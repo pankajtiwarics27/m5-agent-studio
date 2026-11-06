@@ -1,31 +1,33 @@
 #!/usr/bin/env node
 /**
- * Check the Start pane's readiness answer in a browser (UIUX-P2-01).
+ * Check the Start pane's command center and readiness answer in a browser (UIV2-24).
  *
  *   python3 scripts/demo_tour.py --serve                 # in one terminal
  *   STUDIO_SCREENSHOT_CHROME=/path/to/chrome \
  *     node scripts/start_walk.mjs --base-url http://127.0.0.1:PORT --token TOKEN
  *
- * The acceptance criterion for this story is that the pane tells a first-run reader
- * the one next thing to click, and that a disabled control explains itself. Neither
- * is provable from source: both depend on what /api/onboarding/preflight actually
- * answered on this machine.
+ * Two acceptance criteria for this story cannot be proved from source: that the
+ * primary action is above the fold at the viewport a reader actually has, and that
+ * the verdict is the server's rather than one the pane worked out. Both depend on
+ * what /api/start/command-center answered on this machine.
  *
  * So the walk reads the same response the pane read (`fetch` from inside the page)
  * and holds the pane against it:
  *
- *   1. the lead prints the server's completed_count of total_count, verbatim;
- *   2. the lead's state matches the server's verdict - ready, blocked or waiting;
- *   3. the lead names the server's next step and offers its action label;
- *   4. exactly one row is aria-current="step", and it is that step;
- *   5. Run is off exactly when the server says not ready, and its described hint
- *      names the step holding it up;
- *   6. pressing the lead's action does what the label says;
- *   7. Tab from the action stays inside the pane;
- *   8. a refused preflight presents the error, and Re-check restores the list with
- *      focus back on the lead instead of on <body>;
- *   9. the lead survives a 900px viewport with its action still usable;
- *  10. no page errors.
+ *   1. the composer is the first card, and its input and button are above the fold;
+ *   2. all three disclosures start closed, and each summary carries its own state;
+ *   3. the verdict line prints the server's headline, counts and basis - and says
+ *      "runtime not asked" whenever the basis is derived;
+ *   4. the blocker names the server's next step, or says nothing is in the way;
+ *   5. opening the checklist is one keyboard press, and the lead it holds prints the
+ *      server's completed_count of total_count verbatim;
+ *   6. exactly one row is aria-current="step", and it is the server's next step;
+ *   7. Run is off exactly when the server says not ready, with a stated reason;
+ *   8. pressing the blocker's action does what its label says;
+ *   9. a refused read presents the error, and Re-check restores the pane with focus
+ *      back inside it instead of on <body>;
+ *  10. at 390x844 the composer and the verdict are still above the fold;
+ *  11. no page errors.
  *
  * It never fabricates a ready machine: when this host is not ready, the ready-state
  * assertions are recorded as blocked rather than skipped silently.
@@ -151,7 +153,9 @@ async function run(args) {
     await page.screenshot({ path: resolve(args.screenshots, `${name}.png`) });
   };
 
-  const breakers = { preflight: false };
+  // The pane reads one route now, while the walk reads another for its own copy of
+  // the truth. Breaking the readiness read must not break the walk's source.
+  const breakers = { readiness: false };
 
   try {
     const page = await browser.newPage();
@@ -160,7 +164,7 @@ async function run(args) {
     page.on("pageerror", (error) => errors.push(String(error)));
     await page.setRequestInterception(true);
     page.on("request", (request) => {
-      if (breakers.preflight && request.url().includes("/api/onboarding/preflight")) return request.abort("failed");
+      if (breakers.readiness && request.url().includes("/api/start/command-center")) return request.abort("failed");
       return request.continue();
     });
     await page.evaluateOnNewDocument((key, token) => {
@@ -176,27 +180,157 @@ async function run(args) {
     // What the server actually said, read from inside the page so it is the same
     // response the pane consumed rather than a second opinion from the walk.
     const server = await page.evaluate(async () => {
-      const response = await fetch("/api/onboarding/preflight");
+      const response = await fetch("/api/start/command-center");
       if (!response.ok) return { error: `HTTP ${response.status}` };
       const payload = await response.json();
-      const report = payload.preflight || {};
+      const readiness = payload.readiness || {};
+      const report = readiness.preflight || {};
       return {
+        verdict: readiness.verdict,
+        headline: readiness.headline,
+        basis: readiness.basis,
+        probe: readiness.probe,
+        counts: readiness.counts || {},
+        next: readiness.next || null,
+        contradictions: (readiness.contradictions || []).map((item) => item.id),
+        runtime: readiness.runtime || {},
         ready: Boolean(report.ready),
         blocked: Boolean(report.blocked),
         completed: report.completed_count,
         total: report.total_count,
-        next: report.next_step || null,
       };
     });
     if (server.error) {
-      record("the preflight answers", false, server.error);
-      throw new Error("the preflight could not be read, so the pane cannot be held against it");
+      record("the readiness route answers", false, server.error);
+      throw new Error("the readiness route could not be read, so the pane cannot be held against it");
     }
     record(
-      "the preflight answers",
+      "the readiness route answers",
       true,
-      `${server.completed}/${server.total} ready, next=${server.next ? server.next.id : "none"}`,
+      `verdict=${server.verdict} (${server.completed}/${server.total} ready), next=${server.next ? server.next.id : "none"}`,
     );
+
+    // ---- the landing state, before anything is opened ------------------------
+    const landing = await page.evaluate(() => {
+      const rect = (id) => {
+        const node = document.getElementById(id);
+        if (!node) return null;
+        const box = node.getBoundingClientRect();
+        return { top: Math.round(box.top), bottom: Math.round(box.bottom), height: Math.round(box.height) };
+      };
+      const details = ["startDiagnostics", "startHealthDetails", "startWorkspaceDetails"].map((id) => {
+        const node = document.getElementById(id);
+        return { id, open: node ? node.open : null, tag: node ? node.tagName : null };
+      });
+      const launchCard = document.getElementById("startLaunchCard");
+      const pane = document.getElementById("pane-start");
+      const cards = [...pane.querySelectorAll(".m-card")];
+      const line = document.getElementById("startReadinessLine");
+      const pill = document.getElementById("startReadinessPill");
+      const blocker = document.getElementById("startNextBlocker");
+      return {
+        viewport: { width: window.innerWidth, height: window.innerHeight },
+        composer: rect("startTaskInput"),
+        button: rect("startTaskBtn"),
+        line: rect("startReadinessLine"),
+        details,
+        launchIsFirstCard: cards.length > 0 && cards[0] === launchCard,
+        lineText: line ? line.textContent.trim() : "",
+        pillText: pill ? pill.textContent.trim() : "",
+        blockerHidden: blocker ? blocker.hidden : null,
+        blockerText: blocker ? blocker.textContent.trim() : "",
+        contradictions: document.querySelectorAll("#startContradictions .start-contradiction").length,
+      };
+    });
+    record("the composer is the first card on the pane", landing.launchIsFirstCard === true);
+    record(
+      "the composer input and button are above the fold",
+      Boolean(landing.composer && landing.button)
+        && landing.composer.top >= 0 && landing.composer.bottom <= landing.viewport.height
+        && landing.button.bottom <= landing.viewport.height,
+      `input ${landing.composer ? landing.composer.top : "?"}-${landing.composer ? landing.composer.bottom : "?"} of ${landing.viewport.height}`,
+    );
+    record(
+      "all three disclosures start closed",
+      landing.details.every((item) => item.tag === "DETAILS" && item.open === false),
+      landing.details.map((item) => `${item.id}:${item.open}`).join(" "),
+    );
+    record(
+      "the verdict line prints the server's headline",
+      typeof landing.lineText === "string" && landing.lineText.includes(server.headline),
+      landing.lineText,
+    );
+    record(
+      "the verdict line prints the server's counts",
+      typeof landing.lineText === "string"
+        && landing.lineText.includes(`${server.counts.ready} of ${server.counts.total}`),
+      landing.lineText,
+    );
+    record(
+      "the verdict says how it was reached",
+      server.basis === "measured"
+        ? /runtime (answered|did not answer)/.test(landing.lineText)
+        : /runtime not asked/.test(landing.lineText),
+      `basis=${server.basis} · ${landing.lineText}`,
+    );
+    record(
+      "a port that answered without models is never reported as ready here",
+      !(server.runtime.port_answered === true && server.runtime.model_count === 0 && server.verdict === "ready"),
+      `port_answered=${server.runtime.port_answered} models=${server.runtime.model_count} verdict=${server.verdict}`,
+    );
+    if (server.next) {
+      record(
+        "the blocker names the server's next step",
+        landing.blockerHidden === false && landing.blockerText.length > 0,
+        landing.blockerText.slice(0, 120),
+      );
+    } else {
+      record(
+        "nothing in the way is said in words, not left blank",
+        landing.blockerHidden === false && /Nothing is in the way/i.test(landing.blockerText),
+        landing.blockerText.slice(0, 120),
+      );
+    }
+    record(
+      "every contradiction the server printed is on the pane",
+      landing.contradictions === server.contradictions.length,
+      `${landing.contradictions} rendered, ${server.contradictions.length} from the server`,
+    );
+    await shoot(page, "landing");
+
+    // ---- opening the checklist, from the keyboard ----------------------------
+    const opened = await page.evaluate(() => {
+      const summary = document.querySelector("#startDiagnostics > summary");
+      if (!summary) return { skipped: true };
+      summary.focus();
+      return { skipped: false, focused: document.activeElement === summary };
+    });
+    if (opened.skipped) {
+      record("the checklist has a summary to open", false, "no #startDiagnostics summary");
+    } else {
+      await page.keyboard.press("Enter");
+      await sleep(args.settleMs * 2);
+      const afterOpen = await page.evaluate(() => ({
+        open: document.getElementById("startDiagnostics").open,
+        stillFocused: document.activeElement === document.querySelector("#startDiagnostics > summary"),
+        summaryState: (document.querySelector("#startDiagnostics #onboardingSummary") || {}).textContent || "",
+      }));
+      record(
+        "the checklist opens from the keyboard",
+        opened.focused === true && afterOpen.open === true && afterOpen.stillFocused === true,
+        `open=${afterOpen.open} focus kept=${afterOpen.stillFocused}`,
+      );
+      record(
+        "the checklist summary carries the verdict it hides",
+        afterOpen.summaryState.trim().toLowerCase() === landing.pillText.trim().toLowerCase(),
+        `${afterOpen.summaryState.trim()} vs pill ${landing.pillText.trim()}`,
+      );
+    }
+    await page.evaluate(() => {
+      document.getElementById("startHealthDetails").open = true;
+      document.getElementById("startWorkspaceDetails").open = true;
+    });
+    await sleep(args.settleMs * 2);
 
     const readLead = () => page.evaluate(() => {
       const host = document.getElementById("onboardingLead");
@@ -340,7 +474,7 @@ async function run(args) {
     }
 
     // A refused preflight, then a re-check that must restore the pane and the focus.
-    breakers.preflight = true;
+    breakers.readiness = true;
     await page.evaluate(() => refreshOnboarding());
     await sleep(args.settleMs * 5);
     const failed = await page.evaluate(() => ({
@@ -360,7 +494,7 @@ async function run(args) {
       failed.hint,
     );
 
-    breakers.preflight = false;
+    breakers.readiness = false;
     // Pressed from the keyboard on purpose: an element.click() from script does not
     // focus the button, and the focus-restoration this checks only happens when the
     // control that held focus is the one removed. A real click and a real Enter both
@@ -401,24 +535,58 @@ async function run(args) {
       `${recovered.focusId}`,
     );
 
-    // Narrow viewport: the lead is the first thing a small screen shows, so it must
-    // still be legible and its action still reachable.
-    await page.setViewport({ width: 900, height: 780, deviceScaleFactor: 1 });
+    // Narrow viewport: the story's smallest target. The composer and the verdict have
+    // to be above the fold there too, or "the primary action is above the fold" is a
+    // claim about a desktop window and nothing else.
+    await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 1 });
     await sleep(args.settleMs * 4);
     const narrow = await page.evaluate(() => {
+      // Measured from the top: the earlier steps scrolled the pane, and "above the
+      // fold" means the fold a reader lands on, not wherever the walk left off. The
+      // scroller is whichever ancestor actually overflows, so every one of them is
+      // reset rather than assuming it is the window.
+      if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
+      for (let node = document.getElementById("pane-start"); node; node = node.parentElement) {
+        node.scrollTop = 0;
+      }
+      const input = document.getElementById("startTaskInput");
+      const button = document.getElementById("startTaskBtn");
+      const line = document.getElementById("startReadinessLine");
       const host = document.getElementById("onboardingLead");
-      const action = document.getElementById("onboardingLeadAction");
-      const box = host.getBoundingClientRect();
+      // Plain objects: a DOMRect does not survive the trip out of the page, and a
+      // check that reads `undefined < 844` passes for the wrong reason.
+      const box = (node) => {
+        if (!node) return null;
+        const rect = node.getBoundingClientRect();
+        return { top: Math.round(rect.top), bottom: Math.round(rect.bottom), height: Math.round(rect.height) };
+      };
+      const lead = box(host);
       return {
-        height: Math.round(box.height),
-        overflowing: host.scrollWidth > host.clientWidth + 1,
-        actionVisible: action ? action.getBoundingClientRect().height > 0 : true,
+        input: box(input),
+        button: box(button),
+        line: box(line),
+        leadHeight: lead ? Math.round(lead.height) : 0,
+        leadOverflowing: host ? host.scrollWidth > host.clientWidth + 1 : null,
+        height: window.innerHeight,
+        width: window.innerWidth,
+        docOverflow: document.documentElement.scrollWidth > window.innerWidth + 1,
       };
     });
     record(
-      "the lead survives a 900px viewport",
-      narrow.height > 40 && narrow.overflowing === false && narrow.actionVisible === true,
-      `height=${narrow.height} overflow=${narrow.overflowing}`,
+      "at 390px the composer and the verdict are above the fold",
+      Boolean(narrow.input && narrow.button && narrow.line)
+        && narrow.line.top >= 0 && narrow.input.bottom <= narrow.height && narrow.button.bottom <= narrow.height,
+      `input ends ${narrow.input ? Math.round(narrow.input.bottom) : "?"} of ${narrow.height}`,
+    );
+    record(
+      "at 390px the pane does not scroll sideways",
+      narrow.docOverflow === false,
+      `scrollWidth>${narrow.width}: ${narrow.docOverflow}`,
+    );
+    record(
+      "the shell survives a 390px viewport",
+      narrow.leadHeight > 40 && narrow.leadOverflowing === false,
+      `lead height=${narrow.leadHeight}`,
     );
     await shoot(page, "narrow");
 

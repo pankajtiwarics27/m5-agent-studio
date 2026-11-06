@@ -18,15 +18,15 @@
   "totals": {
     "pages": 5,
     "links": 22,
-    "commands": 40,
+    "commands": 47,
     "claims": 7,
     "claims_verified": 7,
     "findings": 0,
     "by_kind": {
-      "needs-network": 9,
+      "needs-network": 11,
       "illustrative": 5,
       "writes": 12,
-      "runs": 14
+      "runs": 19
     }
   },
   "links": [
@@ -459,6 +459,62 @@
       "kind": "runs",
       "reason": "one test module; read-only apart from temporary directories",
       "executes": true
+    },
+    {
+      "page": "docs/onboarding-preflight.md",
+      "command": "python -m pytest -q tests/test_start_command_center.py     # 27 passed (UIV2-24)",
+      "normalized": "python -m pytest -q tests/test_start_command_center.py",
+      "kind": "runs",
+      "reason": "one test module; read-only apart from temporary directories",
+      "executes": true
+    },
+    {
+      "page": "docs/onboarding-preflight.md",
+      "command": "python -m pytest -q tests/test_start_readiness.py  # the 22 pane-contract tests (P2-01)",
+      "normalized": "python -m pytest -q tests/test_start_readiness.py",
+      "kind": "runs",
+      "reason": "one test module; read-only apart from temporary directories",
+      "executes": true
+    },
+    {
+      "page": "docs/onboarding-preflight.md",
+      "command": "python -m pytest -q tests/test_start_health.py  # the 3 bases and 2 routes the health card reads",
+      "normalized": "python -m pytest -q tests/test_start_health.py",
+      "kind": "runs",
+      "reason": "one test module; read-only apart from temporary directories",
+      "executes": true
+    },
+    {
+      "page": "docs/onboarding-preflight.md",
+      "command": "python -m pytest -q tests/test_start_recent.py  # recent work, the composer and its handoff",
+      "normalized": "python -m pytest -q tests/test_start_recent.py",
+      "kind": "runs",
+      "reason": "one test module; read-only apart from temporary directories",
+      "executes": true
+    },
+    {
+      "page": "docs/onboarding-preflight.md",
+      "command": "python scripts/uiux_start_command_center_inventory.py --check  # the story's own artifact is current",
+      "normalized": "python scripts/uiux_start_command_center_inventory.py --check",
+      "kind": "runs",
+      "reason": "regenerates one UI/UX artifact, or with --check compares it with the source; --check is read-only",
+      "executes": true
+    },
+    {
+      "page": "docs/onboarding-preflight.md",
+      "command": "node scripts/start_walk.mjs --base-url URL --token TOKEN  # 31/31 checks against a running app",
+      "normalized": "node scripts/start_walk.mjs --base-url URL --token TOKEN",
+      "kind": "needs-network",
+      "reason": "drives a real browser against the app, which it starts itself or is given; needs a browser binary",
+      "executes": false
+    },
+    {
+      "page": "docs/onboarding-preflight.md",
+      "command": "node scripts/start_command_center_walk.mjs --out DIR  # 31/31 per run, 56 captures",
+      "normalized": "node scripts/start_command_center_walk.mjs --out DIR",
+      "kind": "needs-network",
+      "reason": "drives a real browser against the app, which it starts itself or is given; needs a browser binary",
+      "executes": false
     },
     {
       "page": "docs/onboarding-preflight.md",

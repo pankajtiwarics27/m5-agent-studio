@@ -97,6 +97,7 @@ SUBSYSTEM_ROLES: dict[str, tuple[str, str]] = {
     "routing_experiments": ("support", "routing experiments and measurements"),
     "failure_injection": ("support", "fault injection used by tests"),
     "onboarding_preflight": ("support", "local readiness probing"),
+    "start_command_center": ("support", "the Start pane's one-line readiness verdict and its contradictions"),
     "workflow_orchestration": ("support", "multi-stage workflow sequencing"),
 }
 

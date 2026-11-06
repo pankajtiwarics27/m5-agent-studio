@@ -1,0 +1,297 @@
+{
+  "schema_version": "1.0.0",
+  "story": "UIV2-24",
+  "statement": "Start opens with the one action it exists for - opening a task - followed by one sentence of verdict and at most one blocker, with the checklist, health and workspace one disclosure below. The verdict is the server's, printed with the basis it was reached on, and a port that answers without a model is a contradiction with its evidence rather than a green word.",
+  "source": {
+    "frontend": "static/index.html",
+    "module": "start_command_center.py",
+    "route": "GET /api/start/command-center",
+    "preflight": "GET /api/onboarding/preflight",
+    "walk": "scripts/start_walk.mjs"
+  },
+  "verdicts": [
+    "blocked",
+    "contradiction",
+    "needs-you",
+    "ready"
+  ],
+  "basis_values": [
+    "derived",
+    "measured"
+  ],
+  "matrix": [
+    {
+      "case": "ready preflight, runtime never asked",
+      "verdict": "ready",
+      "headline": "Ready to run",
+      "basis": "derived",
+      "probe": "not-run",
+      "port_answered": null,
+      "model_count": null,
+      "ready_count": 6,
+      "total_count": 6,
+      "next": null,
+      "next_action": null,
+      "contradictions": []
+    },
+    {
+      "case": "ready preflight, runtime answered with models",
+      "verdict": "ready",
+      "headline": "Ready to run",
+      "basis": "measured",
+      "probe": "ran",
+      "port_answered": true,
+      "model_count": 2,
+      "ready_count": 6,
+      "total_count": 6,
+      "next": null,
+      "next_action": null,
+      "contradictions": []
+    },
+    {
+      "case": "ready preflight, port answers with no models",
+      "verdict": "contradiction",
+      "headline": "The checks and the runtime disagree",
+      "basis": "measured",
+      "probe": "ran",
+      "port_answered": true,
+      "model_count": 0,
+      "ready_count": 6,
+      "total_count": 6,
+      "next": "port-without-models",
+      "next_action": "probe-local-models",
+      "contradictions": [
+        {
+          "id": "port-without-models",
+          "has_evidence": true,
+          "has_action": true
+        }
+      ]
+    },
+    {
+      "case": "ready preflight, nothing answered",
+      "verdict": "contradiction",
+      "headline": "The checks and the runtime disagree",
+      "basis": "measured",
+      "probe": "ran",
+      "port_answered": false,
+      "model_count": null,
+      "ready_count": 6,
+      "total_count": 6,
+      "next": "checks-passed-without-runtime",
+      "next_action": "probe-local-models",
+      "contradictions": [
+        {
+          "id": "checks-passed-without-runtime",
+          "has_evidence": true,
+          "has_action": true
+        }
+      ]
+    },
+    {
+      "case": "ready preflight, runtime with models but demo health",
+      "verdict": "contradiction",
+      "headline": "The checks and the runtime disagree",
+      "basis": "measured",
+      "probe": "ran",
+      "port_answered": true,
+      "model_count": 3,
+      "ready_count": 6,
+      "total_count": 6,
+      "next": "demo-health-with-live-runtime",
+      "next_action": "probe-local-models",
+      "contradictions": [
+        {
+          "id": "demo-health-with-live-runtime",
+          "has_evidence": true,
+          "has_action": true
+        }
+      ]
+    },
+    {
+      "case": "no providers, no probe",
+      "verdict": "needs-you",
+      "headline": "Needs you: Connect a model source",
+      "basis": "derived",
+      "probe": "not-run",
+      "port_answered": null,
+      "model_count": null,
+      "ready_count": 3,
+      "total_count": 6,
+      "next": "model-source",
+      "next_action": "open-providers",
+      "contradictions": []
+    },
+    {
+      "case": "no providers, runtime answered with models",
+      "verdict": "contradiction",
+      "headline": "The checks and the runtime disagree",
+      "basis": "measured",
+      "probe": "ran",
+      "port_answered": true,
+      "model_count": 3,
+      "ready_count": 3,
+      "total_count": 6,
+      "next": "runtime-models-without-usable-selection",
+      "next_action": "probe-local-models",
+      "contradictions": [
+        {
+          "id": "runtime-models-without-usable-selection",
+          "has_evidence": true,
+          "has_action": true
+        }
+      ]
+    },
+    {
+      "case": "workspace missing",
+      "verdict": "needs-you",
+      "headline": "Needs you: Fix the workspace directory",
+      "basis": "derived",
+      "probe": "not-run",
+      "port_answered": null,
+      "model_count": null,
+      "ready_count": 5,
+      "total_count": 6,
+      "next": "workspace",
+      "next_action": "fix-workspace",
+      "contradictions": []
+    },
+    {
+      "case": "execution disabled",
+      "verdict": "ready",
+      "headline": "Ready to run",
+      "basis": "derived",
+      "probe": "not-run",
+      "port_answered": null,
+      "model_count": null,
+      "ready_count": 6,
+      "total_count": 6,
+      "next": null,
+      "next_action": null,
+      "contradictions": []
+    },
+    {
+      "case": "auth disabled",
+      "verdict": "blocked",
+      "headline": "Blocked: Studio has no API token",
+      "basis": "derived",
+      "probe": "not-run",
+      "port_answered": null,
+      "model_count": null,
+      "ready_count": 5,
+      "total_count": 6,
+      "next": "auth",
+      "next_action": "restart-server",
+      "contradictions": []
+    },
+    {
+      "case": "no local runtime configured",
+      "verdict": "ready",
+      "headline": "Ready to run",
+      "basis": "derived",
+      "probe": "not-run",
+      "port_answered": null,
+      "model_count": null,
+      "ready_count": 6,
+      "total_count": 6,
+      "next": null,
+      "next_action": null,
+      "contradictions": []
+    },
+    {
+      "case": "local runtime configured but the probe could not be made",
+      "verdict": "ready",
+      "headline": "Ready to run",
+      "basis": "derived",
+      "probe": "unavailable",
+      "port_answered": false,
+      "model_count": null,
+      "ready_count": 6,
+      "total_count": 6,
+      "next": null,
+      "next_action": null,
+      "contradictions": []
+    }
+  ],
+  "frontend": {
+    "anchor_lines": {
+      "pane": 2829,
+      "launch_card": 2837,
+      "readiness_line": 2844,
+      "composer": 2847,
+      "blocker": 2857,
+      "checklist": 2883,
+      "health": 2924,
+      "workspace": 2944
+    },
+    "order": {
+      "composer_is_first_card": true,
+      "composer_first": true,
+      "readiness_before_composer": true,
+      "blocker_after_composer": true,
+      "details_after_blocker": true,
+      "contradictions_after_blocker": true
+    },
+    "composer": {
+      "primary_button": true,
+      "label_names_task": true,
+      "described_by": true
+    },
+    "details": {
+      "checklist": "startDiagnostics",
+      "health": "startHealthDetails",
+      "workspace": "startWorkspaceDetails",
+      "all_closed_by_default": true,
+      "summary_carries_state": true,
+      "summary_is_native": true
+    },
+    "verdict": {
+      "reads_route": "/api/start/command-center",
+      "prints_headline": true,
+      "prints_counts": true,
+      "prints_basis": true,
+      "prints_runtime": true,
+      "recomputes": false,
+      "no_second_preflight_read": true
+    },
+    "contradictions": {
+      "container": true,
+      "from_payload": true,
+      "prints_evidence": true,
+      "alert_role": true,
+      "offers_action": true
+    },
+    "blocker": {
+      "button": true,
+      "opens_workspace": true,
+      "delegates": true,
+      "probing_is_explicit": true,
+      "no_render_loop": true
+    },
+    "styles": {
+      "line": true,
+      "basis": true,
+      "blocker": true,
+      "contradiction": true,
+      "details": true,
+      "focus_ring": true
+    },
+    "links": {
+      "walk": true
+    }
+  },
+  "totals": {
+    "cases": 12,
+    "verdicts": 4,
+    "contradictions": 4,
+    "disclosures": 3,
+    "findings": 0
+  },
+  "findings": [],
+  "limits": [
+    "the matrix runs the pure module, so it covers every runtime observation the pane can hold but not the live probe against a real runtime",
+    "a browser cannot make a machine ready, so scripts/start_walk.mjs asserts the pane against the same API response it received rather than against an invented ready state",
+    "the contradiction that needs a real empty runtime is covered by tests/test_start_command_center.py, which stubs the probe to answer with zero models",
+    "keyboard reachability of the disclosures is proved in the walk (native <summary>), not in this artifact"
+  ]
+}

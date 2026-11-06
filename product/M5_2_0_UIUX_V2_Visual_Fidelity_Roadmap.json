@@ -2757,20 +2757,59 @@
       "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
       "agent_prompt": "Implement UIV2-24: Start concise command center. Required outcome: Replace checklist-first landing with new task, recent sessions, readiness summary and next actionable blocker; detailed diagnostics collapsible. Specific gate: Primary new-task action visible above fold; do not claim local backend ready solely because port responds; readiness contradictions explained; no hidden required setup. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempt_count": 0,
-        "started_at": null,
-        "completed_at": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "tests_executed": [],
-        "visual_evidence": [],
-        "acceptance_evidence": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempt_count": 1,
+        "started_at": "2026-11-06T21:20:00+05:30",
+        "completed_at": "2026-11-06T23:55:00+05:30",
+        "commit_sha": "639044b",
+        "changed_files": [
+          "start_command_center.py (new: the pure verdict builder — `RuntimeObservation` keeps `port_answered` and `model_count` apart, `TelemetryObservation` carries which health payload the page holds, and `build_readiness()` composes the preflight into one `verdict`, one `next`, five `checks` and the `contradictions` it refuses to smooth over: `port-without-models`, `runtime-models-without-usable-selection`, `checks-passed-without-runtime`, `demo-health-with-live-runtime`; `basis` is `measured` only when the runtime was asked and answered, and nothing in the module performs I/O)",
+          "app.py (GET /api/start/command-center — read-only, `?probe=local` reuses the single user-triggered loopback probe, `?telemetry=` echoes which health payload the pane holds; returns the readiness block with the preflight it was built from)",
+          "studio.py (built from the above by scripts/build_studio.py; start_command_center added to INLINED_MODULES)",
+          "static/index.html (Start rebuilt as a command center: #startLaunchCard first with #startReadinessPill, #startReadinessLine (tabindex -1), the composer and #startTaskBtn as the primary action, #startTaskHint now about the composer only, #startNextBlocker carrying the server's next step or 'Nothing is in the way', and #startContradictions printing evidence plus an action; the checklist, health and workspace are native <details> (#startDiagnostics/#startHealthDetails/#startWorkspaceDetails) that start closed with each summary carrying its own status; one read through refreshStartCommand() — refreshOnboarding() delegates to it — and a failure keeps no stale verdict, puts #startRetryReadBtn in the blocker slot and returns focus to the verdict line)",
+          "scripts/start_walk.mjs (rewritten for the landing: composer first and above the fold, disclosures closed with their state in the summary, the verdict against the route it read, keyboard opening of the checklist, blocker naming the server's next step, 390x844 fold check; 31/31)",
+          "scripts/start_command_center_walk.mjs (new: starts its own stand-in runtime it can empty and the seeded app pointed at it, then drives 7 states — empty, populated, long-content, loading, error, recovery, contradiction — on 4 viewports x light/dark, 31/31 checks per run and 56 captures)",
+          "scripts/council_readiness_seed.py (an optional `--runtime-url`, so a walk can hand the app a runtime it controls instead of having one started for it)",
+          "scripts/uiux_start_command_center_inventory.py + product/M5_2_0_UIUX_Start_Command_Center.json + docs/uiux-2-4-start-command-center.md (new: 12 runtime observations through the module, the landing order, the disclosures, the verdict and basis, the contradiction rendering and the blocker's reach, 0 findings)",
+          "scripts/uiux_onboarding_inventory.py, scripts/uiux_recent_work_inventory.py, scripts/uiux_preservation_e2e.py, scripts/uiux_authorization_trace.py, scripts/uiux_docs_verification.py, scripts/uiux_screenshot_review.py, scripts/generate_subsystem_inventory.py (the rules and producers that follow the moved code: the checklist renderer, the composer note that no longer restates the verdict, the new support walk, the new subsystem classification and the new artefact producer)",
+          "docs/onboarding-preflight.md (the command center's route, its fields and the four contradictions, with the commands that prove them)",
+          "pyproject.toml (start_command_center.py joins the type-checked contract modules)",
+          "tests/test_start_command_center.py (new: 27 tests over the module, the route and the pane's rules, each rule also broken in a copy), tests/test_start_readiness.py, tests/test_start_health.py, tests/test_start_recent.py, tests/test_uiux_route_map.py (the moved renderers, the composer note's new contract and the single route the pane now reads)",
+          "docs/media/start-command-center-uiv2-24/ (56 captures across 7 states x 4 viewports x light/dark from the walk, plus before-uiv2-24/ served from ff14655, and the README that says how each was taken)"
+        ],
+        "tests_executed": [
+          "python -m pytest -q  ->  2986 passed, 28 skipped (18m25s)",
+          "python -m pytest -q tests/test_screenshot_capture_browser.py tests/test_uiux_adversarial_browser.py  ->  32 passed (pinned Chromium)",
+          "python -m pytest -q tests/test_start_command_center.py  ->  27 passed",
+          "python -m pytest -q tests/test_start_readiness.py tests/test_start_health.py tests/test_start_recent.py tests/test_onboarding_preflight.py  ->  110 passed",
+          "node scripts/start_walk.mjs  ->  31/31 checks against a seeded demo app",
+          "node scripts/start_command_center_walk.mjs  ->  31/31 checks on each of 8 runs, 56 captures",
+          "python scripts/uiux_start_command_center_inventory.py --check  ->  12 cases, 4 contradictions, 0 findings",
+          "python scripts/uiux_release_gate.py --check  ->  37/37 artifact checks, 7/7 phase gates, 0 findings",
+          "python scripts/uiux_screenshot_review.py --check  ->  1784 captures in 38 sets, 38 reviewed, 0 findings",
+          "ruff check .  ->  clean;  python -m mypy  ->  59 files, no issues;  python scripts/check_frontend_syntax.py  ->  OK"
+        ],
+        "visual_evidence": [
+          "docs/media/start-command-center-uiv2-24/after/light/populated-390x844.png",
+          "docs/media/start-command-center-uiv2-24/after/dark/long-content-1280x800.png",
+          "docs/media/start-command-center-uiv2-24/after/light/error-1440x900.png",
+          "docs/media/start-command-center-uiv2-24/after/light/contradiction-1440x900.png",
+          "docs/media/start-command-center-uiv2-24/before-uiv2-24/start.png"
+        ],
+        "acceptance_evidence": [
+          "Primary new-task action visible above fold: #startLaunchCard is the first card and the composer's input and button sit above the fold at 1640x900, 1440x900, 1280x800 and 390x844 — asserted in scripts/start_walk.mjs ('the composer is the first card', 'the composer input and button are above the fold', 'at 390px the composer and the verdict are above the fold') and visible in all 24 after captures.",
+          "Do not claim local backend ready solely because port responds: RuntimeObservation keeps port_answered and model_count apart, build_readiness() reports port-without-models as a contradiction and never as ready, /api/start/command-center?probe=local turns a zero-model answer into exactly that (tests/test_start_command_center.py::test_a_port_that_answers_with_no_models_is_a_contradiction_not_a_ready and ::test_the_route_never_claims_ready_from_the_port_alone), the walk asserts it twice ('a port that answered without models is never reported as ready here', 'a port with no models is printed as a contradiction'), and after/light/contradiction-1440x900.png shows the pane reading 'Checks disagree', 'runtime answered, 0 models' and `port_answered=True · model_count=0`.",
+          "Readiness contradictions explained: the four contradiction ids each carry a title, a plain-language detail, an evidence string and the action that settles them; the pane renders all of them with role=alert under the blocker (renderStartContradictions), and the inventory fails when any loses its evidence or its action.",
+          "No hidden required setup: the checklist, health and workspace are <details> whose summaries print their state (#onboardingSummary, #startHealthSummary, #startWorkspaceSummary), the blocker names the step in the way, and its action opens the control that step lives in (fix-workspace opens #startWorkspaceDetails and focuses the input rather than switching tabs); the inventory fails when a summary loses its state ('details-state-hidden').",
+          "Visually conforms to the approved target: the landing order is the story's target — new task, recent sessions, readiness summary, next actionable blocker, diagnostics collapsed — captured in 7 states x 4 viewports x light/dark from the real app beside the before set from ff14655.",
+          "No UI-only checkbox completion: the verdict is computed on the server by start_command_center.py and printed; the pane has no readiness arithmetic (inventory check 'verdict-recomputed' plus tests/test_start_readiness.py's negative cases).",
+          "All impacted existing features work and preserve authorization/session behavior: the six tabs, the preflight route, the guided first task, the recent-session list, the health card, the workspace saver and the providers modal are unchanged in behaviour (110 Start-related tests, 32 browser regressions, preservation e2e 21/21 rows with 55 provers, authorization trace 48 routes); the new route is read-only, bearer-authenticated, makes no network call without ?probe=local and sends no credentials."
+        ],
         "known_regressions": [],
         "blockers": [],
-        "handoff_summary": "",
-        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+        "handoff_summary": "Start is a command center: the composer first and above the fold at every target viewport, one sentence of verdict with the basis it stands on, at most one blocker with the action that clears it, and the checklist, health and workspace behind disclosures whose summaries still carry their state. GET /api/start/command-center (pure start_command_center.py) composes the preflight with what is actually known about the runtime, keeps port_answered and model_count apart, and prints a disagreement as a contradiction with its evidence rather than calling a live socket ready. Evidence: 56 after captures plus a before set from ff14655, 31/31 on both walks, 27 new tests, the story's own inventory, and every gate regenerated (37/37, 7/7, 0 findings). Next story: UIV2-25 'Pipeline stage-focused workspace and artifacts'.",
+        "exact_next_action": "Start UIV2-25: read the Pipeline pane's stage/artifact source and pin HEAD before changing anything"
       }
     },
     {

@@ -8,12 +8,12 @@
   "check_with": "python3 scripts/uiux_v2_preservation_matrix.py --check",
   "statement": "Control -> DOM handler -> API route -> test coverage for every interactive control in static/index.html, plus the three UIV2-02 contract investigations. api_status is existing when every call the handler makes resolves to a mounted @app route, absent-route when a call matches no mounted route, unknown when the resolver left an edge open, no-api for handlers that never fetch, and no-handler for controls without an inline handler. The contracts distinguish existing / partial / absent / unknown and cite file evidence; the generator hard-fails if the sources drift from the classification, so --check is a gate.",
   "pinned_source_commit": "9a584a36f1fbe29ba467562dd12a705626769f00",
-  "frontend_sha256": "4765fda1538fdc08994c15a37a452d4e0a2c6a3296509cd88eccdc49d72ac1ce",
-  "app_sha256": "28991bc7295ccdcaeb35a6bc720f3d6379c5865907508e2db0556b8f389e1ff1",
+  "frontend_sha256": "8558d2b589d7373ed1519f559b0da44b7ffd6fe95331d10ab85dcf254b31a200",
+  "app_sha256": "11601f3c9efbc4c55d90171b286c1452e1e8d1100025cd1d0a0e1a422f82c999",
   "totals": {
-    "controls": 225,
+    "controls": 228,
     "by_pane": {
-      "start": 11,
+      "start": 14,
       "harness": 30,
       "hall": 20,
       "council": 16,
@@ -22,62 +22,14 @@
     },
     "chrome_controls": 126,
     "api_status_counts": {
-      "existing": 33,
-      "no-api": 118,
-      "no-handler": 74
+      "existing": 32,
+      "no-api": 119,
+      "no-handler": 77
     },
-    "mounted_routes": 117,
+    "mounted_routes": 118,
     "fetch_call_sites": 68
   },
   "controls": [
-    {
-      "pane": "start",
-      "id": "onboardingRunBtn",
-      "tag": "button",
-      "text": "Run the first task",
-      "handler": "startGuidedFirstTask",
-      "calls": [],
-      "api_status": "no-api",
-      "tests": []
-    },
-    {
-      "pane": "start",
-      "id": null,
-      "tag": "button",
-      "text": "Re-check",
-      "handler": "refreshOnboarding",
-      "calls": [
-        {
-          "method": "GET",
-          "route": "/api/onboarding/preflight",
-          "kind": "exact"
-        },
-        {
-          "method": "GET",
-          "route": "/api/onboarding/preflight",
-          "kind": "exact"
-        }
-      ],
-      "api_status": "existing",
-      "tests": [
-        "test_demo_tour.py",
-        "test_onboarding_preflight.py",
-        "test_presentations.py",
-        "test_start_readiness.py",
-        "test_uiux_docs_verification.py",
-        "test_uiux_route_map.py"
-      ]
-    },
-    {
-      "pane": "start",
-      "id": null,
-      "tag": "button",
-      "text": "Providers",
-      "handler": "openProvidersModal",
-      "calls": [],
-      "api_status": "no-api",
-      "tests": []
-    },
     {
       "pane": "start",
       "id": "startTaskInput",
@@ -138,6 +90,56 @@
     {
       "pane": "start",
       "id": null,
+      "tag": "summary",
+      "text": "Readiness details checking",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "start",
+      "id": "onboardingRunBtn",
+      "tag": "button",
+      "text": "Run the first task",
+      "handler": "startGuidedFirstTask",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "start",
+      "id": null,
+      "tag": "button",
+      "text": "Re-check",
+      "handler": "refreshOnboarding",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "start",
+      "id": null,
+      "tag": "button",
+      "text": "Providers",
+      "handler": "openProvidersModal",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "start",
+      "id": null,
+      "tag": "summary",
+      "text": "System health loading",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "start",
+      "id": null,
       "tag": "button",
       "text": "Re-check health",
       "handler": "refreshTelemetry",
@@ -162,6 +164,16 @@
       "handler": "toggleMonitorRail",
       "calls": [],
       "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "start",
+      "id": null,
+      "tag": "summary",
+      "text": "Project workspace loading",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
       "tests": []
     },
     {
@@ -2753,7 +2765,7 @@
       "classification": "present_registry__picker_rendered_from_it",
       "picker": {
         "status": "rendered_from_registry",
-        "evidence": "select#chatPersona at static/index.html:3319 ships no <option>; renderChatPersonaPicker() fills it from CHAT_PERSONAS on load and on every filter",
+        "evidence": "select#chatPersona at static/index.html:3430 ships no <option>; renderChatPersonaPicker() fills it from CHAT_PERSONAS on load and on every filter",
         "option_source": "CHAT_PERSONAS"
       },
       "registry": {

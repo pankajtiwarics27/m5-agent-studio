@@ -32,8 +32,9 @@ shape is what the rules below protect:
   component, with a cause, what is kept and an action.
 * **the launcher hands off, it does not run.** It writes the text into the Harness
   composer and stops, because the workspace, worktree decision and policy are chosen
-  there; and its note quotes the preflight's verdict so a task is not handed over
-  into a Run that will refuse.
+  there; and its note says exactly that. Since UIV2-24 the note no longer restates the
+  preflight: the verdict is printed once, above the composer it describes, by the
+  command center, and a second copy under the input was the same sentence twice.
 """
 
 from __future__ import annotations
@@ -186,6 +187,12 @@ def presentation_calls(body: str) -> list[dict[str, object]]:
     return calls
 
 
+def _above(html: str, first: str, second: str) -> bool:
+    head = html.find(first)
+    tail = html.find(second)
+    return 0 <= head < tail
+
+
 def read_frontend(html: str) -> dict:
     bodies = {name: function_body(html, name) for name in RECENT_FUNCTIONS}
     renderer = bodies["renderStartRecent"]
@@ -222,9 +229,12 @@ def read_frontend(html: str) -> dict:
             "focuses_composer": ".focus()" in launcher,
         },
         "hint": {
-            "reads_preflight": "onboardingReport" in hint,
-            "names_next_step": "next_step" in hint,
-            "states_ready": "onboardingReport.ready" in hint,
+            # The sentence lives in one constant so the failure path can reuse it; the
+            # rule is that the note uses that constant and the sentence says the thing.
+            "says_what_it_does": "Nothing runs from this pane" in html and "START_TASK_HINT" in hint,
+            # The verdict the note used to quote is printed once, above the composer,
+            # so the handoff and the readiness answer cannot say different things.
+            "verdict_above": _above(html, 'id="startReadinessLine"', 'id="startTaskInput"'),
             "described_by": 'aria-describedby="startTaskHint"' in html,
             "element": 'id="startTaskHint"' in html,
             "refreshed_on_recheck": "updateStartTaskHint();" in html,
@@ -308,12 +318,12 @@ def build_inventory() -> dict:
         if not launcher.get(flag):
             fail("launcher-runs", description)
 
-    # 7. The handoff's note quotes the preflight verdict, and is the button's description.
+    # 7. The handoff's note says what pressing the button does, and the verdict it used
+    #    to quote is printed once above the composer (UIV2-24).
     hint = frontend["hint"]
     for flag, description in (
-        ("reads_preflight", "the launcher note ignores the preflight"),
-        ("names_next_step", "the launcher note does not name the step holding Run back"),
-        ("states_ready", "the launcher note does not distinguish ready from not ready"),
+        ("says_what_it_does", "the launcher note does not say that nothing runs from this pane"),
+        ("verdict_above", "the verdict is not printed above the composer the note describes"),
         ("described_by", "the composer's description is not wired to the note"),
         ("element", "there is no #startTaskHint element"),
         ("refreshed_on_recheck", "the note is not refreshed when the preflight is re-read, so it can go stale"),

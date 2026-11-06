@@ -85,6 +85,8 @@ COMMAND_PATTERNS: tuple[tuple[str, str, str, bool], ...] = (
     (r"^python3? app\.py$", "needs-network", "starts the server and waits for a browser", False),
     (r"^python3? studio\.py$", "needs-network", "starts the generated bundle and waits for a browser", False),
     (r"^npm i puppeteer-core @sparticuz/chromium$", "writes", "installs the pinned browser tooling into a scratch directory", False),
+    (r"^python3? scripts/uiux_[a-z0-9_]+\.py( --check)?$", "runs", "regenerates one UI/UX artifact, or with --check compares it with the source; --check is read-only", True),
+    (r"^node scripts/[a-z0-9_]+_walk\.mjs .*$", "needs-network", "drives a real browser against the app, which it starts itself or is given; needs a browser binary", False),
     (r"^.*node scripts/capture_screenshots\.mjs.*$", "needs-network", "captures from a running demo; needs a server, a browser and the libraries the environment names", False),
 )
 

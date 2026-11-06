@@ -12,23 +12,23 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "4765fda1538fdc08994c15a37a452d4e0a2c6a3296509cd88eccdc49d72ac1ce",
-      "bytes": 945728,
-      "lines": 16385
+      "sha256": "8558d2b589d7373ed1519f559b0da44b7ffd6fe95331d10ab85dcf254b31a200",
+      "bytes": 963139,
+      "lines": 16749
     },
     {
       "path": "app.py",
       "role": "the FastAPI server the UI talks to; source of the route table",
-      "sha256": "28991bc7295ccdcaeb35a6bc720f3d6379c5865907508e2db0556b8f389e1ff1",
-      "bytes": 1025817,
-      "lines": 22103
+      "sha256": "11601f3c9efbc4c55d90171b286c1452e1e8d1100025cd1d0a0e1a422f82c999",
+      "bytes": 1028031,
+      "lines": 22146
     },
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "fe1899aef1bb58e5e6b375892bb9af2bf87cec0fd8e6337b6abe888d69aea884",
-      "bytes": 3706678,
-      "lines": 79865
+      "sha256": "3084452aa472d2b930aedd7ed4b89b890a3468920eacdbf69bc15d6e5c4cd4b2",
+      "bytes": 3738690,
+      "lines": 80568
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -68,9 +68,9 @@
     {
       "path": "scripts/build_studio.py",
       "role": "regenerates studio.py from app.py and the inlined modules",
-      "sha256": "27e98d2ccb44b34684ad854219479b9aa615bf0eba46fb75bbeb69e83eafd555",
-      "bytes": 6989,
-      "lines": 130
+      "sha256": "1d963e27647df299ffa4eeecf92f4175120091c73ee8aa630f6126be7a57f81d",
+      "bytes": 7017,
+      "lines": 131
     },
     {
       "path": "scripts/check_frontend_syntax.py",
@@ -96,9 +96,9 @@
     {
       "path": "scripts/uiux_authorization_trace.py",
       "role": "traces the authorization and state behind each state-changing call",
-      "sha256": "161c5668ac7b351e86e601abfa57ef5512aae699672136e3e58046cbe28506d2",
-      "bytes": 36905,
-      "lines": 763
+      "sha256": "2af507728d284c4c9bd271b838b14f68e131718217118004a4a5069202f5e83c",
+      "bytes": 37016,
+      "lines": 764
     },
     {
       "path": "scripts/uiux_preservation_signoff.py",
@@ -376,9 +376,9 @@
     {
       "path": "scripts/uiux_preservation_e2e.py",
       "role": "maps each preservation-matrix row to the walk, test, route and control that proves it",
-      "sha256": "2dd79184ca9266ba7e872f70e9fcbe97a670bc69b42c5ef31e46dc7f98549f2b",
-      "bytes": 42885,
-      "lines": 834
+      "sha256": "ebc39cde58a9c8b8e3e6394620c1219c170fb67bb7a7abc3b7e4e3baf3a162d7",
+      "bytes": 43753,
+      "lines": 835
     },
     {
       "path": "tests/test_uiux_preservation_e2e.py",
@@ -418,9 +418,9 @@
     {
       "path": "scripts/uiux_screenshot_review.py",
       "role": "traces every committed capture to the script that made it and checks that the theme in its name is the theme in its pixels",
-      "sha256": "4bfc1d3e5ee430a9eca1d5e2e8656df768f2cf4e1a78348642fddaf23aa78636",
-      "bytes": 73615,
-      "lines": 1393
+      "sha256": "6db58fc2fe43d956cfe92446b13612aa700ca8e89a7b2bcc75de15797001b9a5",
+      "bytes": 76031,
+      "lines": 1427
     },
     {
       "path": "tests/test_uiux_screenshot_review.py",
@@ -432,9 +432,9 @@
     {
       "path": "scripts/uiux_docs_verification.py",
       "role": "checks the README and the onboarding pages against the tree: links, classified commands, and the claims that name a route or a file",
-      "sha256": "9d1cefaaff447b26a10590471f7bc4e24533b1d8363cc286d61fd117af874017",
-      "bytes": 25387,
-      "lines": 508
+      "sha256": "35b4d07f77acc9e8d3b55c0df969c54527bebbb287efe6e895095780790b7096",
+      "bytes": 25736,
+      "lines": 510
     },
     {
       "path": "tests/test_uiux_docs_verification.py",
@@ -460,8 +460,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "4765fda1538fdc08994c15a37a452d4e0a2c6a3296509cd88eccdc49d72ac1ce",
-    "lines": 16385,
+    "sha256": "8558d2b589d7373ed1519f559b0da44b7ffd6fe95331d10ab85dcf254b31a200",
+    "lines": 16749,
     "tab_count": 6,
     "tabs": [
       {
@@ -550,8 +550,6 @@
       "/api/models/unload-all",
       "/api/models/{param}/load",
       "/api/models/{param}/{param}",
-      "/api/onboarding/preflight",
-      "/api/onboarding/preflight?probe=local",
       "/api/opencontext/docs",
       "/api/opencontext/docs/{param}",
       "/api/opencontext/lint",
@@ -561,6 +559,8 @@
       "/api/providers/{param}",
       "/api/skills",
       "/api/skills/install",
+      "/api/start/command-center",
+      "/api/start/command-center?{param}",
       "/api/telemetry",
       "/api/workspace/directory",
       "/api/workspace/files"
@@ -568,11 +568,11 @@
   },
   "api": {
     "path": "app.py",
-    "sha256": "28991bc7295ccdcaeb35a6bc720f3d6379c5865907508e2db0556b8f389e1ff1",
-    "route_count": 117,
+    "sha256": "11601f3c9efbc4c55d90171b286c1452e1e8d1100025cd1d0a0e1a422f82c999",
+    "route_count": 118,
     "by_method": {
       "DELETE": 7,
-      "GET": 38,
+      "GET": 39,
       "PATCH": 3,
       "POST": 69
     },
@@ -588,6 +588,10 @@
       {
         "method": "GET",
         "path": "/api/onboarding/preflight"
+      },
+      {
+        "method": "GET",
+        "path": "/api/start/command-center"
       },
       {
         "method": "GET",
