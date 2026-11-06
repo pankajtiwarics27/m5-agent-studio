@@ -15,14 +15,24 @@ from __future__ import annotations
 import asyncio
 import re
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from types import MappingProxyType
 from typing import Any, Literal, Protocol
 
-from local_provider_adapters import LocalRuntimeSnapshot
+from execution_budget import ExecutionCancelled
+from local_provider_adapters import MONEYPRINTER_GATEWAY_CAPABILITIES, LocalRuntimeSnapshot
 from model_registry import ModelDescriptor, ModelRegistry
 
 InstallObservationStatus = Literal["installed", "already_present", "not_installed"]
+
+# Runtimes that act as capability gateways over delegated backends rather than
+# serving model weights themselves. Descriptors discovered from these runtimes
+# additionally advertise the gateway capability surface, so downstream
+# negotiation can route script-generation/speech-synthesis work through the
+# gateway even when the endpoint does not declare those capabilities itself.
+GATEWAY_RUNTIME_CAPABILITIES: Mapping[str, tuple[str, ...]] = MappingProxyType(
+    {"moneyprinter": MONEYPRINTER_GATEWAY_CAPABILITIES}
+)
 
 # Runtimes whose native CLI performs model installation. Other runtimes manage
 # models through their own import flows, so app-driven install is refused.
@@ -49,6 +59,28 @@ def _text(value: object, field: str) -> str:
     if any(ord(char) < 32 or ord(char) == 127 for char in result):
         raise ModelDiscoveryError(f"{field} must not contain control characters.")
     return result
+
+
+def gateway_capabilities(runtime: str) -> tuple[str, ...]:
+    """Return the declared gateway capability surface for a runtime.
+
+    Returns an empty tuple for runtimes that are not capability gateways. The
+    tags are a static declaration, not a live probe: they describe what the
+    gateway is expected to route, and discovery merges them into any descriptor
+    the runtime reports.
+    """
+    runtime = _text(runtime, "runtime")
+    return GATEWAY_RUNTIME_CAPABILITIES.get(runtime, ())
+
+
+def _with_gateway_capabilities(descriptor: ModelDescriptor) -> ModelDescriptor:
+    declared = GATEWAY_RUNTIME_CAPABILITIES.get(descriptor.runtime)
+    if not declared:
+        return descriptor
+    merged = tuple(sorted(set(descriptor.capabilities) | set(declared)))
+    if merged == descriptor.capabilities:
+        return descriptor
+    return replace(descriptor, capabilities=merged)
 
 
 def _model_reference(value: object, field: str = "model_reference") -> str:
@@ -149,6 +181,10 @@ async def _safe_discover(source: DiscoverySource) -> LocalRuntimeSnapshot:
         snapshot = await source.discover()
     except asyncio.CancelledError:
         raise
+    except ExecutionCancelled:
+        # A cancelled execution budget must abort the fan-out, not be folded
+        # into a generic "discovery failed" snapshot.
+        raise
     except Exception:
         # One failing runtime must not sink the fan-out; report a safe,
         # fixed-category error without embedding upstream exception text.
@@ -183,6 +219,7 @@ async def discover_models(sources: Sequence[DiscoverySource]) -> ModelCatalog:
         snapshot = by_runtime[runtime_name]
         per_runtime: dict[tuple[str, str], ModelDescriptor] = {}
         for descriptor in snapshot.models:
+            descriptor = _with_gateway_capabilities(descriptor)
             key = (descriptor.model_id, descriptor.digest)
             existing = per_runtime.get(key)
             if existing is not None and existing != descriptor:

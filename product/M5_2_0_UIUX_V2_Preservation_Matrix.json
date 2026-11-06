@@ -8,10 +8,10 @@
   "check_with": "python3 scripts/uiux_v2_preservation_matrix.py --check",
   "statement": "Control -> DOM handler -> API route -> test coverage for every interactive control in static/index.html, plus the three UIV2-02 contract investigations. api_status is existing when every call the handler makes resolves to a mounted @app route, absent-route when a call matches no mounted route, unknown when the resolver left an edge open, no-api for handlers that never fetch, and no-handler for controls without an inline handler. The contracts distinguish existing / partial / absent / unknown and cite file evidence; the generator hard-fails if the sources drift from the classification, so --check is a gate.",
   "pinned_source_commit": "9a584a36f1fbe29ba467562dd12a705626769f00",
-  "frontend_sha256": "77e8a67248be9932a33bcea6e06e11f3fe2e0f19a30577de931da3ebbcf90df8",
-  "app_sha256": "56c42245e5f3e00dc18bd38425b4ec922b1f6a3135e51009d0b8e1914a62fdac",
+  "frontend_sha256": "ef75ce6bb371344dbe9286327334a5737e227c8dc972c2ed89bcd531454cf382",
+  "app_sha256": "d83c846921babaccd1a44baef9372cacbafb3e4224fd1463eda0d2829a7fca4f",
   "totals": {
-    "controls": 208,
+    "controls": 221,
     "by_pane": {
       "start": 11,
       "harness": 30,
@@ -20,11 +20,11 @@
       "debate": 10,
       "chat": 12
     },
-    "chrome_controls": 109,
+    "chrome_controls": 122,
     "api_status_counts": {
       "existing": 33,
-      "no-api": 95,
-      "no-handler": 80
+      "no-api": 113,
+      "no-handler": 75
     },
     "mounted_routes": 117,
     "fetch_call_sites": 68
@@ -1569,6 +1569,16 @@
     },
     {
       "pane": "chrome",
+      "id": "mcpHubSearch",
+      "tag": "input",
+      "text": null,
+      "handler": "renderMcpHub",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
       "id": null,
       "tag": "button",
       "text": "Refresh",
@@ -1583,7 +1593,9 @@
       "api_status": "existing",
       "tests": [
         "test_demo_tour.py",
-        "test_durable_intent_ledger.py"
+        "test_durable_intent_ledger.py",
+        "test_mcp_hub.py",
+        "test_mcp_wizard.py"
       ]
     },
     {
@@ -1598,12 +1610,92 @@
     },
     {
       "pane": "chrome",
-      "id": "mcpAlias",
-      "tag": "input",
-      "text": null,
+      "id": "mcpTabCatalog",
+      "tag": "button",
+      "text": "Catalog 0",
+      "handler": "switchMcpTab",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "mcpTabConnected",
+      "tag": "button",
+      "text": "Connected 0",
+      "handler": "switchMcpTab",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "mcpTabActivity",
+      "tag": "button",
+      "text": "Activity 0",
+      "handler": "switchMcpTab",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "summary",
+      "text": "Add or edit a serverPick a catalog card to prefill, or enter your own.",
       "handler": null,
       "calls": [],
       "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "mcpWizardTab1",
+      "tag": "button",
+      "text": "1Server",
+      "handler": "mcpWizardGo",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "mcpWizardTab2",
+      "tag": "button",
+      "text": "2Transport & credentials",
+      "handler": "mcpWizardGo",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "mcpWizardTab3",
+      "tag": "button",
+      "text": "3Policy & consent",
+      "handler": "mcpWizardGo",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "mcpWizardTab4",
+      "tag": "button",
+      "text": "4Review & connect",
+      "handler": "mcpWizardGo",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "mcpAlias",
+      "tag": "input",
+      "text": null,
+      "handler": "syncMcpEditorState",
+      "calls": [],
+      "api_status": "no-api",
       "tests": []
     },
     {
@@ -1620,7 +1712,7 @@
       "pane": "chrome",
       "id": "mcpTransport",
       "tag": "select",
-      "text": "Cloud / Custom HTTP (URL) Custom Stdio Command",
+      "text": "Remote server over HTTP (URL) Local command over stdio",
       "handler": "toggleMcpTransportFields",
       "calls": [],
       "api_status": "no-api",
@@ -1628,22 +1720,12 @@
     },
     {
       "pane": "chrome",
-      "id": "mcpApprovalPolicy",
-      "tag": "select",
-      "text": "Auto-Run (Trusted Read/Search) Inherit Harness Policy Always Ask Human Approval",
-      "handler": null,
-      "calls": [],
-      "api_status": "no-handler",
-      "tests": []
-    },
-    {
-      "pane": "chrome",
       "id": "mcpUrl",
       "tag": "input",
       "text": null,
-      "handler": null,
+      "handler": "mcpWizardRefresh",
       "calls": [],
-      "api_status": "no-handler",
+      "api_status": "no-api",
       "tests": []
     },
     {
@@ -1651,9 +1733,9 @@
       "id": "mcpAuthHeader",
       "tag": "select",
       "text": "Authorization: Bearer x-api-key None (Zero-Key)",
-      "handler": null,
+      "handler": "mcpWizardRefresh",
       "calls": [],
-      "api_status": "no-handler",
+      "api_status": "no-api",
       "tests": []
     },
     {
@@ -1661,6 +1743,36 @@
       "id": "mcpToken",
       "tag": "input",
       "text": null,
+      "handler": "mcpWizardRefresh",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "mcpCommand",
+      "tag": "input",
+      "text": null,
+      "handler": "mcpWizardRefresh",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "mcpArgs",
+      "tag": "input",
+      "text": null,
+      "handler": "mcpWizardRefresh",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "summary",
+      "text": "Advanced: raw headers and environment JSON",
       "handler": null,
       "calls": [],
       "api_status": "no-handler",
@@ -1669,26 +1781,6 @@
     {
       "pane": "chrome",
       "id": "mcpHeadersJson",
-      "tag": "input",
-      "text": null,
-      "handler": null,
-      "calls": [],
-      "api_status": "no-handler",
-      "tests": []
-    },
-    {
-      "pane": "chrome",
-      "id": "mcpCommand",
-      "tag": "input",
-      "text": null,
-      "handler": null,
-      "calls": [],
-      "api_status": "no-handler",
-      "tests": []
-    },
-    {
-      "pane": "chrome",
-      "id": "mcpArgs",
       "tag": "input",
       "text": null,
       "handler": null,
@@ -1708,9 +1800,29 @@
     },
     {
       "pane": "chrome",
+      "id": "mcpApprovalPolicy",
+      "tag": "select",
+      "text": "Auto-Run (Trusted Read/Search) Inherit Harness Policy Always Ask Human Approval",
+      "handler": "mcpWizardRefresh",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "mcpStdioConsent",
+      "tag": "input",
+      "text": null,
+      "handler": "mcpWizardRefresh",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
       "id": "mcpSaveBtn",
       "tag": "button",
-      "text": "Save & Sync Tools",
+      "text": "Save & test connection",
       "handler": "saveMcpServer",
       "calls": [
         {
@@ -1722,14 +1834,36 @@
       "api_status": "existing",
       "tests": [
         "test_demo_tour.py",
-        "test_durable_intent_ledger.py"
+        "test_durable_intent_ledger.py",
+        "test_mcp_hub.py",
+        "test_mcp_wizard.py"
       ]
+    },
+    {
+      "pane": "chrome",
+      "id": "mcpWizardBack",
+      "tag": "button",
+      "text": "Back",
+      "handler": "mcpWizardBack",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "mcpWizardNext",
+      "tag": "button",
+      "text": "Continue",
+      "handler": "mcpWizardNext",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
     },
     {
       "pane": "chrome",
       "id": null,
       "tag": "summary",
-      "text": "Paste mcpServers JSON Config (Claude Desktop / Cursor / Windsurf Format)",
+      "text": "Paste mcpServers JSONClaude Desktop / Cursor / Windsurf format",
       "handler": null,
       "calls": [],
       "api_status": "no-handler",
@@ -1759,7 +1893,9 @@
         }
       ],
       "api_status": "existing",
-      "tests": []
+      "tests": [
+        "test_mcp_hub.py"
+      ]
     },
     {
       "pane": "chrome",
@@ -1807,7 +1943,9 @@
       "api_status": "existing",
       "tests": [
         "test_demo_tour.py",
-        "test_durable_intent_ledger.py"
+        "test_durable_intent_ledger.py",
+        "test_mcp_hub.py",
+        "test_mcp_wizard.py"
       ]
     },
     {
@@ -2572,7 +2710,7 @@
       "classification": "present_registry__picker_rendered_from_it",
       "picker": {
         "status": "rendered_from_registry",
-        "evidence": "select#chatPersona at static/index.html:3063 ships no <option>; renderChatPersonaPicker() fills it from CHAT_PERSONAS on load and on every filter",
+        "evidence": "select#chatPersona at static/index.html:3241 ships no <option>; renderChatPersonaPicker() fills it from CHAT_PERSONAS on load and on every filter",
         "option_source": "CHAT_PERSONAS"
       },
       "registry": {

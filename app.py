@@ -1898,6 +1898,16 @@ PROVIDER_PRESETS: dict[str, dict[str, Any]] = {
         "default_models": ["free-stack", "cc/claude-sonnet-4-5", "gc/gemini-2.5-pro"],
         "notes": "Connects to a local OmniRoute instance (:20128) to unlock OAuth & 150+ free providers.",
     },
+    "moneyprinterapi": {
+        "name": "MoneyPrinterAPI",
+        "wire": "openai",
+        "tier": "gateway",
+        "base_url": "http://localhost:8080/v1",
+        "env_key": "MONEYPRINTER_API_KEY",
+        "requires_key": False,
+        "default_models": ["moneyprinter-gateway"],
+        "notes": "Local MoneyPrinterTurbo gateway on :8080. Routes script/term generation through the LLM backend configured in MoneyPrinterTurbo's config.toml (e.g. Qwen/DeepSeek over an OpenAI-compatible endpoint) and speech synthesis through its configured TTS provider; rendering runs through the MoneyPrinterTurbo pipeline itself. Stock MoneyPrinterTurbo serves a native REST API under /api/v1 — the /v1 OpenAI surface expects an OpenAI-compatible shim or gateway in front of it.",
+    },
     "openrouter": {
         "name": "OpenRouter (Free + Frontier)",
         "wire": "openai",
@@ -2043,6 +2053,28 @@ PROVIDER_PRESETS: dict[str, dict[str, Any]] = {
         "notes": "Zero API key required — anonymous free cloud endpoint (great for quick fallback tests).",
     },
 }
+
+# Builtin loopback gateway presets that may bypass the private-network outbound
+# block *only* when the caller's (alias, base_url) pair matches the preset
+# exactly. Deliberately an explicit set — a third-party provider must never
+# inherit this pin, and a tampered base_url never qualifies.
+_BUILTIN_LOCAL_GATEWAY_ALIASES = frozenset({"omniroute", "moneyprinterapi"})
+
+
+def _is_builtin_local_gateway(alias: object, base_url: object) -> bool:
+    """True when ``alias`` names a builtin loopback gateway and ``base_url`` matches its preset exactly."""
+    if not isinstance(alias, str) or not isinstance(base_url, str):
+        return False
+    if alias not in _BUILTIN_LOCAL_GATEWAY_ALIASES:
+        return False
+    preset = PROVIDER_PRESETS.get(alias)
+    if not preset:
+        return False
+    preset_url = str(preset.get("base_url", "")).strip().rstrip("/")
+    if base_url.strip().rstrip("/") != preset_url:
+        return False
+    return (urlsplit(preset_url).hostname or "").lower().rstrip(".") in ("localhost", "127.0.0.1", "::1")
+
 
 AGENT_ROLES: dict[str, dict[str, str]] = {
     "architect": {
@@ -3925,7 +3957,7 @@ async def api_fetch_provider_models(request: Request) -> JSONResponse:
             headers["Authorization"] = f"Bearer {raw_key}"
 
     try:
-        await _validate_outbound_url(base_url, allow_private=(alias == "omniroute" and base_url == PROVIDER_PRESETS["omniroute"]["base_url"]))
+        await _validate_outbound_url(base_url, allow_private=_is_builtin_local_gateway(alias, base_url))
         r = await client.get(f"{base_url}/models", headers=headers, timeout=10.0)
         if r.status_code == 200:
             data = r.json()
@@ -4042,7 +4074,7 @@ async def _stream_cloud_openai(
     finish_reason = "stop"
     usage_sent = False
 
-    await _validate_outbound_url(provider["base_url"], allow_private=(provider.get("alias") == "omniroute" and provider["base_url"] == PROVIDER_PRESETS["omniroute"]["base_url"]))
+    await _validate_outbound_url(provider["base_url"], allow_private=_is_builtin_local_gateway(provider.get("alias"), provider.get("base_url")))
     async with client.stream("POST", f"{provider['base_url']}/chat/completions", headers=headers, json=body) as resp:
         _reject_redirect_response(resp, f"{provider['base_url']}/chat/completions")
         if resp.status_code >= 400:
@@ -4163,7 +4195,7 @@ async def _stream_cloud_anthropic(
     finish_reason = "stop"
     provider_alias = str(provider.get("alias") or "anthropic")
 
-    await _validate_outbound_url(provider["base_url"], allow_private=(provider.get("alias") == "omniroute" and provider["base_url"] == PROVIDER_PRESETS["omniroute"]["base_url"]))
+    await _validate_outbound_url(provider["base_url"], allow_private=_is_builtin_local_gateway(provider.get("alias"), provider.get("base_url")))
     async with client.stream("POST", f"{provider['base_url']}/messages", headers=headers, json=body) as resp:
         _reject_redirect_response(resp, f"{provider['base_url']}/messages")
         if resp.status_code >= 400:

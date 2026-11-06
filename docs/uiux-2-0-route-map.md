@@ -6,7 +6,7 @@ functions and structural route candidates, derived from the inline script and th
 route table, not from handler names.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4`.
-* Frontend digest: `ef75ce6bb371344d…` · `app.py` digest: `56c42245e5f3e00d…`.
+* Frontend digest: `ef75ce6bb371344d…` · `app.py` digest: `d83c846921babacc…`.
 * 68 call sites resolve to 76 URLs — exact: 74, dynamic URL: 2, unknown method: 0, forwarded through a helper: 1, findings: 0, unresolved sites: 0, unresolved edges: 0 (0 method).
 * 117 routes exist; 71 have a resolved or possible caller (62 unique structural matches, 9 only possible candidates); 46 have none observed and 0 are unknown due to unresolved edges.
 

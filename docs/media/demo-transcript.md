@@ -35,7 +35,7 @@ Provider presets ship with the app, but a preset is only a description. An empty
 
 `GET /api/providers` -> 200
 
-Observed: 13 provider presets are described locally and 0 are configured; the demo configures none, so no key is read or sent
+Observed: 14 provider presets are described locally and 0 are configured; the demo configures none, so no key is read or sent
 
 ## 3. Create a combo
 
