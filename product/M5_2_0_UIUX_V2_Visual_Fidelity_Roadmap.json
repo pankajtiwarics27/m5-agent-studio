@@ -2052,7 +2052,7 @@
         "attempt_count": 1,
         "started_at": "2026-11-06T14:00:00+05:30",
         "completed_at": "2026-11-06T20:45:00+05:30",
-        "commit_sha": null,
+        "commit_sha": "8b857938005379e9e3889cf6883a4b515d26ff7f",
         "changed_files": [
           "static/index.html (Chat: `--chat-column: 820px` in `:root`; the transcript, its bar and the composer take that column with `padding-inline: max(20px, calc((100% - var(--chat-column)) / 2))`; the control bar stays chrome at the pane's width, one row above 1200px and three rows on a phone; the composer is sticky with a safe-area inset and a keyboard scroll margin; `.msg` gains `min-width: 0` and `overflow-wrap: anywhere` with in-bubble scrolling for `pre` and tables; the empty state is one short sentence, said the same way by the markup and by `renderChatMessages`)",
           "studio.py (built from the above by scripts/build_studio.py)",
