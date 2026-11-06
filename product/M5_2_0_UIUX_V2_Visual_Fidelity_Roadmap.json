@@ -2879,10 +2879,10 @@
       "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
       "agent_prompt": "Implement UIV2-25: Pipeline stage-focused workspace and artifacts. Required outcome: Four stages presented as useful timeline with selected-stage detail, logs, artifacts and recovery; no empty expanse below stage strip. Specific gate: Current 4-stage model/controls preserved; selected stage has meaningful states; failures/retry and checkpoints visible; no fake progress; no new backend stage invented. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempt_count": 0,
-        "started_at": null,
+        "status": "in_progress",
+        "progress_percent": 5,
+        "attempt_count": 1,
+        "started_at": "2026-11-06T21:08:47Z",
         "completed_at": null,
         "commit_sha": null,
         "changed_files": [],
@@ -2891,8 +2891,9 @@
         "acceptance_evidence": [],
         "known_regressions": [],
         "blockers": [],
-        "handoff_summary": "",
-        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+        "handoff_summary": "Claimed UIV2-25 at 605b977 (current origin/main). Derived counters repaired separately; baseline reproduction and pre-change captures are next.",
+        "exact_next_action": "Capture the untouched Pipeline empty state and stage/artifact/recovery controls from the running app, then implement the selected-stage workspace without changing the four-stage API model.",
+        "updated_at": "2026-11-06T21:08:47Z"
       }
     },
     {
@@ -3374,9 +3375,9 @@
       "name": "MCP hub and Start/Pipeline refinement",
       "total": 5,
       "done": 4,
-      "in_progress": 0,
+      "in_progress": 1,
       "blocked": 0,
-      "not_started": 1,
+      "not_started": 0,
       "percent_complete": 80
     },
     {
@@ -3393,9 +3394,9 @@
   "progress": {
     "total": 30,
     "done": 24,
-    "in_progress": 0,
+    "in_progress": 1,
     "blocked": 0,
-    "not_started": 6,
+    "not_started": 5,
     "percent_complete": 80
   },
   "session_recovery_protocol": [
