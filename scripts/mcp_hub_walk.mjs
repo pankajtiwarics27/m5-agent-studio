@@ -393,6 +393,20 @@ const addServer = async (page, config) => {
     await fill(page, "mcpArgs", config.args || "");
     await fill(page, "mcpEnvJson", "");
   }
+  // UIV2-22 replaced the one form with a four-step guide: this walk still drives the hub, so it
+  // walks the guide to its last step (and gives a local command the consent the guide now asks
+  // for) before pressing save. The pre-wizard dialog has no steps, and the guard skips it there.
+  await page.evaluate((transport) => {
+    if (typeof mcpWizardGo !== "function") return;
+    if (transport === "stdio") {
+      const consent = document.getElementById("mcpStdioConsent");
+      if (consent) {
+        consent.checked = true;
+        consent.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    }
+    mcpWizardGo(4, { focus: false });
+  }, config.transport || "http");
   await clickText(page, "#mcpSaveBtn", "Save");
   await page.waitForFunction(
     (alias) => {
@@ -402,8 +416,7 @@ const addServer = async (page, config) => {
       const row = document.querySelector(`#configuredMcpServersList [data-mcp-server="${alias}"]`);
       // Pre-hub rows print the display name only; the alias lives in their onclick handlers.
       const byText = Boolean(list) && (list.innerHTML || "").includes(alias);
-      return Boolean(row || byText)
-        && document.getElementById("mcpSaveBtn").textContent.trim() === "Save & Sync Tools";
+      return Boolean(row || byText) && document.getElementById("mcpSaveBtn").disabled === false;
     },
     { timeout: 120000 },
     config.alias,

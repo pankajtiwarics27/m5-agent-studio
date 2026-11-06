@@ -1577,6 +1577,50 @@ details.think-box pre { border-color: var(--border); font-size: 12px; }
 #providersModal .modal > div:first-child, #skillsModal .modal > div:first-child,
 #sdlcModal .modal > div:first-child, #externalHarnessModal .modal > div:first-child { flex-shrink: 0; }
 
+/* UIV2-22: connecting a server is a four-step guide - name it, say how it is reached, decide what
+   a call costs, then review and test. The raw headers/environment JSON lives behind one advanced
+   disclosure so the guided path never asks anyone to hand-write JSON. */
+.mcp-wizard { display: flex; flex-direction: column; gap: 12px; }
+.mcp-wizard-rail { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.mcp-wizard-steps { display: flex; gap: 6px; list-style: none; margin: 0; padding: 0; flex-wrap: wrap; }
+.mcp-wizard-stepbtn { display: inline-flex; align-items: center; gap: 6px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-pill); color: var(--text-dim); font-family: var(--sans); font-size: 11.6px; padding: 3px 9px; cursor: pointer; }
+.mcp-wizard-step[aria-current="step"] .mcp-wizard-stepbtn { color: var(--text); border-color: var(--accent); background: var(--bg-hover); }
+.mcp-wizard-step.done .mcp-wizard-stepbtn { color: var(--text); border-color: var(--border-hi); }
+.mcp-wizard-num { font-family: var(--mono); font-size: 10.6px; color: var(--text-faint); }
+.mcp-wizard-step[aria-current="step"] .mcp-wizard-num { color: var(--text); }
+.mcp-wizard-progress { font-size: 11.2px; color: var(--text-faint); }
+.mcp-wizard-panel { display: flex; flex-direction: column; gap: 8px; }
+.mcp-wizard-panel[hidden] { display: none; }
+.mcp-wizard-heading { font-size: 12.8px; margin: 0; color: var(--text); align-self: flex-start; }
+.mcp-wizard-heading:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: var(--radius-sm); }
+.mcp-wizard [hidden] { display: none !important; }
+.mcp-wizard-grid { display: grid; gap: 8px; }
+.mcp-wizard-grid.two { grid-template-columns: 1fr 1.4fr; }
+.mcp-wizard-grid.three { grid-template-columns: 1.6fr 0.9fr 1.2fr; }
+.mcp-advanced { background: var(--bg); border: 1px dashed var(--border); border-radius: var(--radius-sm); padding: 7px 9px; }
+.mcp-advanced summary { cursor: pointer; font-size: 11.6px; color: var(--text-dim); }
+.mcp-consent { display: flex; gap: 8px; align-items: flex-start; font-size: 11.8px; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; }
+.mcp-consent[hidden] { display: none; }
+.mcp-consent input[type="checkbox"] { flex: 0 0 auto; width: 15px; height: 15px; min-height: 0; margin: 2px 0 0; padding: 0; accent-color: var(--accent); }
+.mcp-wizard-nav #mcpWizardHint:not(:empty) { color: var(--amber); }
+.mcp-consent.required { border-color: var(--amber); }
+.mcp-review { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 5px 12px; margin: 0; font-size: 11.8px; }
+.mcp-review dt { color: var(--text-faint); }
+.mcp-review dd { margin: 0; color: var(--text); overflow-wrap: anywhere; }
+.mcp-wizard-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.mcp-wizard-result { font-size: 11.8px; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 9px 10px; background: var(--bg); color: var(--text-dim); }
+.mcp-wizard-result[data-state="ok"] { border-color: var(--emerald); color: var(--emerald); }
+.mcp-wizard-result[data-state="failed"] { border-color: var(--rose); color: var(--rose); }
+.mcp-wizard-result[data-state="testing"] { color: var(--text-dim); }
+.mcp-wizard-result[hidden] { display: none; }
+.mcp-wizard-confirm { font-size: 11.8px; color: var(--text); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.mcp-wizard-confirm[hidden] { display: none; }
+.mcp-wizard-nav { display: flex; gap: 8px; align-items: center; border-top: 1px solid var(--border); padding-top: 10px; flex-wrap: wrap; }
+.mcp-wizard-nav #mcpWizardHint { flex: 1 1 200px; }
+@media (max-width: 880px) {
+  .mcp-wizard-grid.two, .mcp-wizard-grid.three { grid-template-columns: minmax(0, 1fr); }
+}
+
 /* UIV2-21: the MCP surface is a hub with Catalog / Connected / Activity tabs, so the
    dialog never asks anyone to scroll through presets, the whole config form, the
    importer, the server list and the playground in one column. */
@@ -2101,62 +2145,111 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       <section id="mcpPanelConnected" class="mcp-hub-panel" role="tabpanel" aria-labelledby="mcpTabConnected" tabindex="0" hidden>
         <details class="mcp-hub-card mcp-editor" id="mcpEditor">
           <summary class="mcp-hub-cardhead">Add or edit a server<span class="mcp-hub-cardsub" id="mcpEditorState">Pick a catalog card to prefill, or enter your own.</span></summary>
-          <div class="mcp-editor-body">
-            <div style="display:grid; grid-template-columns:1fr 1.4fr 1fr 1.2fr; gap:8px; margin-bottom:8px;">
-              <div><label class="field-lbl" for="mcpAlias">Server Alias</label><input type="text" id="mcpAlias" style="width:100%; font-family:var(--mono);" placeholder="context7" oninput="syncMcpEditorState()" /></div>
-              <div><label class="field-lbl" for="mcpName">Display Name</label><input type="text" id="mcpName" style="width:100%;" placeholder="Context7 Live Docs" /></div>
-              <div>
-                <label class="field-lbl" for="mcpTransport">Transport</label>
-                <select id="mcpTransport" style="width:100%;" onchange="toggleMcpTransportFields()">
-                  <option value="http">Cloud / Custom HTTP (URL)</option>
-                  <option value="stdio">Custom Stdio Command</option>
-                </select>
-              </div>
-              <div>
-                <label class="field-lbl" for="mcpApprovalPolicy">Approval Policy</label>
-                <select id="mcpApprovalPolicy" style="width:100%;">
-                  <option value="auto">Auto-Run (Trusted Read/Search)</option>
-                  <option value="inherit">Inherit Harness Policy</option>
-                  <option value="always_ask">Always Ask Human Approval</option>
-                </select>
+          <div class="mcp-editor-body mcp-wizard">
+            <div class="mcp-wizard-rail">
+              <ol class="mcp-wizard-steps" id="mcpWizardSteps">
+                <li class="mcp-wizard-step" data-wizard-step="1" aria-current="step"><button type="button" class="mcp-wizard-stepbtn" id="mcpWizardTab1" onclick="mcpWizardGo(1)"><span class="mcp-wizard-num">1</span>Server</button></li>
+                <li class="mcp-wizard-step" data-wizard-step="2"><button type="button" class="mcp-wizard-stepbtn" id="mcpWizardTab2" onclick="mcpWizardGo(2)"><span class="mcp-wizard-num">2</span>Transport &amp; credentials</button></li>
+                <li class="mcp-wizard-step" data-wizard-step="3"><button type="button" class="mcp-wizard-stepbtn" id="mcpWizardTab3" onclick="mcpWizardGo(3)"><span class="mcp-wizard-num">3</span>Policy &amp; consent</button></li>
+                <li class="mcp-wizard-step" data-wizard-step="4"><button type="button" class="mcp-wizard-stepbtn" id="mcpWizardTab4" onclick="mcpWizardGo(4)"><span class="mcp-wizard-num">4</span>Review &amp; connect</button></li>
+              </ol>
+              <div class="mcp-wizard-progress" id="mcpWizardProgress" role="status" aria-live="polite">Step 1 of 4 · Server</div>
+            </div>
+
+            <div class="mcp-wizard-panel" id="mcpStep1" data-wizard-step="1" role="group" aria-labelledby="mcpWizardHeading">
+              <h4 class="mcp-wizard-heading" id="mcpWizardHeading" tabindex="-1">Name the server</h4>
+              <p class="mcp-hub-hint">A catalog card fills this in. The harness calls each tool <code>mcp__alias__tool</code>, so the alias has to be short, unique and stable.</p>
+              <div class="mcp-wizard-grid two">
+                <div><label class="field-lbl" for="mcpAlias">Server Alias</label><input type="text" id="mcpAlias" style="width:100%; font-family:var(--mono);" placeholder="context7" oninput="syncMcpEditorState()" /></div>
+                <div><label class="field-lbl" for="mcpName">Display Name</label><input type="text" id="mcpName" style="width:100%;" placeholder="Context7 Live Docs" /></div>
               </div>
             </div>
 
-            <!-- HTTP Transport Fields -->
-            <div id="mcpHttpFields">
-              <div style="display:grid; grid-template-columns:1.8fr 0.9fr 1.2fr; gap:8px; margin-bottom:8px;">
-                <div><label class="field-lbl" for="mcpUrl">Remote / Custom MCP URL</label><input type="text" id="mcpUrl" style="width:100%; font-family:var(--mono);" placeholder="https://mcp.context7.com/mcp" /></div>
+            <div class="mcp-wizard-panel" id="mcpStep2" data-wizard-step="2" role="group" aria-labelledby="mcpWizardHeading2" hidden>
+              <h4 class="mcp-wizard-heading" id="mcpWizardHeading2" tabindex="-1">Say how it is reached</h4>
+              <div class="mcp-wizard-grid two">
                 <div>
-                  <label class="field-lbl" for="mcpAuthHeader">Auth Header</label>
-                  <select id="mcpAuthHeader" style="width:100%;">
-                    <option value="Authorization">Authorization: Bearer</option>
-                    <option value="x-api-key">x-api-key</option>
-                    <option value="none">None (Zero-Key)</option>
+                  <label class="field-lbl" for="mcpTransport">Transport</label>
+                  <select id="mcpTransport" style="width:100%;" onchange="toggleMcpTransportFields()">
+                    <option value="http">Remote server over HTTP (URL)</option>
+                    <option value="stdio">Local command over stdio</option>
                   </select>
                 </div>
-                <div><label class="field-lbl" for="mcpToken">API Token (Masked; blank keeps existing)</label><input type="password" id="mcpToken" style="width:100%; font-family:var(--mono);" placeholder="Optional for free servers" /></div>
+                <div id="mcpTransportEffect" class="mcp-hub-hint"></div>
               </div>
-              <div style="margin-bottom:8px;">
-                <label class="field-lbl" for="mcpHeadersJson">Extra HTTP Headers JSON (Optional)</label>
-                <input type="text" id="mcpHeadersJson" style="width:100%; font-family:var(--mono); font-size:11.6px;" placeholder='{"X-Workspace": "prod"}' />
+
+              <!-- HTTP Transport Fields -->
+              <div id="mcpHttpFields">
+                <div class="mcp-wizard-grid three">
+                  <div><label class="field-lbl" for="mcpUrl">Remote / Custom MCP URL</label><input type="text" id="mcpUrl" style="width:100%; font-family:var(--mono);" placeholder="https://mcp.context7.com/mcp" oninput="mcpWizardRefresh()" /></div>
+                  <div>
+                    <label class="field-lbl" for="mcpAuthHeader">Auth Header</label>
+                    <select id="mcpAuthHeader" style="width:100%;" onchange="mcpWizardRefresh()">
+                      <option value="Authorization">Authorization: Bearer</option>
+                      <option value="x-api-key">x-api-key</option>
+                      <option value="none">None (Zero-Key)</option>
+                    </select>
+                  </div>
+                  <div><label class="field-lbl" for="mcpToken">API Token (blank keeps the stored one)</label><input type="password" id="mcpToken" autocomplete="off" spellcheck="false" style="width:100%; font-family:var(--mono);" placeholder="Optional for free servers" oninput="mcpWizardRefresh()" /></div>
+                </div>
+                <p class="mcp-hub-hint">The token is sent once, stored by the server's credential store, and only ever shown back as a mask. It is never written to this page's DOM, a log or the review below.</p>
               </div>
+
+              <!-- Stdio Transport Fields -->
+              <div id="mcpStdioFields" style="display:none;">
+                <div class="mcp-wizard-grid two">
+                  <div><label class="field-lbl" for="mcpCommand">Executable Command</label><input type="text" id="mcpCommand" style="width:100%; font-family:var(--mono);" placeholder="python3, uv, npx, uvx, docker" oninput="mcpWizardRefresh()" /></div>
+                  <div><label class="field-lbl" for="mcpArgs">Arguments (Shell-quoted or space-separated)</label><input type="text" id="mcpArgs" style="width:100%; font-family:var(--mono);" placeholder="-y @playwright/mcp@latest --headless" oninput="mcpWizardRefresh()" /></div>
+                </div>
+              </div>
+
+              <details class="mcp-advanced" id="mcpAdvancedJson">
+                <summary>Advanced: raw headers and environment JSON</summary>
+                <div class="mcp-wizard-grid two" style="margin-top:8px;">
+                  <div><label class="field-lbl" for="mcpHeadersJson">Extra HTTP Headers JSON (Optional)</label><input type="text" id="mcpHeadersJson" style="width:100%; font-family:var(--mono); font-size:11.6px;" placeholder='{"X-Workspace": "prod"}' /></div>
+                  <div><label class="field-lbl" for="mcpEnvJson">Environment Variables JSON (Secrets auto-masked)</label><input type="text" id="mcpEnvJson" style="width:100%; font-family:var(--mono); font-size:11.6px;" placeholder='{"API_KEY": "..."}' /></div>
+                </div>
+                <p class="mcp-hub-hint">Only for servers the guide cannot describe. Values with a sensitive name are stored in the credential store and shown back masked.</p>
+              </details>
             </div>
 
-            <!-- Stdio Transport Fields -->
-            <div id="mcpStdioFields" style="display:none;">
-              <div style="display:grid; grid-template-columns:1fr 2.2fr; gap:8px; margin-bottom:8px;">
-                <div><label class="field-lbl" for="mcpCommand">Executable Command</label><input type="text" id="mcpCommand" style="width:100%; font-family:var(--mono);" placeholder="python3, uv, npx, uvx, docker" /></div>
-                <div><label class="field-lbl" for="mcpArgs">Arguments (Shell-quoted or space-separated)</label><input type="text" id="mcpArgs" style="width:100%; font-family:var(--mono);" placeholder="-y @playwright/mcp@latest --headless" /></div>
+            <div class="mcp-wizard-panel" id="mcpStep3" data-wizard-step="3" role="group" aria-labelledby="mcpWizardHeading3" hidden>
+              <h4 class="mcp-wizard-heading" id="mcpWizardHeading3" tabindex="-1">Choose what a tool call costs you</h4>
+              <div class="mcp-wizard-grid two">
+                <div>
+                  <label class="field-lbl" for="mcpApprovalPolicy">Approval Policy</label>
+                  <select id="mcpApprovalPolicy" style="width:100%;" onchange="mcpWizardRefresh()">
+                    <option value="auto">Auto-Run (Trusted Read/Search)</option>
+                    <option value="inherit">Inherit Harness Policy</option>
+                    <option value="always_ask">Always Ask Human Approval</option>
+                  </select>
+                </div>
+                <div class="mcp-hub-hint" id="mcpPolicyEffect"></div>
               </div>
-              <div style="margin-bottom:8px;">
-                <label class="field-lbl" for="mcpEnvJson">Environment Variables JSON (Secrets auto-masked)</label>
-                <input type="text" id="mcpEnvJson" style="width:100%; font-family:var(--mono); font-size:11.6px;" placeholder='{"API_KEY": "..."}' />
-              </div>
+
+              <label class="mcp-consent" id="mcpConsentRow" hidden>
+                <input type="checkbox" id="mcpStdioConsent" onchange="mcpWizardRefresh()" />
+                <span>I have reviewed <code id="mcpConsentCommand">this command</code> and I want Studio to run it on this machine every time one of its tools is called.</span>
+              </label>
+              <p class="mcp-hub-hint" id="mcpConsentNote">A local command only starts when the server itself has been started with <code>STUDIO_ALLOW_MCP_STDIO=1</code>. This screen records your consent; it cannot grant that permission, and it does not weaken the sandbox.</p>
             </div>
 
-            <div class="mcp-editor-foot">
+            <div class="mcp-wizard-panel" id="mcpStep4" data-wizard-step="4" role="group" aria-labelledby="mcpWizardHeading4" hidden>
+              <h4 class="mcp-wizard-heading" id="mcpWizardHeading4" tabindex="-1">Review, then connect and test</h4>
+              <dl class="mcp-review" id="mcpReviewList"></dl>
               <div id="mcpPresetNote" class="mcp-hub-hint"></div>
-              <button id="mcpSaveBtn" class="btn btn-primary" onclick="saveMcpServer()">Save &amp; Sync Tools</button>
+              <p class="mcp-hub-hint">Connecting saves the server and asks it for its tools in one step: that request is the connection test, and its result appears below.</p>
+              <div class="mcp-wizard-actions">
+                <button id="mcpSaveBtn" class="btn btn-primary" onclick="saveMcpServer()">Save &amp; test connection</button>
+              </div>
+              <div id="mcpWizardResult" class="mcp-wizard-result" role="status" aria-live="polite" hidden></div>
+              <div id="mcpWizardConfirm" class="mcp-wizard-confirm" hidden></div>
+            </div>
+
+            <div class="mcp-wizard-nav">
+              <button type="button" class="btn btn-xs" id="mcpWizardBack" onclick="mcpWizardBack()">Back</button>
+              <button type="button" class="btn btn-xs btn-primary" id="mcpWizardNext" onclick="mcpWizardNext()">Continue</button>
+              <div id="mcpWizardHint" class="mcp-hub-hint" role="status" aria-live="polite"></div>
             </div>
           </div>
         </details>
@@ -14677,7 +14770,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     if (!host) return;
     const alias = document.getElementById("mcpAlias").value.trim();
     if (!alias) {
-      host.textContent = "New server — nothing is saved until you press Save & Sync Tools.";
+      host.textContent = "New server — nothing is saved until you press Save & test connection.";
       return;
     }
     if (mcpServerByAlias(alias)) {
@@ -14687,13 +14780,206 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const preset = mcpPresets[alias];
     host.textContent = preset
       ? `Prefilled from the ${preset.name} card — add a key only if the card asks for one, then save.`
-      : `New server “${alias}” — nothing is saved until you press Save & Sync Tools.`;
+      : `New server “${alias}” — nothing is saved until you press Save & test connection.`;
+    if (typeof mcpWizardRefresh === "function") mcpWizardRefresh();
+  }
+
+  // ---- UIV2-22: connecting a server is a four-step guide, not one form ----
+  let mcpWizardStep = 1;
+  const MCP_WIZARD_STEPS = [
+    { id: 1, label: "Server", heading: "mcpWizardHeading" },
+    { id: 2, label: "Transport and credentials", heading: "mcpWizardHeading2" },
+    { id: 3, label: "Policy and consent", heading: "mcpWizardHeading3" },
+    { id: 4, label: "Review and connect", heading: "mcpWizardHeading4" },
+  ];
+
+  function mcpWizardField(id) { return document.getElementById(id); }
+  function mcpWizardValue(id) {
+    const field = mcpWizardField(id);
+    return field ? String(field.value || "").trim() : "";
+  }
+  function mcpWizardTransport() { return mcpWizardValue("mcpTransport") === "stdio" ? "stdio" : "http"; }
+
+  function mcpPolicyEffect() {
+    const policy = mcpWizardValue("mcpApprovalPolicy") || "inherit";
+    if (policy === "auto") return "Every call runs without asking. Only for servers that read or search and never write.";
+    if (policy === "always_ask") return "Every call waits for your approval in the Harness before it runs.";
+    return "The session's Harness policy decides, and a call may be refused.";
+  }
+
+  function mcpWizardValidate(step) {
+    if (step === 1) {
+      const alias = mcpWizardValue("mcpAlias");
+      if (!alias) return "Give the server an alias first — it names every tool the harness gets.";
+      if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(alias)) return "An alias may only use letters, digits, hyphens and underscores.";
+      return "";
+    }
+    if (step === 2) {
+      if (mcpWizardTransport() === "http") {
+        const url = mcpWizardValue("mcpUrl");
+        if (!url) return "A remote server needs its URL.";
+        if (!/^https?:\/\//i.test(url)) return "The URL must start with https:// (or http:// for a private host).";
+        return "";
+      }
+      return mcpWizardValue("mcpCommand") ? "" : "A local server needs the command that starts it.";
+    }
+    if (step === 3 && mcpWizardTransport() === "stdio") {
+      const consent = mcpWizardField("mcpStdioConsent");
+      if (!consent || !consent.checked) return "Read the command and tick the consent box: this server runs a program on your machine.";
+    }
+    return "";
+  }
+
+  function mcpWizardFocusFor(step) {
+    if (step === 1) return "mcpAlias";
+    if (step === 2) return mcpWizardTransport() === "http" ? "mcpUrl" : "mcpCommand";
+    if (step === 3) return mcpWizardTransport() === "stdio" ? "mcpStdioConsent" : "mcpApprovalPolicy";
+    return "mcpSaveBtn";
+  }
+
+  // Nothing here ever reads the typed token back out: the review says a new token will be stored,
+  // and a stored one is named by the mask the server already sent.
+  function mcpReviewRows() {
+    const stdio = mcpWizardTransport() === "stdio";
+    const alias = mcpWizardValue("mcpAlias");
+    const stored = alias ? mcpServerByAlias(alias) : null;
+    const typedToken = Boolean(mcpWizardField("mcpToken") && mcpWizardField("mcpToken").value);
+    const credential = stdio
+      ? "None — the command's own environment is used"
+      : typedToken
+        ? "A new token will be stored, and only its mask shown"
+        : stored && stored.masked_token
+          ? `The stored token is kept (${stored.masked_token})`
+          : "No token";
+    const consent = stdio
+      ? ((mcpWizardField("mcpStdioConsent") && mcpWizardField("mcpStdioConsent").checked) ? "Given" : "Not given yet")
+      : "Not needed for a remote server";
+    return [
+      ["Alias", alias || "—"],
+      ["Display name", mcpWizardValue("mcpName") || alias || "—"],
+      ["Transport", stdio ? "Local command over stdio" : "Remote server over HTTP"],
+      ["Target", (stdio ? `${mcpWizardValue("mcpCommand")} ${mcpWizardValue("mcpArgs")}` : mcpWizardValue("mcpUrl")).trim() || "—"],
+      ["Credential", credential],
+      ["Approval policy", mcpPolicyLabel(mcpWizardValue("mcpApprovalPolicy"))],
+      ["Local command consent", consent],
+    ];
+  }
+
+  function mcpWizardRefresh() {
+    const stdio = mcpWizardTransport() === "stdio";
+    const effect = mcpWizardField("mcpTransportEffect");
+    if (effect) {
+      effect.textContent = stdio
+        ? "Studio starts this program itself and talks to it over stdin and stdout."
+        : "Studio talks to the server over the URL you give it.";
+    }
+    const policyEffect = mcpWizardField("mcpPolicyEffect");
+    if (policyEffect) policyEffect.textContent = mcpPolicyEffect();
+    const consentChecked = Boolean(mcpWizardField("mcpStdioConsent") && mcpWizardField("mcpStdioConsent").checked);
+    const consentRow = mcpWizardField("mcpConsentRow");
+    if (consentRow) {
+      consentRow.hidden = !stdio;
+      consentRow.classList.toggle("required", stdio && !consentChecked);
+    }
+    const consentNote = mcpWizardField("mcpConsentNote");
+    if (consentNote) consentNote.hidden = !stdio;
+    const command = mcpWizardField("mcpConsentCommand");
+    if (command) command.textContent = `${mcpWizardValue("mcpCommand") || "this command"} ${mcpWizardValue("mcpArgs")}`.trim();
+    const list = mcpWizardField("mcpReviewList");
+    if (list) {
+      list.innerHTML = mcpReviewRows()
+        .map(([term, value]) => `<dt>${escapeHtml(term)}</dt><dd data-review="${escapeHtml(term.toLowerCase())}">${escapeHtml(value)}</dd>`)
+        .join("");
+    }
+    const hint = mcpWizardField("mcpWizardHint");
+    if (hint && hint.dataset.step && !mcpWizardValidate(Number(hint.dataset.step))) {
+      hint.textContent = "";
+      delete hint.dataset.step;
+    }
+  }
+
+  function mcpWizardGo(step, options = {}) {
+    const target = Math.max(1, Math.min(MCP_WIZARD_STEPS.length, Number(step) || 1));
+    mcpWizardStep = target;
+    for (const entry of MCP_WIZARD_STEPS) {
+      const panel = mcpWizardField(`mcpStep${entry.id}`);
+      if (panel) panel.hidden = entry.id !== target;
+      const item = document.querySelector(`#mcpWizardSteps [data-wizard-step="${entry.id}"]`);
+      if (item) {
+        item.setAttribute("aria-current", entry.id === target ? "step" : "false");
+        item.classList.toggle("done", entry.id < target);
+      }
+    }
+    const progress = mcpWizardField("mcpWizardProgress");
+    if (progress) progress.textContent = `Step ${target} of ${MCP_WIZARD_STEPS.length} · ${MCP_WIZARD_STEPS[target - 1].label}`;
+    const back = mcpWizardField("mcpWizardBack");
+    if (back) back.disabled = target === 1;
+    const next = mcpWizardField("mcpWizardNext");
+    if (next) next.hidden = target === MCP_WIZARD_STEPS.length;
+    const hint = mcpWizardField("mcpWizardHint");
+    if (hint) {
+      hint.textContent = "";
+      delete hint.dataset.step;
+    }
+    mcpWizardRefresh();
+    if (options.focus !== false) {
+      const heading = mcpWizardField(MCP_WIZARD_STEPS[target - 1].heading);
+      if (heading) heading.focus({ preventScroll: true });
+    }
+  }
+
+  function mcpWizardProblem(step) {
+    const problem = mcpWizardValidate(step);
+    if (!problem) return "";
+    const hint = mcpWizardField("mcpWizardHint");
+    if (hint) {
+      hint.textContent = problem;
+      hint.dataset.step = String(step);
+    }
+    const field = mcpWizardField(mcpWizardFocusFor(step));
+    if (field) field.focus({ preventScroll: true });
+    return problem;
+  }
+
+  function mcpWizardNext() {
+    if (mcpWizardProblem(mcpWizardStep)) return false;
+    if (mcpWizardStep < MCP_WIZARD_STEPS.length) mcpWizardGo(mcpWizardStep + 1);
+    return true;
+  }
+
+  function mcpWizardBack() { mcpWizardGo(mcpWizardStep - 1); }
+
+  function mcpWizardResult(state, text) {
+    const box = mcpWizardField("mcpWizardResult");
+    if (!box) return;
+    box.hidden = false;
+    box.dataset.state = state;
+    box.textContent = text;
+  }
+
+  function mcpWizardConfirm(html) {
+    const box = mcpWizardField("mcpWizardConfirm");
+    if (!box) return;
+    box.hidden = !html;
+    box.innerHTML = html || "";
+  }
+
+  function mcpWizardDone() {
+    const editor = mcpWizardField("mcpEditor");
+    if (editor) editor.open = false;
+    switchMcpTab("connected");
   }
 
   function openMcpEditor() {
     const editor = document.getElementById("mcpEditor");
     if (editor) editor.open = true;
     switchMcpTab("connected");
+    const result = document.getElementById("mcpWizardResult");
+    if (result) { result.hidden = true; result.textContent = ""; delete result.dataset.state; }
+    mcpWizardConfirm("");
+    const hint = document.getElementById("mcpWizardHint");
+    if (hint) { hint.textContent = ""; delete hint.dataset.step; }
+    mcpWizardGo(1, { focus: false });
   }
 
   function recordMcpActivity(entry) {
@@ -14711,6 +14997,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     if (!document.getElementById("mcpAlias").value.trim()) {
       editingMcpCategory = tr === "http" ? "cloud" : "custom";
     }
+    if (typeof mcpWizardRefresh === "function") mcpWizardRefresh();
   }
 
   async function loadMcpServers() {
@@ -14791,7 +15078,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     // Configured Server Cards
     const listBox = document.getElementById("configuredMcpServersList");
     if (!mcpServers.length) {
-      listBox.innerHTML = `<div class="mcp-hub-empty" style="text-align:left;">No MCP servers connected yet. Open the <strong>Catalog</strong> tab, pick a card (Context7, Exa, DeepWiki, GitHub or a local template), then <strong>Save &amp; Sync Tools</strong>.</div>`;
+      listBox.innerHTML = `<div class="mcp-hub-empty" style="text-align:left;">No MCP servers connected yet. Open the <strong>Catalog</strong> tab, pick a card (Context7, Exa, DeepWiki, GitHub or a local template), then <strong>Save &amp; test connection</strong>.</div>`;
     } else {
       listBox.innerHTML = mcpServers.map(s => {
         const tools = s.tools || [];
@@ -14880,8 +15167,21 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   }
 
   async function saveMcpServer() {
+    // UIV2-22: the guide may not be skipped. The button lives on the last step, but every earlier
+    // step is re-checked here so a field edited after passing it cannot slip through.
+    for (const step of [1, 2, 3]) {
+      const problem = mcpWizardValidate(step);
+      if (problem) {
+        mcpWizardGo(step, { focus: false });
+        mcpWizardProblem(step);
+        return;
+      }
+    }
     const btn = document.getElementById("mcpSaveBtn");
-    btn.disabled = true; btn.textContent = "Saving & Syncing...";
+    const label = btn.textContent;
+    btn.disabled = true; btn.textContent = "Saving and testing…";
+    mcpWizardConfirm("");
+    mcpWizardResult("testing", "Saving the server and asking it for its tool list…");
     try {
       const tr = document.getElementById("mcpTransport").value;
       let headersObj = {}, envObj = {};
@@ -14914,15 +15214,25 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       document.getElementById("mcpToken").value = "";
       mcpServers = d.servers || [];
       renderMcpUI();
+      const tools = (d.server.tools || []).length;
       if (d.sync_error) {
-        document.getElementById("mcpPresetNote").textContent = `Saved '${d.server.alias}', sync note: ${d.sync_error}`;
+        document.getElementById("mcpPresetNote").textContent = `Saved '${d.server.alias}'.`;
+        mcpWizardResult("failed", `Saved, but the connection test failed — ${d.sync_error}`);
       } else {
-        document.getElementById("mcpPresetNote").textContent = `Saved & synced '${d.server.alias}' (${(d.server.tools || []).length} tools discovered)!`;
+        document.getElementById("mcpPresetNote").textContent = `Saved '${d.server.alias}'.`;
+        mcpWizardResult("ok", `Connected — ${tools} tool${tools === 1 ? "" : "s"} discovered.`);
+        mcpWizardConfirm(
+          `<span>${tools} tool${tools === 1 ? "" : "s"} are now callable as <code>mcp__${escapeHtml(d.server.alias)}__&lt;tool&gt;</code>.</span>`
+          + `<button class="btn btn-xs" id="mcpWizardDoneBtn" onclick="mcpWizardDone()">Open the server list</button>`
+        );
+        recordMcpActivity({ alias: d.server.alias, tool: "connection test", ok: true, ms: 0, detail: `${tools} tools discovered` });
       }
+      mcpWizardRefresh();
     } catch (e) {
+      mcpWizardResult("failed", "Not saved — " + e.message);
       showToast("MCP Save Error: " + e.message, "err");
     } finally {
-      btn.disabled = false; btn.textContent = "Save & Sync Tools";
+      btn.disabled = false; btn.textContent = label;
     }
   }
 

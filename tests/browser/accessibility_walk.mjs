@@ -258,8 +258,22 @@ async function main() {
     await page.evaluate(() => window.openMcpModal());
     await page.waitForFunction(() => document.getElementById("contextModal").classList.contains("open") && document.getElementById("mcpModal").classList.contains("open"));
     await new Promise((resolve) => setTimeout(resolve, 100));
-    const modalSemantics = await page.evaluate(() => [...document.querySelectorAll(".modal-backdrop.open [role=dialog]")]
-      .every((dialog) => dialog.getAttribute("aria-modal") === "true" && dialog.getAttribute("aria-label")));
+    // A dialog is named either by `aria-label` or by `aria-labelledby` pointing at a heading that
+    // actually has text: the MCP hub labels itself from its title (`#mcpHubTitle`), and an id that
+    // resolves to nothing is not a name.
+    const modalSemantics = await page.evaluate(() => {
+      const named = (dialog) => {
+        const label = (dialog.getAttribute("aria-label") || "").trim();
+        if (label) return true;
+        const ids = (dialog.getAttribute("aria-labelledby") || "").split(/\s+/).filter(Boolean);
+        return ids.length > 0 && ids.every((id) => {
+          const target = document.getElementById(id);
+          return Boolean(target && (target.textContent || "").trim());
+        });
+      };
+      return [...document.querySelectorAll(".modal-backdrop.open [role=dialog]")]
+        .every((dialog) => dialog.getAttribute("aria-modal") === "true" && named(dialog));
+    });
     results.push(check("every open overlay exposes a named modal dialog", modalSemantics));
     await page.keyboard.press("Escape");
     const topClosed = await page.evaluate(() => ({
