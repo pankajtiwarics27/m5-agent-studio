@@ -476,13 +476,26 @@ def main(argv: list[str] | None = None) -> int:
         help="a second catalogue model the stand-in runtime reports as loaded, so two panels can answer",
     )
     parser.add_argument("--port", type=int, default=0, help="port to bind on 127.0.0.1 (0 picks one)")
+    parser.add_argument(
+        "--runtime-url",
+        default="",
+        help=(
+            "point the app at an already-running runtime instead of starting this one. The Start "
+            "walk uses it to hand the app a runtime it can empty on demand, which is the only way "
+            "to photograph a port that answers with no models behind it (UIV2-24)."
+        ),
+    )
     parser.add_argument("--root", default="", help="reuse a directory as the throwaway environment")
     parser.add_argument("--ready-file", default="", help="also write the ready line to this file")
     args = parser.parse_args(argv)
 
     runtime: ThreadingHTTPServer | None = None
-    runtime_url = ""
-    if not args.offline:
+    runtime_url = args.runtime_url.strip()
+    if runtime_url:
+        # An external runtime was handed in, so nothing is started here and nothing is
+        # shut down on the way out: it belongs to whoever started it.
+        pass
+    elif not args.offline:
         runtime, _state, runtime_url = start_runtime(
             cap_model=args.cap_model,
             reasoning_model=args.reasoning_model,

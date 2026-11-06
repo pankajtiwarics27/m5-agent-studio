@@ -13,56 +13,56 @@
       "status": "blocked",
       "tone": "danger",
       "label": "blocked",
-      "app_line": 13914,
+      "app_line": 13957,
       "occurrences": 1
     },
     {
       "status": "cancelled",
       "tone": "warn",
       "label": "stopped by you",
-      "app_line": 13789,
+      "app_line": 13832,
       "occurrences": 7
     },
     {
       "status": "completed",
       "tone": "ok",
       "label": "completed",
-      "app_line": 18974,
+      "app_line": 19017,
       "occurrences": 4
     },
     {
       "status": "error",
       "tone": "danger",
       "label": "failed",
-      "app_line": 19105,
+      "app_line": 19148,
       "occurrences": 4
     },
     {
       "status": "idle",
       "tone": "info",
       "label": "ready",
-      "app_line": 2199,
+      "app_line": 2200,
       "occurrences": 2
     },
     {
       "status": "paused",
       "tone": "warn",
       "label": "paused",
-      "app_line": 11952,
+      "app_line": 11995,
       "occurrences": 11
     },
     {
       "status": "running",
       "tone": "busy",
       "label": "running",
-      "app_line": 8241,
+      "app_line": 8284,
       "occurrences": 10
     },
     {
       "status": "waiting_approval",
       "tone": "warn",
       "label": "waiting approval",
-      "app_line": 8124,
+      "app_line": 8167,
       "occurrences": 1
     }
   ],
@@ -157,9 +157,8 @@
       "focuses_composer": true
     },
     "hint": {
-      "reads_preflight": true,
-      "names_next_step": true,
-      "states_ready": true,
+      "says_what_it_does": true,
+      "verdict_above": true,
       "described_by": true,
       "element": true,
       "refreshed_on_recheck": true

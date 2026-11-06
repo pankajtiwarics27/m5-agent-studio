@@ -226,17 +226,28 @@ def read_matrix() -> list[dict]:
 def read_frontend(html: str) -> dict:
     lead = html.find('id="onboardingLead"')
     renderer_start = html.find("function renderOnboardingLead")
+    # UIV2-24 moved the checklist under a disclosure and reduced the fetch to one
+    # route, so the renderer is now two functions: the lead, and the details block
+    # that draws the steps and restores focus. The slice follows the code rather
+    # than a fixed byte window, so a move within the pane cannot silently empty it.
+    details_start = html.find("function renderOnboardingDetails")
+    refresh_start = html.find("async function refreshStartCommand")
     renderer = (
-        html[renderer_start : html.find("async function refreshOnboarding")]
-        if renderer_start > 0
+        html[renderer_start:details_start]
+        if 0 <= renderer_start < details_start
         else ""
     )
-    steps_start = html.find("list.innerHTML = onboardingReport.steps.map")
-    steps = html[steps_start : steps_start + 2200] if steps_start > 0 else ""
+    details = html[details_start:refresh_start] if 0 <= details_start < refresh_start else ""
+    steps_start = html.find("list.innerHTML = report.steps.map", details_start)
+    steps = (
+        html[steps_start : steps_start + 2200] if steps_start > 0 else ""
+    )
     clear_start = html.find("function clearPresentation")
     clear = html[clear_start : clear_start + 1200] if clear_start > 0 else ""
-    refresh_start = html.find("async function refreshOnboarding")
-    refresh = html[refresh_start : refresh_start + 6000] if refresh_start > 0 else ""
+    # Everything that used to live in refreshOnboarding() - the Run hint, the focus
+    # target, the order of render and focus - now lives in the lead and the details
+    # block it renders. Both are read together so neither half can quietly lose it.
+    refresh = renderer + details
     return {
         "lead_container": {
             "present": lead > 0,
@@ -286,7 +297,9 @@ def read_frontend(html: str) -> dict:
             < refresh.find('clearPresentation("onboardingState", { focus:'),
         },
         "readiness": {
-            "uses_server_ready": "onboardingReport.ready" in html,
+            # The lead renders `report.ready`; the note under the composer no longer
+            # restates it (UIV2-24 prints the verdict once, above the input).
+            "uses_server_ready": "report.ready" in refresh or "onboardingReport.ready" in refresh,
             "recomputes_ready": bool(
                 re.search(
                     r"steps\.every\(|steps\.filter\(\s*step\s*=>\s*step\.status\s*!==",

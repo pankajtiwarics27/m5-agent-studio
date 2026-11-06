@@ -8,8 +8,8 @@ and what a revert does and does not touch.
 * Status: **historical-approval-unbound** — Signed in the ledger; this page reports the historical owner record, not a new approval.
 * Approval binding: **unbound** — The historical record has no approved input snapshot and does not establish approval of current inputs.
 * Pinned baseline source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (input artifacts are hashed separately).
-* 6 panes · 21 preserved capabilities · 225 markup controls (126 chrome, 99 panes) · 71 rendered by script.
-* 117 routes exist, 71 with a resolved or possible caller, 46 with none observed and 0 unknown due to unresolved edges; 48 state-changing candidates traced.
+* 6 panes · 21 preserved capabilities · 228 markup controls (126 chrome, 102 panes) · 71 rendered by script.
+* 118 routes exist, 71 with a resolved or possible caller, 47 with none observed and 0 unknown due to unresolved edges; 48 state-changing candidates traced.
 * 0 fetch site(s) have 0 unresolved URL or method edge(s) (0 method).
 * Baseline screenshots recorded in the index: 6 of 6 (not provenance-verified).
 
@@ -28,8 +28,8 @@ separates the historical signature from any explicit binding to current input di
 | # | Ask | Evidence in this package |
 |---|---|---|
 | 1 | Accept the preservation matrix as the baseline P1 must preserve | 21 capability rows across 6 panes, carried row for row from product/M5_2_0_UIUX_Autonomous_Roadmap.json |
-| 2 | Accept the control inventory as the list of controls that must stay reachable | 225 markup controls (126 chrome, 99 panes) plus 71 rendered by script |
-| 3 | Review route candidates and preserve confirmed browser-reachable routes and their gates | 117 routes exist; 71 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 48 state-changing candidates; the lexical scan is not exhaustive |
+| 2 | Accept the control inventory as the list of controls that must stay reachable | 228 markup controls (126 chrome, 102 panes) plus 71 rendered by script |
+| 3 | Review route candidates and preserve confirmed browser-reachable routes and their gates | 118 routes exist; 71 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 48 state-changing candidates; the lexical scan is not exhaustive |
 | 4 | Accept that P1 may not weaken the shared boundary | host allowlist (400), cross-origin rejection (403), bearer token (401, 503 when unconfigured), rate limit (429) and body-size limit (413), read from the middleware itself |
 | 5 | Review the rollback path and the state effects of each story | this package adds no migration or privilege; review each story's actual merge, revert and recovery effects, then regenerate artifacts and re-run the checks below |
 
@@ -52,18 +52,21 @@ The preflight checklist a new user sees first: what is ready, what still needs t
 | recheck | Start primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
 | provider settings | Start primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
 
-**Controls — 11 in the markup:**
+**Controls — 14 in the markup:**
 
 | Tag | Id | Label | Handler |
 |---|---|---|---|
-| button | onboardingRunBtn | Run the first task | startGuidedFirstTask() |
-| button | — | Re-check | refreshOnboarding() |
-| button | — | Providers | openProvidersModal() |
 | input | startTaskInput | — | — |
 | button | startTaskBtn | Open in Harness | launchTaskFromStart() |
 | button | — | Refresh | loadStartRecent({ force: true }) |
+| summary | — | Readiness details checking | — |
+| button | onboardingRunBtn | Run the first task | startGuidedFirstTask() |
+| button | — | Re-check | refreshOnboarding() |
+| button | — | Providers | openProvidersModal() |
+| summary | — | System health loading | — |
 | button | — | Re-check health | refreshTelemetry() |
 | button | — | Inspector | toggleMonitorRail() |
+| summary | — | Project workspace loading | — |
 | input | startWorkspaceInput | — | — |
 | select | startWorkspaceRecent | Recent folders… | — |
 | button | startWorkspaceBtn | Set / Create | saveStartWorkspace() |
@@ -74,8 +77,8 @@ The preflight checklist a new user sees first: what is ready, what still needs t
 |---|---|---|---|---|---|
 | GET | `/api/hall/sessions` | certain | no | `launchTaskFromStart` → `switchTab` → `refreshHallSessions` | — |
 | GET | `/api/harness/sessions` | certain | no | `loadStartRecent` | — |
-| GET | `/api/onboarding/preflight` | certain | no | `refreshOnboarding` | — |
 | GET | `/api/providers` | certain | no | `openProvidersModal` → `loadProviders` | — |
+| GET | `/api/start/command-center` | certain | no | `refreshOnboarding` → `refreshStartCommand` | — |
 | GET | `/api/telemetry` | certain | no | `refreshTelemetry` | — |
 | POST | `/api/models/{model_id:path}/load` | possible | yes | `refreshTelemetry` → `renderTelemetry` → `modelAction` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
 | POST | `/api/models/{model_id:path}/unload` | possible | yes | `refreshTelemetry` → `renderTelemetry` → `modelAction` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
@@ -304,13 +307,12 @@ A single streaming conversation with the selected model.
 | button | chatStopBtn | Stop | stopChatStream() |
 | button | chatSendBtn | Send | sendChat() |
 
-**Routes reached from this pane's controls — 4, walking at most 2 calls; 7 route(s) reached through the same shared helper were excluded because this pane's walk never passes the function that supplied their URL:**
+**Routes reached from this pane's controls — 3, walking at most 2 calls; 7 route(s) reached through the same shared helper were excluded because this pane's walk never passes the function that supplied their URL:**
 
 | Method | Route | Certainty | State-changing | Walk | Gates that can refuse it |
 |---|---|---|---|---|---|
 | GET | `/api/hall/sessions` | certain | no | `handOffChatToHarness` → `switchTab` → `refreshHallSessions` | — |
 | GET | `/api/harness/sessions` | certain | no | `handOffChatToHarness` → `switchTab` → `loadHarnessSessions` | — |
-| GET | `/api/onboarding/preflight` | certain | no | `handOffChatToHarness` → `switchTab` → `refreshOnboarding` | — |
 | POST | `/api/chat/stream` | certain | yes | `sendChat` → `sendChatRequest` → `consumeSSE` | `host_allowlist`, `origin_check`, `bearer_token`, `rate_limit`, `body_size_limit` |
 
 ## Shared chrome
@@ -378,11 +380,11 @@ provenance; a matching snapshot cannot clear separate review holds.
 | Input | Current digest | Owner-recorded digest |
 |---|---|---|
 | `ledger_content_sha256` | `d4137cf1e214931953734cc97943732ea5204b5884c6aa26339cc7c27ed5908b` | `not recorded` |
-| `source_manifest_sha256` | `594eac0546226e48f2ae19c5e9c867d47454b49ec1cb122ea55c87fda74697d5` | `not recorded` |
-| `control_inventory_sha256` | `32d59f11a557ed417be761a7e5d55b62dff6307e403d25f236a825f50c4d4932` | `not recorded` |
-| `route_map_sha256` | `6fe6b8e4f52a24c62f09b83d0d9f77cb1f24e7f0e8381f5105e39d5f95ae5edb` | `not recorded` |
-| `authorization_trace_sha256` | `9ff79d3fa75d33022bc659056c5723cd9a398d377eb677a480e9ab60f9a5a29b` | `not recorded` |
-| `frontend_sha256` | `4765fda1538fdc08994c15a37a452d4e0a2c6a3296509cd88eccdc49d72ac1ce` | `not recorded` |
+| `source_manifest_sha256` | `9f71f143a14cd9f8ceb4e63ca77829da4e02ba0e35231f0c54958fa8cbbcbd83` | `not recorded` |
+| `control_inventory_sha256` | `e900baf7185e431069f9070f8e1d6dccd59ad68284a185e7eff46aa312434314` | `not recorded` |
+| `route_map_sha256` | `aa57f5c639c4418f79881c7028d54bfe68345fe8528af4783b19ba8c61558ebf` | `not recorded` |
+| `authorization_trace_sha256` | `786102b74c6a03120c3f0bc20138a29a1436e2b688a59d3750d8f97179affd8b` | `not recorded` |
+| `frontend_sha256` | `8558d2b589d7373ed1519f559b0da44b7ffd6fe95331d10ab85dcf254b31a200` | `not recorded` |
 | `screenshot_manifest_sha256` | `b488bf453ae260b6564ae592f0455e3d70cff3121dca1e7c823c7abb270b44d3` | `not recorded` |
 | `screenshot_index_sha256` | `16b0620ca1d02a1b181ad15b3a2b0c6aae9e7aa539654d27ed80d9147189634e` | `not recorded` |
 | `generator_sha256` | `6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65` | `not recorded` |

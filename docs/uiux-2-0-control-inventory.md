@@ -6,8 +6,8 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 re-derived from the markup on every run.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
-* Frontend digest: `4765fda1538fdc08994c15a37a452d4e0a2c6a3296509cd88eccdc49d72ac1ce`.
-* Panes: 6 · controls in panes: 99 · controls in the
+* Frontend digest: `8558d2b589d7373ed1519f559b0da44b7ffd6fe95331d10ab85dcf254b31a200`.
+* Panes: 6 · controls in panes: 102 · controls in the
   shared chrome: 126 · script-rendered: 71.
 
 ## What this page is, and is not
@@ -21,7 +21,7 @@ the end, attributed to the function that renders them — a heuristic, not a cal
 
 | Pane | Section | Total | Without id | Without any label | Breakdown |
 |---|---|---|---|---|---|
-| start | `pane-start` | 11 | 5 | 0 | button 8, input 2, select 1 |
+| start | `pane-start` | 14 | 8 | 0 | button 8, input 2, select 1, summary 3 |
 | harness | `pane-harness` | 30 | 9 | 0 | button 16, input 3, select 9, summary 1, textarea 1 |
 | hall | `pane-hall` | 20 | 3 | 0 | button 9, select 8, summary 2, textarea 1 |
 | council | `pane-council` | 16 | 2 | 0 | button 9, input 1, select 5, textarea 1 |
@@ -31,27 +31,30 @@ the end, attributed to the function that renders them — a heuristic, not a cal
 
 ## What the numbers already say
 
-* 225 controls are in the markup and 71 more are built by script — a checklist written from the markup alone would miss 24% of the interactive surface.
-* The shared chrome carries 126 controls; all six panes together carry 99. Most of the clicking happens in the shell, not inside a tab.
-* 67 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
+* 228 controls are in the markup and 71 more are built by script — a checklist written from the markup alone would miss 24% of the interactive surface.
+* The shared chrome carries 126 controls; all six panes together carry 102. Most of the clicking happens in the shell, not inside a tab.
+* 70 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
 
 ## Pane `start`
 
-Section `pane-start`, 11 interactive elements.
+Section `pane-start`, 14 interactive elements.
 
 | # | Element | id | Type | Label or text | Handler |
 |---|---|---|---|---|---|
-| 1 | button | onboardingRunBtn | button | Run the first task | startGuidedFirstTask() |
-| 2 | button | — | button | Re-check | refreshOnboarding() |
-| 3 | button | — | button | Providers | openProvidersModal() |
-| 4 | input | startTaskInput | text | Describe a task to open in the Harness… | — |
-| 5 | button | startTaskBtn | button | Open in Harness | launchTaskFromStart() |
-| 6 | button | — | button | Refresh | loadStartRecent({ force: true }) |
-| 7 | button | — | button | Re-check health | refreshTelemetry() |
-| 8 | button | — | button | Inspector | toggleMonitorRail() |
-| 9 | input | startWorkspaceInput | text | ~/Projects/my-app | — |
-| 10 | select | startWorkspaceRecent | — | Recent project folders | if(this.value) pickStartWorkspace(this.value) |
-| 11 | button | startWorkspaceBtn | button | Set / Create | saveStartWorkspace() |
+| 1 | input | startTaskInput | text | Describe a task to open in the Harness… | — |
+| 2 | button | startTaskBtn | button | Open in Harness | launchTaskFromStart() |
+| 3 | button | — | button | Refresh | loadStartRecent({ force: true }) |
+| 4 | summary | — | — | Readiness details checking | — |
+| 5 | button | onboardingRunBtn | button | Run the first task | startGuidedFirstTask() |
+| 6 | button | — | button | Re-check | refreshOnboarding() |
+| 7 | button | — | button | Providers | openProvidersModal() |
+| 8 | summary | — | — | System health loading | — |
+| 9 | button | — | button | Re-check health | refreshTelemetry() |
+| 10 | button | — | button | Inspector | toggleMonitorRail() |
+| 11 | summary | — | — | Project workspace loading | — |
+| 12 | input | startWorkspaceInput | text | ~/Projects/my-app | — |
+| 13 | select | startWorkspaceRecent | — | Recent project folders | if(this.value) pickStartWorkspace(this.value) |
+| 14 | button | startWorkspaceBtn | button | Set / Create | saveStartWorkspace() |
 
 ## Pane `harness`
 
@@ -327,7 +330,6 @@ and are **not** in the tables above:
 | `openSpawnModal` | 1 |
 | `refreshHallSessions` | 3 |
 | `refreshInspectorPanel` | 9 |
-| `refreshOnboarding` | 1 |
 | `renderActiveHall` | 3 |
 | `renderCommandPaletteList` | 1 |
 | `renderDebateCriteria` | 3 |
@@ -344,6 +346,7 @@ and are **not** in the tables above:
 | `renderMcpHub` | 2 |
 | `renderMcpTools` | 2 |
 | `renderMcpUI` | 7 |
+| `renderOnboardingDetails` | 1 |
 | `renderOpenContextDocs` | 3 |
 | `renderProvidersModal` | 3 |
 | `renderTelemetry` | 1 |

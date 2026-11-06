@@ -6,7 +6,7 @@ executed by [`scripts/preservation_suite.py`](../scripts/preservation_suite.py).
 
 * 21 of 21 matrix rows mapped, 55 provers, 0 findings
 * 40 walk checks, 4 pytest nodes, 9 route probes, 2 wired controls
-* 17 walks prove a row; 24 more are listed with the reason they do not
+* 17 walks prove a row; 25 more are listed with the reason they do not
 
 ## What this page is, and is not
 
@@ -97,6 +97,7 @@ than succeed. That is what "existing endpoint and permission semantics" means in
 | `polish_walk.mjs` | the polish layer (P5-05) proves affordances across all six panes |
 | `presentation_walk.mjs` | the presentation contract (P1-05) is the shape failures are drawn in |
 | `responsive_walk.mjs` | the layout walk (P5-03) proves the matrix rows still fit a phone |
+| `start_command_center_walk.mjs` | the Start command center walk (UIV2-24) proves the landing order a reader actually gets: the composer is the first card and above the fold at 1440x900, 1280x800 and 390x844, the checklist, health and workspace are native disclosures that start closed with their state still in each summary, the verdict line prints the server's headline, counts and basis (and says 'runtime not asked' when it was not), the blocker names the server's next step, a runtime port that answers with no models is printed as a contradiction with its evidence and an action rather than as ready, a refused read puts its retry above the fold and keeps the last good result, and recovery returns focus to the verdict line instead of `<body>`; the capability it belongs to is Start itself, which the matrix already enumerates from the pane's own controls |
 | `status_walk.mjs` | the status component (P1-03) is the vocabulary every row is drawn in |
 | `stream_perf_walk.mjs` | the streaming bound (P5-04) is a cost property, not a capability |
 | `terminology_walk.mjs` | the vocabulary walk (P5-01) proves the same states say the same words |

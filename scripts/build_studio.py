@@ -29,6 +29,7 @@ INLINED_MODULES = (
     "mcp_client",
     "context_store",
     "onboarding_preflight",
+    "start_command_center",
     "failure_injection",
     "execution_spine",
     "task_events",

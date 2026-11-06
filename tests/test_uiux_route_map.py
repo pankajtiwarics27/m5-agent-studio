@@ -112,9 +112,14 @@ def test_a_runtime_chosen_segment_is_never_an_exact_match() -> None:
 def test_known_calls_map_to_known_routes() -> None:
     by_handler = {call["handler"]: call for call in _calls()}
 
-    onboarding = by_handler["refreshOnboarding"]
-    assert onboarding["resolved_from"] == "assignment"
-    assert {u["route"] for u in onboarding["urls"]} == {"/api/onboarding/preflight"}
+    # UIV2-24: the pane reads one route, and the checklist's entry point delegates to it,
+    # so the map resolves the readiness call rather than two callers of two routes.
+    readiness = by_handler["refreshStartCommand"]
+    assert readiness["resolved_from"] == "assignment"
+    assert {u["route"] for u in readiness["urls"]} == {"/api/start/command-center"}
+    assert "refreshOnboarding" not in by_handler, (
+        "refreshOnboarding still issues its own request, so the pane has two sources"
+    )
 
     # A helper that takes the URL as a parameter is resolved from its call sites,
     # including the call sites of helpers that forward their own parameter into

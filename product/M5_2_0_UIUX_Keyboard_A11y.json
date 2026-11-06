@@ -79,7 +79,7 @@
   "names": {
     "controls": 97,
     "unnamed": 0,
-    "live_regions": 24
+    "live_regions": 25
   },
   "walk": {
     "script": "scripts/a11y_walk.mjs",

@@ -168,9 +168,11 @@ def test_the_handoff_does_not_run_anything(payload):
     assert launcher["focuses_composer"]
 
 
-def test_the_handoff_note_quotes_the_preflight(payload):
+def test_the_handoff_note_says_what_the_button_does(payload):
+    """UIV2-24: the note hands off; the verdict above the composer is the verdict."""
     hint = payload["frontend"]["hint"]
-    assert hint["reads_preflight"] and hint["states_ready"] and hint["names_next_step"]
+    assert hint["says_what_it_does"], "the note no longer says nothing runs from this pane"
+    assert hint["verdict_above"], "no verdict is printed above the composer the note describes"
     assert hint["described_by"] and hint["element"]
     assert hint["refreshed_on_recheck"]
 
@@ -277,14 +279,27 @@ def test_a_launcher_that_runs_is_caught(sources):
     assert "launcher-runs" in _checks(payload) or "client-owns-sessions" in _checks(payload)
 
 
-def test_a_note_that_ignores_the_preflight_is_caught(sources):
+def test_a_note_that_forgets_the_handoff_is_caught(sources):
     payload = sources(
         html_transform=lambda text: text.replace(
-            "    const ready = Boolean(onboardingReport && onboardingReport.ready);",
-            "    const ready = true;",
+            "const START_TASK_HINT = \"Nothing runs from this pane",
+            "const START_TASK_HINT = \"A task runs from this pane",
             1,
         )
     )
+    assert "launcher-hint-hollow" in _checks(payload)
+
+
+def test_a_verdict_below_the_composer_is_caught(sources):
+    def move(text: str) -> str:
+        line = '          <p id="startReadinessLine" class="start-readiness-line" role="status" aria-live="polite" tabindex="-1">Reading local configuration…</p>\n'
+        assert line in text
+        text = text.replace(line, "", 1)
+        hint = '          <div id="startTaskHint" class="onboarding-note"></div>\n'
+        assert hint in text
+        return text.replace(hint, hint + line, 1)
+
+    payload = sources(html_transform=move)
     assert "launcher-hint-hollow" in _checks(payload)
 
 

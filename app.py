@@ -76,6 +76,7 @@ import onboarding_preflight
 import recovery_guard
 import runtime_persistence
 import sandbox_boundary
+import start_command_center
 import side_effect_ledger
 import task_events
 import workflow_checkpoints
@@ -3856,6 +3857,48 @@ async def api_onboarding_preflight(request: Request, probe: str = "") -> JSONRes
     report = onboarding_preflight.build_report(inputs).to_dict()
     report["local_probe"] = inputs.local_probe
     return JSONResponse({"status": "ok", "preflight": report})
+
+
+@app.get("/api/start/command-center")
+async def api_start_readiness(request: Request, probe: str = "", telemetry: str = "") -> JSONResponse:
+    """The short answer Start opens with, and the evidence it stands on (UIV2-24).
+
+    Read-only. Without ``?probe=local`` nothing is contacted, so the runtime row
+    says "not asked" rather than guessing from configuration. ``?telemetry=``
+    carries which health payload the page is holding (``live_omlx``,
+    ``simulated_demo``, or empty), because a demo payload and a live probe can
+    disagree and the pane has to explain that instead of picking a winner.
+    """
+    runtime = start_command_center.RuntimeObservation(configured=bool(OMLX_BASE), url=OMLX_BASE)
+    if probe == "local":
+        client: httpx.AsyncClient | None = getattr(request.app.state, "http", None)
+        local_models = await _onboarding_probe_local_models(client) if client is not None else None
+        runtime = start_command_center.RuntimeObservation(
+            configured=bool(OMLX_BASE),
+            url=OMLX_BASE,
+            # A None here means "nothing answered"; a 0 means "something answered and
+            # reported no models", which is the distinction this whole route exists for.
+            port_answered=local_models is not None,
+            model_count=local_models,
+            probe="ran" if local_models is not None else "unavailable",
+        )
+        inputs = onboarding_preflight_inputs(
+            local_model_count=local_models,
+            local_probe="ran" if local_models is not None else "unavailable",
+        )
+    else:
+        inputs = onboarding_preflight_inputs()
+    preflight = onboarding_preflight.build_report(inputs).to_dict()
+    telemetry_source = telemetry if telemetry in ("live_omlx", "simulated_demo") else ""
+    readiness = start_command_center.build_readiness(
+        preflight,
+        runtime=runtime,
+        telemetry=start_command_center.TelemetryObservation(source=telemetry_source),
+        workspace_dir=str(WORKSPACE_ROOT),
+        workspace_writable=bool(inputs.workspace_writable),
+    )
+    readiness["preflight"] = preflight
+    return JSONResponse({"status": "ok", "readiness": readiness})
 
 
 # =============================================================================

@@ -619,6 +619,40 @@ REVIEWS: dict[str, dict[str, object]] = {
         "re_taken": True,
         "theme": "light and dark, desktop 1280-1640 and narrow 390",
     },
+    "start-command-center-uiv2-24": {
+        "story": "UIV2-24",
+        "note": (
+            "The Start command center: seven states - empty, populated, long content, loading, error, "
+            "recovery and a runtime port that answers with no models - on each of four viewports "
+            "(1640x900, 1440x900, 1280x800, 390x844) x light/dark, written by "
+            "`scripts/start_command_center_walk.mjs` against a fixture it starts itself (a stand-in "
+            "runtime it can empty, plus `scripts/council_readiness_seed.py --runtime-url`), after 31/31 "
+            "checks on each of the eight runs; beside `before-uiv2-24/`, the same pane served from "
+            "ff14655 and captured with `scripts/capture_screenshots.mjs --panes start` (light and dark "
+            "at 1440x900, light at 390x844). Opened and read: the 390x844-light populated capture (the "
+            "composer card fills the first screen: verdict pill, 'Ready to run - 6 of 6 checks ready - "
+            "runtime answered, 2 models', the input, the primary button, and 'Nothing is in the way' "
+            "with its way to the evidence - and no checklist above it), the 1280x800-dark long-content "
+            "capture (a 149-character draft held in one line above the fold, long session titles "
+            "clipped at one line with an ellipsis, no sideways scroll), the 1440x900-light error "
+            "capture (pill `failed`, a sentence that keeps no stale verdict, and the retry sitting in "
+            "the blocker slot above the fold rather than 800px down a closed disclosure), the "
+            "1440x900-light contradiction capture (`Checks disagree`, 'runtime answered, 0 models', "
+            "and the port-without-models row printing `port_answered=True - model_count=0` with the "
+            "action that settles it), and the before-uiv2-24 1440x900 capture (GUIDED FIRST RUN first, "
+            "six checklist rows under it, and the task composer below the fold - the pane this story "
+            "replaces)."
+        ),
+        "eye": [
+            "after/light/populated-390x844.png",
+            "after/dark/long-content-1280x800.png",
+            "after/light/error-1440x900.png",
+            "after/light/contradiction-1440x900.png",
+            "before-uiv2-24/start.png",
+        ],
+        "re_taken": True,
+        "theme": "light and dark, desktop 1280-1640 and narrow 390",
+    },
     "mcp-tools-uiv2-23": {
         "story": "UIV2-23",
         "note": (

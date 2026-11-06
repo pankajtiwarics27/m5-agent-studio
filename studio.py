@@ -4104,6 +4104,88 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   .start-launch { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; margin-top: var(--space-4); }
   .start-launch input { flex: 1 1 320px; min-width: 220px; }
 
+  /* ── The command center ─────────────────────────────────────────────────────
+     Start opens with the composer, one sentence of verdict, and at most one
+     blocker. The checklist, the health card and the workspace are disclosures
+     under it: same evidence, one click away, in the order a reader needs them.
+     Nothing required is hidden - the blocker line names the step and its button
+     opens the control that step lives in. */
+  .start-readiness-line {
+    margin: 0 0 var(--space-3);
+    font-size: var(--text-sm);
+    line-height: var(--lh-base);
+    color: var(--text-dim);
+  }
+  .start-readiness-line strong { color: var(--text); font-weight: var(--weight-semibold); }
+  .start-readiness-line .start-readiness-basis {
+    color: var(--text-faint);
+    font-family: var(--mono);
+    font-size: var(--text-2xs);
+    white-space: nowrap;
+  }
+  .start-blocker {
+    margin-top: var(--space-4);
+    padding: var(--space-3);
+    border: 1px solid var(--amber);
+    border-radius: var(--radius-md);
+    background: var(--bg-hover);
+  }
+  .start-blocker[data-verdict="blocked"],
+  .start-blocker[data-verdict="contradiction"] { border-color: var(--rose); }
+  .start-blocker[data-verdict="ready"] { border-color: var(--emerald); }
+  .start-blocker-title { font-size: var(--text-sm); font-weight: var(--weight-semibold); }
+  .start-blocker-detail {
+    font-size: var(--text-xs);
+    line-height: var(--lh-base);
+    color: var(--text-dim);
+    margin-top: var(--space-1);
+  }
+  .start-blocker-actions { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; margin-top: var(--space-3); }
+  .start-contradiction {
+    margin-top: var(--space-3);
+    padding: var(--space-3);
+    border-left: 3px solid var(--rose);
+    border-radius: var(--radius-sm);
+    background: var(--bg-hover);
+  }
+  .start-contradiction-title { font-size: var(--text-sm); font-weight: var(--weight-semibold); }
+  .start-contradiction-detail {
+    font-size: var(--text-xs);
+    line-height: var(--lh-base);
+    color: var(--text-dim);
+    margin-top: var(--space-1);
+  }
+  .start-contradiction-evidence {
+    font-family: var(--mono);
+    font-size: var(--text-2xs);
+    color: var(--text-faint);
+    margin-top: var(--space-1);
+  }
+  .start-diagnostics { margin-top: 14px; }
+  .start-diagnostics > summary {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    cursor: pointer;
+    list-style: none;
+    margin: 0;
+  }
+  .start-diagnostics > summary::-webkit-details-marker { display: none; }
+  .start-diagnostics > summary::after {
+    content: "";
+    width: 7px;
+    height: 7px;
+    margin-left: auto;
+    border-right: 2px solid var(--text-faint);
+    border-bottom: 2px solid var(--text-faint);
+    transform: rotate(45deg);
+    transition: transform var(--dur-fast) var(--ease-out);
+    flex: none;
+  }
+  .start-diagnostics[open] > summary::after { transform: rotate(-135deg); }
+  .start-diagnostics > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .start-diagnostics-body { margin-top: var(--space-3); }
+
   /* ── System health and workspace ────────────────────────────────────────────
      Two questions a first-run reader asks after "what next": is this machine
      actually working, and where will my task run? Both are answered from data the
@@ -6467,115 +6549,144 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     <section id="pane-start" role="tabpanel" aria-labelledby="tab-start" class="pane">
       <h2 class="pane-title">Start</h2>
       <div class="onboarding-shell">
-        <div class="m-card">
+        <!-- UIV2-24: the command center. The one thing Start is for - opening a task -
+             is first and above the fold at every viewport, followed by the server's
+             one-line verdict and the single thing in the way. Everything that backs
+             that verdict is one disclosure below, because evidence a reader has to
+             scroll past before they can act is evidence in the wrong place. -->
+        <div class="m-card" id="startLaunchCard">
           <div class="m-head">
-            <span>Guided first run</span>
-            <span id="onboardingSummary" class="status" data-tone="neutral" role="status">checking</span>
+            <span>New task</span>
+            <span id="startReadinessPill" class="status" data-tone="neutral" role="status">checking</span>
           </div>
-          <p class="onboarding-lede">
-            Studio checks your local configuration and tells you the one next thing to click.
-            No config files, no shell commands, and no network calls during the check.
-          </p>
-          <!-- The server's next step, printed before the list so the answer is not
-               buried under six rows. Filled by renderOnboardingLead(). -->
-          <div id="onboardingLead" class="onboarding-lead" data-state="checking" role="group" aria-label="The next thing to click">
-            <div class="onboarding-lead-head"><span class="onboarding-lead-count">checking local configuration</span></div>
-          </div>
-          <div id="onboardingSteps" class="onboarding-steps" role="list"></div>
-          <div class="onboarding-actions">
-            <button class="btn btn-primary" id="onboardingRunBtn" type="button" onclick="startGuidedFirstTask()" aria-describedby="onboardingRunHint">Run the first task</button>
-            <button class="btn" type="button" onclick="refreshOnboarding()">Re-check</button>
-            <button class="btn" type="button" onclick="openProvidersModal()">Providers</button>
-          </div>
-          <!-- Why the Run button above is off, in visible text and as the button's
-               accessible description: a disabled control with no stated reason is
-               an authoritative refusal the reader cannot see. -->
-          <div id="onboardingRunHint" class="onboarding-note"></div>
-          <div id="onboardingState"></div>
-          <div id="onboardingFirstTask" class="onboarding-note" hidden></div>
-          <div id="onboardingNotes" class="onboarding-note"></div>
-          <!-- The summary above is a claim; this says what it stands on, in the same
-               place, so a reader never has to guess whether a check ran. -->
-          <div class="evidence" id="onboardingEvidence" data-basis="measured">
-            <span class="evidence-basis">Basis: measured locally</span>
-            Each step reads local configuration and, where offered, one explicit request to a
-            loopback runtime when you press the button. Nothing here contacts a cloud provider,
-            and a step that cannot be checked is reported as unavailable rather than passed.
-          </div>
-        </div>
-
-        <!-- Work that already exists, and the composer for the next task. Both are
-             read from the Harness's own endpoints: Start shows sessions, it does not
-             own them. -->
-        <div class="m-card" style="margin-top: 14px;">
-          <div class="m-head">
-            <span>Recent work and task launch</span>
-            <span id="startRecentSummary" class="status" data-tone="neutral" role="status">loading</span>
-          </div>
-          <p class="onboarding-lede">
-            The five most recent Harness sessions on this machine, newest first, plus a composer
-            for the next task. A task opens in the Harness with your text already in it, next to the
-            workspace and policy it will run with; nothing starts from this pane.
-          </p>
-          <div id="startRecentList" class="start-recent" role="list" aria-label="Recent Harness sessions">
-            <div class="start-recent-loading">Reading recent sessions…</div>
-          </div>
-          <div id="startRecentState"></div>
+          <!-- The verdict, one line, printed before the composer so "can I start?"
+               is answered first. Filled by renderStartCommand(). -->
+          <p id="startReadinessLine" class="start-readiness-line" role="status" aria-live="polite" tabindex="-1">Reading local configuration…</p>
           <div class="start-launch">
             <label for="startTaskInput" style="position:absolute; left:-9999px;">Task to open in the Harness</label>
             <input type="text" id="startTaskInput" autocomplete="off"
                    placeholder="Describe a task to open in the Harness…"
                    aria-describedby="startTaskHint" />
-            <button class="btn" id="startTaskBtn" type="button" onclick="launchTaskFromStart()" aria-describedby="startTaskHint">Open in Harness</button>
+            <button class="btn btn-primary" id="startTaskBtn" type="button" onclick="launchTaskFromStart()" aria-describedby="startTaskHint">Open in Harness</button>
             <button class="btn" type="button" onclick="loadStartRecent({ force: true })" title="Re-read the session list from the server">Refresh</button>
           </div>
           <div id="startTaskHint" class="onboarding-note"></div>
+          <!-- The one thing in the way, with the action that clears it. Empty and
+               hidden when nothing is - a green card with an empty box under it reads
+               as a step that was skipped. -->
+          <div id="startNextBlocker" class="start-blocker" role="group" aria-label="What is in the way" hidden></div>
+          <!-- Where the checks and the runtime disagree. Rendered from the server's
+               contradictions verbatim: this pane does not resolve them itself. -->
+          <div id="startContradictions" class="start-contradictions"></div>
         </div>
+
+        <!-- Work that already exists. Read from the Harness's own endpoint: Start shows
+             sessions, it does not own them. -->
+        <div class="m-card" style="margin-top: 14px;">
+          <div class="m-head">
+            <span>Recent work</span>
+            <span id="startRecentSummary" class="status" data-tone="neutral" role="status">loading</span>
+          </div>
+          <p class="onboarding-lede">
+            The five most recent Harness sessions on this machine, newest first. A row opens that
+            session where it lives; nothing starts from this pane.
+          </p>
+          <div id="startRecentList" class="start-recent" role="list" aria-label="Recent Harness sessions">
+            <div class="start-recent-loading">Reading recent sessions…</div>
+          </div>
+          <div id="startRecentState"></div>
+        </div>
+
+        <!-- Readiness details: the checklist the verdict above stands on. Collapsed,
+             not removed - the summary carries the count and the verdict, so a reader
+             can see whether it is worth opening without opening it. -->
+        <details class="m-card start-diagnostics" id="startDiagnostics">
+          <summary class="m-head start-diagnostics-head">
+            <span>Readiness details</span>
+            <span id="onboardingSummary" class="status" data-tone="neutral" role="status">checking</span>
+          </summary>
+          <div class="start-diagnostics-body">
+            <p class="onboarding-lede">
+              Studio checks your local configuration and names the one next thing to click.
+              No config files, no shell commands, and no network calls during the check.
+            </p>
+            <!-- The server's next step, printed before the list so the answer is not
+                 buried under six rows. Filled by renderOnboardingLead(). -->
+            <div id="onboardingLead" class="onboarding-lead" data-state="checking" role="group" aria-label="The next thing to click">
+              <div class="onboarding-lead-head"><span class="onboarding-lead-count">checking local configuration</span></div>
+            </div>
+            <div id="onboardingSteps" class="onboarding-steps" role="list"></div>
+            <div class="onboarding-actions">
+              <button class="btn" id="onboardingRunBtn" type="button" onclick="startGuidedFirstTask()" aria-describedby="onboardingRunHint">Run the first task</button>
+              <button class="btn" type="button" onclick="refreshOnboarding()">Re-check</button>
+              <button class="btn" type="button" onclick="openProvidersModal()">Providers</button>
+            </div>
+            <!-- Why the Run button above is off, in visible text and as the button's
+                 accessible description: a disabled control with no stated reason is
+                 an authoritative refusal the reader cannot see. -->
+            <div id="onboardingRunHint" class="onboarding-note"></div>
+            <div id="onboardingState"></div>
+            <div id="onboardingFirstTask" class="onboarding-note" hidden></div>
+            <div id="onboardingNotes" class="onboarding-note"></div>
+            <!-- The summary above is a claim; this says what it stands on, in the same
+                 place, so a reader never has to guess whether a check ran. -->
+            <div class="evidence" id="onboardingEvidence" data-basis="measured">
+              <span class="evidence-basis">Basis: measured locally</span>
+              Each step reads local configuration and, where offered, one explicit request to a
+              loopback runtime when you press the button. Nothing here contacts a cloud provider,
+              and a step that cannot be checked is reported as unavailable rather than passed.
+            </div>
+          </div>
+        </details>
 
         <!-- Health, then the workspace it will run in. Both read from endpoints the
              Harness already owns; neither invents a number. -->
-        <div class="m-card" style="margin-top: 14px;">
-          <div class="m-head">
+        <details class="m-card start-diagnostics" id="startHealthDetails">
+          <summary class="m-head start-diagnostics-head">
             <span>System health</span>
             <span id="startHealthSummary" class="status" data-tone="neutral" role="status">loading</span>
+          </summary>
+          <div class="start-diagnostics-body">
+            <div id="startHealthRows" class="start-health"></div>
+            <!-- The basis is a required part of the claim: a simulated payload says so. -->
+            <div class="evidence" id="startHealthEvidence" data-basis="unverified">
+              <span class="evidence-basis">Basis: unverified</span>
+              Nothing has been read from the runtime yet.
+            </div>
+            <div id="startHealthState"></div>
+            <div id="startHealthActions" class="onboarding-actions">
+              <button class="btn" type="button" onclick="refreshTelemetry()">Re-check health</button>
+              <button class="btn" type="button" onclick="toggleMonitorRail()" title="Open the contextual inspector">Inspector</button>
+            </div>
           </div>
-          <div id="startHealthRows" class="start-health"></div>
-          <!-- The basis is a required part of the claim: a simulated payload says so. -->
-          <div class="evidence" id="startHealthEvidence" data-basis="unverified">
-            <span class="evidence-basis">Basis: unverified</span>
-            Nothing has been read from the runtime yet.
-          </div>
-          <div id="startHealthState"></div>
-          <div id="startHealthActions" class="onboarding-actions">
-            <button class="btn" type="button" onclick="refreshTelemetry()">Re-check health</button>
-            <button class="btn" type="button" onclick="toggleMonitorRail()" title="Open the contextual inspector">Inspector</button>
-          </div>
-        </div>
+        </details>
 
-        <div class="m-card" style="margin-top: 14px;">
-          <div class="m-head">
+        <details class="m-card start-diagnostics" id="startWorkspaceDetails">
+          <summary class="m-head start-diagnostics-head">
             <span>Project workspace</span>
             <span id="startWorkspaceSummary" class="status" data-tone="neutral" role="status">loading</span>
+          </summary>
+          <div class="start-diagnostics-body">
+            <p class="onboarding-lede">
+              Where the Harness runs your task. This is the same setting the Harness pane shows;
+              changing it here changes it there, and the readiness answer is re-read afterwards so
+              the two cannot disagree.
+            </p>
+            <div id="startWorkspaceRow" class="start-workspace">
+              <div class="start-workspace-path">reading the configured directory…</div>
+            </div>
+            <div class="start-workspace-actions">
+              <label for="startWorkspaceInput" style="position:absolute; left:-9999px;">Project directory</label>
+              <input type="text" id="startWorkspaceInput" autocomplete="off" placeholder="~/Projects/my-app" aria-describedby="startWorkspaceHint" />
+              <select id="startWorkspaceRecent" aria-label="Recent project folders" onchange="if(this.value) pickStartWorkspace(this.value)">
+                <option value="">Recent folders…</option>
+              </select>
+              <button class="btn" id="startWorkspaceBtn" type="button" onclick="saveStartWorkspace()" aria-describedby="startWorkspaceHint">Set / Create</button>
+            </div>
+            <div id="startWorkspaceHint" class="onboarding-note"></div>
+            <div id="startWorkspaceState"></div>
           </div>
-          <p class="onboarding-lede">
-            Where the Harness runs your task. This is the same setting the Harness pane shows;
-            changing it here changes it there, and the preflight is re-read afterwards so the
-            checklist cannot disagree with this line.
-          </p>
-          <div id="startWorkspaceRow" class="start-workspace">
-            <div class="start-workspace-path">reading the configured directory…</div>
-          </div>
-          <div class="start-workspace-actions">
-            <label for="startWorkspaceInput" style="position:absolute; left:-9999px;">Project directory</label>
-            <input type="text" id="startWorkspaceInput" autocomplete="off" placeholder="~/Projects/my-app" aria-describedby="startWorkspaceHint" />
-            <select id="startWorkspaceRecent" aria-label="Recent project folders" onchange="if(this.value) pickStartWorkspace(this.value)">
-              <option value="">Recent folders…</option>
-            </select>
-            <button class="btn" id="startWorkspaceBtn" type="button" onclick="saveStartWorkspace()" aria-describedby="startWorkspaceHint">Set / Create</button>
-          </div>
-          <div id="startWorkspaceHint" class="onboarding-note"></div>
-          <div id="startWorkspaceState"></div>
-        </div>
+        </details>
       </div>
     </section>
 
@@ -7835,75 +7946,321 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     return host;
   }
 
-  async function refreshOnboarding(probeLocal) {
+  /* ── The command center ────────────────────────────────────────────────────
+     GET /api/start/command-center is the preflight plus what is actually known
+     about the local runtime, reduced to one verdict and one next action. This pane
+     prints that verdict; it does not work one out, so the sentence on screen and
+     the checklist underneath cannot drift apart. The runtime half is the reason the
+     route exists: a port answering is not a runtime that can run a model, and the
+     two are reported separately here. */
+
+  let startReadiness = null;
+
+  function startTelemetrySource() {
+    const source = lastTelemetry && lastTelemetry.telemetry_source;
+    return source === "live_omlx" || source === "simulated_demo" ? source : "";
+  }
+
+  function openStartSection(cardId, focusId) {
+    const card = document.getElementById(cardId);
+    if (card && card.tagName === "DETAILS") card.open = true;
+    const target = focusId ? document.getElementById(focusId) : null;
+    if (target) target.focus();
+    return card;
+  }
+
+  function renderStartCommand() {
+    const pill = document.getElementById("startReadinessPill");
+    const line = document.getElementById("startReadinessLine");
+    const box = document.getElementById("startNextBlocker");
+    if (!pill || !line || !box) return null;
+    if (!startReadiness) return null;
+    const readiness = startReadiness;
+    const tones = { ready: "ok", "needs-you": "warn", blocked: "danger", contradiction: "danger" };
+    const labels = { ready: "Ready", "needs-you": "Needs you", blocked: "Blocked", contradiction: "Checks disagree" };
+    setStatus(pill, tones[readiness.verdict] || "neutral", labels[readiness.verdict] || "checking");
+    pill.title = readiness.detail || readiness.headline;
+
+    // The verdict is one sentence, and the basis is its tail: whether the runtime was
+    // actually asked, and what it said. "Ready" without that tail would be a claim
+    // about the port dressed up as a claim about the runtime.
+    line.innerHTML = "";
+    const head = document.createElement("strong");
+    head.textContent = readiness.headline;
+    const count = document.createElement("span");
+    count.textContent = ` — ${readiness.counts.ready} of ${readiness.counts.total} checks ready`;
+    const basis = document.createElement("span");
+    basis.className = "start-readiness-basis";
+    const runtime = readiness.runtime || {};
+    if (readiness.basis === "measured") {
+      basis.textContent = runtime.port_answered
+        ? ` · runtime answered, ${runtime.model_count} model${runtime.model_count === 1 ? "" : "s"}`
+        : " · runtime did not answer";
+    } else {
+      basis.textContent = " · runtime not asked";
+    }
+    line.append(head, count, basis);
+
+    // A retry pressed from inside this box removes the button that had focus. Without
+    // somewhere to put it back, the reader lands on <body> with no idea where they are.
+    const hadFocus = box.contains(document.activeElement);
+    box.innerHTML = "";
+    const next = readiness.next || null;
+    box.dataset.verdict = readiness.verdict;
+    if (!next) {
+      box.hidden = false;
+      const title = document.createElement("div");
+      title.className = "start-blocker-title";
+      title.textContent = "Nothing is in the way";
+      const detail = document.createElement("div");
+      detail.className = "start-blocker-detail";
+      detail.textContent = "Open a task above, or run the guided first task from Readiness details. "
+        + "The checks and their evidence are one click below.";
+      const actions = document.createElement("div");
+      actions.className = "start-blocker-actions";
+      const show = document.createElement("button");
+      show.type = "button";
+      show.className = "btn btn-xs";
+      show.textContent = "Readiness details";
+      show.addEventListener("click", () => openStartSection("startDiagnostics", "onboardingLead"));
+      actions.appendChild(show);
+      box.append(title, detail, actions);
+      if (hadFocus) line.focus();
+      return box;
+    }
+
+    box.hidden = false;
+    const title = document.createElement("div");
+    title.className = "start-blocker-title";
+    // A contradiction is printed once, with its evidence, in the rows below. Repeating
+    // its title here would be the same sentence twice on one card.
+    const contradictory = readiness.verdict === "contradiction";
+    title.textContent = contradictory ? "Two of these cannot both be true" : next.title;
+    const detail = document.createElement("div");
+    detail.className = "start-blocker-detail";
+    detail.textContent = contradictory
+      ? "The evidence is printed below, with the action that settles it. Nothing on this pane calls this ready until they agree."
+      : next.detail || "";
+    const actions = document.createElement("div");
+    actions.className = "start-blocker-actions";
+    if (!contradictory && next.action && next.action_label) {
+      const run = document.createElement("button");
+      run.type = "button";
+      run.className = "btn btn-xs btn-primary";
+      run.id = "startNextAction";
+      run.textContent = next.action_label;
+      run.title = `Do the next step: ${next.title}`;
+      run.addEventListener("click", () => runStartNextAction(next.action));
+      actions.appendChild(run);
+    }
+    const show = document.createElement("button");
+    show.type = "button";
+    show.className = "btn btn-xs";
+    show.textContent = "Readiness details";
+    show.addEventListener("click", () => openStartSection("startDiagnostics", "onboardingLead"));
+    actions.appendChild(show);
+    box.append(title, detail, actions);
+    if (hadFocus) line.focus();
+    return box;
+  }
+
+  function renderStartContradictions() {
+    const host = document.getElementById("startContradictions");
+    if (!host) return null;
+    host.innerHTML = "";
+    const items = (startReadiness && startReadiness.contradictions) || [];
+    items.forEach(item => {
+      const row = document.createElement("div");
+      row.className = "start-contradiction";
+      row.dataset.contradiction = item.id;
+      row.setAttribute("role", "alert");
+      const title = document.createElement("div");
+      title.className = "start-contradiction-title";
+      title.textContent = item.title;
+      const detail = document.createElement("div");
+      detail.className = "start-contradiction-detail";
+      detail.textContent = item.detail;
+      const evidence = document.createElement("div");
+      evidence.className = "start-contradiction-evidence";
+      evidence.textContent = item.evidence;
+      row.append(title, detail, evidence);
+      if (item.action && item.action_label) {
+        const actions = document.createElement("div");
+        actions.className = "start-blocker-actions";
+        const run = document.createElement("button");
+        run.type = "button";
+        run.className = "btn btn-xs";
+        run.textContent = item.action_label;
+        run.addEventListener("click", () => runStartNextAction(item.action));
+        actions.appendChild(run);
+        row.appendChild(actions);
+      }
+      host.appendChild(row);
+    });
+    return host;
+  }
+
+  /* The blocker's own action. The workspace control lives on this pane now, so the
+     step that needs it opens it here instead of sending the reader to another tab:
+     a required setting behind a tab switch is a required setting that looks optional.
+     Everything else is the checklist's own handler, unchanged. */
+  function runStartNextAction(action) {
+    if (action === "fix-workspace" && document.getElementById("startWorkspaceDetails")) {
+      openStartSection("startWorkspaceDetails", "startWorkspaceInput");
+      const hint = document.getElementById("startWorkspaceHint");
+      if (hint) hint.textContent = ONBOARDING_ACTION_LABELS["fix-workspace"];
+      return;
+    }
+    if (action === "probe-local-models") { refreshStartCommand({ probe: true }); return; }
+    if (action === "open-providers") { openProvidersModal(); return; }
+    if (action === "run-first-task") { startGuidedFirstTask(); return; }
+    openStartSection("startDiagnostics");
+    runOnboardingAction(action);
+  }
+
+  /* The verdict quotes which health payload the pane is holding. When that changes -
+     live to the demo payload, or the other way - the answer is re-read once, without
+     probing: re-reading health must not ask the runtime a second question. */
+  function syncStartCommandTelemetry() {
+    if (!startReadiness) return null;
+    const held = (startReadiness.telemetry && startReadiness.telemetry.source) || "none";
+    const current = startTelemetrySource() || "none";
+    if (held === current) return null;
+    return refreshStartCommand();
+  }
+
+  function renderOnboardingDetails(probeLocal) {
+    const list = document.getElementById("onboardingSteps");
+    if (!list || !onboardingReport) return null;
+    const report = onboardingReport;
+    const next = report.next_step || null;
+    setStatus(
+      "onboardingSummary",
+      report.ready ? "ok" : report.blocked ? "danger" : "warn",
+      report.ready ? uiStatus("ready").label : report.blocked ? uiStatus("blocked").label : uiStatus("needs-you").label,
+    );
+    // The list is ordered by the server (STEP_ORDER). The row it named as next is
+    // marked with aria-current="step" and a chip, so the eye and the screen reader
+    // land on the same row, and a row the server gave no action is printed as
+    // following that one instead of as a button that does nothing.
+    const nextIndex = next ? report.steps.findIndex(step => step.id === next.id) : -1;
+    list.setAttribute("aria-live", "polite");
+    list.innerHTML = report.steps.map((step, index) => {
+      const isNext = Boolean(next && step.id === next.id);
+      const waits = !step.action && step.status !== "ready" && step.status !== "optional"
+        && nextIndex >= 0 && index > nextIndex;
+      return `
+      <div class="${onboardingStepClass(step.status)}${isNext ? " next" : ""}" role="listitem"${isNext ? ' aria-current="step"' : ""}>
+        <span class="onboarding-glyph" aria-hidden="true">${onboardingStepIcon(step.status)}</span>
+        <div>
+          <div class="onboarding-title">${escapeHtml(step.title)}${isNext ? '<span class="onboarding-step-chip">next</span>' : ""}</div>
+          <div class="onboarding-detail">${escapeHtml(step.detail)}</div>
+          ${waits ? '<div class="onboarding-step-waiting">No action of its own yet: this step follows the one marked next.</div>' : ""}
+        </div>
+        ${step.action && step.action_label ? `<button class="btn btn-xs" type="button" onclick="runOnboardingAction('${escapeHtml(step.action)}')">${escapeHtml(step.action_label)}</button>` : ""}
+      </div>`;
+    }).join("");
+    // Order matters: the lead is rebuilt first, because clearPresentation() may
+    // hand focus to it. Focusing a node that the next line replaces drops focus on
+    // <body> - which is exactly what the walk caught before this line moved.
+    renderOnboardingLead();
+    // The Re-check button lives inside the box this clears, so without a target a
+    // keyboard user would be left on <body> with nothing announced.
+    clearPresentation("onboardingState", { focus: "onboardingLead" });
+    const notes = document.getElementById("onboardingNotes");
+    if (notes) notes.textContent = (report.notes || []).join(" ");
+    const runBtn = document.getElementById("onboardingRunBtn");
+    if (runBtn) {
+      runBtn.disabled = !report.ready;
+      runBtn.setAttribute("aria-describedby", "onboardingRunHint");
+      runBtn.title = report.ready
+        ? "Send the guided prompt to the selected model"
+        : `Stays off until every step is ready${next ? `; next: ${next.title}` : ""}`;
+    }
+    const checked = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const measured = Boolean(probeLocal) && startReadiness && startReadiness.basis === "measured";
+    evidenceNote(
+      "onboardingEvidence",
+      measured ? "measured" : "derived",
+      measured
+        ? `Preflight run at ${checked}: ${report.ready ? "ready" : report.summary}. Steps were checked against local configuration and the runtime answered when asked.`
+        : `Preflight read at ${checked}: ${report.ready ? "ready" : report.summary}. Read from local configuration only${probeLocal ? ", and the runtime did not answer when asked" : ", without contacting the runtime"}.`,
+      { copyText: `Preflight ${checked}: ${report.summary}` },
+    );
+    return list;
+  }
+
+  async function refreshStartCommand(options = {}) {
+    const probeLocal = Boolean(options.probe);
     const list = document.getElementById("onboardingSteps");
     const summary = document.getElementById("onboardingSummary");
-    const notes = document.getElementById("onboardingNotes");
-    const runBtn = document.getElementById("onboardingRunBtn");
+    const pill = document.getElementById("startReadinessPill");
+    const line = document.getElementById("startReadinessLine");
     if (!list) return;
+    const params = new URLSearchParams();
+    if (probeLocal) params.set("probe", "local");
+    const source = startTelemetrySource();
+    if (source) params.set("telemetry", source);
+    const query = params.toString();
+    // One literal, one conditional: the route map reads this call instead of guessing
+    // at a template with a conditional inside it.
+    const url = query ? `/api/start/command-center?${query}` : "/api/start/command-center";
     try {
-      const url = probeLocal ? "/api/onboarding/preflight?probe=local" : "/api/onboarding/preflight";
       const response = await fetch(url);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const payload = await response.json();
-      onboardingReport = payload.preflight || null;
-      if (!onboardingReport) throw new Error("empty preflight");
-      // The pill states the verdict, not the count: the count is printed once, in the
-      // lead. Two places repeating "3 of 6" is how a progress line and a status badge
-      // start disagreeing after one of them is edited.
-      setStatus(
-        summary,
-        onboardingReport.ready ? "ok" : onboardingReport.blocked ? "danger" : "warn",
-        onboardingReport.ready ? uiStatus("ready").label : onboardingReport.blocked ? uiStatus("blocked").label : uiStatus("needs-you").label,
-      );
-      // The list is ordered by the server (STEP_ORDER). The row it named as next is
-      // marked with aria-current="step" and a chip, so the eye and the screen reader
-      // land on the same row, and a row the server gave no action is printed as
-      // following that one instead of as a button that does nothing.
-      const next = onboardingReport.next_step || null;
-      const nextIndex = next ? onboardingReport.steps.findIndex(step => step.id === next.id) : -1;
-      list.setAttribute("aria-live", "polite");
-      list.innerHTML = onboardingReport.steps.map((step, index) => {
-        const isNext = Boolean(next && step.id === next.id);
-        const waits = !step.action && step.status !== "ready" && step.status !== "optional"
-          && nextIndex >= 0 && index > nextIndex;
-        return `
-        <div class="${onboardingStepClass(step.status)}${isNext ? " next" : ""}" role="listitem"${isNext ? ' aria-current="step"' : ""}>
-          <span class="onboarding-glyph" aria-hidden="true">${onboardingStepIcon(step.status)}</span>
-          <div>
-            <div class="onboarding-title">${escapeHtml(step.title)}${isNext ? '<span class="onboarding-step-chip">next</span>' : ""}</div>
-            <div class="onboarding-detail">${escapeHtml(step.detail)}</div>
-            ${waits ? '<div class="onboarding-step-waiting">No action of its own yet: this step follows the one marked next.</div>' : ""}
-          </div>
-          ${step.action && step.action_label ? `<button class="btn btn-xs" type="button" onclick="runOnboardingAction('${escapeHtml(step.action)}')">${escapeHtml(step.action_label)}</button>` : ""}
-        </div>`;
-      }).join("");
-      // Order matters: the lead is rebuilt first, because clearPresentation() may
-      // hand focus to it. Focusing a node that the next line replaces drops focus on
-      // <body> - which is exactly what the walk caught before this line moved.
-      renderOnboardingLead();
-      // The Re-check button lives inside the box this clears, so without a target a
-      // keyboard user would be left on <body> with nothing announced.
-      clearPresentation("onboardingState", { focus: "onboardingLead" });
-      notes.textContent = (onboardingReport.notes || []).join(" ");
-      if (runBtn) {
-        runBtn.disabled = !onboardingReport.ready;
-        runBtn.setAttribute("aria-describedby", "onboardingRunHint");
-        runBtn.title = onboardingReport.ready
-          ? "Send the guided prompt to the selected model"
-          : `Stays off until every step is ready${next ? `; next: ${next.title}` : ""}`;
-      }
-      const checked = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-      evidenceNote(
-        "onboardingEvidence",
-        probeLocal ? "measured" : "derived",
-        probeLocal
-          ? `Preflight run at ${checked}: ${onboardingReport.ready ? "ready" : onboardingReport.summary}. Steps were checked against local configuration and the local runtime.`
-          : `Preflight read at ${checked}: ${onboardingReport.ready ? "ready" : onboardingReport.summary}. Read from local configuration only, without contacting the runtime.`,
-        { copyText: `Preflight ${checked}: ${onboardingReport.summary}` },
-      );
+      startReadiness = payload.readiness || null;
+      onboardingReport = (startReadiness && startReadiness.preflight) || null;
+      if (!onboardingReport) throw new Error("empty readiness");
+      renderOnboardingDetails(probeLocal);
+      renderStartCommand();
+      renderStartContradictions();
     } catch (error) {
       setStatus(summary, "danger", uiStatus("failed").label);
+      if (pill) setStatus(pill, "danger", uiStatus("failed").label);
+      const message = error && error.message ? error.message : "the request failed";
+      if (line) {
+        // The sentence does not keep the last verdict: a stale "Ready" beside a
+        // failed read is the one thing this card must never show.
+        line.textContent = "Could not read the readiness check. Nothing below was changed by this attempt.";
+      }
+      // The retry belongs where the reader is looking. The error record stays inside
+      // Readiness details, but a failure whose only way forward is 800px down a closed
+      // disclosure is a dead end with a summary on it.
+      const blocker = document.getElementById("startNextBlocker");
+      if (blocker) {
+        const hadFocus = blocker.contains(document.activeElement);
+        blocker.hidden = false;
+        blocker.dataset.verdict = "blocked";
+        blocker.innerHTML = "";
+        const title = document.createElement("div");
+        title.className = "start-blocker-title";
+        title.textContent = `The readiness check failed: ${message}`;
+        const detail = document.createElement("div");
+        detail.className = "start-blocker-detail";
+        detail.textContent = "The checks in Readiness details still show the last result that loaded; this attempt changed nothing.";
+        const actions = document.createElement("div");
+        actions.className = "start-blocker-actions";
+        const retry = document.createElement("button");
+        retry.type = "button";
+        retry.className = "btn btn-xs btn-primary";
+        retry.id = "startRetryReadBtn";
+        retry.textContent = "Re-check";
+        retry.addEventListener("click", () => refreshOnboarding(probeLocal));
+        const details = document.createElement("button");
+        details.type = "button";
+        details.className = "btn btn-xs";
+        details.textContent = "Readiness details";
+        details.addEventListener("click", () => openStartSection("startDiagnostics", "onboardingLead"));
+        actions.append(retry, details);
+        blocker.append(title, detail, actions);
+        if (hadFocus) retry.focus();
+      }
+      // The error record also lives inside Readiness details, so opening it is one click
+      // from the retry rather than a hunt.
+      openStartSection("startDiagnostics");
+      const taskHint = document.getElementById("startTaskHint");
+      if (taskHint) taskHint.textContent = START_TASK_HINT;
       const runHint = document.getElementById("onboardingRunHint");
       if (runHint) runHint.textContent = "Run the first task is off while the preflight is unreadable; the last good result is still shown.";
       // The steps below are left alone on purpose: a failed re-check does not
@@ -7922,6 +8279,12 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         ],
       });
     }
+  }
+
+  /* The checklist's entry point keeps its name and its meaning: it now reads the
+     same route the command center reads, so there is exactly one answer on the pane. */
+  async function refreshOnboarding(probeLocal) {
+    await refreshStartCommand({ probe: Boolean(probeLocal) });
   }
 
   async function runOnboardingAction(action) {
@@ -8261,15 +8624,14 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   /* The launcher is a handoff. It never starts anything: the workspace, the
      worktree decision and the execution policy are chosen in the Harness, and a run
      begun from a pane that cannot show them is a run begun with the wrong ones. */
+  const START_TASK_HINT = "Nothing runs from this pane: the task opens in the Harness, with the workspace and policy you set there.";
+
   function updateStartTaskHint(extra) {
     const hint = document.getElementById("startTaskHint");
     if (!hint) return;
-    const ready = Boolean(onboardingReport && onboardingReport.ready);
-    const next = onboardingReport && onboardingReport.next_step ? onboardingReport.next_step : null;
-    const readiness = ready
-      ? "The preflight reports ready, so Run works in the Harness straight away."
-      : `The preflight is not ready yet${next ? ` (next: ${next.title})` : ""}, so Run in the Harness will refuse until that step is done.`;
-    hint.textContent = extra ? `${extra} ${readiness}` : `Type a task, then press Open in Harness. ${readiness}`;
+    // The verdict line and the blocker above already say what the preflight thinks.
+    // This hint says what the composer does, which is the only thing it can add.
+    hint.textContent = extra ? `${extra} ${START_TASK_HINT}` : START_TASK_HINT;
   }
 
   function launchTaskFromStart() {
@@ -11527,6 +11889,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       councilTelemetryReadAt = 0;
       renderStartHealth();
       renderCouncilReadiness();
+      syncStartCommandTelemetry();
       const pill = document.getElementById("connPill");
       pill.className = "status-pill demo";
       document.getElementById("connText").textContent = "Backend Offline";
@@ -11539,6 +11902,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     councilTelemetryReadAt = startHealthReadAt;
     renderStartHealth();
     renderCouncilReadiness();
+    syncStartCommandTelemetry();
     updateChatComposer();
     const pill = document.getElementById("connPill");
     pill.className = d.omlx_online ? "status-pill" : "status-pill demo";
@@ -20212,6 +20576,48 @@ async def api_onboarding_preflight(request: Request, probe: str = "") -> JSONRes
     report = onboarding_preflight.build_report(inputs).to_dict()
     report["local_probe"] = inputs.local_probe
     return JSONResponse({"status": "ok", "preflight": report})
+
+
+@app.get("/api/start/command-center")
+async def api_start_readiness(request: Request, probe: str = "", telemetry: str = "") -> JSONResponse:
+    """The short answer Start opens with, and the evidence it stands on (UIV2-24).
+
+    Read-only. Without ``?probe=local`` nothing is contacted, so the runtime row
+    says "not asked" rather than guessing from configuration. ``?telemetry=``
+    carries which health payload the page is holding (``live_omlx``,
+    ``simulated_demo``, or empty), because a demo payload and a live probe can
+    disagree and the pane has to explain that instead of picking a winner.
+    """
+    runtime = start_command_center.RuntimeObservation(configured=bool(OMLX_BASE), url=OMLX_BASE)
+    if probe == "local":
+        client: httpx.AsyncClient | None = getattr(request.app.state, "http", None)
+        local_models = await _onboarding_probe_local_models(client) if client is not None else None
+        runtime = start_command_center.RuntimeObservation(
+            configured=bool(OMLX_BASE),
+            url=OMLX_BASE,
+            # A None here means "nothing answered"; a 0 means "something answered and
+            # reported no models", which is the distinction this whole route exists for.
+            port_answered=local_models is not None,
+            model_count=local_models,
+            probe="ran" if local_models is not None else "unavailable",
+        )
+        inputs = onboarding_preflight_inputs(
+            local_model_count=local_models,
+            local_probe="ran" if local_models is not None else "unavailable",
+        )
+    else:
+        inputs = onboarding_preflight_inputs()
+    preflight = onboarding_preflight.build_report(inputs).to_dict()
+    telemetry_source = telemetry if telemetry in ("live_omlx", "simulated_demo") else ""
+    readiness = start_command_center.build_readiness(
+        preflight,
+        runtime=runtime,
+        telemetry=start_command_center.TelemetryObservation(source=telemetry_source),
+        workspace_dir=str(WORKSPACE_ROOT),
+        workspace_writable=bool(inputs.workspace_writable),
+    )
+    readiness["preflight"] = preflight
+    return JSONResponse({"status": "ok", "readiness": readiness})
 
 
 # =============================================================================
@@ -56143,6 +56549,303 @@ def build_report(inputs: PreflightInputs) -> PreflightReport:
     return PreflightReport(steps=steps, notes=tuple(notes))
 
 onboarding_preflight = sys.modules[__name__]
+
+"""The Start pane's verdict, the evidence under it, and the contradictions it refuses to hide.
+
+Start used to lead with a six-row checklist. The checklist is still the truth, but it is the wrong
+first thing to read: what a person needs on landing is *what can I do next*, *is anything in the way*,
+and only then *why do you say so*. This module produces that short answer from the preflight the
+server already computes, plus what is actually known about the local model runtime.
+
+The rule it exists to enforce: **a port answering is not a runtime that can run a model.** A loopback
+port can answer `/v1/models` with an empty list, a model can be listed but not loaded, and the
+health card can be the server's own demo payload. So the runtime is observed separately from the
+preflight, the observation records how it was obtained (``not-run`` / ``ran`` / ``unavailable``), and
+a disagreement between the two is reported as a contradiction with its evidence rather than averaged
+into a friendly green word.
+
+Nothing here performs I/O: the caller passes in what it observed.
+"""
+
+
+from dataclasses import dataclass
+from typing import Any, Literal
+
+Verdict = Literal["ready", "needs-you", "blocked", "contradiction"]
+ProbeState = Literal["not-run", "ran", "unavailable"]
+
+#: The preflight steps that make up the short readiness summary, in reading order. `auth` and
+#: `first-task` stay in the detailed checklist: the first is about the port, the second is about
+#: what the pane is inviting you to do next.
+SUMMARY_STEPS = ("model-source", "model-available", "workspace", "execution")
+
+STEP_LABELS = {
+    "auth": "Workspace protected",
+    "model-source": "Model source",
+    "model-available": "Model ready",
+    "workspace": "Project workspace",
+    "execution": "Command execution",
+    "first-task": "First task",
+    "runtime": "Local runtime",
+}
+
+
+@dataclass(frozen=True)
+class RuntimeObservation:
+    """What was seen of the local model runtime, and how it was seen.
+
+    ``port_answered`` is a statement about the socket, not about the runtime: a process can hold
+    the port and serve an empty model list. ``model_count`` is the number the runtime itself
+    reported, and ``None`` means nobody asked.
+    """
+
+    configured: bool = False
+    url: str = ""
+    port_answered: bool | None = None
+    model_count: int | None = None
+    probe: ProbeState = "not-run"
+
+    @property
+    def measured(self) -> bool:
+        return self.probe == "ran" and self.port_answered is not None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "configured": self.configured,
+            "url": self.url,
+            "port_answered": self.port_answered,
+            "model_count": self.model_count,
+            "probe": self.probe,
+            "measured": self.measured,
+            "basis": "measured" if self.measured else "not measured",
+        }
+
+
+@dataclass(frozen=True)
+class TelemetryObservation:
+    """Which health payload the pane is holding, and what it claimed about the runtime."""
+
+    source: str = ""
+    omlx_online: bool | None = None
+
+    @property
+    def simulated(self) -> bool:
+        return self.source == "simulated_demo"
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"source": self.source or "none", "omlx_online": self.omlx_online, "simulated": self.simulated}
+
+
+def _check(step: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": step.get("id", ""),
+        "label": STEP_LABELS.get(str(step.get("id")), str(step.get("title", ""))),
+        "status": step.get("status", "action-required"),
+        "detail": step.get("detail", ""),
+        "action": step.get("action", ""),
+        "action_label": step.get("action_label", ""),
+    }
+
+
+def _runtime_check(runtime: RuntimeObservation) -> dict[str, Any]:
+    """The runtime row, which is the one row that must never be inferred from the port alone."""
+    if not runtime.configured:
+        return {
+            "id": "runtime",
+            "label": STEP_LABELS["runtime"],
+            "status": "optional",
+            "detail": "No local runtime is configured, so every model comes from a cloud provider.",
+            "action": "",
+            "action_label": "",
+        }
+    if not runtime.measured:
+        return {
+            "id": "runtime",
+            "label": STEP_LABELS["runtime"],
+            "status": "unchecked",
+            "detail": "Not asked yet: the runtime is only contacted when you press the button that checks it.",
+            "action": "probe-local-models",
+            "action_label": "Check the runtime",
+        }
+    if runtime.port_answered and (runtime.model_count or 0) > 0:
+        return {
+            "id": "runtime",
+            "label": STEP_LABELS["runtime"],
+            "status": "ready",
+            "detail": f"The runtime answered and reported {runtime.model_count} model(s).",
+            "action": "",
+            "action_label": "",
+        }
+    if runtime.port_answered:
+        return {
+            "id": "runtime",
+            "label": STEP_LABELS["runtime"],
+            "status": "action-required",
+            "detail": "The port answered, but the runtime reported no models: a turn would fail even though the port is up.",
+            "action": "probe-local-models",
+            "action_label": "Check again",
+        }
+    return {
+        "id": "runtime",
+        "label": STEP_LABELS["runtime"],
+        "status": "action-required",
+        "detail": f"Nothing answered at {runtime.url or 'the configured runtime'} when it was asked.",
+        "action": "probe-local-models",
+        "action_label": "Check again",
+    }
+
+
+def _contradictions(
+    preflight: dict[str, Any],
+    runtime: RuntimeObservation,
+    telemetry: TelemetryObservation,
+) -> list[dict[str, Any]]:
+    """Where two honest observations disagree, say so instead of picking the friendlier one."""
+    found: list[dict[str, Any]] = []
+    steps = {str(step.get("id")): step for step in preflight.get("steps", [])}
+
+    if runtime.port_answered and (runtime.model_count or 0) == 0:
+        found.append(
+            {
+                "id": "port-without-models",
+                "title": "The runtime answers, but has no model to run",
+                "detail": (
+                    "A process is holding the port and answering requests, so a port check passes. "
+                    "It reports zero models, so a task sent to it would fail. Load a model, or point "
+                    "Studio at a provider that has one."
+                ),
+                "evidence": f"port_answered={runtime.port_answered} · model_count={runtime.model_count}",
+                "action": "probe-local-models",
+                "action_label": "Check the runtime",
+            }
+        )
+
+    model_step = steps.get("model-available", {})
+    if runtime.port_answered and (runtime.model_count or 0) > 0 and model_step.get("status") not in ("ready", "optional"):
+        found.append(
+            {
+                "id": "runtime-models-without-usable-selection",
+                "title": "The runtime has models, but the check found none usable",
+                "detail": (
+                    f"The runtime reported {runtime.model_count} model(s). The readiness check did "
+                    "not find a usable one, so the two are describing different things: check the "
+                    "selected model, not the port."
+                ),
+                "evidence": f"model_count={runtime.model_count} · step_status={model_step.get('status')}",
+                "action": model_step.get("action") or "open-providers",
+                "action_label": model_step.get("action_label") or "Open providers",
+            }
+        )
+
+    if preflight.get("ready") and runtime.measured and not runtime.port_answered:
+        found.append(
+            {
+                "id": "checks-passed-without-runtime",
+                "title": "The checks passed, but the runtime did not answer",
+                "detail": (
+                    "Every local check passed, and the runtime did not answer when it was asked. "
+                    "That combination is possible — the checks read configuration — so it is printed "
+                    "instead of being smoothed into a green word."
+                ),
+                "evidence": f"preflight.ready=true · probe={runtime.probe}",
+                "action": "probe-local-models",
+                "action_label": "Check the runtime",
+            }
+        )
+
+    if telemetry.simulated and preflight.get("ready") and (runtime.model_count or 0) > 0:
+        found.append(
+            {
+                "id": "demo-health-with-live-runtime",
+                "title": "Health is the demo payload while a runtime is answering",
+                "detail": (
+                    "The health card is the server's own simulated payload, and a separate probe "
+                    "found the runtime answering. The health card's rows describe this machine only "
+                    "where it says so; do not read its model runtime row as the verdict."
+                ),
+                "evidence": f"telemetry_source={telemetry.source} · model_count={runtime.model_count}",
+                "action": "probe-local-models",
+                "action_label": "Refresh health",
+            }
+        )
+    return found
+
+
+def build_readiness(
+    preflight: dict[str, Any],
+    runtime: RuntimeObservation | None = None,
+    telemetry: TelemetryObservation | None = None,
+    workspace_dir: str = "",
+    workspace_writable: bool = True,
+) -> dict[str, Any]:
+    """The one-line verdict, the next action, and the evidence under both."""
+    runtime = runtime or RuntimeObservation()
+    telemetry = telemetry or TelemetryObservation()
+    steps = {str(step.get("id")): step for step in preflight.get("steps", [])}
+
+    checks = [_check(steps[step_id]) for step_id in SUMMARY_STEPS if step_id in steps]
+    checks.append(_runtime_check(runtime))
+
+    contradictions = _contradictions(preflight, runtime, telemetry)
+    next_step = preflight.get("next_step") or None
+    blocked = bool(preflight.get("blocked"))
+    ready = bool(preflight.get("ready"))
+
+    following: dict[str, Any] | None
+    if contradictions:
+        verdict: Verdict = "contradiction"
+        headline = "The checks and the runtime disagree"
+        detail = contradictions[0]["detail"]
+        following = {
+            "id": contradictions[0]["id"],
+            "title": contradictions[0]["title"],
+            "detail": contradictions[0]["detail"],
+            "action": contradictions[0]["action"],
+            "action_label": contradictions[0]["action_label"],
+        }
+    elif blocked:
+        verdict = "blocked"
+        headline = f"Blocked: {next_step['title'] if next_step else 'a check needs attention'}"
+        detail = (next_step or {}).get("detail", "")
+        following = next_step
+    elif ready:
+        verdict = "ready"
+        headline = "Ready to run"
+        detail = (
+            f"All {preflight.get('total_count', len(checks))} checks read locally"
+            + (" and the runtime answered when asked." if runtime.measured and runtime.port_answered else ".")
+        )
+        following = None
+    else:
+        verdict = "needs-you"
+        headline = f"Needs you: {next_step['title'] if next_step else 'one check'}"
+        detail = (next_step or {}).get("detail", "")
+        following = next_step
+
+    return {
+        "verdict": verdict,
+        "headline": headline,
+        "detail": detail,
+        "ready": verdict == "ready",
+        "blocked": verdict == "blocked",
+        "counts": {
+            "ready": int(preflight.get("completed_count", 0)),
+            "total": int(preflight.get("total_count", len(checks))),
+            "optional": sum(1 for check in checks if check["status"] == "optional"),
+            "unchecked": sum(1 for check in checks if check["status"] == "unchecked"),
+        },
+        "basis": "measured" if runtime.measured else "derived",
+        "probe": runtime.probe,
+        "runtime": runtime.to_dict(),
+        "telemetry": telemetry.to_dict(),
+        "workspace": {"dir": workspace_dir, "writable": bool(workspace_writable)},
+        "checks": checks,
+        "contradictions": contradictions,
+        "next": following,
+        "summary": f"{preflight.get('completed_count', 0)} of {preflight.get('total_count', len(checks))} checks ready",
+    }
+
+start_command_center = sys.modules[__name__]
 
 """Deterministic failure-injection harness for workflow and action-boundary resilience tests."""
 

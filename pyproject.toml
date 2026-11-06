@@ -98,6 +98,7 @@ files = [
   "security_release_gate.py",
   "session_trust.py",
   "side_effect_ledger.py",
+  "start_command_center.py",
   "task_events.py",
   "trusted_transformations.py",
   "workflow_checkpoints.py",

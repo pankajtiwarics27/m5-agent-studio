@@ -8,25 +8,55 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "4765fda1538fdc08994c15a37a452d4e0a2c6a3296509cd88eccdc49d72ac1ce",
+  "frontend_sha256": "8558d2b589d7373ed1519f559b0da44b7ffd6fe95331d10ab85dcf254b31a200",
   "panes": [
     {
       "dom_id": "start",
       "section_id": "pane-start",
-      "control_count": 11,
+      "control_count": 14,
       "counts": {
         "button": 8,
         "input": 2,
-        "select": 1
+        "select": 1,
+        "summary": 3
       },
-      "controls_without_id": 5,
+      "controls_without_id": 8,
       "controls_without_label": 0,
       "controls": [
+        {
+          "tag": "input",
+          "id": "startTaskInput",
+          "type": "text",
+          "aria-describedby": "startTaskHint",
+          "placeholder": "Describe a task to open in the Harness…"
+        },
+        {
+          "tag": "button",
+          "id": "startTaskBtn",
+          "type": "button",
+          "class": "btn btn-primary",
+          "aria-describedby": "startTaskHint",
+          "onclick": "launchTaskFromStart()",
+          "text": "Open in Harness"
+        },
+        {
+          "tag": "button",
+          "type": "button",
+          "class": "btn",
+          "title": "Re-read the session list from the server",
+          "onclick": "loadStartRecent({ force: true })",
+          "text": "Refresh"
+        },
+        {
+          "tag": "summary",
+          "class": "m-head start-diagnostics-head",
+          "text": "Readiness details checking"
+        },
         {
           "tag": "button",
           "id": "onboardingRunBtn",
           "type": "button",
-          "class": "btn btn-primary",
+          "class": "btn",
           "aria-describedby": "onboardingRunHint",
           "onclick": "startGuidedFirstTask()",
           "text": "Run the first task"
@@ -46,28 +76,9 @@
           "text": "Providers"
         },
         {
-          "tag": "input",
-          "id": "startTaskInput",
-          "type": "text",
-          "aria-describedby": "startTaskHint",
-          "placeholder": "Describe a task to open in the Harness…"
-        },
-        {
-          "tag": "button",
-          "id": "startTaskBtn",
-          "type": "button",
-          "class": "btn",
-          "aria-describedby": "startTaskHint",
-          "onclick": "launchTaskFromStart()",
-          "text": "Open in Harness"
-        },
-        {
-          "tag": "button",
-          "type": "button",
-          "class": "btn",
-          "title": "Re-read the session list from the server",
-          "onclick": "loadStartRecent({ force: true })",
-          "text": "Refresh"
+          "tag": "summary",
+          "class": "m-head start-diagnostics-head",
+          "text": "System health loading"
         },
         {
           "tag": "button",
@@ -83,6 +94,11 @@
           "title": "Open the contextual inspector",
           "onclick": "toggleMonitorRail()",
           "text": "Inspector"
+        },
+        {
+          "tag": "summary",
+          "class": "m-head start-diagnostics-head",
+          "text": "Project workspace loading"
         },
         {
           "tag": "input",
@@ -1687,8 +1703,8 @@
   },
   "totals": {
     "panes": 6,
-    "markup_controls": 225,
-    "pane_controls": 99,
+    "markup_controls": 228,
+    "pane_controls": 102,
     "chrome_controls": 126,
     "script_rendered_controls": 71,
     "script_rendered_by_function": {
@@ -1700,7 +1716,6 @@
       "openSpawnModal": 1,
       "refreshHallSessions": 3,
       "refreshInspectorPanel": 9,
-      "refreshOnboarding": 1,
       "renderActiveHall": 3,
       "renderCommandPaletteList": 1,
       "renderDebateCriteria": 3,
@@ -1717,6 +1732,7 @@
       "renderMcpHub": 2,
       "renderMcpTools": 2,
       "renderMcpUI": 7,
+      "renderOnboardingDetails": 1,
       "renderOpenContextDocs": 3,
       "renderProvidersModal": 3,
       "renderTelemetry": 1,

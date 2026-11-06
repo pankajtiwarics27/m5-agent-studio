@@ -5,7 +5,7 @@
     "frontend": "static/index.html",
     "walk": "scripts/polish_walk.mjs",
     "style_blocks": 2,
-    "rules": 1090
+    "rules": 1110
   },
   "tokens": {
     "radius": [
@@ -96,6 +96,7 @@
       ".conclusion-body:focus-visible",
       ".conclusion-resize:focus-visible",
       ".start-recent-row:focus-visible",
+      ".start-diagnostics > summary:focus-visible",
       ".prompt-box:focus-within",
       ".debate-criteria-summary:focus-visible",
       ".harness-stream:focus-visible, .hall-stream:focus-visible",
@@ -132,8 +133,8 @@
     ]
   },
   "totals": {
-    "radius_rules": 124,
-    "motion_rules": 17,
+    "radius_rules": 126,
+    "motion_rules": 18,
     "press_rules": 2,
     "hover_rules": 34,
     "captures": 8,
