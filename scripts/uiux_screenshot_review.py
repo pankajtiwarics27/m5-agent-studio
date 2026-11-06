@@ -547,6 +547,32 @@ REVIEWS: dict[str, dict[str, object]] = {
         "re_taken": True,
         "theme": "light and dark, desktop 1280-1640 and narrow 390",
     },
+    "chat-persona": {
+        "story": "UIV2-19",
+        "note": (
+            "Chat's persona picker: six shots on each of four viewports x light/dark - empty, "
+            "populated, long-content, loading, error and recovery - written by "
+            "`scripts/chat_persona_walk.mjs` against fixtures it starts itself, after 21/21 checks "
+            "on each of the eight runs, beside `before-uiv2-19/`, the empty and populated states "
+            "served from origin/main at 3bd4890 and captured by this same walk in `--capture-only` "
+            "(3/17 checks there: the registry, the filter and the description line are the things "
+            "the story adds, so their absence is what the before set is). Opened and read: the "
+            "1440x900-dark empty capture (the picker with its filter beside it and one clamped "
+            "description line under both, inside the same one-row control bar UIV2-18 measured), "
+            "the 390x844-light empty capture (the same three parts at phone width, the bar still "
+            "three rows), and the before-uiv2-19 1440x900-dark empty capture (the select alone, "
+            "its value a paragraph of prose, nothing describing it)."
+        ),
+        "eye": [
+            "chat-persona-empty-1440x900-dark.png",
+            "chat-persona-populated-1440x900-dark.png",
+            "chat-persona-loading-390x844-light.png",
+            "chat-persona-error-1440x900-light.png",
+            "before-uiv2-19/1440x900-dark/chat-persona-empty-1440x900-dark.png",
+        ],
+        "re_taken": True,
+        "theme": "light and dark, desktop 1024-1440 and narrow 390",
+    },
     "chat-layout": {
         "story": "UIV2-18",
         "note": (

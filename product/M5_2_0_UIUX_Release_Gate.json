@@ -51,8 +51,8 @@
           "artifact": "product/M5_2_0_UIUX_Control_Inventory.json",
           "totals": {
             "panes": 6,
-            "markup_controls": 207,
-            "pane_controls": 98,
+            "markup_controls": 208,
+            "pane_controls": 99,
             "chrome_controls": 109,
             "script_rendered_controls": 62,
             "script_rendered_by_function": {
@@ -208,9 +208,9 @@
           "totals": {
             "panes": 6,
             "preserved_capabilities": 21,
-            "markup_controls": 207,
+            "markup_controls": 208,
             "chrome_controls": 109,
-            "pane_controls": 98,
+            "pane_controls": 99,
             "script_rendered_controls": 62,
             "routes": 117,
             "routes_with_resolved_or_possible_caller": 71,
@@ -245,7 +245,7 @@
           "totals": {
             "tokens": 56,
             "groups": 8,
-            "references": 1314,
+            "references": 1318,
             "theme_overrides": 20,
             "density_overrides": 5,
             "contrast_pairs": 28,
@@ -847,7 +847,7 @@
             "route_provers": 9,
             "control_provers": 2,
             "walks": 17,
-            "support_walks": 19,
+            "support_walks": 20,
             "findings": 0
           }
         }
@@ -894,15 +894,15 @@
         {
           "artifact": "product/M5_2_0_UIUX_Screenshot_Review.json",
           "totals": {
-            "sets": 32,
-            "files": 981,
-            "reviewed_sets": 32,
-            "sets_eyed": 12,
-            "files_eyed": 71,
-            "re_taken_sets": 8,
+            "sets": 33,
+            "files": 1045,
+            "reviewed_sets": 33,
+            "sets_eyed": 13,
+            "files_eyed": 76,
+            "re_taken_sets": 9,
             "published_sets": 1,
             "findings": 0,
-            "observations": 26
+            "observations": 27
           }
         }
       ]
@@ -1141,7 +1141,7 @@
   "inventory": {
     "tabs": 6,
     "routes": 117,
-    "markup_controls": 207,
+    "markup_controls": 208,
     "chrome_controls": 109,
     "script_rendered_controls": 62,
     "capabilities": 21,
@@ -1149,9 +1149,9 @@
     "e2e_findings": 0,
     "refusals": 12,
     "refusal_statuses": 9,
-    "captures": 981,
-    "capture_sets": 32,
-    "reviewed_sets": 32,
+    "captures": 1045,
+    "capture_sets": 33,
+    "reviewed_sets": 33,
     "screenshot_findings": 0,
     "doc_pages": 5,
     "doc_commands": 40,

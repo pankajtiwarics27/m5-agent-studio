@@ -6,7 +6,7 @@ executed by [`scripts/preservation_suite.py`](../scripts/preservation_suite.py).
 
 * 21 of 21 matrix rows mapped, 55 provers, 0 findings
 * 40 walk checks, 4 pytest nodes, 9 route probes, 2 wired controls
-* 17 walks prove a row; 19 more are listed with the reason they do not
+* 17 walks prove a row; 20 more are listed with the reason they do not
 
 ## What this page is, and is not
 
@@ -81,6 +81,7 @@ than succeed. That is what "existing endpoint and permission semantics" means in
 | `adversarial_walk.mjs` | the adversarial walk (P6-02) proves how a refusal is drawn, which is a contract about failures rather than a capability the matrix enumerates |
 | `chat_handoff_walk.mjs` | the Chat-to-Harness handoff (P2-05) is a new journey, not a preserved capability |
 | `chat_layout_walk.mjs` | the Chat layout walk (UIV2-18) proves the column, the control bar and the composer's position on a screen; the capability it belongs to is Chat itself, which the matrix already enumerates from the pane's own controls |
+| `chat_persona_walk.mjs` | the Chat persona walk (UIV2-19) proves that the picker is drawn from CHAT_PERSONAS, that a stored choice survives a reload, that a deleted persona falls back to the default, and that the request carries the registry's prompt rather than the picker's value; the capability it belongs to is Chat itself, which the matrix already enumerates from the pane's own controls |
 | `compare_balanced_walk.mjs` | the Compare composition walk (UIV2-16) proves how the question, the folded criteria and the answer columns are drawn; the capability it belongs to is the comparison itself, which the matrix already enumerates from the pane's own controls |
 | `compare_continuity_walk.mjs` | Compare continuity (P4-06) keeps a comparison; the capability it belongs to is the comparison itself |
 | `compare_evidence_walk.mjs` | the Compare evidence walk (UIV2-17) proves what the results table, the verdict card and the inspector's evidence lines say about a reply; the capability it belongs to is the comparison itself, which the matrix already enumerates from the pane's own controls |

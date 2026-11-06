@@ -484,9 +484,12 @@ async function run(args) {
       record(
         "the model, persona and reasoning controls are one compact row",
         Boolean(empty.header)
+          // UIV2-19 added one clamped line under the persona picker (13px + its margin), so the
+          // one-row bar is ~95px rather than the 79px UIV2-18 measured; the row count is the claim
+          // that matters, and the height is here to catch a bar that has started stacking again.
           && (empty.innerWidth >= 1200
-            ? empty.header.rows === 1 && empty.header.height <= 84
-            : empty.header.rows <= 3 && empty.header.height <= 220),
+            ? empty.header.rows === 1 && empty.header.height <= 100
+            : empty.header.rows <= 3 && empty.header.height <= 240),
         `${empty.header ? empty.header.rows : "?"} row(s), ${empty.header ? empty.header.height : "?"}px tall · ${empty.header ? empty.header.controls.join(",") : ""}`,
       );
       await shoot(page, `chat-empty-${args.viewport}-${args.theme}`);

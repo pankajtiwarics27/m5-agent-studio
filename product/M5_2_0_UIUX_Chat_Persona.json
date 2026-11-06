@@ -1,0 +1,212 @@
+{
+  "story": "UIV2-19",
+  "title": "Chat persona registry audit and complete supported picker",
+  "schema_version": 1,
+  "source": "static/index.html",
+  "registry": {
+    "constant": "CHAT_PERSONAS",
+    "personas": [
+      {
+        "id": "principal-engineer",
+        "label": "Principal Engineer & UI Architect",
+        "description": "Production-ready code with the reasoning behind it: named trade-offs, accessibility, no filler.",
+        "prompt": "You are a concise Principal Software Engineer & UI Architect. Write clean, accessible, production-ready code."
+      },
+      {
+        "id": "bug-ux-auditor",
+        "label": "Bug & UX Auditor",
+        "description": "Reads what is on screen adversarially: bugs, race conditions, UX anti-patterns and security issues.",
+        "prompt": "You are an adversarial code reviewer. Focus strictly on bugs, race conditions, UX anti-patterns, and security issues."
+      },
+      {
+        "id": "code-only",
+        "label": "Code Only (Zero Fluff)",
+        "description": "Answers in code blocks, with as little prose as the question allows.",
+        "prompt": "Output code blocks only with minimal prose."
+      }
+    ],
+    "default": "principal-engineer",
+    "storage_key": "m5_chat_persona"
+  },
+  "picker": {
+    "select": "select#chatPersona",
+    "shipped_options": 0,
+    "renderer": "renderChatPersonaPicker",
+    "filter": "input#chatPersonaSearch",
+    "description": "#chatPersonaDescription"
+  },
+  "checks": [
+    {
+      "check": "the registry exists and holds at least the three personas the pane shipped",
+      "passed": true,
+      "detail": "3 persona(s): principal-engineer, bug-ux-auditor, code-only"
+    },
+    {
+      "check": "every persona has an id, a label, a description and a prompt",
+      "passed": true,
+      "detail": "principal-engineer: ; bug-ux-auditor: ; code-only: "
+    },
+    {
+      "check": "ids are stable slugs, not prose",
+      "passed": true,
+      "detail": "principal-engineer, bug-ux-auditor, code-only"
+    },
+    {
+      "check": "ids, labels and prompts are all distinct",
+      "passed": true,
+      "detail": "3 unique id(s), 3 unique label(s), 3 unique prompt(s)"
+    },
+    {
+      "check": "every label fits a picker row",
+      "passed": true,
+      "detail": "longest 33 chars (limit 40)"
+    },
+    {
+      "check": "every description explains the persona in one line",
+      "passed": true,
+      "detail": "68-99 chars (band 30-140)"
+    },
+    {
+      "check": "every prompt is a system prompt the pane can send",
+      "passed": true,
+      "detail": "43-117 chars"
+    },
+    {
+      "check": "the default persona is one the registry names",
+      "passed": true,
+      "detail": "CHAT_PERSONA_DEFAULT = principal-engineer"
+    },
+    {
+      "check": "the pane remembers the selection under its own key",
+      "passed": true,
+      "detail": "CHAT_PERSONA_KEY = m5_chat_persona"
+    },
+    {
+      "check": "the markup ships no persona options of its own",
+      "passed": true,
+      "detail": "0 <option> in select#chatPersona"
+    },
+    {
+      "check": "the picker is filled from the registry, with nothing hard-coded beside it",
+      "passed": true,
+      "detail": "renderChatPersonaPicker() filters CHAT_PERSONAS and writes persona.label"
+    },
+    {
+      "check": "the picker escapes what it writes into the markup",
+      "passed": true,
+      "detail": "both the id and the label go through escapeHtml"
+    },
+    {
+      "check": "every registry entry reaches the picker, and the count says how many",
+      "passed": true,
+      "detail": "the label shows (N) / N of M while filtering"
+    },
+    {
+      "check": "the filter is labelled, and controls the picker it filters",
+      "passed": true,
+      "detail": "input#chatPersonaSearch with aria-label=\"Filter personas\" and aria-controls"
+    },
+    {
+      "check": "the filter reads labels and descriptions, never prompts",
+      "passed": true,
+      "detail": "chatPersonaMatches() looks at label and description only"
+    },
+    {
+      "check": "the description line is announced, and the picker points at it",
+      "passed": true,
+      "detail": "select#chatPersona aria-describedby=chatPersonaDescription, whose own tag is aria-live=polite"
+    },
+    {
+      "check": "the description says what the selected persona does, not what it is called",
+      "passed": true,
+      "detail": "updateChatPersonaDescription() writes persona.description, and names the label only when the filter matched nothing else"
+    },
+    {
+      "check": "the description is one clamped line, with the whole sentence in its title",
+      "passed": true,
+      "detail": "nowrap + ellipsis in CSS, and the full text on the element's title"
+    },
+    {
+      "check": "Enter chooses the first persona the filter matched",
+      "passed": true,
+      "detail": "the Enter handler resolves through chatPersonaMatches, not through options[0]"
+    },
+    {
+      "check": "Escape clears the filter rather than leaving an empty list",
+      "passed": true,
+      "detail": "Escape empties the filter and redraws every persona"
+    },
+    {
+      "check": "the filter never filters out the persona that is about to be sent",
+      "passed": true,
+      "detail": "the selected persona is kept in the list whatever the filter says"
+    },
+    {
+      "check": "the request sends the selected persona's prompt",
+      "passed": true,
+      "detail": "sendChatRequest() builds the system message from chatPersonaSelected().prompt"
+    },
+    {
+      "check": "nothing sends the select's value any more",
+      "passed": true,
+      "detail": "no read of #chatPersona.value outside the picker helpers"
+    },
+    {
+      "check": "the context line still names the persona by its label",
+      "passed": true,
+      "detail": "chatPersonaLabel() reads the selected option's text"
+    },
+    {
+      "check": "a stored id resolves through the registry",
+      "passed": true,
+      "detail": "chatPersonaById() searches the table and falls back to the default id"
+    },
+    {
+      "check": "a persona cannot be synthesised from an unknown id",
+      "passed": true,
+      "detail": "chatPersonaById() returns a registry entry or nothing; it never builds one"
+    },
+    {
+      "check": "a deleted persona is detected, not silently replaced",
+      "passed": true,
+      "detail": "the fallback note fires only when the stored id is absent from the table"
+    },
+    {
+      "check": "the choice is written to storage when it is made",
+      "passed": true,
+      "detail": "selectChatPersona() stores the id, guarded against blocked storage"
+    },
+    {
+      "check": "the picker is drawn before the pane is used",
+      "passed": true,
+      "detail": "boot draws the picker, then wires the filter and the change handler"
+    },
+    {
+      "check": "the filter is the one documented exception to the control floor, and stays tappable",
+      "passed": true,
+      "detail": "min-height 32px (control floor 44px, target floor 24px), declared on the id selector"
+    },
+    {
+      "check": "the picker and its filter share one row at every width, with no breakpoint of their own",
+      "passed": true,
+      "detail": "a two-column grid whose select shrinks by min-width, not a stacking breakpoint"
+    },
+    {
+      "check": "the browser walk exists and asserts the prompt on the wire",
+      "passed": true,
+      "detail": "chat_persona_walk.mjs: 21 recorded checks"
+    },
+    {
+      "check": "the walk covers the six states the ledger asks for",
+      "passed": true,
+      "detail": "STATES = empty, populated, long, loading, error, recovery"
+    },
+    {
+      "check": "the state captures are present for every viewport and theme",
+      "passed": true,
+      "detail": "48 PNG in docs/media/chat-persona"
+    }
+  ],
+  "check_count": 34,
+  "findings": []
+}
