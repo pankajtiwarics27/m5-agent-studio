@@ -17,6 +17,12 @@ provider, MCP server, or container runtime.
   contracts remain covered by `tests/test_provider_adapters.py`,
   `tests/test_local_integration_contracts.py`, and
   `tests/test_redirect_safety.py`.
+- Ollama discovery is a read-only probe (`GET {OLLAMA_BASE_URL}/api/tags`,
+  default `http://127.0.0.1:11434`) with a 10-second cache, so the 2-second
+  telemetry poll never multiplies outbound requests. Models surface in the
+  unified catalog as `ollama::<name>` and are dispatched through a
+  server-built OpenAI-wire virtual provider that sends no credentials. These
+  contracts are covered by `tests/test_ollama_discovery.py`.
 
 ## Evidence
 
@@ -27,7 +33,8 @@ python -m pytest -q \
   tests/test_api_provider_contracts.py \
   tests/test_provider_adapters.py \
   tests/test_local_integration_contracts.py \
-  tests/test_redirect_safety.py
+  tests/test_redirect_safety.py \
+  tests/test_ollama_discovery.py
 ```
 
 The fixtures use `httpx.MockTransport`, an injected async stream, and a

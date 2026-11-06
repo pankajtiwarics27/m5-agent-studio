@@ -16,6 +16,7 @@ There is no implicit `.env`, YAML, or JSON configuration file. For process setti
 | `STUDIO_AUTH_DISABLED` | Permitted only for a loopback `STUDIO_HOST`; non-loopback binds require an explicit token. |
 | `STUDIO_EXTERNAL_STATIC` | Boolean used by the standalone wrapper to read `static/index.html` instead of the embedded UI when enabled. |
 | `OMLX_BASE_URL` | Absolute HTTP(S) URL with a hostname and valid port; credentials, query, and fragment are rejected. Private-network authorization is still enforced at outbound request time. |
+| `OLLAMA_BASE_URL` | Absolute HTTP(S) URL with a hostname and valid port; credentials, query, and fragment are rejected. Unlike `OMLX_BASE_URL` it is **not** loopback-restricted (an Ollama host may live anywhere on the operator's network), and it is only ever read with read-only `GET /api/tags` discovery plus dispatch of the operator's own requests; no credentials are sent and no writes are issued. Default `http://127.0.0.1:11434`. |
 | `STUDIO_ALLOWED_ORIGINS` | Comma-separated HTTP(S) origins, with no credentials, non-root path, query, or fragment; an optional trailing slash is normalized away. |
 | `STUDIO_ALLOWED_HOSTS` | Non-empty comma-separated Host values without whitespace. |
 | `STUDIO_DB_PATH`, `STUDIO_API_TOKEN_FILE` | Non-empty paths when explicitly set; `~` expansion is supported. |
