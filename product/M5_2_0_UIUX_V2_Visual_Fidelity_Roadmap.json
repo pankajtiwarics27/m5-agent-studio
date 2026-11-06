@@ -2403,7 +2403,7 @@
         "attempt_count": 1,
         "started_at": "2026-11-06T21:10:00+05:30",
         "completed_at": "2026-11-06T23:20:00+05:30",
-        "commit_sha": null,
+        "commit_sha": "739e0926b7fd5d3792f6ee73262917ba0a45ee0e",
         "changed_files": [
           "static/index.html (MCP: `#mcpModal` is now a hub — a `role=tablist` of Catalog / Connected / Activity with one panel shown at a time and a roving tab stop; `#mcpHubSearch` plus five filter chips and `applyMcpHubSearch()`; `mcpCatalogCardHtml()` renders one card per preset stating Remote·HTTP / Local·stdio, its trust level, its key requirement and its approval policy plus the endpoint or command; `mcpPresetTrust()` derives trust from `requires_token` and `approval_policy` only; the add/edit form is a closed `<details id=\"mcpEditor\">` that `openMcpEditor()` opens and `syncMcpEditorState()` describes from the alias; `renderMcpActivity()` and `recordMcpActivity()` give the Activity tab per-server health with its stored sync note and every test call with its outcome and latency; `bindMcpTabs()` is one delegated keydown listener, not an inline handler; the MCP CSS block and the 880px collapse)",
           "studio.py (built from the above by scripts/build_studio.py)",
