@@ -2047,20 +2047,56 @@
       "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
       "agent_prompt": "Implement UIV2-18: Chat focused balanced conversation layout. Required outcome: Center conversation in a readable column, compact model/persona controls, sticky composer, contextual options without dead whitespace. Specific gate: At >=1440px readable message width 720-900px centered; no permanent blank telemetry rail; composer visible with keyboard; messages and code blocks never clipped; empty state concise. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempt_count": 0,
-        "started_at": null,
-        "completed_at": null,
+        "status": "done",
+        "progress_percent": 100,
+        "attempt_count": 1,
+        "started_at": "2026-11-06T14:00:00+05:30",
+        "completed_at": "2026-11-06T20:45:00+05:30",
         "commit_sha": null,
-        "changed_files": [],
-        "tests_executed": [],
-        "visual_evidence": [],
-        "acceptance_evidence": [],
-        "known_regressions": [],
+        "changed_files": [
+          "static/index.html (Chat: `--chat-column: 820px` in `:root`; the transcript, its bar and the composer take that column with `padding-inline: max(20px, calc((100% - var(--chat-column)) / 2))`; the control bar stays chrome at the pane's width, one row above 1200px and three rows on a phone; the composer is sticky with a safe-area inset and a keyboard scroll margin; `.msg` gains `min-width: 0` and `overflow-wrap: anywhere` with in-bubble scrolling for `pre` and tables; the empty state is one short sentence, said the same way by the markup and by `renderChatMessages`)",
+          "studio.py (built from the above by scripts/build_studio.py)",
+          "scripts/chat_layout_walk.mjs (new: 26 checks - the column, its symmetry, the chrome bar, the composer's position at rest, mid-stream, at the end of a long reply and after a failure, in-bubble scrolling for a code block and an unbroken token, the empty sentence, Enter/Shift+Enter, the phone width, no console error and one chat stream; six states, four viewports, two themes)",
+          "scripts/uiux_chat_layout_inventory.py (new: 28 checks over the column token and its band, the three conversation rows, the chrome bar's two layouts, the design system's control height, the sticky composer, the dvh shell, the wrapping rules, the empty sentence's agreement, and every preserved control, key binding, undo and call site)",
+          "tests/test_chat_layout.py (new: 42 tests - inventory sync, the doc, the ledger, 28 mutation tests that break one rule each, and the captures at every required viewport/theme)",
+          "docs/media/chat-layout/ (48 after captures across 8 viewport/theme runs + 16 before captures from origin/main 21c1eef + README)",
+          "docs/media/chat-layout/README.md, docs/uiux-2-0-chat-layout.md, product/M5_2_0_UIUX_Chat_Layout.json",
+          "scripts/uiux_preservation_e2e.py (the new walk registered as a support walk, with the reason it proves a contract rather than a matrix row)",
+          "scripts/uiux_screenshot_review.py (the `chat-layout` set, with the five files that were opened and read)"
+        ],
+        "tests_executed": [
+          "node scripts/chat_layout_walk.mjs --viewport <vp> --theme <theme> --screenshots docs/media/chat-layout -> 26/26 checks, 6 screenshots, on all eight viewport/theme runs (1640x900, 1440x900, 1280x800, 390x844 x light, dark)",
+          "node scripts/chat_layout_walk.mjs --capture-only --states empty,populated against a worktree of origin/main 21c1eef -> 11/13 and 12/13 checks: the before set fails the column and control-bar checks it exists to show",
+          "python3 scripts/uiux_chat_layout_inventory.py -> 28 checks, 0 findings",
+          "pytest tests/test_chat_layout.py -> 42 passed",
+          "pytest tests/ -> 2803 passed, 28 skipped",
+          "ruff check . -> clean; python3 scripts/uiux_responsive_inventory.py -> 21 checks, 0 findings; python3 scripts/uiux_release_gate.py -> 37/37 checks, 7/7 gates, 0 findings",
+          "browser: 1440x900 dark, measured in the page - column 820px with 210/210 padding, composer left edge 410 = column left 410, one 79px control row, rail display none with a 1240px single-track grid, 390x844: page overflow 0 with the composer at 685/844"
+        ],
+        "visual_evidence": [
+          "docs/media/chat-layout/ - 48 captured files: six states (empty, populated, long-content, loading, error, recovery) on each of 4 viewports x light/dark, written by `node scripts/chat_layout_walk.mjs` (26/26 checks on each of the eight runs)",
+          "docs/media/chat-layout/before-uiv2-18/ - 16 files: the empty and populated states served from origin/main at 21c1eef, captured by this walk in `--capture-only --states empty,populated` against a detached worktree of that commit; the same run scores 11/13 at desktop widths and 12/13 at 390x844",
+          "docs/uiux-2-0-chat-layout.md - the 28 checks with the value each one read, generated from static/index.html",
+          "docs/uiux-2-0-screenshot-review.md - the `chat-layout` set, with the five captures opened and read (1440x900-dark populated, long-content, loading; 390x844-light empty; before-uiv2-18 1640x900-light populated)"
+        ],
+        "acceptance_evidence": [
+          "at >=1440px readable message width 720-900px centred: `--chat-column` is 820px, one declaration; the browser measured an 820px column with 210px of padding on each side at 1440x900 and the same at 1640x900 (380/380) and 1280x800 (230/230), and the composer's left edge is the column's left edge within 1px",
+          "no permanent blank telemetry rail: on entry to Chat the layout collapses the rail (`rail-collapsed`), the browser reads `display: none` with a 0px width and a single-track 1,240px grid, and no 320px track survives in `grid-template-columns`",
+          "compact model/persona controls: one 79px row above 1200px in all six light and dark desktop runs (measured by grouping the control band, not by counting distinct offsets), three rows and <=220px at 390x844 where it used to be five rows and 314px; the pickers keep the design system's `--control-min-h` rather than a private height",
+          "composer visible with keyboard: the composer is `position: sticky; bottom: 0` inside a `100dvh` shell with `env(safe-area-inset-bottom)` and a 110px scroll margin on the field; the browser confirms the field inside the viewport at rest, mid-stream, at the end of the longest transcript and after a failure, at every viewport including 390x844 (input bottom 685 of 844)",
+          "messages and code blocks never clipped: `.msg` is `min-width: 0` with `overflow-wrap: anywhere`, `pre` and tables scroll inside the bubble; a 2,289px code line scrolls inside a 735px bubble whose right edge (1,163) is inside the column (1,230), and a 300-character unbroken token wraps with 0px of page overflow",
+          "empty state concise: one sentence of 90 characters, and the markup and `renderChatMessages` now say the identical words (they disagreed before)",
+          "no UI-only completion: every claim above is measured in a real browser on the real fixture at four viewports and two themes, 48 after captures beside 16 before captures in which the same walk fails the column and control-bar checks",
+          "impacted features preserved: all 17 control ids, the Enter/Shift+Enter binding, Clear's Undo, the single `/api/chat/stream` call site, the transcript's `role=\"log\"` and `aria-live=\"off\"`, and Chat's rail collapse are asserted by the inventory; the full suite is 2,803 passed and the release gate is 37/37 checks and 7/7 gates"
+        ],
+        "known_regressions": [
+          "Carried from UIV2-17, still open: `node scripts/compare_continuity_walk.mjs` fails 7/15 on origin/main and here, because restoring a saved comparison at load re-renders the pane before the store has answered.",
+          "At 390x844 the control bar is three rows and about 190px: persona, reasoning, the two toggles and Clear cannot all sit beside the model picker in 390px, so the phone layout spends that height on chrome above the conversation. It is better than the five rows (314px) it replaced, not free.",
+          "The transcript bar's handoff sentence truncates with an ellipsis inside the 820px column at desktop widths; the full sentence is still in `#chatHandoffHint`'s text and in the button's title, but a reader who does not hover sees a fragment."
+        ],
         "blockers": [],
-        "handoff_summary": "",
-        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+        "handoff_summary": "UIV2-18 is done: Chat reads as a conversation. The transcript, its bar and the composer share one 820px column centred in the pane, the model/persona/reasoning controls are chrome above it on one 79px row (three rows at phone width), the composer is sticky inside a dvh shell with a safe-area inset and a keyboard scroll margin, and prose, code blocks and unbroken tokens all wrap or scroll inside their bubble instead of running off the edge. 28 inventory checks, 42 tests, a 26-check walk at 26/26 on eight viewport/theme runs, 48 captures beside a 16-file before set from main. Next story: UIV2-19 'Harness execution and evidence timeline' (P4, deps UIV2-10/11/12).",
+        "exact_next_action": "Start UIV2-19 'Harness execution and evidence timeline': read the Harness pane's timeline, its stage strip and its evidence cards on this branch, pin the defects with the browser, and build the same evidence set - inventory, walk, tests, before/after captures at four viewports x light/dark - before touching the pane."
       }
     },
     {
@@ -3135,11 +3171,11 @@
   ],
   "progress": {
     "total": 30,
-    "done": 17,
+    "done": 18,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 13,
-    "percent_complete": 57
+    "not_started": 12,
+    "percent_complete": 60
   },
   "session_recovery_protocol": [
     "Read global prompt and tracking",

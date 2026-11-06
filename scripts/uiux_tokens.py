@@ -68,7 +68,9 @@ GROUPS: dict[str, tuple[str, ...]] = {
     # different questions (UIUX-P5-03, WCAG 2.5.8).
     "touch": ("target-min",),
     "motion": ("ease-out", "dur-fast", "dur-slow", "dur-meter"),
-    "shell": ("sans", "mono", "header-height", "debate-cols"),
+    # `chat-column` (UIV2-18) is the width a conversation is read in; `debate-cols` is how many
+    # answers Compare will draw. Both are measures of the shell, not of a component.
+    "shell": ("sans", "mono", "header-height", "debate-cols", "chat-column"),
 }
 GROUP_OF = {f"--{name}": group for group, names in GROUPS.items() for name in names}
 

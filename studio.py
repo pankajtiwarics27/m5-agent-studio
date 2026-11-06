@@ -4413,6 +4413,74 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   .chat-composer-hint[data-reason="no-model"], .chat-composer-hint[data-reason="runtime-offline"] { color: var(--amber); }
   .chat-composer-hint[data-reason="tools-readonly"] { color: var(--text-dim); }
   .chat-composer-hint code { font-family: var(--mono); font-size: 11px; color: var(--text); }
+
+  /* ── UIV2-18: the conversation is a column, not a full-width ribbon ─────────
+     Chat was the one pane that used the whole workspace: at 1640px an answer line ran 1,300px
+     wide and the reply's own text stopped two thirds of the way across, which is the "dead
+     whitespace" the target names. The messages, the bar above them and the composer under them
+     take one centred column, so the reader's eye has one left edge and the composer sits directly
+     under the words it will send. The controls stay chrome above it - see the rule below. */
+  .chat-transcript-bar,
+  .chat-messages,
+  .chat-composer {
+    padding-inline: max(20px, calc((100% - var(--chat-column)) / 2));
+  }
+  /* The controls are chrome above the conversation, not part of it: they keep the pane's own
+     width and one tight row, so the column below starts where the reader expects it to. */
+  .chat-header-bar { padding-inline: 16px; }
+  /* At 390px the max() falls back to the padding the phone layout already used. */
+  .chat-empty-state { width: 100%; }
+
+  /* The composer is the one control a conversation cannot be read without: it stays at the
+     bottom of the pane while the transcript scrolls under it, and it keeps clear of a phone's
+     home indicator. `dvh` on the shell is what makes the on-screen keyboard shrink the pane
+     instead of covering the field. */
+  .chat-composer {
+    position: sticky; bottom: 0; z-index: 2;
+    padding-bottom: max(11px, env(safe-area-inset-bottom, 0px));
+  }
+  .chat-messages { scroll-padding-bottom: 16px; overscroll-behavior: contain; }
+
+  /* An answer is prose and code, and neither may be cut in half by the column that made it
+     readable. Anything wider than the bubble scrolls inside it, never off the edge. */
+  .msg { min-width: 0; overflow-wrap: anywhere; }
+  .msg .md, .msg .md p, .msg .md li, .msg .md h1, .msg .md h2, .msg .md h3, .msg .md h4 { overflow-wrap: anywhere; }
+  .msg pre { max-width: 100%; overflow-x: auto; }
+  .msg code { overflow-wrap: anywhere; }
+  .msg img, .msg video, .msg table { max-width: 100%; }
+  .msg > .md > table { display: block; overflow-x: auto; }
+
+  /* The model, persona and reasoning pickers are one compact row above 1200px - three
+     full-width selects and two checkboxes stacked onto a second line put the conversation's
+     first word nearly 200px down the screen for no gain. */
+  @media (min-width: 1200px) {
+    .chat-header-bar { flex-wrap: nowrap; gap: 10px; padding-block: 8px; }
+    .chat-header-bar > div { flex: 1 1 0; min-width: 0; }
+    .chat-header-bar > div:first-child { flex: 1.4 1 0; }
+    .chat-header-bar > .chk-lbl { flex: 0 0 auto; white-space: nowrap; margin-top: 0 !important; }
+    .chat-header-bar > #chatClearBtn { flex: 0 0 auto; margin-top: 0 !important; margin-left: 0 !important; }
+    /* The model's label is longer than its picker; a wrapped label is what made this bar two
+       rows tall, and an ellipsis still leaves the picker's own name for a screen reader. */
+    .chat-header-bar .field-lbl { margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* The selects keep the design system's --control-min-h: UIV2-07 made every field the same
+       height on purpose, and a chat picker is not the place to be the exception. Only the
+       checkboxes are centred against them, since their hit area is the label. */
+    .chat-header-bar .chk-lbl { align-self: center; }
+  }
+  @media (max-width: 600px) {
+    /* The keyboard covers the bottom of a phone screen; the field has to be able to scroll
+       itself above it. */
+    #chatInput { scroll-margin-bottom: 110px; }
+    /* Three rows, not five. Stacked one per row these controls were 314px of chrome above a
+       conversation that then had 250px left to be read in - on the one screen that has the least
+       room for it. The model keeps a row of its own because it is the choice that starts a reply;
+       persona and reasoning share the next one; the two toggles sit beside Clear. */
+    .chat-header-bar { gap: 8px; padding-block: 10px; }
+    .chat-header-bar > div:first-child { flex: 1 1 100%; }
+    .chat-header-bar > div:not(:first-child) { flex: 1 1 0; min-width: 0; }
+    .chat-header-bar > .chk-lbl { flex: 1 1 auto; min-width: 0; margin-top: 0 !important; font-size: 11px; line-height: 1.3; }
+    .chat-header-bar > #chatClearBtn { flex: 0 0 auto; margin-top: 0 !important; margin-left: auto !important; }
+  }
   /* What the reply was given: one line, from the same values that built the request. */
   .chat-context { font-size: 11.2px; color: var(--text-faint); margin: 0 0 8px; line-height: 1.5; }
   .chat-context code { font-family: var(--mono); font-size: 10.8px; color: var(--text-dim); }
@@ -4580,6 +4648,12 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   --strip-pad-y: 7px;
   --card-pad: 13px;
   --row-gap: 4px;
+
+  /* Measure — the width a conversation is read in. Past roughly 90 characters an eye loses the
+     start of the next line, so Chat centres its transcript in this column and puts the composer
+     on the same left edge (UIV2-18). It is a token, not a number in a rule: the walk measures the
+     rendered column against it. */
+  --chat-column: 820px;
 
   /* Motion — a duration and an easing curve, so a transition is a choice. `slow` is for a shape
      that changes size rather than colour, and `meter` is for a bar reporting progress, which may
@@ -6690,7 +6764,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
                 title="Scroll the transcript to the newest turn">Jump to latest ↓</button>
       </div>
       <div id="chatMessages" class="chat-messages" role="log" aria-label="Conversation" aria-live="off" aria-relevant="additions">
-        <div class="chat-empty-state"><strong>Nothing has been said yet</strong><span>Choose a model above and type below; replies and reasoning appear here. The local OpenAI-compatible endpoint is also available at http://127.0.0.1:3000/v1.</span></div>
+        <div class="chat-empty-state"><strong>Nothing has been said yet</strong><span>Pick a model, then type below; replies and reasoning appear here.</span></div>
       </div>
       <div class="chat-composer">
         <div style="display:flex; gap:10px; align-items:flex-end;">
@@ -14121,7 +14195,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     chatRenderQueued = false;
     const box = document.getElementById("chatMessages");
     if (!chatHistory.length) {
-      box.innerHTML = `<div class="chat-empty-state"><strong>Nothing has been said yet</strong><span>Choose a model above and type below; replies and reasoning appear here.</span></div>`;
+      // UIV2-18: one sentence, the same the markup ships, so an emptied transcript and a fresh
+      // load do not describe the pane two different ways.
+      box.innerHTML = `<div class="chat-empty-state"><strong>Nothing has been said yet</strong><span>Pick a model, then type below; replies and reasoning appear here.</span></div>`;
       chatRenderedShape = "";
       updateChatTranscriptBar();
       updateChatComposer();

@@ -12,9 +12,9 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "d884cf321e60263c43f5c27f15b36642d9febb3db48d8c82063664b434f62652",
-      "bytes": 855936,
-      "lines": 14801
+      "sha256": "8a31f9d317190422f8a96d788aa5ade33b15aa03095507310196fba4acdeaa16",
+      "bytes": 860818,
+      "lines": 14877
     },
     {
       "path": "app.py",
@@ -26,9 +26,9 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "86fa2f5a717635c6cab2ca1f6cf3d99409e24c8662f8e1f2383d77eb26db5a84",
-      "bytes": 3608739,
-      "lines": 78118
+      "sha256": "7e9a33473890a02cd9cc0726af7132fecce888fbb88e9aa82557315f3baaf623",
+      "bytes": 3613621,
+      "lines": 78194
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -124,8 +124,8 @@
     {
       "path": "tests/test_chat_composer.py",
       "role": "checks mainline P2-04 Chat behavior and its negative cases",
-      "sha256": "64774cd1885b2c4c24245ed727251203ab4dcc21fae19eb68ef43c4e374727b9",
-      "bytes": 16133,
+      "sha256": "701f34fe201a1db0cf0d5220a3214eb853032fc257d971136f1c04f0318626fa",
+      "bytes": 16127,
       "lines": 456
     },
     {
@@ -376,9 +376,9 @@
     {
       "path": "scripts/uiux_preservation_e2e.py",
       "role": "maps each preservation-matrix row to the walk, test, route and control that proves it",
-      "sha256": "048f719659b89ccb401d87fbfb4c7f963eaf027f15e7c4c5fb5cc4179f45b03e",
-      "bytes": 39574,
-      "lines": 828
+      "sha256": "15e73c5959dab5f915a79045b680b4e8a39ee07fd28fedd64046cc272524edc7",
+      "bytes": 39822,
+      "lines": 829
     },
     {
       "path": "tests/test_uiux_preservation_e2e.py",
@@ -418,9 +418,9 @@
     {
       "path": "scripts/uiux_screenshot_review.py",
       "role": "traces every committed capture to the script that made it and checks that the theme in its name is the theme in its pixels",
-      "sha256": "970633c1da9c44636c632cda8622116b2b4084d90be267115aba2b1ab6a3fcb8",
-      "bytes": 60321,
-      "lines": 1202
+      "sha256": "ba0c7a8db1efb045f6899b93e7aec0942396ea9f964b860ba9c009ff3b0e264b",
+      "bytes": 62166,
+      "lines": 1230
     },
     {
       "path": "tests/test_uiux_screenshot_review.py",
@@ -460,8 +460,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "d884cf321e60263c43f5c27f15b36642d9febb3db48d8c82063664b434f62652",
-    "lines": 14801,
+    "sha256": "8a31f9d317190422f8a96d788aa5ade33b15aa03095507310196fba4acdeaa16",
+    "lines": 14877,
     "tab_count": 6,
     "tabs": [
       {
