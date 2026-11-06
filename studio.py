@@ -11094,8 +11094,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         };
       }
       return {
-        state: "offline", tone: "warn", tag: "OLLAMA DOWN",
-        text: `Ollama is not answering at ${base}; start Ollama or choose another seat.`,
+        state: "demo", tone: "warn", tag: "OLLAMA DOWN",
+        text: `Ollama is not answering at ${base}, so dispatching this seat produces no model reply; start Ollama or choose another seat.`,
         action: { id: "check", label: "Check again", title: "Read /api/telemetry again" },
       };
     }
