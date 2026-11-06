@@ -245,7 +245,7 @@
           "totals": {
             "tokens": 56,
             "groups": 8,
-            "references": 1318,
+            "references": 1326,
             "theme_overrides": 20,
             "density_overrides": 5,
             "contrast_pairs": 28,
@@ -815,7 +815,7 @@
         {
           "artifact": "product/M5_2_0_UIUX_Polish.json",
           "totals": {
-            "radius_rules": 105,
+            "radius_rules": 106,
             "motion_rules": 17,
             "press_rules": 2,
             "hover_rules": 33,
@@ -847,7 +847,7 @@
             "route_provers": 9,
             "control_provers": 2,
             "walks": 17,
-            "support_walks": 20,
+            "support_walks": 21,
             "findings": 0
           }
         }
@@ -894,15 +894,15 @@
         {
           "artifact": "product/M5_2_0_UIUX_Screenshot_Review.json",
           "totals": {
-            "sets": 33,
-            "files": 1045,
-            "reviewed_sets": 33,
-            "sets_eyed": 13,
-            "files_eyed": 76,
-            "re_taken_sets": 9,
+            "sets": 34,
+            "files": 1109,
+            "reviewed_sets": 34,
+            "sets_eyed": 14,
+            "files_eyed": 81,
+            "re_taken_sets": 10,
             "published_sets": 1,
             "findings": 0,
-            "observations": 27
+            "observations": 28
           }
         }
       ]
@@ -1149,9 +1149,9 @@
     "e2e_findings": 0,
     "refusals": 12,
     "refusal_statuses": 9,
-    "captures": 1045,
-    "capture_sets": 33,
-    "reviewed_sets": 33,
+    "captures": 1109,
+    "capture_sets": 34,
+    "reviewed_sets": 34,
     "screenshot_findings": 0,
     "doc_pages": 5,
     "doc_commands": 40,

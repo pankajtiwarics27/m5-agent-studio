@@ -547,6 +547,32 @@ REVIEWS: dict[str, dict[str, object]] = {
         "re_taken": True,
         "theme": "light and dark, desktop 1280-1640 and narrow 390",
     },
+    "chat-recovery": {
+        "story": "UIV2-20",
+        "note": (
+            "Chat's streaming, tool disclosure, copy and recovery: six shots on each of four "
+            "viewports x light/dark - empty, populated, long-content, loading, error and recovery - "
+            "written by `scripts/chat_recovery_walk.mjs` against fixtures it starts itself, after "
+            "25/25 checks on each of the eight runs, beside `before-uiv2-20/`, the empty and "
+            "populated states served from origin/main at 2b0c35f and captured by this same walk in "
+            "`--capture-only` (7/14 there). Opened and read: the 1440x900-dark populated capture (a "
+            "fenced code block with its labelled Copy control, one tool disclosure open under its "
+            "Failed status word with the arguments and the 500-character cap, and the turn's "
+            "'1 tool call - 1 failed - 1 ms' line), the 1440x900-dark loading capture (a stopped "
+            "turn reading 'Stopped by you - N characters kept in this pane'), and the "
+            "before-uiv2-20 1440x900-dark populated capture (the same reply with a bare Copy button "
+            "and no tool call, because the old fixture could not make one)."
+        ),
+        "eye": [
+            "chat-recovery-populated-1440x900-dark.png",
+            "chat-recovery-loading-1440x900-dark.png",
+            "chat-recovery-error-1440x900-light.png",
+            "chat-recovery-empty-390x844-light.png",
+            "before-uiv2-20/1440x900-dark/chat-recovery-populated-1440x900-dark.png",
+        ],
+        "re_taken": True,
+        "theme": "light and dark, desktop 1024-1440 and narrow 390",
+    },
     "chat-persona": {
         "story": "UIV2-19",
         "note": (

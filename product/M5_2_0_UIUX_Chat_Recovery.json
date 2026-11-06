@@ -1,0 +1,189 @@
+{
+  "story": "UIV2-20",
+  "title": "Chat streaming, tools, handoff and recovery UX",
+  "schema_version": 1,
+  "source": "static/index.html",
+  "states": [
+    "empty",
+    "populated",
+    "long-content",
+    "loading",
+    "error",
+    "recovery"
+  ],
+  "capabilities": {
+    "copy": {
+      "control": ".code-bar button",
+      "fallback": "selection + document.execCommand('copy')",
+      "announced_in": "#copyAnnounce (role=status)"
+    },
+    "tools": {
+      "renderer": "renderChatTool",
+      "summary": "chatToolSummary",
+      "output_cap": 500
+    },
+    "streaming": {
+      "meta": "chatStreamingMeta",
+      "stop": "stopChatStream"
+    },
+    "retry": {
+      "plan": "chatRetryPlan",
+      "card": "presentChatError",
+      "keep_failed_turn": true
+    },
+    "handoff": {
+      "brief": "chatHandoffBrief",
+      "reason": "chatHandoffReason",
+      "posts": false
+    }
+  },
+  "checks": [
+    {
+      "check": "a code block's copy control names the block and its size",
+      "passed": true,
+      "detail": "aria-label carries the language and the character count; the wrap carries data-lang"
+    },
+    {
+      "check": "copying awaits the clipboard and reports what happened",
+      "passed": true,
+      "detail": "copyCodeBlock() awaits, sets data-state and says Copy unavailable when neither path works"
+    },
+    {
+      "check": "a refused clipboard is copied through a selection fallback",
+      "passed": true,
+      "detail": "writeClipboard() falls back to a selected textarea before it reports failure"
+    },
+    {
+      "check": "the code-block copy never touches the clipboard directly",
+      "passed": true,
+      "detail": "copyCodeBlock() goes through writeClipboard(), which awaits; the sheet's other 11 call sites belong to other panes and are unchanged by this story"
+    },
+    {
+      "check": "a copy is announced, not just painted",
+      "passed": true,
+      "detail": "copyAnnounce() fills one shared role=status region and copyCodeBlock() calls it"
+    },
+    {
+      "check": "a tool call is a disclosure, not a line of text",
+      "passed": true,
+      "detail": "renderChatTool() returns a <details> with a <summary>"
+    },
+    {
+      "check": "its status is a word, not only a colour",
+      "passed": true,
+      "detail": "the summary prints the status label"
+    },
+    {
+      "check": "it states the step, the time and the size of what it was given",
+      "passed": true,
+      "detail": "step, elapsed milliseconds and argument bytes in the summary"
+    },
+    {
+      "check": "opening it shows the arguments, the output and the server's cap",
+      "passed": true,
+      "detail": "the output label names the 500-character cap"
+    },
+    {
+      "check": "the turn counts its tool calls and says whether they worked",
+      "passed": true,
+      "detail": "chatToolSummary() counts the calls, the failures and the total time"
+    },
+    {
+      "check": "the tools are rendered into the turn, above the reply",
+      "passed": true,
+      "detail": "every tool in `message.tools` is drawn as a disclosure"
+    },
+    {
+      "check": "a streaming turn reports elapsed time, first token and size",
+      "passed": true,
+      "detail": "chatStreamingMeta() measures rather than guesses"
+    },
+    {
+      "check": "stopping records how much of the answer had arrived",
+      "passed": true,
+      "detail": "the stopped handler freezes the character count before it renders"
+    },
+    {
+      "check": "a stopped turn says who stopped it and how much was kept",
+      "passed": true,
+      "detail": "the meta line names the reader and the characters kept"
+    },
+    {
+      "check": "stopping hands the composer back with the cursor in the field",
+      "passed": true,
+      "detail": "the stop handler focuses the composer when the reader stopped it"
+    },
+    {
+      "check": "a retry's meaning is decided by what the failed attempt did",
+      "passed": true,
+      "detail": "chatRetryPlan() reads the failed turn's tool count"
+    },
+    {
+      "check": "a turn that ran nothing is a plain retry that replaces the placeholder",
+      "passed": true,
+      "detail": "no tool calls: Retry, replace"
+    },
+    {
+      "check": "a turn that ran tools is asked again, not retried silently",
+      "passed": true,
+      "detail": "tool calls: Ask again (N tool calls already ran), keep the failed turn"
+    },
+    {
+      "check": "the failure card carries the plan and says what will not be repeated",
+      "passed": true,
+      "detail": "presentChatError() prints the plan's sentence and label"
+    },
+    {
+      "check": "retrying keeps the failed turn when it did something",
+      "passed": true,
+      "detail": "retryChatRequest() splices only when the failed turn is a placeholder"
+    },
+    {
+      "check": "the question asked again says so on the question",
+      "passed": true,
+      "detail": "the user turn carries retryOf, and the transcript renders it"
+    },
+    {
+      "check": "the handoff brief names the messages and the tool calls it carries",
+      "passed": true,
+      "detail": "chatHandoffBrief() counts the conversation and lists the calls"
+    },
+    {
+      "check": "the brief carries the context the last reply was sent with",
+      "passed": true,
+      "detail": "the same context line the transcript shows"
+    },
+    {
+      "check": "the handoff explains why it is off, or what it will do",
+      "passed": true,
+      "detail": "chatHandoffReason() covers nothing, streaming, handed and ready"
+    },
+    {
+      "check": "the handoff posts nothing and starts nothing",
+      "passed": true,
+      "detail": "the handoff writes a composer's text, never a request"
+    },
+    {
+      "check": "the browser walk exists and asserts the copy, the tool disclosure and the retry plan",
+      "passed": true,
+      "detail": "chat_recovery_walk.mjs: 25 recorded checks, clipboard read back, fallback forced, tool disclosure and retry plan asserted"
+    },
+    {
+      "check": "the walk covers the six states the ledger asks for",
+      "passed": true,
+      "detail": "STATES = empty, populated, long, loading, error, recovery"
+    },
+    {
+      "check": "the walk reads the clipboard rather than trusting the button",
+      "passed": true,
+      "detail": "the copied text is compared to the block's own text"
+    },
+    {
+      "check": "the state captures are present for every viewport and theme, with a before set",
+      "passed": true,
+      "detail": "48 after PNG, 16 before PNG"
+    }
+  ],
+  "check_count": 29,
+  "findings": []
+}

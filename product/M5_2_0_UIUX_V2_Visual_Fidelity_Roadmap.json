@@ -2285,20 +2285,50 @@
       "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
       "agent_prompt": "Implement UIV2-20: Chat streaming, tools, handoff and recovery UX. Required outcome: Tool call disclosure, streaming/cancel state, code copy, errors, retry where safe and explicit handoff to Harness. Specific gate: Maintain existing authorization and read-only Chat semantics; never duplicate tool effects on retry; preserve messages and scroll position; task handoff shows exact context included. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempt_count": 0,
-        "started_at": null,
-        "completed_at": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "tests_executed": [],
-        "visual_evidence": [],
-        "acceptance_evidence": [],
-        "known_regressions": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempt_count": 1,
+        "started_at": "2026-11-07T00:55:00+05:30",
+        "completed_at": "2026-11-07T04:30:00+05:30",
+        "commit_sha": "e9dcb8e7a8c4b8516e2c8ccebdc3c53bb101be94",
+        "changed_files": [
+          "static/index.html (Chat: `writeClipboard()` with the selection fallback and `copyAnnounce()` into one shared `role=status` region; `copyCodeBlock()` awaits, labels itself `Copy the <lang> block (N characters)` and states Copied / Copy unavailable; `chatRetryPlan()` — Retry when nothing ran, `Ask again (N tool calls already ran)` when tools did, keeping the failed turn and marking the new question with `retryOf`; `presentChatError()` prints the plan's sentence and label; a stopped turn records `stoppedChars` and says `Stopped by you · N characters kept in this pane · Ns`; `.chat-retry-note`, `.sr-only` and the copy button states)",
+          "studio.py (built from the above by scripts/build_studio.py)",
+          "scripts/council_readiness_seed.py (fixture: `[[use-tool]]` streams a real `<tool_call>` so app.py runs a tool, `[[code]]` streams a fenced block, and the follow-up turn is recognised by the escaped `UNTRUSTED_DATA_JSON` payload rather than the `<tool_response>` wrapper)",
+          "scripts/chat_recovery_walk.mjs (new: 25 checks - copy label, clipboard read-back, fallback with the Clipboard API forced to reject, announcement, tool disclosure status/step/time/argument bytes/arguments/output cap, the turn's counts, the handoff brief and that it posts nothing, stop with characters kept and focus returned, Retry when nothing ran, the plan and card for a turn that ran a tool, long reply pinned and timed, no console error, one POST route)",
+          "scripts/uiux_chat_recovery_inventory.py (new: 29 checks over copy, tools, streaming, retry and handoff)",
+          "tests/test_chat_recovery.py (new: 26 tests, 16 of them mutations)",
+          "product/M5_2_0_UIUX_Chat_Recovery.json, docs/uiux-2-0-chat-recovery.md (generated)",
+          "docs/media/chat-recovery/ (48 after PNGs + before-uiv2-20/ 16 PNGs + README)"
+        ],
+        "tests_executed": [
+          "pytest tests/test_chat_recovery.py tests/test_chat_persona.py tests/test_chat_layout.py tests/test_chat_composer.py -q",
+          "python3 scripts/uiux_chat_recovery_inventory.py --check",
+          "node scripts/chat_recovery_walk.mjs (8 viewport x theme runs, 25/25 each)",
+          "python3 scripts/uiux_release_gate.py"
+        ],
+        "visual_evidence": [
+          "docs/media/chat-recovery/*.png (48: six states x four viewports x two themes)",
+          "docs/media/chat-recovery/before-uiv2-20/ (16: empty and populated served from origin/main at 2b0c35f)",
+          "docs/media/chat-recovery/README.md"
+        ],
+        "acceptance_evidence": [
+          "tool disclosure: each call is a <details> whose summary carries the status in a word, its step, its elapsed time and its argument size, and whose body carries the arguments, the output and the sentence naming the server's 500-character cap; the turn adds `N tool calls · all ok|N failed · N ms` above them, and a real tool call is now produced by the fixture rather than described",
+          "streaming/cancel: a streaming turn reports elapsed time, first token and characters; Stop keeps the partial reply and the turn then says `Stopped by you · N characters kept in this pane · Ns`, with the composer re-enabled and the cursor back in the field",
+          "code copy: the control names the block and its size, puts exactly the block's text on the clipboard (the walk reads the clipboard back and compares), announces the result in a role=status region, and copies through the selection fallback when the Clipboard API rejects",
+          "errors: a failure is a card with the provider's message and a plain Retry when the attempt ran nothing — the card says 'nothing ran, so sending it again repeats nothing', and retrying then leaves one user turn and one request",
+          "retry where safe and explicit: a turn that ran a tool is never retried silently — the plan returns Ask again (1 tool call already ran), the failed turn and its tool call stay in the transcript, and the new question carries `Asked again after an attempt that made 1 tool call; those calls are not repeated`",
+          "handoff: the brief names the messages, the replies, the tool calls (with status, step, time and clipped output), the context the last reply was sent with, and the sentence that nothing has run; the walk asserts no POST follows a handoff",
+          "authorization and read-only semantics: no route, no fetch and no tool policy changed — the pane still posts only /api/chat/stream, and the tool that ran is the existing read-only read_file"
+        ],
+        "known_regressions": [
+          "app.py closes a post-tool stream that produced no tokens as a *complete* turn with an empty reply, so a provider that dies after a tool call cannot be produced end to end. The retry-after-tools card is therefore exercised through the production `chatRetryPlan()` and `presentChatError()` on a turn that really did run a tool, not through a fabricated provider failure; the defect itself is recorded here rather than papered over.",
+          "The fixture runtime can now emit a `<tool_call>` when the message contains `[[use-tool]]`. That is test-fixture behaviour only; app.py and the tool policy are untouched.",
+          "The other panes' copy helpers (`copyStageMarkdown`, `copyHallVerdict`, `copyDeliberationEvidence`, the evidence copy control) still call `navigator.clipboard.writeText` directly and ignore the promise. This story fixed Chat's code-block path only; they are named here so the gap is visible rather than assumed fixed."
+        ],
         "blockers": [],
-        "handoff_summary": "",
-        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+        "handoff_summary": "Chat now tells the truth about four things it used to approximate: a copy says Copied only when the text is on the clipboard (and falls back to a selection copy when the Clipboard API refuses), a tool call is a disclosure with a status word, step, time, argument size, arguments and the server's 500-character cap, a stopped turn says who stopped it and how many characters were kept, and a turn that already ran tools is offered as `Ask again (N tool calls already ran)` — a new question with the failed attempt and its tool calls still in the transcript — instead of a silent resend. The handoff brief already named the messages, the tool calls and the context; the walk now proves it posts nothing.",
+        "exact_next_action": "Start UIV2-21 from the ledger: read its entry, pin HEAD, and capture the before state before touching the source."
       }
     },
     {
@@ -3209,11 +3239,11 @@
   ],
   "progress": {
     "total": 30,
-    "done": 19,
+    "done": 20,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 11,
-    "percent_complete": 63
+    "not_started": 10,
+    "percent_complete": 67
   },
   "session_recovery_protocol": [
     "Read global prompt and tracking",

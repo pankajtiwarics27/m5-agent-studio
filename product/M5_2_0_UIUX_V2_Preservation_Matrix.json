@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_v2_preservation_matrix.py --check",
   "statement": "Control -> DOM handler -> API route -> test coverage for every interactive control in static/index.html, plus the three UIV2-02 contract investigations. api_status is existing when every call the handler makes resolves to a mounted @app route, absent-route when a call matches no mounted route, unknown when the resolver left an edge open, no-api for handlers that never fetch, and no-handler for controls without an inline handler. The contracts distinguish existing / partial / absent / unknown and cite file evidence; the generator hard-fails if the sources drift from the classification, so --check is a gate.",
   "pinned_source_commit": "9a584a36f1fbe29ba467562dd12a705626769f00",
-  "frontend_sha256": "4bbce1432acc67a9ea8d05ae77dd4d65f73c23c9e9291ef8e1ec390795c3930e",
+  "frontend_sha256": "77e8a67248be9932a33bcea6e06e11f3fe2e0f19a30577de931da3ebbcf90df8",
   "app_sha256": "56c42245e5f3e00dc18bd38425b4ec922b1f6a3135e51009d0b8e1914a62fdac",
   "totals": {
     "controls": 208,
@@ -2572,7 +2572,7 @@
       "classification": "present_registry__picker_rendered_from_it",
       "picker": {
         "status": "rendered_from_registry",
-        "evidence": "select#chatPersona at static/index.html:3048 ships no <option>; renderChatPersonaPicker() fills it from CHAT_PERSONAS on load and on every filter",
+        "evidence": "select#chatPersona at static/index.html:3063 ships no <option>; renderChatPersonaPicker() fills it from CHAT_PERSONAS on load and on every filter",
         "option_source": "CHAT_PERSONAS"
       },
       "registry": {
