@@ -72,14 +72,14 @@
   "tab_order": {
     "tabs": 6,
     "tabbable_tabs": 1,
-    "hub_tabs": 3,
+    "hub_tabs": 4,
     "hub_tabbable_tabs": 1,
     "positive_tabindex": 0
   },
   "names": {
-    "controls": 96,
+    "controls": 97,
     "unnamed": 0,
-    "live_regions": 22
+    "live_regions": 24
   },
   "walk": {
     "script": "scripts/a11y_walk.mjs",

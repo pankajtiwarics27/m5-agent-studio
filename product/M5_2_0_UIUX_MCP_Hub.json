@@ -69,14 +69,14 @@
   ],
   "checks": [
     {
-      "check": "the dialog is a hub: one tablist with three tabs",
+      "check": "the dialog is a hub: one tablist with four tabs, the Tools tab included",
       "passed": true,
-      "detail": "tabs: Catalog, Connected, Activity"
+      "detail": "tabs: Catalog, Connected, Tools, Activity"
     },
     {
       "check": "each tab controls its own panel, and the panels are tabpanels",
       "passed": true,
-      "detail": "panels: Catalog, Connected, Activity · aria-controls and aria-labelledby wired both ways"
+      "detail": "panels: Catalog, Connected, Tools, Activity · aria-controls and aria-labelledby wired both ways"
     },
     {
       "check": "the landing tab is the catalog, not the configuration form",

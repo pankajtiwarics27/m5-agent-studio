@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "ef75ce6bb371344dbe9286327334a5737e227c8dc972c2ed89bcd531454cf382",
+  "frontend_sha256": "4765fda1538fdc08994c15a37a452d4e0a2c6a3296509cd88eccdc49d72ac1ce",
   "panes": [
     {
       "dom_id": "start",
@@ -807,13 +807,13 @@
     }
   ],
   "chrome": {
-    "control_count": 122,
+    "control_count": 126,
     "counts": {
-      "button": 71,
+      "button": 73,
       "input": 31,
       "select": 12,
-      "summary": 3,
-      "textarea": 5
+      "summary": 4,
+      "textarea": 6
     },
     "controls": [
       {
@@ -1136,6 +1136,17 @@
       },
       {
         "tag": "button",
+        "id": "mcpTabTools",
+        "role": "tab",
+        "class": "mcp-hub-tab",
+        "onclick": "switchMcpTab('tools')",
+        "data": {
+          "data-mcp-tab": "tools"
+        },
+        "text": "Tools 0"
+      },
+      {
+        "tag": "button",
         "id": "mcpTabActivity",
         "role": "tab",
         "class": "mcp-hub-tab",
@@ -1306,17 +1317,20 @@
       {
         "tag": "select",
         "id": "mcpPlayServer",
-        "onchange": "populateMcpPlayTools()"
+        "onchange": "onMcpPlayServerChange()"
       },
       {
         "tag": "select",
-        "id": "mcpPlayTool"
+        "id": "mcpPlayTool",
+        "onchange": "onMcpPlayToolChange()"
       },
       {
-        "tag": "input",
+        "tag": "textarea",
         "id": "mcpPlayArgs",
-        "type": "text",
-        "value": "{}"
+        "aria-describedby": "mcpPlaySchema mcpPlayArgsError",
+        "rows": "2",
+        "oninput": "validateMcpPlayArgs()",
+        "text": "{}"
       },
       {
         "tag": "button",
@@ -1324,6 +1338,23 @@
         "class": "btn btn-emerald",
         "onclick": "runMcpPlayground()",
         "text": "Test Call"
+      },
+      {
+        "tag": "input",
+        "id": "mcpPlayConsentBox",
+        "type": "checkbox",
+        "onchange": "onMcpPlayConsentChange()"
+      },
+      {
+        "tag": "button",
+        "id": "mcpPlayMore",
+        "class": "btn btn-xs",
+        "onclick": "showFullMcpPlayOutput()",
+        "text": "Show all"
+      },
+      {
+        "tag": "summary",
+        "text": "Raw response"
       },
       {
         "tag": "button",
@@ -1656,15 +1687,16 @@
   },
   "totals": {
     "panes": 6,
-    "markup_controls": 221,
+    "markup_controls": 225,
     "pane_controls": 99,
-    "chrome_controls": 122,
-    "script_rendered_controls": 66,
+    "chrome_controls": 126,
+    "script_rendered_controls": 71,
     "script_rendered_by_function": {
       "ensureStageCardMounted": 1,
       "hallClearScopeNoteHtml": 2,
       "harnessEvidenceChangeHtml": 1,
       "mcpCatalogCardHtml": 1,
+      "mcpToolRowHtml": 3,
       "openSpawnModal": 1,
       "refreshHallSessions": 3,
       "refreshInspectorPanel": 9,
@@ -1683,6 +1715,7 @@
       "renderHarnessVerdictCardHtml": 2,
       "renderMarkdown": 1,
       "renderMcpHub": 2,
+      "renderMcpTools": 2,
       "renderMcpUI": 7,
       "renderOpenContextDocs": 3,
       "renderProvidersModal": 3,

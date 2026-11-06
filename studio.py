@@ -5341,6 +5341,55 @@ details.think-box pre { border-color: var(--border); font-size: 12px; }
   .mcp-wizard-grid.two, .mcp-wizard-grid.three { grid-template-columns: minmax(0, 1fr); }
 }
 
+/* UIV2-23: the Tools tab is the tool browser — risk, state and what a call costs, one row
+   per discovered tool — and the playground is a test call with validation and an inspector. */
+.mcp-tools-summary { display: flex; gap: 14px; flex-wrap: wrap; font-size: 11.8px; color: var(--text-dim); background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; }
+.mcp-tools-summary b { color: var(--text); font-variant-numeric: tabular-nums; }
+.mcp-tools-summary span { display: inline-flex; align-items: baseline; gap: 5px; }
+.mcp-tools-sep { color: var(--text-faint); }
+.mcp-tool-consequence code { font-family: var(--mono); color: var(--text-dim); }
+.mcp-tools-list { display: flex; flex-direction: column; gap: 7px; }
+.mcp-tool-row { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; display: flex; flex-direction: column; gap: 5px; }
+.mcp-tool-row[data-state="denied"] { border-style: dashed; opacity: 0.78; }
+.mcp-tool-head { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.mcp-tool-name { font-family: var(--mono); font-size: 11.8px; color: var(--text); overflow-wrap: anywhere; }
+.mcp-tool-server { font-size: 11.2px; color: var(--text-faint); }
+.mcp-tool-desc { margin: 0; font-size: 11.4px; color: var(--text-dim); }
+.mcp-tool-consequence { margin: 0; font-size: 11.2px; color: var(--text-faint); }
+.mcp-tool-consequence strong { color: var(--text-dim); font-weight: 600; }
+.mcp-tool-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.mcp-tool-schema { margin: 0; font-size: 11.2px; color: var(--text-dim); background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 8px; font-family: var(--mono); overflow-wrap: anywhere; }
+.mcp-pill.risk-read { color: var(--emerald); border-color: var(--emerald); }
+.mcp-pill.risk-write { color: var(--amber); border-color: var(--amber); }
+.mcp-pill.risk-write_idempotent { color: var(--cyan); border-color: var(--cyan); }
+.mcp-pill.risk-destructive { color: var(--rose); border-color: var(--rose); }
+.mcp-pill.state-available { color: var(--emerald); border-color: var(--emerald); }
+.mcp-pill.state-denied { color: var(--text-faint); border-color: var(--border-hi); }
+.mcp-play-grid { display: grid; grid-template-columns: 1fr 1.2fr 1.8fr auto; gap: 7px; align-items: end; margin-top: 6px; }
+.mcp-play-risk { font-size: 11.4px; color: var(--text-dim); background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 9px; }
+.mcp-play-risk[data-risk="destructive"], .mcp-play-risk[data-risk="write"] { border-color: var(--amber); }
+.mcp-play-schema { font-size: 11.2px; color: var(--text-faint); }
+.mcp-play-schema code { color: var(--text-dim); }
+.mcp-play-argserror { font-size: 11.4px; color: var(--rose); }
+.mcp-play-consent { margin-top: 2px; }
+.mcp-play-result { display: flex; flex-direction: column; gap: 6px; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; background: var(--bg); }
+.mcp-play-result[data-state="ok"] { border-color: var(--emerald); }
+.mcp-play-result[data-state="failed"] { border-color: var(--amber); }
+.mcp-play-result[data-state="denied"] { border-color: var(--rose); }
+.mcp-play-result[data-state="needs-confirmation"] { border-color: var(--amber); }
+.mcp-play-result[data-state="loading"] { border-color: var(--border-hi); }
+.mcp-play-result[hidden], .mcp-play-risk[hidden], .mcp-play-argserror[hidden], .mcp-play-consent[hidden], .mcp-play-raw[hidden], .mcp-play-result #mcpPlayMore[hidden] { display: none !important; }
+.mcp-play-result #mcpPlayOutput { margin: 0; max-height: 180px; overflow: auto; font-size: 11.4px; color: var(--text); white-space: pre-wrap; overflow-wrap: anywhere; }
+.mcp-play-result #mcpPlayArgs, .mcp-play-grid textarea { font-family: var(--mono); }
+.mcp-play-meta { display: flex; gap: 10px; flex-wrap: wrap; font-size: 11.4px; color: var(--text-dim); }
+.mcp-play-auth { font-size: 11.2px; color: var(--text-faint); }
+.mcp-play-auth code { color: var(--text-dim); }
+.mcp-play-raw summary { cursor: pointer; font-size: 11.2px; color: var(--text-dim); }
+.mcp-play-raw pre { margin: 5px 0 0; max-height: 150px; overflow: auto; font-size: 10.8px; color: var(--text-dim); white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 880px) {
+  .mcp-play-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
 /* UIV2-21: the MCP surface is a hub with Catalog / Connected / Activity tabs, so the
    dialog never asks anyone to scroll through presets, the whole config form, the
    importer, the server list and the playground in one column. */
@@ -5847,6 +5896,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     <div class="mcp-hub-tabbar" role="tablist" aria-label="MCP hub sections">
       <button class="mcp-hub-tab active" id="mcpTabCatalog" role="tab" aria-selected="true" aria-controls="mcpPanelCatalog" tabindex="0" data-mcp-tab="catalog" onclick="switchMcpTab('catalog')">Catalog <span class="mcp-hub-count" id="mcpTabCatalogCount">0</span></button>
       <button class="mcp-hub-tab" id="mcpTabConnected" role="tab" aria-selected="false" aria-controls="mcpPanelConnected" tabindex="-1" data-mcp-tab="connected" onclick="switchMcpTab('connected')">Connected <span class="mcp-hub-count" id="mcpTabConnectedCount">0</span></button>
+      <button class="mcp-hub-tab" id="mcpTabTools" role="tab" aria-selected="false" aria-controls="mcpPanelTools" tabindex="-1" data-mcp-tab="tools" onclick="switchMcpTab('tools')">Tools <span class="mcp-hub-count" id="mcpTabToolsCount">0</span></button>
       <button class="mcp-hub-tab" id="mcpTabActivity" role="tab" aria-selected="false" aria-controls="mcpPanelActivity" tabindex="-1" data-mcp-tab="activity" onclick="switchMcpTab('activity')">Activity <span class="mcp-hub-count" id="mcpTabActivityCount">0</span></button>
     </div>
 
@@ -5992,18 +6042,46 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         <div id="configuredMcpServersList" class="mcp-connected-list"></div>
 
         <div class="mcp-hub-card mcp-playground">
-          <div class="mcp-hub-cardhead">Test an MCP tool call<span class="mcp-hub-cardsub">Runs one live call; results also appear in Activity.</span></div>
-          <div style="display:grid; grid-template-columns:1fr 1.2fr 1.8fr auto; gap:7px; align-items:end; margin-top:6px;">
-            <div><label class="field-lbl" for="mcpPlayServer">Server</label><select id="mcpPlayServer" style="width:100%;" onchange="populateMcpPlayTools()"></select></div>
-            <div><label class="field-lbl" for="mcpPlayTool">Tool Name</label><select id="mcpPlayTool" style="width:100%;"></select></div>
-            <div><label class="field-lbl" for="mcpPlayArgs">JSON Arguments</label><input type="text" id="mcpPlayArgs" style="width:100%; font-family:var(--mono); font-size:11.6px;" value="{}" /></div>
+          <div class="mcp-hub-cardhead">Test an MCP tool call<span class="mcp-hub-cardsub">One live call, through the same authorization a model's call goes through.</span></div>
+          <div class="mcp-play-grid">
+            <div><label class="field-lbl" for="mcpPlayServer">Server</label><select id="mcpPlayServer" style="width:100%;" onchange="onMcpPlayServerChange()"></select></div>
+            <div><label class="field-lbl" for="mcpPlayTool">Tool Name</label><select id="mcpPlayTool" style="width:100%;" onchange="onMcpPlayToolChange()"></select></div>
+            <div><label class="field-lbl" for="mcpPlayArgs">JSON Arguments</label><textarea id="mcpPlayArgs" rows="2" spellcheck="false" style="width:100%; font-family:var(--mono); font-size:11.6px; resize:vertical;" aria-describedby="mcpPlaySchema mcpPlayArgsError" oninput="validateMcpPlayArgs()">{}</textarea></div>
             <button id="mcpPlayBtn" class="btn btn-emerald" onclick="runMcpPlayground()">Test Call</button>
           </div>
-          <pre id="mcpPlayOutput" class="mcp-play-output" style="display:none;"></pre>
+          <div class="mcp-play-risk" id="mcpPlayRisk" hidden></div>
+          <div class="mcp-play-schema" id="mcpPlaySchema"></div>
+          <div class="mcp-play-argserror" id="mcpPlayArgsError" role="alert" hidden></div>
+          <label class="mcp-consent mcp-play-consent" id="mcpPlayConsent" hidden>
+            <input type="checkbox" id="mcpPlayConsentBox" onchange="onMcpPlayConsentChange()" />
+            <span id="mcpPlayConsentText">I understand what this tool can do and want to run it once.</span>
+          </label>
+          <div class="mcp-play-result" id="mcpPlayResult" role="status" aria-live="polite" hidden>
+            <div class="mcp-play-meta" id="mcpPlayMeta"></div>
+            <div class="mcp-play-auth" id="mcpPlayAuth"></div>
+            <pre id="mcpPlayOutput" class="mcp-play-output" style="display:none;"></pre>
+            <button class="btn btn-xs" id="mcpPlayMore" hidden onclick="showFullMcpPlayOutput()">Show all</button>
+            <details class="mcp-play-raw" id="mcpPlayRaw" hidden>
+              <summary>Raw response</summary>
+              <pre id="mcpPlayRawBody"></pre>
+            </details>
+          </div>
         </div>
+
+        <!-- ============ TAB 3: TOOLS ============ -->
       </section>
 
-      <!-- ============ TAB 3: ACTIVITY ============ -->
+      <section id="mcpPanelTools" class="mcp-hub-panel" role="tabpanel" aria-labelledby="mcpTabTools" tabindex="0" hidden>
+        <div class="mcp-tools-summary" id="mcpToolsSummary" role="status" aria-live="polite"></div>
+        <div class="mcp-hub-filterrow">
+          <div class="mcp-hub-filters" id="mcpToolFilters" role="group" aria-label="Filter tools by what a call can do"></div>
+          <div class="mcp-hub-hint" id="mcpToolHint">Every row states what a call can do, whether the server will allow it, and what happens when a model asks for it.</div>
+        </div>
+        <div class="mcp-tools-list" id="mcpToolList"></div>
+        <div class="mcp-hub-empty" id="mcpToolsEmpty" hidden></div>
+      </section>
+
+      <!-- ============ TAB 4: ACTIVITY ============ -->
       <section id="mcpPanelActivity" class="mcp-hub-panel" role="tabpanel" aria-labelledby="mcpTabActivity" tabindex="0" hidden>
         <div class="mcp-hub-sectionhead">Connection health<span class="mcp-hub-cardsub" id="mcpActivityHealthCount">0 servers</span></div>
         <div class="mcp-activity-list" id="mcpActivityList"></div>
@@ -18433,12 +18511,13 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     if (connectedCount) connectedCount.textContent = mcpServers.length;
     if (activityCount) activityCount.textContent = mcpServers.length + mcpActivity.length;
 
+    renderMcpTools();
     renderMcpActivity();
     applyMcpHubSearch();
   }
 
   function switchMcpTab(tab) {
-    mcpHubTab = ["catalog", "connected", "activity"].includes(tab) ? tab : "catalog";
+    mcpHubTab = ["catalog", "connected", "tools", "activity"].includes(tab) ? tab : "catalog";
     document.querySelectorAll("#mcpModal [data-mcp-tab]").forEach(btn => {
       const on = btn.dataset.mcpTab === mcpHubTab;
       btn.classList.toggle("active", on);
@@ -18777,6 +18856,329 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     syncMcpEditorState();
   }
 
+  // ---- UIV2-23: the Tools tab, and a test call that says what it costs ----
+  const MCP_RISK_LABELS = { read: "Read-only", write: "Write", write_idempotent: "Write · repeatable", destructive: "Destructive" };
+  const MCP_RISK_TEXT = {
+    read: "It only reads: a call changes nothing on the server.",
+    write: "It writes and cannot be repeated safely — a second call may do the work twice.",
+    write_idempotent: "It writes, but carries an idempotency key, so a repeat with the same key is safe.",
+    destructive: "The server says this call can remove or overwrite data.",
+  };
+  const MCP_RISK_NOUNS = { read: "a read-only call", write: "a write", write_idempotent: "a repeatable write", destructive: "a destructive call" };
+  const MCP_TOOL_FILTERS = [
+    { id: "all", label: "All" },
+    { id: "read", label: "Read-only" },
+    { id: "write", label: "Writes" },
+    { id: "denied", label: "Denied" },
+  ];
+  const MCP_DENIAL_WORDS = {
+    tool_denied: "the tool is turned off for this server",
+    server_denied: "the server is switched off",
+    stdio_gate: "the stdio launch gate is closed",
+    unknown_tool: "the server never discovered that tool",
+    approval_required: "the Harness policy needs approval first",
+    paused_idempotency: "a previous write is unresolved",
+    denied: "the call was refused",
+  };
+  let mcpToolFilter = "all";
+  let mcpPlayFull = "";
+  let mcpPlayLast = null;
+
+  /** Fail closed: a tool with no classification at all is a write, never a read. */
+  function mcpToolRisk(tool) {
+    if (!tool) return "write";
+    if (MCP_RISK_LABELS[tool.risk]) return tool.risk;
+    if (tool.read_only) return "read";
+    if (tool.destructive) return "destructive";
+    if (tool.idempotency_supported) return "write_idempotent";
+    return "write";
+  }
+
+  function mcpToolRows() {
+    const rows = [];
+    for (const srv of mcpServers) {
+      for (const tool of (srv.tools || [])) rows.push({ srv, tool });
+    }
+    return rows;
+  }
+
+  /** What this server's approval policy promises, in one sentence a reader can act on. */
+  function mcpPolicyPromise(srv) {
+    const policy = (srv && srv.approval_policy) || "inherit";
+    if (policy === "auto") return "Auto-Run: the Harness sends a call without asking you first.";
+    if (policy === "always_ask") return "Always Ask: every call waits for your approval in the Harness.";
+    return "Inherit: the Harness policy decides, and Standard and Plan ask first.";
+  }
+
+  /** What happens when a model asks for this tool, given its server's policy. */
+  function mcpToolConsequence(srv, tool) {
+    const risk = mcpToolRisk(tool);
+    const policy = (srv && srv.approval_policy) || "inherit";
+    if (tool && tool.denied) return "Turned off: the server's allowlist refuses a call until you allow it here.";
+    if (policy === "auto") {
+      return risk === "read"
+        ? "A model's call runs without asking: Auto-Run, and this tool only reads."
+        : `A model's call runs without asking under Auto-Run, and this is a ${MCP_RISK_LABELS[risk].toLowerCase()} — that is what Auto-Run means for it. A test call still asks you first.`;
+    }
+    if (policy === "always_ask") {
+      return "A model's call waits for your approval in the Harness. A test call asks you first if it is a write.";
+    }
+    return risk === "read"
+      ? "A model's call follows the Harness policy: Standard and Plan ask, Autonomous does not."
+      : "A model's call follows the Harness policy; this is a write, so Standard and Plan ask first.";
+  }
+
+  function mcpToolStateWord(tool) {
+    return tool && tool.denied ? "Denied" : "Available";
+  }
+
+  function mcpToolSchemaText(tool) {
+    const schema = (tool && tool.inputSchema) || {};
+    const props = schema.properties || {};
+    const required = schema.required || [];
+    const parts = Object.entries(props).map(([name, spec]) => `${name}: ${(spec && spec.type) || "any"}${required.includes(name) ? " (required)" : ""}`);
+    return parts.length ? parts.join(" · ") : "no arguments";
+  }
+
+  function mcpToolRowHtml(srv, tool) {
+    const risk = mcpToolRisk(tool);
+    const denied = Boolean(tool.denied);
+    const key = `${srv.alias}::${tool.name}`;
+    const searchKey = [srv.alias, srv.name, tool.name, tool.description || "", risk, denied ? "denied" : "available"].join(" ").toLowerCase();
+    const schemaId = `mcpToolSchema-${encodeURIComponent(key)}`;
+    return `
+      <article class="mcp-tool-row" data-tool-key="${escapeHtml(key)}" data-risk="${risk}" data-state="${denied ? "denied" : "available"}" data-mcp-search="${escapeHtml(searchKey)}">
+        <div class="mcp-tool-head">
+          <code class="mcp-tool-name">mcp__${escapeHtml(srv.alias)}__${escapeHtml(tool.name)}</code>
+          <span class="mcp-pill risk-${risk}">${escapeHtml(MCP_RISK_LABELS[risk])}</span>
+          <span class="mcp-pill state-${denied ? "denied" : "available"}">${mcpToolStateWord(tool)}</span>
+          <span class="mcp-tool-server">${escapeHtml(srv.name)}</span>
+        </div>
+        <p class="mcp-tool-desc">${escapeHtml(tool.description || "The server sent no description.")}</p>
+        <p class="mcp-tool-consequence"><strong>What a call does</strong> ${escapeHtml(MCP_RISK_TEXT[risk])}</p>
+        <p class="mcp-tool-consequence"><strong>When a model asks</strong> ${escapeHtml(mcpToolConsequence(srv, tool))}</p>
+        <p class="mcp-tool-consequence"><strong>Arguments</strong> <code>${escapeHtml(mcpToolSchemaText(tool))}</code></p>
+        <div class="mcp-tool-actions">
+          <button class="btn btn-xs btn-emerald" ${denied ? "disabled" : ""} onclick="openMcpToolTest('${escapeHtml(srv.alias)}', '${escapeHtml(tool.name)}')">Test call</button>
+          <button class="btn btn-xs" onclick="toggleMcpSingleTool('${escapeHtml(srv.alias)}', '${escapeHtml(tool.name)}', ${denied ? "true" : "false"})">${denied ? "Allow" : "Deny"}</button>
+          <button class="btn btn-xs" onclick="toggleMcpToolSchema('${escapeHtml(key)}')">Raw schema</button>
+        </div>
+        <div class="mcp-tool-schema" id="${schemaId}" hidden>${escapeHtml(JSON.stringify(tool.inputSchema || {}, null, 1))}</div>
+      </article>`;
+  }
+
+  function toggleMcpToolSchema(key) {
+    const node = document.getElementById(`mcpToolSchema-${encodeURIComponent(key)}`);
+    if (node) node.hidden = !node.hidden;
+  }
+
+  function setMcpToolFilter(id) {
+    mcpToolFilter = MCP_TOOL_FILTERS.some(f => f.id === id) ? id : "all";
+    renderMcpTools();
+  }
+
+  function mcpToolMatches(row, filter, term) {
+    if (filter === "denied" && !row.tool.denied) return false;
+    if (filter === "read" && mcpToolRisk(row.tool) !== "read") return false;
+    if (filter === "write" && mcpToolRisk(row.tool) === "read") return false;
+    if (!term) return true;
+    const haystack = [row.srv.alias, row.srv.name, row.tool.name, row.tool.description || "", mcpToolRisk(row.tool)].join(" ").toLowerCase();
+    return haystack.includes(term);
+  }
+
+  function renderMcpTools() {
+    const rows = mcpToolRows();
+    const summary = document.getElementById("mcpToolsSummary");
+    const deniedCount = rows.filter(r => r.tool.denied).length;
+    const unsynced = mcpServers.filter(s => !(s.tools || []).length).length;
+    if (summary) {
+      const parts = [
+        `<span><b>${mcpServers.length}</b> configured server${mcpServers.length === 1 ? "" : "s"}</span>`,
+        `<span><b>${rows.length}</b> discovered tool${rows.length === 1 ? "" : "s"}</span>`,
+        `<span><b>${rows.length - deniedCount}</b> available to call</span>`,
+        `<span><b>${deniedCount}</b> denied by the allowlist</span>`,
+      ];
+      if (unsynced) parts.push(`<span><b>${unsynced}</b> configured without tools yet</span>`);
+      summary.innerHTML = parts.join('<span class="mcp-tools-sep" aria-hidden="true">·</span>');
+    }
+
+    const filters = document.getElementById("mcpToolFilters");
+    if (filters) {
+      filters.innerHTML = MCP_TOOL_FILTERS.map(f => {
+        const count = f.id === "all"
+          ? rows.length
+          : rows.filter(r => mcpToolMatches(r, f.id, "")).length;
+        const on = mcpToolFilter === f.id;
+        return `<button class="chip ${on ? "active" : ""}" aria-pressed="${on}" onclick="setMcpToolFilter('${f.id}')">${f.label} <span class="mcp-hub-count">${count}</span></button>`;
+      }).join("");
+    }
+
+    const term = mcpHubTerm();
+    const shown = rows.filter(r => mcpToolMatches(r, mcpToolFilter, term));
+    const list = document.getElementById("mcpToolList");
+    if (list) list.innerHTML = shown.map(r => mcpToolRowHtml(r.srv, r.tool)).join("");
+    const empty = document.getElementById("mcpToolsEmpty");
+    if (empty) {
+      empty.hidden = shown.length > 0;
+      if (!shown.length) {
+        empty.innerHTML = rows.length
+          ? `No tool matches <strong>${escapeHtml(term || mcpToolFilter)}</strong>. <button class="btn btn-xs" onclick="resetMcpHubSearch()">Clear search</button>`
+          : "No tools have been discovered yet. Sync a server in <strong>Connected</strong>, or pick a catalog card first — discovering a server's tools is what fills this tab.";
+      }
+    }
+    const count = document.getElementById("mcpTabToolsCount");
+    if (count) count.textContent = rows.length;
+  }
+
+  function openMcpToolTest(alias, toolName) {
+    switchMcpTab("connected");
+    const server = document.getElementById("mcpPlayServer");
+    server.value = alias;
+    populateMcpPlayTools();
+    document.getElementById("mcpPlayTool").value = toolName;
+    prefillMcpPlayground(alias, toolName);
+    const card = document.querySelector("#mcpModal .mcp-playground");
+    if (card && card.scrollIntoView) card.scrollIntoView({ block: "nearest" });
+  }
+
+  function mcpPlayServerObj() {
+    const alias = (document.getElementById("mcpPlayServer") || {}).value;
+    return mcpServers.find(s => s.alias === alias) || null;
+  }
+
+  function mcpPlayToolObj() {
+    const srv = mcpPlayServerObj();
+    const name = (document.getElementById("mcpPlayTool") || {}).value;
+    return srv ? ((srv.tools || []).find(t => t.name === name) || null) : null;
+  }
+
+  function mcpPlayMissingArgs() {
+    const tool = mcpPlayToolObj();
+    if (!tool) return [];
+    const raw = (document.getElementById("mcpPlayArgs") || {}).value || "";
+    let parsed = {};
+    try { parsed = raw.trim() ? JSON.parse(raw) : {}; } catch (e) { return []; }
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return [];
+    const required = ((tool.inputSchema || {}).required) || [];
+    return required.filter(name => !(name in parsed));
+  }
+
+  /** Is what is in the box something this tool could accept? Returns the sentence, or "". */
+  function mcpPlayArgProblem() {
+    const raw = (document.getElementById("mcpPlayArgs").value || "").trim();
+    if (raw) {
+      let parsed;
+      try {
+        parsed = JSON.parse(raw);
+      } catch (e) {
+        return `These arguments are not valid JSON — ${e.message}`;
+      }
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        return "Arguments have to be one JSON object, like {\"note\": \"hi\"}.";
+      }
+    }
+    const missing = mcpPlayMissingArgs();
+    if (missing.length) return `This tool needs ${missing.join(", ")} — add ${missing.length === 1 ? "it" : "them"} to the arguments.`;
+    return "";
+  }
+
+  function mcpPlayNeedsConsent() {
+    return mcpToolRisk(mcpPlayToolObj()) !== "read";
+  }
+
+  function validateMcpPlayArgs() {
+    const problem = mcpPlayArgProblem();
+    const box = document.getElementById("mcpPlayArgsError");
+    if (box) {
+      box.hidden = !problem;
+      box.textContent = problem;
+    }
+    const btn = document.getElementById("mcpPlayBtn");
+    if (btn) btn.disabled = Boolean(problem) || (mcpPlayNeedsConsent() && !document.getElementById("mcpPlayConsentBox").checked);
+    return !problem;
+  }
+
+  function renderMcpPlayConsent() {
+    const tool = mcpPlayToolObj();
+    const risk = mcpToolRisk(tool);
+    const riskBox = document.getElementById("mcpPlayRisk");
+    const consent = document.getElementById("mcpPlayConsent");
+    const text = document.getElementById("mcpPlayConsentText");
+    const schema = document.getElementById("mcpPlaySchema");
+    if (schema) {
+      schema.innerHTML = tool
+        ? `Arguments: <code>${escapeHtml(mcpToolSchemaText(tool))}</code>`
+        : "<span>Pick a server with tools, or sync one in Connected.</span>";
+    }
+    if (riskBox) {
+      const srv = mcpPlayServerObj();
+      riskBox.hidden = !tool;
+      riskBox.dataset.risk = risk;
+      if (tool) {
+        riskBox.innerHTML = `<span class="mcp-pill risk-${risk}">${escapeHtml(MCP_RISK_LABELS[risk])}</span> ${escapeHtml(MCP_RISK_TEXT[risk])}`
+          + (srv && !srv.enabled ? ` <strong>The server is switched off, so this will be refused.</strong>` : "")
+          + (tool.denied ? ` <strong>This tool is denied by the allowlist, so this will be refused.</strong>` : "");
+      }
+    }
+    if (consent) consent.hidden = !tool || risk === "read";
+    if (text && tool) {
+      text.textContent = `I understand this is ${MCP_RISK_NOUNS[risk]} and I want to run ${tool.name} once.`;
+    }
+    validateMcpPlayArgs();
+  }
+
+  function onMcpPlayToolChange() {
+    mcpPlayLast = null;
+    const box = document.getElementById("mcpPlayConsentBox");
+    if (box) box.checked = false;
+    const result = document.getElementById("mcpPlayResult");
+    if (result) result.hidden = true;
+    renderMcpPlayConsent();
+  }
+
+  function onMcpPlayConsentChange() {
+    validateMcpPlayArgs();
+  }
+
+  /** Keep the head and the tail of a long result: the middle is what nobody reads. */
+  function mcpPlayTruncate(text, limit) {
+    if (text.length <= limit) return { text, truncated: false };
+    const head = text.slice(0, limit - 900);
+    const tail = text.slice(-900);
+    return { text: `${head}\n… [${text.length - head.length - tail.length} characters hidden — Show all] …\n${tail}`, truncated: true };
+  }
+
+  function showFullMcpPlayOutput() {
+    const out = document.getElementById("mcpPlayOutput");
+    if (out && mcpPlayFull) out.textContent = mcpPlayFull;
+    const more = document.getElementById("mcpPlayMore");
+    if (more) more.hidden = true;
+  }
+
+  function renderMcpPlayResult(state, meta, auth, output, raw) {
+    const result = document.getElementById("mcpPlayResult");
+    const metaBox = document.getElementById("mcpPlayMeta");
+    const authBox = document.getElementById("mcpPlayAuth");
+    const out = document.getElementById("mcpPlayOutput");
+    const more = document.getElementById("mcpPlayMore");
+    const rawBox = document.getElementById("mcpPlayRaw");
+    const rawBody = document.getElementById("mcpPlayRawBody");
+    if (result) { result.hidden = false; result.dataset.state = state; }
+    if (metaBox) metaBox.innerHTML = meta;
+    if (authBox) authBox.innerHTML = auth;
+    mcpPlayFull = String(output || "");
+    const shown = mcpPlayTruncate(mcpPlayFull, 2600);
+    if (out) { out.style.display = "block"; out.textContent = shown.text; }
+    if (more) {
+      more.hidden = !shown.truncated;
+      if (shown.truncated) more.textContent = `Show all ${mcpPlayFull.length} characters`;
+    }
+    if (rawBox) {
+      rawBox.hidden = !raw;
+      if (raw && rawBody) rawBody.textContent = JSON.stringify(raw, null, 2).slice(0, 4000);
+    }
+  }
+
   function renderMcpUI() {
     const totalActiveTools = mcpServers.filter(s => s.enabled).reduce((acc, s) => acc + (s.active_tool_count || 0), 0);
     document.getElementById("mcpToolsCountBadge").textContent = totalActiveTools;
@@ -18804,6 +19206,11 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         const tools = s.tools || [];
         const enSet = new Set((s.enabled_tools && s.enabled_tools.length) ? s.enabled_tools : tools.map(t => t.name));
         const errHtml = s.last_error ? `<div style="font-size:11.2px; color:#fda4af; margin-top:4px;">${UI_ICONS.warn} Sync note: ${escapeHtml(s.last_error)}</div>` : "";
+        const riskCounts = { read: 0, write_idempotent: 0, write: 0, destructive: 0 };
+        for (const tool of tools) riskCounts[mcpToolRisk(tool)] += 1;
+        const riskLine = tools.length
+          ? `<div class="mcp-tool-consequence" style="margin-top:4px;"><strong>${tools.length} tool${tools.length === 1 ? "" : "s"}</strong> · ${riskCounts.read} read-only · ${riskCounts.write + riskCounts.write_idempotent} write · ${riskCounts.destructive} destructive · ${escapeHtml(mcpPolicyPromise(s))}</div>`
+          : `<div class="mcp-tool-consequence" style="margin-top:4px;">${escapeHtml(mcpPolicyPromise(s))}</div>`;
         const targetInfo = s.transport === "http" ? s.url : `${s.command} ${(s.args || []).join(" ")}`;
         const toolsDrawer = tools.length ? `
           <details style="margin-top:7px;">
@@ -18845,6 +19252,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
             </div>
             <div class="mono" style="font-size:11px; color:var(--text-dim); margin-top:3px;">${escapeHtml(targetInfo)}</div>
             ${errHtml}
+            ${riskLine}
             ${toolsDrawer}
           </div>`;
       }).join("");
@@ -18865,10 +19273,26 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const alias = document.getElementById("mcpPlayServer").value;
     const srv = mcpServers.find(s => s.alias === alias);
     const toolSel = document.getElementById("mcpPlayTool");
+    const previous = toolSel.value;
     const tools = (srv && srv.tools) ? srv.tools : [];
     toolSel.innerHTML = tools.length
-      ? tools.map(t => `<option value="${escapeHtml(t.name)}">${escapeHtml(t.name)}</option>`).join("")
+      ? tools.map(t => {
+          const denied = t.denied ? " — denied" : "";
+          return `<option value="${escapeHtml(t.name)}">${escapeHtml(t.name)}${denied}</option>`;
+        }).join("")
       : `<option value="">(Sync server first)</option>`;
+    if (tools.some(t => t.name === previous)) toolSel.value = previous;
+    renderMcpPlayConsent();
+  }
+
+  /** Changing the server is a new subject: the previous consent and result do not carry over. */
+  function onMcpPlayServerChange() {
+    const box = document.getElementById("mcpPlayConsentBox");
+    if (box) box.checked = false;
+    const result = document.getElementById("mcpPlayResult");
+    if (result) result.hidden = true;
+    populateMcpPlayTools();
+    onMcpPlayToolChange();
   }
 
   function prefillMcpPlayground(alias, toolName) {
@@ -18884,6 +19308,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     }
     document.getElementById("mcpPlayArgs").value = JSON.stringify(sample);
     document.getElementById("mcpPlayArgs").focus();
+    renderMcpPlayConsent();
   }
 
   async function saveMcpServer() {
@@ -19046,27 +19471,72 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     mcpServers = d.servers || []; renderMcpUI();
   }
 
+  /** A refusal is only helpful if it says which switch to move. */
+  function mcpDenialHelp(kind, srv, tool) {
+    const name = tool ? tool.name : "this tool";
+    if (kind === "tool_denied") return `The allowlist for ${srv.name} does not include ${name}. Open the Tools tab and hit Allow on that row to put it back.`;
+    if (kind === "server_denied") return `${srv.name} is switched off, so nothing can call it. Turn the server on here, then call again.`;
+    if (kind === "stdio_gate") return "Studio was launched without the local-command opt-in, so a stdio server cannot be started from this screen. Ask whoever launched Studio to enable it.";
+    if (kind === "unknown_tool") return `The tool list the server is serving now has no ${name}. Sync the server in Connected and pick the tool again.`;
+    if (kind === "approval_required") return "This server's approval policy needs a human approval for this call, and a test call does not count as one.";
+    if (kind === "paused_idempotency") return "An earlier write with this key is still unresolved. Reconcile it in Activity before repeating the call.";
+    return "Nothing ran. Check the server's state in Connected and try again.";
+  }
+
   async function runMcpPlayground() {
-    const alias = document.getElementById("mcpPlayServer").value;
-    const tool = document.getElementById("mcpPlayTool").value;
+    const srv = mcpPlayServerObj();
+    const picked = mcpPlayToolObj();
+    if (!srv || !picked) { showToast("Pick a server with a synced tool first.", "warn"); return; }
+    if (!validateMcpPlayArgs()) return;
+    const alias = srv.alias;
+    const tool = picked.name;
+    const risk = mcpToolRisk(picked);
+    const confirmBox = document.getElementById("mcpPlayConsentBox");
+    const confirmWrite = risk !== "read" && Boolean(confirmBox && confirmBox.checked);
     const argsRaw = document.getElementById("mcpPlayArgs").value.trim() || "{}";
-    if (!alias || !tool) return;
-    const btn = document.getElementById("mcpPlayBtn"), out = document.getElementById("mcpPlayOutput");
-    btn.disabled = true; btn.textContent = "Calling..."; out.style.display = "block"; out.textContent = "Executing MCP tool call...";
+    const btn = document.getElementById("mcpPlayBtn");
+    btn.disabled = true; btn.textContent = "Calling...";
+    renderMcpPlayResult("loading", "<span>Sending one call…</span>", "", "Executing MCP tool call...", null);
     try {
       const r = await fetch(`/api/mcp/servers/${encodeURIComponent(alias)}/call`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tool, arguments: JSON.parse(argsRaw) }),
+        body: JSON.stringify({ tool, arguments: JSON.parse(argsRaw), ...(confirmWrite ? { confirm_write: true } : {}) }),
       });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.detail || "Call failed");
-      out.textContent = `(${d.elapsed_ms}ms • ${d.ok ? uiStatus("ok").label : uiStatus("failed").label})\n${d.output || ""}`;
-      recordMcpActivity({ alias, tool, ok: !!d.ok, ms: d.elapsed_ms, detail: String(d.output || "").replace(/\s+/g, " ").slice(0, 160) });
+      const d = await r.json().catch(() => ({}));
+      if (r.status === 428 && d.confirmation_required) {
+        const c = d.confirmation_required;
+        renderMcpPlayResult("needs-confirmation",
+          `<span class="mcp-pill risk-${risk}">${escapeHtml(MCP_RISK_LABELS[risk])}</span> <strong>Confirmation required — nothing ran</strong>`,
+          "The server stopped the call before the tool ran — nothing was sent.",
+          `${c.message || "This tool writes, so a test call asks you first."}\n\nTick the box above and call again if you meant it.`, d);
+        recordMcpActivity({ alias, tool, ok: false, ms: 0, detail: "Confirmation required — nothing ran" });
+        return;
+      }
+      if (!r.ok) {
+        const kind = (d.denial && d.denial.kind) || "denied";
+        renderMcpPlayResult("denied",
+          `<span class="mcp-pill state-denied">Denied</span> <strong>${escapeHtml(MCP_DENIAL_WORDS[kind] || MCP_DENIAL_WORDS.denied)}</strong>`,
+          "No authorization was recorded: the call never reached the tool.",
+          `${d.detail || "The call was refused."}\n\n${mcpDenialHelp(kind, srv, picked)}`, d);
+        recordMcpActivity({ alias, tool, ok: false, ms: 0, detail: d.detail || "Denied" });
+        return;
+      }
+      const output = String(d.output || "");
+      const auth = d.authorization || {};
+      renderMcpPlayResult(d.ok ? "ok" : "failed",
+        `<span class="mcp-pill risk-${risk}">${escapeHtml(MCP_RISK_LABELS[risk])}</span> <span>${d.ok ? "Call returned" : "The tool reported a failure"}</span> <span>${d.elapsed_ms || 0} ms</span> <span>${output.length} character${output.length === 1 ? "" : "s"}</span>`,
+        `Authorized as <code>${escapeHtml(auth.grant_source || "operator_one_call")}</code> under <code>${escapeHtml(auth.policy || "standard")}</code> — `
+          + (auth.confirmed_write ? "you confirmed this write." : "read-only, so nothing needed confirming.")
+          + " " + (auth.harness_would_ask ? "A model's call would wait for your approval." : "A model's call would not ask under this server's policy."),
+        output, d);
+      recordMcpActivity({ alias, tool, ok: !!d.ok, ms: d.elapsed_ms, detail: output.replace(/\s+/g, " ").slice(0, 160) });
     } catch (e) {
-      out.textContent = "Error: " + e.message;
+      renderMcpPlayResult("denied", `<span class="mcp-pill state-denied">No response</span>`, "",
+        `The request failed before the tool answered: ${e.message}`, null);
       recordMcpActivity({ alias, tool, ok: false, ms: 0, detail: e.message });
     } finally {
-      btn.disabled = false; btn.textContent = "Test Call";
+      btn.textContent = "Test Call";
+      validateMcpPlayArgs();
     }
   }
 
@@ -21889,6 +22359,37 @@ def _normalize_mcp_tool_entry(raw_tool: Mapping[str, Any]) -> dict[str, Any]:
     return entry
 
 
+#: What each risk level is called on screen, and what it means for the next call (UIV2-23).
+MCP_RISK_LABELS: dict[str, str] = {
+    "read": "read-only tool",
+    "write": "write",
+    "write_idempotent": "repeatable write",
+    "destructive": "destructive write",
+}
+MCP_RISK_CONSEQUENCES: dict[str, str] = {
+    "read": "It only reads. Running it changes nothing on the server.",
+    "write": "It writes and cannot be repeated safely — a second call may do the work twice.",
+    "write_idempotent": "It writes, but it carries an idempotency key, so a repeat with the same key is safe.",
+    "destructive": "It is destructive: the server says this call can remove or overwrite data.",
+}
+
+
+def mcp_tool_risk_level(semantics: "mcp_client.McpToolSemantics") -> str:
+    """What a call to this tool can do to the world (UIV2-23).
+
+    Four words, in the order that matters: a read changes nothing, a destructive call is the one
+    nobody can undo, an idempotent write can be replayed with the same key, and every other tool
+    is a write that neither repeats safely nor can be reverted.
+    """
+    if semantics.read_only:
+        return "read"
+    if semantics.destructive:
+        return "destructive"
+    if semantics.idempotency_supported:
+        return "write_idempotent"
+    return "write"
+
+
 def list_mcp_servers(include_secret: bool = False) -> list[dict[str, Any]]:
     def _read_mcp(conn: sqlite3.Connection) -> list[sqlite3.Row]:
         conn.row_factory = sqlite3.Row
@@ -21942,6 +22443,12 @@ def list_mcp_servers(include_secret: bool = False) -> list[dict[str, Any]]:
             t_copy["idempotency_mechanism"] = sem.idempotency_mechanism
             t_copy["replay_policy"] = sem.replay_policy
             t_copy["reconciliation_supported"] = sem.reconciliation_supported
+            # UIV2-23: the tool browser has to be able to say what a call to this tool costs
+            # without re-deriving it, so the classification travels with the tool.
+            t_copy["read_only"] = sem.read_only
+            t_copy["destructive"] = sem.destructive
+            t_copy["requires_approval_override"] = sem.requires_approval_override
+            t_copy["risk"] = mcp_tool_risk_level(sem)
             if sem.idempotency_status == "unsupported":
                 unsupported_tools.append(sem.tool_name)
             enriched_tools.append(t_copy)
@@ -21949,6 +22456,10 @@ def list_mcp_servers(include_secret: bool = False) -> list[dict[str, Any]]:
         d["unsupported_idempotency_tools"] = unsupported_tools
         en_set = set(d["enabled_tools"]) if d["enabled_tools"] else {t.get("name") for t in enriched_tools}
         d["active_tool_count"] = sum(1 for t in enriched_tools if t.get("name") in en_set)
+        for t_copy in enriched_tools:
+            # `denied` is the server's own allowlist, not the Harness policy: a tool that is off
+            # here is refused before any policy is consulted.
+            t_copy["denied"] = bool(t_copy.get("name")) and t_copy["name"] not in en_set
         if include_secret:
             d["effective_token"] = effective_tok
             d["raw_token"] = raw_tok
@@ -22824,6 +23335,49 @@ async def api_sync_mcp_server(alias: str, request: Request) -> JSONResponse:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+#: The four ways a test call can be refused before the server is even reached, keyed by the
+#: sentence `_execute_mcp_tool_call_inner` refuses with. The message stays the one the executor
+#: raises — this only names it, so the UI can say *why* instead of matching words itself (UIV2-23).
+MCP_DENIAL_KINDS: tuple[tuple[str, str], ...] = (
+    ("is not in the server's enabled-tool allowlist", "tool_denied"),
+    ("MCP server `", "server_denied"),
+    ("MCP stdio process launch is disabled by default", "stdio_gate"),
+    ("requires explicit approval", "approval_required"),
+    ("Paused non-idempotent MCP write", "paused_idempotency"),
+)
+
+
+def mcp_denial_kind(message: str) -> str:
+    """Which refusal a test call met: the allowlist, the server, the stdio gate, or policy."""
+    text = str(message or "")
+    for needle, kind in MCP_DENIAL_KINDS:
+        if needle in text:
+            return kind
+    return "denied"
+
+
+def mcp_call_block_reason(srv: Mapping[str, Any], remote_tool: str) -> tuple[str, str] | None:
+    """Why a test call cannot run at all, before its risk or policy is considered.
+
+    The executor re-checks all three (defence in depth); this answers them first so a refused
+    call is not also asked to confirm that it is a write.
+    """
+    if not srv.get("enabled"):
+        return "server_denied", f"MCP server `{srv.get('alias')}` is disabled. Turn it on in Connected."
+    known_tools = {str(t.get("name")) for t in (srv.get("tools") or []) if isinstance(t, Mapping) and t.get("name")}
+    if remote_tool not in known_tools:
+        return "unknown_tool", f"`{remote_tool}` is not a tool this server discovered. Sync the server, then pick one of its tools."
+    enabled_tools = set(srv.get("enabled_tools") or known_tools)
+    if remote_tool not in enabled_tools:
+        return "tool_denied", f"`{remote_tool}` is turned off for this server. Allow it in Tools, then call it again."
+    if str(srv.get("transport") or "http").strip().lower() != "http" and not STUDIO_ALLOW_MCP_STDIO:
+        return (
+            "stdio_gate",
+            "MCP stdio process launch is disabled by default. Set STUDIO_ALLOW_MCP_STDIO=1 on the server, then call again.",
+        )
+    return None
+
+
 @app.post("/api/mcp/servers/{alias}/call")
 async def api_call_mcp_server_tool(alias: str, request: Request) -> JSONResponse:
     """Interactive MCP Tool Playground endpoint — test-fire any Cloud or Custom MCP tool live."""
@@ -22840,6 +23394,33 @@ async def api_call_mcp_server_tool(alias: str, request: Request) -> JSONResponse
     if not isinstance(args, dict):
         raise HTTPException(status_code=400, detail="`arguments` must be a JSON object.")
     raw_action_id = (request.headers.get("Idempotency-Key") or str(body.get("action_id") or "")).strip()
+    # UIV2-23: a test call is a human action, and the risk of the tool is stated before it runs.
+    try:
+        srv = get_mcp_server(alias, include_secret=False)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    blocked = mcp_call_block_reason(srv, tool_name)
+    if blocked is not None:
+        kind, message = blocked
+        return JSONResponse(status_code=403, content={"detail": message, "denial": {"kind": kind, "alias": alias, "tool": tool_name}})
+    semantics = _resolve_mcp_tool_semantics(srv, tool_name)
+    risk = mcp_tool_risk_level(semantics)
+    if risk != "read" and not bool(body.get("confirm_write")):
+        # Nothing runs an unclassified write from this page on one click: the operator is shown
+        # what the tool can do and has to say so for this call, every call.
+        return JSONResponse(
+            status_code=428,
+            content={
+                "detail": f"`{tool_name}` is a {MCP_RISK_LABELS[risk]}. A test call to a tool that is not read-only has to be confirmed first.",
+                "confirmation_required": {
+                    "alias": alias,
+                    "tool": tool_name,
+                    "risk": risk,
+                    "risk_label": MCP_RISK_LABELS[risk],
+                    "message": MCP_RISK_CONSEQUENCES[risk],
+                },
+            },
+        )
     try:
         res = await execute_mcp_tool_call(
             request.app.state.http,
@@ -22852,9 +23433,29 @@ async def api_call_mcp_server_tool(alias: str, request: Request) -> JSONResponse
             grant_source="operator_one_call",
             action_id=(raw_action_id or None),
         )
+        # What authorized this call, so the result inspector can say it instead of implying it.
+        res["authorization"] = {
+            "surface": "test call",
+            "policy": "standard",
+            "grant_source": "operator_one_call",
+            "approved": True,
+            "confirmed_write": risk != "read",
+            "risk": risk,
+            "risk_label": MCP_RISK_LABELS[risk],
+            "read_only": semantics.read_only,
+            "harness_would_ask": mcp_tool_needs_approval(alias, "standard", tool_name),
+        }
         return JSONResponse(res)
     except side_effect_ledger.DuplicateSideEffect as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except PermissionError as exc:
+        return JSONResponse(
+            status_code=403,
+            content={
+                "detail": str(exc),
+                "denial": {"kind": mcp_denial_kind(str(exc)), "alias": alias, "tool": tool_name, "risk": risk},
+            },
+        )
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

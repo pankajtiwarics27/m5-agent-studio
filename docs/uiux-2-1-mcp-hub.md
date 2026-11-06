@@ -20,8 +20,8 @@ on screen while you browse the catalog.
 
 | check | result | detail |
 | --- | --- | --- |
-| the dialog is a hub: one tablist with three tabs | pass | tabs: Catalog, Connected, Activity |
-| each tab controls its own panel, and the panels are tabpanels | pass | panels: Catalog, Connected, Activity · aria-controls and aria-labelledby wired both ways |
+| the dialog is a hub: one tablist with four tabs, the Tools tab included | pass | tabs: Catalog, Connected, Tools, Activity |
+| each tab controls its own panel, and the panels are tabpanels | pass | panels: Catalog, Connected, Tools, Activity · aria-controls and aria-labelledby wired both ways |
 | the landing tab is the catalog, not the configuration form | pass | Catalog is selected and Connected starts hidden |
 | switching a tab shows exactly one panel and moves the roving tabindex | pass | switchMcpTab() hides every other panel, sets aria-selected and a single tab stop |
 | the tab strip answers the arrow keys, Home and End | pass | one delegated listener bound when the hub opens; no inline key handler in the markup |

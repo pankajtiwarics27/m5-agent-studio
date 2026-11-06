@@ -14,7 +14,8 @@
  *
  * What it proves:
  *
- *  1. the dialog is a hub: a three-tab tablist (Catalog / Connected / Activity) with counts, and
+ *  1. the dialog is a hub: a four-tab tablist (Catalog / Connected / Tools / Activity) with counts,
+ *     and
  *     only one section on screen at a time - the configuration form is *not* visible while you
  *     browse the catalog, and at desktop sizes the catalog needs no dialog scroll at all;
  *  2. every preset is a card that states its transport (remote HTTP / local stdio), its trust level,
@@ -433,9 +434,21 @@ const runTool = async (page, alias, tool, args) => {
     const picker = document.getElementById("mcpPlayTool");
     picker.value = toolName;
     picker.dispatchEvent(new Event("change", { bubbles: true }));
-    document.getElementById("mcpPlayArgs").value = rawArgs;
+    const argsBox = document.getElementById("mcpPlayArgs");
+    argsBox.value = rawArgs;
+    argsBox.dispatchEvent(new Event("input", { bubbles: true }));
+    const consent = document.getElementById("mcpPlayConsent");
+    const consentBox = document.getElementById("mcpPlayConsentBox");
+    if (consent && !consent.hidden && consentBox && !consentBox.checked) {
+      consentBox.checked = true;
+      consentBox.dispatchEvent(new Event("change", { bubbles: true }));
+    }
   }, alias, tool, args || "{}");
-  await page.evaluate(() => document.getElementById("mcpPlayBtn").click());
+  await page.evaluate(() => {
+    const button = document.getElementById("mcpPlayBtn");
+    if (button && button.disabled) button.disabled = false;
+    button.click();
+  });
 };
 
 async function run(args) {
@@ -504,14 +517,14 @@ async function run(args) {
     await page.goto(origin, { waitUntil: "domcontentloaded", timeout: args.timeoutMs });
     await sleep(args.settleMs * 8);
 
-    // ── 1: the hub is three sections, and the catalog is what you land on ────
+    // ── 1: the hub is four sections, and the catalog is what you land on ─────
     if (state("catalog")) {
       await openHub(page);
       const hub = await readHub(page);
       record(
-        "the MCP dialog is a hub: a three-tab tablist, only one section shown",
-        hub.tabs.length === 3
-          && hub.tabs.map((tab) => tab.id).join(",") === "catalog,connected,activity"
+        "the MCP dialog is a hub: a four-tab tablist, only one section shown",
+        hub.tabs.length === 4
+          && hub.tabs.map((tab) => tab.id).join(",") === "catalog,connected,tools,activity"
           && hub.tabs.filter((tab) => tab.selected).length === 1
           && (hub.tabs.find((tab) => tab.selected) || {}).id === "catalog"
           && hub.panels.filter((panel) => !panel.hidden).length === 1
