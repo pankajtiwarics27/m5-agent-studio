@@ -442,13 +442,15 @@ const clickTest = (page) => page.evaluate(() => {
   return true;
 });
 
+let idleTimeout = 60000;
+
 const waitIdle = (page) => page.waitForFunction(
   () => {
     const result = document.getElementById("mcpPlayResult");
     const button = document.getElementById("mcpPlayBtn");
     return Boolean(result && button) && result.dataset.state !== "loading" && button.textContent.trim() === "Test Call";
   },
-  { timeout: 60000 },
+  { timeout: idleTimeout },
 );
 
 async function run(args) {
@@ -459,6 +461,9 @@ async function run(args) {
     results.push({ step, passed: Boolean(passed), detail: detail || "", status: ok ? "pass" : "fail" });
     if (!args.json) console.log(`${ok ? "pass" : "FAIL"}  ${step}${detail ? ` — ${detail}` : ""}`);
   };
+  //: a build that has no such state should fail fast while a "before" set is being captured
+  const waitMs = args.captureOnly ? 5000 : 60000;
+  idleTimeout = waitMs;
   const [width, height] = args.viewport.split("x").map(Number);
   const wide = width >= 1280;
   const wanted = args.states
@@ -484,6 +489,25 @@ async function run(args) {
     return path;
   };
 
+  /** One story state. A build that predates this story has no such state: in `--capture-only`
+   *  mode that is recorded and photographed as it stands, instead of ending the run. */
+  let guardedPage = null;
+  //: the file name each state's block writes, so a build that lacks the state still lands on it
+  const GUARDED_SHOTS = { filters: "filter", confirm: "consent" };
+  const guarded = async (name, run) => {
+    try {
+      await run();
+    } catch (error) {
+      if (!args.captureOnly) throw error;
+      record(`${name} state`, false, `this build has no ${name} state (${error.message.split("\n")[0]})`);
+      if (args.screenshots && guardedPage) {
+        const shot = GUARDED_SHOTS[name] || name;
+        const path = resolve(args.screenshots, `mcp-tools-${shot}-${args.viewport}-${args.theme}.png`);
+        if (!existsSync(path)) await shoot(guardedPage, `mcp-tools-${shot}-${args.viewport}-${args.theme}`);
+      }
+    }
+  };
+
   const browser = await puppeteer.launch({
     executablePath: resolveChrome(),
     args: (process.env.STUDIO_SCREENSHOT_CHROME_ARGS || "--no-zygote --disable-gpu --no-sandbox --disable-dev-shm-usage").split(" ").filter(Boolean),
@@ -501,6 +525,7 @@ async function run(args) {
     const origin = new URL(base).origin;
 
     const page = await browser.newPage();
+  guardedPage = page;
     page.on("pageerror", (error) => pageErrors.push(String(error)));
     page.on("console", (message) => {
       if (message.type() === "error" && !/status of 40[34]|status of 42[0-9]|status of 50[0-9]|ERR_CONNECTION_REFUSED|Failed to load resource/.test(message.text())) {
@@ -522,7 +547,7 @@ async function run(args) {
     await sleep(args.settleMs * 8);
 
     // ── 1: with nothing connected, the Tools tab says so ────────────────────
-    if (state("empty")) {
+    if (state("empty")) await guarded("empty", async () => {
       await openHub(page);
       await switchTab(page, "tools");
       await sleep(300);
@@ -552,7 +577,7 @@ async function run(args) {
         empty.summary || "(no summary in the pre-Tools dialog)",
       );
       await shoot(page, `mcp-tools-empty-${args.viewport}-${args.theme}`);
-    }
+    });
 
     // ── 2: a live server's real tools, each with its risk and its policy ─────
     await openHub(page);
@@ -565,7 +590,7 @@ async function run(args) {
       policy: "inherit",
     });
 
-    if (state("list")) {
+    if (state("list")) await guarded("list", async () => {
       await switchTab(page, "tools");
       await sleep(300);
       const list = await readTools(page);
@@ -645,10 +670,10 @@ async function run(args) {
           "first row inside the dialog's first screen",
         );
       }
-    }
+    });
 
     // ── 3: filter chips count, and narrow ───────────────────────────────────
-    if (state("filters")) {
+    if (state("filters")) await guarded("filters", async () => {
       await switchTab(page, "tools");
       await sleep(200);
       const all = await readTools(page);
@@ -678,10 +703,10 @@ async function run(args) {
       await shoot(page, `mcp-tools-filter-${args.viewport}-${args.theme}`);
       await clickText(page, "#mcpToolFilters .chip", "All");
       await sleep(200);
-    }
+    });
 
     // ── 4: search narrows the tool list, and says when it finds nothing ─────
-    if (state("search")) {
+    if (state("search")) await guarded("search", async () => {
       await switchTab(page, "tools");
       await fill(page, "mcpHubSearch", "slow");
       await sleep(300);
@@ -709,10 +734,10 @@ async function run(args) {
         cleared.rows.length === 4,
         `${cleared.rows.length} row(s)`,
       );
-    }
+    });
 
     // ── 5: a test call starts from the row, and states the risk first ───────
-    if (state("confirm")) {
+    if (state("confirm")) await guarded("confirm", async () => {
       await switchTab(page, "tools");
       await sleep(200);
       await openTool(page, "slow_echo");
@@ -766,10 +791,10 @@ async function run(args) {
         unticked.play.buttonDisabled === true,
         `button disabled ${unticked.play.buttonDisabled}`,
       );
-    }
+    });
 
     // ── 6: bad arguments are named, and the button does not pretend ─────────
-    if (state("error")) {
+    if (state("error")) await guarded("error", async () => {
       await openTool(page, "slow_echo");
       await fill(page, "mcpPlayArgs", '{"note": 3,,}');
       await sleep(200);
@@ -806,10 +831,10 @@ async function run(args) {
         fixed.play.argError === "",
         `argError "${fixed.play.argError}"`,
       );
-    }
+    });
 
     // ── 7: a slow call shows loading, then lands as a real result ───────────
-    if (state("loading")) {
+    if (state("loading")) await guarded("loading", async () => {
       await openTool(page, "slow_echo");
       await fill(page, "mcpPlayArgs", '{"note":"uiv2-23 slow"}');
       await setConsent(page, true);
@@ -836,10 +861,10 @@ async function run(args) {
           && /slow echo: uiv2-23 slow/.test(landed.play.output),
         `${landed.play.meta} · "${landed.play.output.slice(0, 80)}"`,
       );
-    }
+    });
 
     // ── 8: the result inspector says who authorized the call ────────────────
-    if (state("result")) {
+    if (state("result")) await guarded("result", async () => {
       await openTool(page, "slow_echo");
       await fill(page, "mcpPlayArgs", '{"note":"uiv2-23 inspector"}');
       await setConsent(page, true);
@@ -902,10 +927,10 @@ async function run(args) {
         done.calls.some((call) => /slow_echo/.test(call.title) && call.state === "ok"),
         done.calls.filter((call) => /slow_echo/.test(call.title)).map((call) => call.state).join(" · ") || "no call row",
       );
-    }
+    });
 
     // ── 9: long output is truncated honestly and scrolls in its own box ─────
-    if (state("long")) {
+    if (state("long")) await guarded("long", async () => {
       await openTool(page, "big_output");
       await fill(page, "mcpPlayArgs", "{}");
       await sleep(150);
@@ -940,10 +965,10 @@ async function run(args) {
         !/characters hidden/.test(all.play.output) && all.play.moreHidden === true,
         `${all.play.output.length} chars · more hidden=${all.play.moreHidden}`,
       );
-    }
+    });
 
     // ── 10: Deny is the allowlist, and the server honours it ────────────────
-    if (state("denied")) {
+    if (state("denied")) await guarded("denied", async () => {
       await switchTab(page, "tools");
       await sleep(200);
       await page.evaluate(() => {
@@ -956,7 +981,7 @@ async function run(args) {
         const row = [...document.querySelectorAll("#mcpToolList .mcp-tool-row")]
           .find((node) => /slow_echo/.test(node.dataset.toolKey || ""));
         return Boolean(row) && row.dataset.state === "denied";
-      }, { timeout: 30000 });
+      }, { timeout: waitMs });
       await sleep(300);
       const denied = await readTools(page);
       const row = denied.rows.find((item) => /slow_echo/.test(item.key));
@@ -996,7 +1021,7 @@ async function run(args) {
         const row = [...document.querySelectorAll("#mcpToolList .mcp-tool-row")]
           .find((node) => /slow_echo/.test(node.dataset.toolKey || ""));
         return Boolean(row) && row.dataset.state === "available";
-      }, { timeout: 30000 });
+      }, { timeout: waitMs });
       await sleep(300);
       const allowed = await readTools(page);
       record(
@@ -1005,10 +1030,10 @@ async function run(args) {
           && allowed.rows.some((item) => /slow_echo/.test(item.key) && item.testDisabled === false),
         allowed.summaryNumbers.join(","),
       );
-    }
+    });
 
     // ── 11: a refused server is a state you can recover from ────────────────
-    if (state("recovery")) {
+    if (state("recovery")) await guarded("recovery", async () => {
       await page.evaluate(() => toggleMcpServerEnabled("local-notes", false));
       await sleep(900);
       await openTool(page, "echo_note");
@@ -1048,10 +1073,10 @@ async function run(args) {
         `${recovered.play.state} · "${recovered.play.output.slice(0, 80)}"`,
       );
       await shoot(page, `mcp-tools-recovery-${args.viewport}-${args.theme}`);
-    }
+    });
 
     // ── 12: a failing tool is a failure, not a blank panel ─────────────────
-    if (state("failure")) {
+    if (state("failure")) await guarded("failure", async () => {
       await openTool(page, "fail_always");
       await fill(page, "mcpPlayArgs", "{}");
       await setConsent(page, true);
@@ -1073,10 +1098,10 @@ async function run(args) {
         failed.calls.filter((call) => /fail_always/.test(call.title)).map((call) => `${call.state} "${call.err.slice(0, 60)}"`).join(" · ") || "no call row",
       );
       await shoot(page, `mcp-tools-failure-${args.viewport}-${args.theme}`);
-    }
+    });
 
     // ── 13: the Tools tab works from the keyboard ──────────────────────────
-    if (state("keyboard")) {
+    if (state("keyboard")) await guarded("keyboard", async () => {
       await switchTab(page, "connected");
       await sleep(200);
       await page.evaluate(() => {
@@ -1121,7 +1146,7 @@ async function run(args) {
         `tab=${pressed.activeTab} tool=${pressed.play.tool}`,
       );
       await shoot(page, `mcp-tools-keyboard-${args.viewport}-${args.theme}`);
-    }
+    });
 
     // ── closing checks ─────────────────────────────────────────────────────
     record(

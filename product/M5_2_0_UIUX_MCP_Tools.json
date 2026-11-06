@@ -1,0 +1,372 @@
+{
+  "story": "UIV2-23",
+  "title": "MCP tool discovery, approval and test-call experience",
+  "schema_version": 1,
+  "source": "static/index.html",
+  "states": [
+    "empty",
+    "list",
+    "filter",
+    "search",
+    "search-empty",
+    "consent",
+    "error",
+    "loading",
+    "result",
+    "long",
+    "denied",
+    "refused",
+    "recovery",
+    "failure",
+    "keyboard"
+  ],
+  "counters": [
+    {
+      "id": "configured",
+      "meaning": "servers the operator added"
+    },
+    {
+      "id": "discovered",
+      "meaning": "tools the servers actually returned"
+    },
+    {
+      "id": "available",
+      "meaning": "tools a model may call right now"
+    },
+    {
+      "id": "denied",
+      "meaning": "tools the allowlist refuses"
+    }
+  ],
+  "risks": [
+    {
+      "id": "read",
+      "label": "Read-only",
+      "because": "the server set annotations.readOnlyHint"
+    },
+    {
+      "id": "write",
+      "label": "Write",
+      "because": "nothing said otherwise: the fail-closed default"
+    },
+    {
+      "id": "write_idempotent",
+      "label": "Write · repeatable",
+      "because": "it carries an idempotency key"
+    },
+    {
+      "id": "destructive",
+      "label": "Destructive",
+      "because": "the server set annotations.destructiveHint"
+    }
+  ],
+  "denials": [
+    {
+      "kind": "server_denied",
+      "speaks": "the server is switched off"
+    },
+    {
+      "kind": "tool_denied",
+      "speaks": "the tool is outside the allowlist"
+    },
+    {
+      "kind": "unknown_tool",
+      "speaks": "the server never returned that tool"
+    },
+    {
+      "kind": "stdio_gate",
+      "speaks": "the local-command gate is closed"
+    },
+    {
+      "kind": "approval_required",
+      "speaks": "the harness policy needs a human approval"
+    },
+    {
+      "kind": "paused_idempotency",
+      "speaks": "an earlier write is unresolved"
+    }
+  ],
+  "controls": {
+    "preserved": [
+      "mcpPlayServer",
+      "mcpPlayTool",
+      "mcpPlayArgs",
+      "mcpPlayBtn",
+      "mcpPlayOutput",
+      "configuredMcpServersList",
+      "mcpToolsCountBadge",
+      "activeMcpPills",
+      "mcpImportJsonInput",
+      "mcpSaveBtn"
+    ],
+    "tools": [
+      "mcpTabTools",
+      "mcpTabToolsCount",
+      "mcpPanelTools",
+      "mcpToolsSummary",
+      "mcpToolFilters",
+      "mcpToolHint",
+      "mcpToolList",
+      "mcpToolsEmpty",
+      "mcpPlayRisk",
+      "mcpPlaySchema",
+      "mcpPlayArgsError",
+      "mcpPlayConsent",
+      "mcpPlayConsentBox",
+      "mcpPlayConsentText",
+      "mcpPlayResult",
+      "mcpPlayMeta",
+      "mcpPlayAuth",
+      "mcpPlayMore",
+      "mcpPlayRaw",
+      "mcpPlayRawBody"
+    ]
+  },
+  "routes": [
+    "@app.get(\"/api/mcp/servers\")",
+    "@app.post(\"/api/mcp/servers\")",
+    "@app.post(\"/api/mcp/import-json\")",
+    "@app.delete(\"/api/mcp/servers/{alias}\")",
+    "@app.post(\"/api/mcp/servers/{alias}/sync\")",
+    "@app.post(\"/api/mcp/servers/{alias}/call\")"
+  ],
+  "checks": [
+    {
+      "check": "the hub's tab strip has a fourth tab — Tools — with a count of what it holds",
+      "passed": true,
+      "detail": "tabs: Catalog, Connected, Tools, Activity"
+    },
+    {
+      "check": "the Tools panel is a labelled tabpanel with a summary, filters, a list and a real empty state",
+      "passed": true,
+      "detail": "summary in a live region, a labelled filter group, one list and one empty state"
+    },
+    {
+      "check": "switching to Tools is a real tab change: one panel shown, the roving tab stop moved",
+      "passed": true,
+      "detail": "switchMcpTab() whitelists tools exactly like the other three"
+    },
+    {
+      "check": "the tab and its count are rendered from the same state the rows are",
+      "passed": true,
+      "detail": "renderMcpHub() calls renderMcpTools(), which sets the tab count from the rows"
+    },
+    {
+      "check": "configured, discovered, available and denied are four numbers, each named",
+      "passed": true,
+      "detail": "configured: servers the operator added · discovered: tools the servers actually returned · available: tools a model may call right now · denied: tools the allowlist refuses"
+    },
+    {
+      "check": "a server with no tools yet is counted separately, not hidden among the zeros",
+      "passed": true,
+      "detail": "`N configured without tools yet` appears only when a server has returned nothing"
+    },
+    {
+      "check": "an empty Tools tab names the next action instead of showing a blank panel",
+      "passed": true,
+      "detail": "the empty state says what to do, not that there is nothing"
+    },
+    {
+      "check": "the filter chips count what they would show, and one is pressed",
+      "passed": true,
+      "detail": "All / Read-only / Writes / Denied, each with a live count and aria-pressed"
+    },
+    {
+      "check": "search reaches the tool list, and a search with no hit says so and offers to clear itself",
+      "passed": true,
+      "detail": "the hub's one search box narrows the rows, and the empty state clears it"
+    },
+    {
+      "check": "a tool is read-only only when the server says so, and a silent tool is a write",
+      "passed": true,
+      "detail": "read → destructive → write_idempotent → write, with `write` as the fall-through"
+    },
+    {
+      "check": "the four risks have labels and a consequence in words",
+      "passed": true,
+      "detail": "Read-only because the server set annotations.readOnlyHint · Write because nothing said otherwise: the fail-closed default · Write · repeatable because it carries an idempotency key · Destructive because the server set annotations.destructiveHint"
+    },
+    {
+      "check": "each row states the risk, the state, what a call does, what happens when a model asks, and its arguments",
+      "passed": true,
+      "detail": "five labelled statements per row; the row carries its risk and state as data attributes too"
+    },
+    {
+      "check": "the row answers the policy question in the policy's own terms",
+      "passed": true,
+      "detail": "one sentence per policy, plus one for a denied tool"
+    },
+    {
+      "check": "the approval policy is explained in words, per server policy",
+      "passed": true,
+      "detail": "three sentences, one per policy, and the Connected row prints one for each server"
+    },
+    {
+      "check": "a denied row is drawn as denied and its test call is disabled",
+      "passed": true,
+      "detail": "dashed row, Denied pill, no Test call"
+    },
+    {
+      "check": "Allow and Deny on a row are the allowlist itself, not a decoration",
+      "passed": true,
+      "detail": "the row calls the same endpoint the drawer's checkbox does"
+    },
+    {
+      "check": "Test call opens that exact tool in the playground, on the server that owns it",
+      "passed": true,
+      "detail": "openMcpToolTest() selects the tab, the server and the tool, then pre-fills its arguments"
+    },
+    {
+      "check": "the arguments are validated against the tool's own schema before anything is posted",
+      "passed": true,
+      "detail": "invalid JSON, a non-object and a missing required argument each get a sentence"
+    },
+    {
+      "check": "the refusal is announced, and the button stays disabled while it stands",
+      "passed": true,
+      "detail": "role=alert, cleared as soon as the arguments could be accepted; the button follows"
+    },
+    {
+      "check": "the risk is stated before the call, in the same words as the Tools tab",
+      "passed": true,
+      "detail": "a pill and a sentence, plus the reason it will be refused when there already is one"
+    },
+    {
+      "check": "anything that is not a read needs a consent that names the tool and cannot be pre-ticked",
+      "passed": true,
+      "detail": "hidden for a read, named for a write, and cleared whenever the subject changes"
+    },
+    {
+      "check": "the request carries confirm_write only because the box was ticked",
+      "passed": true,
+      "detail": "confirm_write is added to the body only when the consent is given"
+    },
+    {
+      "check": "a 428 is drawn as a refusal that says nothing ran, not as a result",
+      "passed": true,
+      "detail": "the confirmation_required body becomes its own state with the next step"
+    },
+    {
+      "check": "a 403 is drawn as a denial, with the kind named and the way out given",
+      "passed": true,
+      "detail": "server_denied → the server is switched off · tool_denied → the tool is outside the allowlist · unknown_tool → the server never returned that tool · stdio_gate → the local-command gate is closed · approval_required → the harness policy needs a human approval · paused_idempotency → an earlier write is unresolved"
+    },
+    {
+      "check": "the inspector states the outcome, the cost and what authorized the call",
+      "passed": true,
+      "detail": "outcome · latency · characters · grant source · policy · confirmation · whether a model would be asked"
+    },
+    {
+      "check": "long output is truncated with a count, and Show all restores every character",
+      "passed": true,
+      "detail": "head and tail with the hidden count in between; Show all prints the rest"
+    },
+    {
+      "check": "the raw response is offered behind a disclosure that starts closed",
+      "passed": true,
+      "detail": "`Raw response`, shut; the inspector fills it and opens nothing"
+    },
+    {
+      "check": "the server classifies a tool from its annotations, and a silent tool is a write",
+      "passed": true,
+      "detail": "read → destructive → write_idempotent → write, in the same order as the page"
+    },
+    {
+      "check": "every tool the API returns states its own risk and whether it is allowed",
+      "passed": true,
+      "detail": "get_mcp_server() adds read_only, destructive, requires_approval_override, risk and denied per tool"
+    },
+    {
+      "check": "a refusal is named before the call is even risked",
+      "passed": true,
+      "detail": "disabled server, unknown tool, allowlisted-out tool, closed stdio gate — in that order"
+    },
+    {
+      "check": "the executor's own refusals can be classified without matching words on the page",
+      "passed": true,
+      "detail": "server_denied · tool_denied · unknown_tool · stdio_gate · approval_required · paused_idempotency — and a fallback word for anything unrecognised"
+    },
+    {
+      "check": "the call route answers each refusal with its own status and a structured body",
+      "passed": true,
+      "detail": "404 unknown server · 403 with denial.kind · 428 confirmation_required · 409 duplicate side effect"
+    },
+    {
+      "check": "a call that runs says what authorized it, instead of implying it",
+      "passed": true,
+      "detail": "surface, policy, grant source, approval, confirmation, risk and whether a model would be asked"
+    },
+    {
+      "check": "the confirmation is required before the executor, not after it",
+      "passed": true,
+      "detail": "the 428 is returned before any execution is attempted"
+    },
+    {
+      "check": "the six MCP routes are still there",
+      "passed": true,
+      "detail": "/api/mcp/servers · /api/mcp/servers · /api/mcp/import-json · /api/mcp/servers/{alias} · /api/mcp/servers/{alias}/sync · /api/mcp/servers/{alias}/call"
+    },
+    {
+      "check": "the stdio launch gate is untouched",
+      "passed": true,
+      "detail": "a local command still needs the operator's own opt-in, whatever the page says"
+    },
+    {
+      "check": "the auto approval policy still means what it meant",
+      "passed": true,
+      "detail": "auto runs without asking unless the tool asks for an override; this story did not tighten it"
+    },
+    {
+      "check": "action admission and the workspace panes are still in place",
+      "passed": true,
+      "detail": "the admission gate the harness goes through, and all six panes"
+    },
+    {
+      "check": "no React rewrite and no new dependency",
+      "passed": true,
+      "detail": "the frontend is still the same single document"
+    },
+    {
+      "check": "every control the old playground had is still on the page",
+      "passed": true,
+      "detail": "mcpPlayServer, mcpPlayTool, mcpPlayArgs, mcpPlayBtn, mcpPlayOutput, configuredMcpServersList, mcpToolsCountBadge, activeMcpPills, mcpImportJsonInput, mcpSaveBtn"
+    },
+    {
+      "check": "a browser walk drives the tool browser and the test call on a screen",
+      "passed": true,
+      "detail": "mcp_tools_walk.mjs: 57 recorded checks"
+    },
+    {
+      "check": "the walk proves a write cannot be posted without consent, and the server refuses it if it is",
+      "passed": true,
+      "detail": "the page's gate and the server's 428 are both asserted"
+    },
+    {
+      "check": "the walk proves Deny is the allowlist and that Allow recovers the same call",
+      "passed": true,
+      "detail": "Deny → 403 tool_denied on the server → Allow → the same call succeeds"
+    },
+    {
+      "check": "the walk covers every state the ledger asks for, and can photograph the old dialog",
+      "passed": true,
+      "detail": "empty · list · filters · search · confirm · error · loading · result · long · denied · recovery · failure · keyboard"
+    },
+    {
+      "check": "captures exist for every state, viewport and theme",
+      "passed": true,
+      "detail": "120 after PNG · missing: none"
+    },
+    {
+      "check": "the before set is the same instrument against the dialog this story replaced",
+      "passed": true,
+      "detail": "112 before PNG across 8 viewport/theme runs"
+    },
+    {
+      "check": "the roadmap records this story as done, with its commit and its evidence",
+      "passed": true,
+      "detail": "status=done commit=648af14 visual=6 acceptance=6"
+    }
+  ],
+  "check_count": 47,
+  "findings": []
+}

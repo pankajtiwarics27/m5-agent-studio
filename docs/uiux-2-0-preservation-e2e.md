@@ -6,7 +6,7 @@ executed by [`scripts/preservation_suite.py`](../scripts/preservation_suite.py).
 
 * 21 of 21 matrix rows mapped, 55 provers, 0 findings
 * 40 walk checks, 4 pytest nodes, 9 route probes, 2 wired controls
-* 17 walks prove a row; 23 more are listed with the reason they do not
+* 17 walks prove a row; 24 more are listed with the reason they do not
 
 ## What this page is, and is not
 
@@ -90,6 +90,7 @@ than succeed. That is what "existing endpoint and permission semantics" means in
 | `harness_recovery_walk.mjs` | Harness pause/resume/abort recovery (P3-05) extends the abort surface rather than preserving it |
 | `keyboard_walk.mjs` | the rail's tab semantics (P1-02) are shell behaviour |
 | `mcp_hub_walk.mjs` | the MCP hub walk (UIV2-21) proves that the dialog is three tabs rather than one configuration scroll, that every preset card states its transport, trust, key requirement and approval policy before anything is connected, that search and the filter chips narrow the catalog, that a server which cannot be reached keeps the sync note it really got in both the Connected list and Activity, that a live stdio server syncs its real tools and a test call is recorded with its outcome and latency, and that a stored token never reaches the document; the capability it belongs to is the MCP surface, which the matrix already enumerates from the tool strip and the dialog's own controls |
+| `mcp_tools_walk.mjs` | the MCP tools walk (UIV2-23) proves that the tool browser keeps configured, discovered, available and denied apart, that every row states the risk of a call in words the server can justify and what its approval policy promises, that Allow/Deny on a row is the allowlist the server itself enforces, that a test call validates its arguments against the tool's schema, asks for consent on anything that is not a read, carries `confirm_write` only when that consent is given, and renders the server's 403 and 428 answers as refusals with the next step; the capability it belongs to is the MCP surface, which the matrix already enumerates from the tool strip and the dialog's own controls |
 | `mcp_wizard_walk.mjs` | the MCP guide walk (UIV2-22) proves that connecting a server is four questions rather than one form: that a step which is not satisfied refuses to advance and names the field, that the token is a password field the review never reads back, that a local command needs a consent naming the exact command and that the consent cannot grant the operator's `STUDIO_ALLOW_MCP_STDIO` opt-in, that raw headers and environment JSON stay behind a shut disclosure, and that saving re-checks every earlier step and reports the connection test where the button is; the capability it belongs to is the MCP surface, which the matrix already enumerates from the tool strip and the dialog's own controls |
 | `overlay_walk.mjs` | the overlay controller (P1-04) is shared machinery the matrix does not enumerate |
 | `pipeline_recovery_walk.mjs` | Pipeline failure recovery (P3-07) extends a capability rather than preserving it |

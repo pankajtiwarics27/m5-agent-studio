@@ -10,6 +10,7 @@ surface without the operator confirming that specific call.
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
@@ -261,3 +262,166 @@ def test_the_walk_covers_every_state_the_story_claims() -> None:
     for state in ("empty", "list", "filters", "search", "confirm", "error", "loading", "result", "long", "denied", "recovery", "failure", "keyboard"):
         assert f'"{state}"' in walk
     assert "--capture-only" in walk
+
+
+# ── the inventory, its artifact and the evidence it claims ──────────────────
+
+INVENTORY = PROJECT_ROOT / "scripts" / "uiux_mcp_tools_inventory.py"
+JSON_PATH = PROJECT_ROOT / "product" / "M5_2_0_UIUX_MCP_Tools.json"
+DOC_PATH = PROJECT_ROOT / "docs" / "uiux-2-3-mcp-tools.md"
+LEDGER = PROJECT_ROOT / "product" / "M5_2_0_UIUX_V2_Visual_Fidelity_Roadmap.json"
+MEDIA = PROJECT_ROOT / "docs" / "media" / "mcp-tools-uiv2-23"
+
+VIEWPORTS = ("1640x900", "1440x900", "1280x800", "390x844")
+THEMES = ("light", "dark")
+
+
+def _load_inventory() -> ModuleType:
+    spec = importlib.util.spec_from_file_location("uiux_mcp_tools_inventory", INVENTORY)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.fixture(scope="module")
+def inventory() -> ModuleType:
+    return _load_inventory()
+
+
+@pytest.fixture(scope="module")
+def payload(inventory: ModuleType) -> dict:
+    return inventory.build_inventory()
+
+
+@pytest.fixture(scope="module")
+def inventory_module() -> ModuleType:
+    return _load_inventory()
+
+
+@pytest.fixture
+def sources(inventory_module: ModuleType):
+    """`build_inventory` over the real sources, with edits made and then undone."""
+    originals = {path: path.read_text(encoding="utf-8") for path in (FRONTEND, APP)}
+
+    class Sources:
+        def findings(self, *replacements):
+            for path, original in originals.items():
+                path.write_text(original, encoding="utf-8")
+            for path, old, new in replacements:
+                edited = path.read_text(encoding="utf-8")
+                assert old in edited, f"{path.name} no longer contains {old[:70]!r}"
+                path.write_text(edited.replace(old, new, 1), encoding="utf-8")
+            try:
+                return {entry["check"] for entry in inventory_module.build_inventory()["findings"]}
+            finally:
+                for path, original in originals.items():
+                    path.write_text(original, encoding="utf-8")
+
+    return Sources()
+
+
+def test_the_inventory_matches_the_source(inventory: ModuleType, payload: dict) -> None:
+    assert JSON_PATH.read_text(encoding="utf-8") == inventory.dumps(payload)
+    assert DOC_PATH.read_text(encoding="utf-8") == inventory.render_doc(payload)
+
+
+def test_the_inventory_is_clean_and_complete(payload: dict) -> None:
+    assert payload["findings"] == []
+    assert payload["check_count"] == len(payload["checks"]) >= 40
+    assert all(entry["passed"] for entry in payload["checks"])
+
+
+def test_the_inventory_names_the_four_counters_and_the_four_risks(payload: dict) -> None:
+    assert [counter["id"] for counter in payload["counters"]] == ["configured", "discovered", "available", "denied"]
+    assert [risk["id"] for risk in payload["risks"]] == ["read", "write", "write_idempotent", "destructive"]
+
+
+def test_every_refusal_the_page_can_name_is_in_the_inventory(payload: dict) -> None:
+    kinds = {entry["kind"] for entry in payload["denials"]}
+    assert kinds == {"server_denied", "tool_denied", "unknown_tool", "stdio_gate", "approval_required", "paused_idempotency"}
+
+
+def test_the_captures_are_the_ones_the_story_claims() -> None:
+    for viewport in VIEWPORTS:
+        for theme in THEMES:
+            assert (MEDIA / f"mcp-tools-list-{viewport}-{theme}.png").exists()
+            assert (MEDIA / f"mcp-tools-consent-{viewport}-{theme}.png").exists()
+            assert (MEDIA / "before-uiv2-23" / f"mcp-tools-list-{viewport}-{theme}.png").exists()
+    assert len(sorted(MEDIA.glob("*.png"))) >= 120
+    assert len(sorted((MEDIA / "before-uiv2-23").glob("*.png"))) >= 100
+
+
+def test_the_ledger_records_the_story_as_done() -> None:
+    ledger = json.loads(LEDGER.read_text(encoding="utf-8"))
+    story = next(entry for entry in ledger["stories"] if entry["id"] == "UIV2-23")
+    tracking = story["tracking"]
+    assert tracking["status"] == "done"
+    assert tracking["progress_percent"] == 100
+    assert tracking["commit_sha"]
+    assert tracking["visual_evidence"] and tracking["acceptance_evidence"]
+    assert tracking["known_regressions"] == []
+
+
+# ── the rules, broken one at a time ─────────────────────────────────────────
+
+
+def test_a_tool_that_is_read_only_without_the_server_saying_so_is_a_finding(sources) -> None:
+    findings = sources.findings((FRONTEND, 'if (tool.read_only) return "read";', ""))
+    assert "a tool is read-only only when the server says so, and a silent tool is a write" in findings
+
+
+def test_a_row_without_its_policy_sentence_is_a_finding(sources) -> None:
+    findings = sources.findings((FRONTEND, "<strong>When a model asks</strong>", "<strong>When asked</strong>"))
+    assert "each row states the risk, the state, what a call does, what happens when a model asks, and its arguments" in findings
+
+
+def test_a_consent_that_does_not_name_the_tool_is_a_finding(sources) -> None:
+    findings = sources.findings(
+        (FRONTEND, "I understand this is ${MCP_RISK_NOUNS[risk]} and I want to run ${tool.name} once.", "I understand this writes."),
+    )
+    assert "anything that is not a read needs a consent that names the tool and cannot be pre-ticked" in findings
+
+
+def test_a_page_that_always_sends_confirm_write_is_a_finding(sources) -> None:
+    findings = sources.findings(
+        (FRONTEND, "...(confirmWrite ? { confirm_write: true } : {})", "...(risk !== \"read\" ? { confirm_write: true } : {})"),
+    )
+    assert "the request carries confirm_write only because the box was ticked" in findings
+
+
+def test_a_428_drawn_as_a_result_is_a_finding(sources) -> None:
+    findings = sources.findings((FRONTEND, "if (r.status === 428 && d.confirmation_required) {", "if (false) {"))
+    assert "a 428 is drawn as a refusal that says nothing ran, not as a result" in findings
+
+
+def test_a_counter_dropped_from_the_summary_is_a_finding(sources) -> None:
+    findings = sources.findings((FRONTEND, "denied by the allowlist", "denied"))
+    assert "configured, discovered, available and denied are four numbers, each named" in findings
+
+
+def test_a_denial_that_hides_which_refusal_it_was_is_a_finding(sources) -> None:
+    findings = sources.findings((FRONTEND, "const kind = (d.denial && d.denial.kind) || \"denied\";", "const kind = \"denied\";"))
+    assert "a 403 is drawn as a denial, with the kind named and the way out given" in findings
+
+
+def test_an_authorization_echo_that_is_not_written_is_a_finding(sources) -> None:
+    findings = sources.findings((APP, '"grant_source": "operator_one_call"', '"grant_source": "model"'))
+    assert "a call that runs says what authorized it, instead of implying it" in findings
+
+
+def test_a_tool_without_its_denied_flag_is_a_finding(sources) -> None:
+    findings = sources.findings(
+        (APP, 't_copy["denied"] = bool(t_copy.get("name")) and t_copy["name"] not in en_set', 't_copy["allowed"] = True'),
+    )
+    assert "every tool the API returns states its own risk and whether it is allowed" in findings
+
+
+def test_a_tightened_auto_policy_is_a_finding(sources) -> None:
+    findings = sources.findings((APP, '    if ap == "auto":\n        return False', '    if ap == "auto":\n        return True'))
+    assert "the auto approval policy still means what it meant" in findings
+
+
+def test_a_missing_mcp_route_is_a_finding(sources) -> None:
+    findings = sources.findings((APP, '@app.post("/api/mcp/servers/{alias}/sync")', '@app.post("/api/mcp/servers/{alias}/refresh")'))
+    assert "the six MCP routes are still there" in findings

@@ -12,23 +12,23 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "ef75ce6bb371344dbe9286327334a5737e227c8dc972c2ed89bcd531454cf382",
-      "bytes": 918897,
-      "lines": 15915
+      "sha256": "4765fda1538fdc08994c15a37a452d4e0a2c6a3296509cd88eccdc49d72ac1ce",
+      "bytes": 945728,
+      "lines": 16385
     },
     {
       "path": "app.py",
       "role": "the FastAPI server the UI talks to; source of the route table",
-      "sha256": "56c42245e5f3e00dc18bd38425b4ec922b1f6a3135e51009d0b8e1914a62fdac",
-      "bytes": 1017670,
-      "lines": 21940
+      "sha256": "84cd78352f501a8f411dbd819487c68e3f33222aa598e3034447c24f308b6da4",
+      "bytes": 1024095,
+      "lines": 22071
     },
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "55bef163ddb481e4e28ff477efc830fec93450fffe5cc46c85afc716eaaf1e96",
-      "bytes": 3671700,
-      "lines": 79232
+      "sha256": "62f6c55b1c6791bcf8758d447139df30dd4fe3af6e6dfd17f4aac0d67a251b4e",
+      "bytes": 3704956,
+      "lines": 79833
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -376,9 +376,9 @@
     {
       "path": "scripts/uiux_preservation_e2e.py",
       "role": "maps each preservation-matrix row to the walk, test, route and control that proves it",
-      "sha256": "110e903af926e96690b2380939f1f8e2231172f4ba504560c6354b432009b803",
-      "bytes": 42172,
-      "lines": 833
+      "sha256": "2dd79184ca9266ba7e872f70e9fcbe97a670bc69b42c5ef31e46dc7f98549f2b",
+      "bytes": 42885,
+      "lines": 834
     },
     {
       "path": "tests/test_uiux_preservation_e2e.py",
@@ -418,9 +418,9 @@
     {
       "path": "scripts/uiux_screenshot_review.py",
       "role": "traces every committed capture to the script that made it and checks that the theme in its name is the theme in its pixels",
-      "sha256": "935cea99ea0986dbc79a76f17f02c677cbaad89cb2447ec8e5a1b717f85a25b5",
-      "bytes": 70730,
-      "lines": 1354
+      "sha256": "4bfc1d3e5ee430a9eca1d5e2e8656df768f2cf4e1a78348642fddaf23aa78636",
+      "bytes": 73615,
+      "lines": 1393
     },
     {
       "path": "tests/test_uiux_screenshot_review.py",
@@ -460,8 +460,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "ef75ce6bb371344dbe9286327334a5737e227c8dc972c2ed89bcd531454cf382",
-    "lines": 15915,
+    "sha256": "4765fda1538fdc08994c15a37a452d4e0a2c6a3296509cd88eccdc49d72ac1ce",
+    "lines": 16385,
     "tab_count": 6,
     "tabs": [
       {
@@ -568,7 +568,7 @@
   },
   "api": {
     "path": "app.py",
-    "sha256": "56c42245e5f3e00dc18bd38425b4ec922b1f6a3135e51009d0b8e1914a62fdac",
+    "sha256": "84cd78352f501a8f411dbd819487c68e3f33222aa598e3034447c24f308b6da4",
     "route_count": 117,
     "by_method": {
       "DELETE": 7,
