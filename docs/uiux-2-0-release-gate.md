@@ -77,11 +77,11 @@ Each story in the program carries the same five criteria. The gate does not deci
 | Measure | Value |
 |---|---|
 | tabs | 6 |
-| markup controls | 207 (109 in the chrome, 62 rendered by script) |
+| markup controls | 208 (109 in the chrome, 62 rendered by script) |
 | preserved capabilities | 21 |
 | preservation e2e rows | 21 (0 findings) |
 | refusal states | 12 across 9 statuses |
-| committed captures | 981 in 32 sets, 32 reviewed |
+| committed captures | 1045 in 33 sets, 33 reviewed |
 | reader pages verified | 5 (40 commands, 7 claims) |
 | files this program changed | 406 |
 

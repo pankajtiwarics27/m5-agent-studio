@@ -43,11 +43,15 @@ DOC_PATH = ROOT / "docs" / "uiv2-v2-preservation-matrix.md"
 SCHEMA_VERSION = 1
 STORY = "UIV2-02"
 HANDLER_RE = re.compile(r"^([A-Za-z_$][\w$]*)\s*\(")
+# The picker carries aria-describedby since UIV2-19 (it is described by the line under it), so the
+# selector is matched by its id wherever the id sits in the tag.
 PERSONA_SELECT_RE = re.compile(
-    r'<select id="chatPersona">(.*?)</select>', re.S
+    r'<select\b[^>]*\bid="chatPersona"[^>]*>(.*?)</select>', re.S
 )
 OPTION_RE = re.compile(r"<option\b[^>]*>(.*?)</option>", re.S)
-REGISTRY_RE = re.compile(r"\bPERSONAS?\b\s*(?::|=)")
+# `\bPERSONAS\b` never matched `CHAT_PERSONAS`: "_" is a word character, so there is no boundary
+# inside the identifier. The registry is named outright now that UIV2-19 shipped it.
+REGISTRY_RE = re.compile(r"\bCHAT_PERSONAS\b\s*=")
 
 
 class MatrixError(RuntimeError):
@@ -128,49 +132,105 @@ def _build_test_index() -> dict[str, list[str]]:
 
 
 def _persona_contract(html: str, script: str) -> dict[str, object]:
+    """UIV2-19 re-classified this: the registry the matrix used to refuse now exists.
+
+    The picker was three `<option>` tags whose *value* was a paragraph of prose, so the markup was
+    the contract and nothing could describe, remember or fall back from a persona. `CHAT_PERSONAS`
+    is the authority now and `#chatPersona` is an empty select the registry fills, which this
+    contract proves: every registry entry reaches the picker, the picker ships no option of its own,
+    and the request sends the registry's prompt rather than the select's value.
+    """
     select = PERSONA_SELECT_RE.search(html)
     if not select:
         raise MatrixError("select#chatPersona not found in static/index.html")
     options = [re.sub(r"\s+", " ", o).strip() for o in OPTION_RE.findall(select.group(1))]
+    if options:
+        raise MatrixError(
+            f"select#chatPersona ships {len(options)} hard-coded <option>(s) again; "
+            "the picker must be drawn from CHAT_PERSONAS"
+        )
     registry = REGISTRY_RE.search(script)
-    if len(options) != 3:
-        raise MatrixError(f"expected the 3 hard-coded personas, parsed {len(options)}")
-    if registry:
-        raise MatrixError("a persona registry appeared; re-classify before shipping")
+    if not registry:
+        raise MatrixError("CHAT_PERSONAS registry disappeared; the picker would have nothing to draw")
+    start = script.index("const CHAT_PERSONAS = [")
+    end = script.index("];", start)
+    table = script[start:end]
+    ids = re.findall(r'id:\s*"([a-z0-9-]+)"', table)
+    prompts = re.findall(r'prompt:\s*"((?:[^"\\]|\\.)*)"', table)
+    labels = list(dict.fromkeys(re.findall(r'label:\s*"((?:[^"\\]|\\.)*)"', table)))
+    if len(ids) < 3 or len(set(ids)) != len(ids):
+        raise MatrixError(f"CHAT_PERSONAS must hold at least 3 uniquely identified personas, parsed {ids}")
+    if not labels or len(labels) != len(ids) or len(prompts) != len(ids):
+        raise MatrixError("every persona needs an id, a label and a prompt")
+    if "CHAT_PERSONA_DEFAULT" not in script:
+        raise MatrixError("CHAT_PERSONAS names no default persona")
+    if "renderChatPersonaPicker" not in script:
+        raise MatrixError("no renderer draws the picker from CHAT_PERSONAS")
+    if "chatPersonaSelected" not in script:
+        raise MatrixError("the request does not read the persona through the registry")
     line = html[: select.start()].count("\n") + 1
     return {
         "question": "Is there a chat persona registry behind the picker?",
-        "classification": "absent_registry__existing_picker",
+        "classification": "present_registry__picker_rendered_from_it",
         "picker": {
-            "status": "existing",
-            "evidence": f"select#chatPersona at static/index.html:{line} with {len(options)} hard-coded <option> values",
-            "options": options,
+            "status": "rendered_from_registry",
+            "evidence": (
+                f"select#chatPersona at static/index.html:{line} ships no <option>; "
+                "renderChatPersonaPicker() fills it from CHAT_PERSONAS on load and on every filter"
+            ),
+            "option_source": "CHAT_PERSONAS",
         },
         "registry": {
-            "status": "absent",
-            "evidence": "no PERSONA/PERSONAS constant or registry object in the inline script; the picker is the whole contract",
+            "status": "present",
+            "evidence": f"const CHAT_PERSONAS in the inline script with {len(ids)} persona(s): {', '.join(ids)}",
+            "personas": [
+                {"id": pid, "label": label}
+                for pid, label in zip(ids, labels)
+            ],
+            "default": "CHAT_PERSONA_DEFAULT",
+            "sent_as": "chatPersonaSelected().prompt",
         },
     }
 
 
 def _council_contract(routes: list[dict[str, str]]) -> dict[str, object]:
+    """UIV2-13 re-classified this: the DELETE the matrix used to refuse now exists.
+
+    The matrix used to raise on any `DELETE /api/hall*`, because a session could only be *closed*:
+    the transcripts accumulated and there was no way to remove one. The hall now clears every
+    session (keeping any that is mid-summon) and deletes one, both as true deletes, and the pane
+    reaches them. The re-classification is the point of the guard - it forced this paragraph to be
+    written instead of letting the contract quietly describe something that is no longer true.
+    """
     hall = sorted(
         {f"{r['method']} {r['path']}" for r in routes if r["path"].startswith("/api/hall")}
     )
-    has_delete = any(r["method"] == "DELETE" and r["path"].startswith("/api/hall") for r in routes)
-    if has_delete:
-        raise MatrixError("a DELETE route under /api/hall appeared; re-classify")
+    deletes = sorted(
+        f"{r['method']} {r['path']}"
+        for r in routes
+        if r["method"] == "DELETE" and r["path"].startswith("/api/hall")
+    )
+    if "DELETE /api/hall/sessions" not in deletes or "DELETE /api/hall/sessions/{session_id}" not in deletes:
+        raise MatrixError(
+            f"the Council's clear/delete routes changed shape: {deletes or 'none'}"
+        )
     return {
         "question": "Can a Council (hall) session be deleted or cleared through the API?",
-        "classification": "partial__lifecycle_without_delete",
+        "classification": "full__lifecycle_with_delete",
         "routes": hall,
         "delete": {
-            "status": "absent",
-            "evidence": "no @app.delete under /api/hall in app.py; the hall pane exposes no clear control either",
+            "status": "existing",
+            "evidence": (
+                "DELETE /api/hall/sessions clears every session except those running a summon "
+                "(clear_hall_sessions_db(exclude=running)); DELETE /api/hall/sessions/{id} removes "
+                "one and answers 409 while its summon is in flight. Both are true deletes "
+                "(archived: false) and touch no workspace file, because a hall session owns none."
+            ),
+            "routes": deletes,
         },
         "close": {
             "status": "existing",
-            "evidence": "POST /api/hall/sessions/{session_id}/close exists (app.py)",
+            "evidence": "POST /api/hall/sessions/{session_id}/close still exists (app.py)",
         },
     }
 

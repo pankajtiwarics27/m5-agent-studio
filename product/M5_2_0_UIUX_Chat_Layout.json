@@ -58,7 +58,7 @@
     {
       "check": "the controls keep the pane's width instead of squeezing into the column",
       "ok": true,
-      "detail": "padding-inline: 16px; \n flex-wrap: nowrap; gap: 10px; padding-block: 8px; \n gap: 8px; padding-block: 10px; \n background:"
+      "detail": "padding-inline: 16px; \n flex-wrap: nowrap; gap: 10px; padding-block: 8px; \n gap: 8px; padding-block: 10px;"
     },
     {
       "check": "above 1200px the pickers are one row",
@@ -103,7 +103,7 @@
     {
       "check": "a bubble may not grow wider than its column",
       "ok": true,
-      "detail": "min-width: 0; overflow-wrap: anywhere; \n\n  background-color: var(--bg-card); border-color: var(--border); box-shadow: no"
+      "detail": "min-width: 0; overflow-wrap: anywhere;"
     },
     {
       "check": "a code block scrolls inside its bubble, never off the pane",

@@ -761,6 +761,34 @@
     .chat-header-bar > .chk-lbl { flex: 1 1 auto; min-width: 0; margin-top: 0 !important; font-size: 11px; line-height: 1.3; }
     .chat-header-bar > #chatClearBtn { flex: 0 0 auto; margin-top: 0 !important; margin-left: auto !important; }
   }
+
+  /* ── UIV2-19: the persona picker, its filter and the line that says what it does ────────
+     The picker is one control with three parts: the select (the authority, filled from
+     CHAT_PERSONAS), a filter beside it, and one line under both that describes the persona that
+     is selected. The line is clamped to a single row - the full sentence is its text and its
+     title - so a described persona does not cost the control bar the height UIV2-18 bought back. */
+  .chat-persona-count { color: var(--text-faint); font-weight: 600; }
+  .chat-header-bar > div:has(#chatPersona) {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 6px; align-items: start;
+  }
+  .chat-header-bar > div:has(#chatPersona) .field-lbl { grid-column: 1 / -1; }
+  .chat-header-bar > div:has(#chatPersona) #chatPersona { grid-column: 1; }
+  .chat-header-bar #chatPersonaSearch {
+    grid-column: 2; width: 92px; min-width: 92px;
+    /* A filter for a list, not a field an answer is typed into: it is deliberately shorter than
+       --control-min-h so it can sit beside its select in one row (the id selector is how it wins
+       over that rule), and it stays above --target-min so a finger can still hit it. */
+    min-height: 32px; height: 32px; align-self: center; padding: 0 var(--space-1);
+    font-size: 11.6px;
+  }
+  /* The picker never stacks: the filter is 92px at the end of the same row and the select shrinks
+     into what is left (its own `min-width: 0`), which is what keeps the bar three rows at 390px
+     instead of four. No breakpoint of its own. */
+  .chat-persona-description {
+    grid-column: 1 / -1; margin: 2px 0 0; font-size: 11px; line-height: 1.15; color: var(--text-faint);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .chat-persona-description[data-state="empty"] { color: var(--amber); }
   /* What the reply was given: one line, from the same values that built the request. */
   .chat-context { font-size: 11.2px; color: var(--text-faint); margin: 0 0 8px; line-height: 1.5; }
   .chat-context code { font-family: var(--mono); font-size: 10.8px; color: var(--text-dim); }
@@ -3014,12 +3042,14 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       <div class="chat-header-bar">
         <div><label class="field-lbl" for="chatModel">Active Model (Local / Cloud / Combo)</label><select id="chatModel"></select></div>
         <div>
-          <label class="field-lbl" for="chatPersona">Persona</label>
-          <select id="chatPersona">
-            <option value="You are a concise Principal Software Engineer & UI Architect. Write clean, accessible, production-ready code.">Principal Engineer &amp; UI Architect</option>
-            <option value="You are an adversarial code reviewer. Focus strictly on bugs, race conditions, UX anti-patterns, and security issues.">Bug &amp; UX Auditor</option>
-            <option value="Output code blocks only with minimal prose.">Code Only (Zero Fluff)</option>
-          </select>
+          <label class="field-lbl" for="chatPersona">Persona <span id="chatPersonaCount" class="chat-persona-count"></span></label>
+          <!-- UIV2-19: filled from CHAT_PERSONAS by renderChatPersonaPicker(); the empty select is the
+               honest state of a picker whose registry is the authority, not a list written twice. -->
+          <select id="chatPersona" aria-describedby="chatPersonaDescription"></select>
+          <input id="chatPersonaSearch" class="chat-persona-search" type="search" autocomplete="off"
+                 placeholder="Filter personas…" aria-label="Filter personas"
+                 aria-controls="chatPersona" aria-describedby="chatPersonaDescription" />
+          <p id="chatPersonaDescription" class="chat-persona-description" data-state="ready" aria-live="polite"></p>
         </div>
         <div>
           <label class="field-lbl" for="chatReasoning">Reasoning</label>
@@ -10036,6 +10066,126 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     user: { label: "You", tone: "info" },
     assistant: { label: "Model", tone: "ok" },
   };
+
+  /* ── UIV2-19: what a persona is, in one place ──────────────────────────────
+     The three prompts used to exist only as `<option value="...">` text in the markup: the picker
+     *was* the contract, so nothing could describe a persona, nothing could survive a reload, and a
+     reader who wanted to know the difference between two of them had to select both and read the
+     answers. This table is now the authority. The prompts are byte-identical to the ones the markup
+     shipped, because they are what the model was actually sent and changing them silently would
+     change every answer; the ids are new and stable, because a selection has to be remembered by
+     something that is not a paragraph of prose. */
+  const CHAT_PERSONAS = [
+    {
+      id: "principal-engineer",
+      label: "Principal Engineer & UI Architect",
+      description: "Production-ready code with the reasoning behind it: named trade-offs, accessibility, no filler.",
+      prompt: "You are a concise Principal Software Engineer & UI Architect. Write clean, accessible, production-ready code.",
+    },
+    {
+      id: "bug-ux-auditor",
+      label: "Bug & UX Auditor",
+      description: "Reads what is on screen adversarially: bugs, race conditions, UX anti-patterns and security issues.",
+      prompt: "You are an adversarial code reviewer. Focus strictly on bugs, race conditions, UX anti-patterns, and security issues.",
+    },
+    {
+      id: "code-only",
+      label: "Code Only (Zero Fluff)",
+      description: "Answers in code blocks, with as little prose as the question allows.",
+      prompt: "Output code blocks only with minimal prose.",
+    },
+  ];
+  //: The id a pane opens on, and the one an unknown or deleted id falls back to.
+  const CHAT_PERSONA_DEFAULT = "principal-engineer";
+  const CHAT_PERSONA_KEY = "m5_chat_persona";
+
+  /** The persona a stored id names, or the default one; never a persona that is not in the table. */
+  function chatPersonaById(id) {
+    return CHAT_PERSONAS.find(persona => persona.id === id)
+      || CHAT_PERSONAS.find(persona => persona.id === CHAT_PERSONA_DEFAULT)
+      || CHAT_PERSONAS[0]
+      || null;
+  }
+
+  function chatPersonaSelected() {
+    const sel = document.getElementById("chatPersona");
+    return sel && sel.value ? chatPersonaById(sel.value) : chatPersonaById(CHAT_PERSONA_DEFAULT);
+  }
+
+  /** Does a persona answer to this filter? A filter reads labels and descriptions, never prompts. */
+  function chatPersonaMatches(persona, needle) {
+    if (!needle) return true;
+    return persona.label.toLowerCase().includes(needle)
+      || persona.description.toLowerCase().includes(needle);
+  }
+
+  /** Draw the picker from the registry, filtered by `query`, and keep the selection honest.
+   *
+   *  The selected persona is never filtered out of its own list: a filter that removed what the
+   *  reader was about to send would make the sentence under the picker describe a different
+   *  request from the one the button would post. */
+  function renderChatPersonaPicker(query = "") {
+    const sel = document.getElementById("chatPersona");
+    if (!sel) return;
+    const selected = sel.value || (chatPersonaById(localStorage.getItem(CHAT_PERSONA_KEY)) || {}).id || CHAT_PERSONA_DEFAULT;
+    const needle = String(query || "").trim().toLowerCase();
+    const visible = CHAT_PERSONAS.filter(persona => chatPersonaMatches(persona, needle) || persona.id === selected);
+    const others = visible.filter(persona => persona.id !== selected).length;
+    const options = visible.map(persona => `<option value="${escapeHtml(persona.id)}">${escapeHtml(persona.label)}</option>`);
+    // The filter never takes away the persona that is about to be sent, so it says instead how many
+    // others it found - an empty list with no explanation is the dead end this story exists to end.
+    if (needle && !others) options.push(`<option value="" disabled>No other persona matches “${escapeHtml(needle)}”</option>`);
+    sel.innerHTML = options.join("");
+    if (visible.some(persona => persona.id === selected)) sel.value = selected;
+    else if (visible.length) sel.value = visible[0].id;
+    const count = document.getElementById("chatPersonaCount");
+    if (count) count.textContent = needle ? `${others} of ${CHAT_PERSONAS.length}` : `(${CHAT_PERSONAS.length})`;
+    updateChatPersonaDescription(needle, others);
+  }
+
+  /** The line under the picker: what the selected persona actually does, or why none is shown. */
+  function updateChatPersonaDescription(needle = "", visibleCount = CHAT_PERSONAS.length) {
+    const host = document.getElementById("chatPersonaDescription");
+    if (!host) return;
+    const persona = chatPersonaSelected();
+    const write = (text, state) => {
+      host.textContent = text;
+      host.title = text;
+      host.dataset.state = state;
+    };
+    if (!persona) {
+      write("No personas are installed, so Chat would send no system prompt.", "empty");
+      return;
+    }
+    if (!visibleCount) {
+      write(`${String(needle).trim()} matches no other persona. ${persona.label} is still selected: ${persona.description}`, "empty");
+      return;
+    }
+    const stored = localStorage.getItem(CHAT_PERSONA_KEY);
+    const storedIsGone = Boolean(stored) && stored !== persona.id
+      && !CHAT_PERSONAS.some(entry => entry.id === stored);
+    write(
+      storedIsGone
+        ? `${persona.description} (The persona saved in this browser is no longer available, so Chat opened on the default one.)`
+        : persona.description,
+      "ready",
+    );
+  }
+
+  /** Choose a persona, remember it, and keep the hint and the description in step. */
+  function selectChatPersona(id) {
+    const persona = chatPersonaById(id);
+    if (!persona) return null;
+    const sel = document.getElementById("chatPersona");
+    if (sel) {
+      if (![...sel.options].some(option => option.value === persona.id)) renderChatPersonaPicker("");
+      sel.value = persona.id;
+    }
+    try { localStorage.setItem(CHAT_PERSONA_KEY, persona.id); } catch (_) { /* storage may be blocked */ }
+    updateChatPersonaDescription();
+    updateChatComposer();
+    return persona;
+  }
   const CHAT_PIN_SLACK = 80;
   let chatBusy = false;
   let chatRequestGeneration = 0;
@@ -10613,7 +10763,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     const wsInput = document.getElementById("harnessWorkspaceInput");
     const workspaceDir = wsInput ? wsInput.value.trim() : "";
     if (options.appendUser !== false) chatHistory.push({ role: "user", content: text, createdAt: Date.now() });
-    const apiMessages = [{ role: "system", content: document.getElementById("chatPersona").value }, ...chatHistory.map(m => ({ role: m.role, content: m.content }))];
+    // UIV2-19: the picker's value is a persona id; the request carries the prompt that id names.
+    const apiMessages = [{ role: "system", content: (chatPersonaSelected() || {}).prompt || "" }, ...chatHistory.map(m => ({ role: m.role, content: m.content }))];
     // What this reply is being given, captured from the same values that build the
     // request below - so the line in the transcript cannot describe a different request
     // than the one that was sent.
@@ -13962,6 +14113,40 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   for (const id of ["chatModel", "chatPersona", "chatToolsEnabled"]) {
     const node = document.getElementById(id);
     if (node) node.addEventListener("change", () => updateChatComposer());
+  }
+  // UIV2-19: the picker is drawn from CHAT_PERSONAS, remembers the choice, and filters by label or
+  // description. A stored id that is no longer in the table falls back to the default persona and
+  // says so under the picker rather than sending a prompt nobody chose.
+  renderChatPersonaPicker();
+  {
+    const personaSelect = document.getElementById("chatPersona");
+    const personaSearch = document.getElementById("chatPersonaSearch");
+    if (personaSelect) personaSelect.addEventListener("change", () => selectChatPersona(personaSelect.value));
+    if (personaSearch) {
+      personaSearch.addEventListener("input", () => renderChatPersonaPicker(personaSearch.value));
+      personaSearch.addEventListener("keydown", event => {
+        if (event.key === "Escape") {
+          // Escape clears the filter before it reaches the pane, so a reader can never be left with
+          // an empty list and no visible way back to the personas they had.
+          event.stopPropagation();
+          personaSearch.value = "";
+          renderChatPersonaPicker("");
+          return;
+        }
+        if (event.key === "Enter") {
+          // Enter takes the first persona the filter *matched*, not the first one in the list: the
+          // selected persona is never filtered out of its own list, so "first option" would often
+          // be the persona the reader already had.
+          const needle = personaSearch.value.trim().toLowerCase();
+          const first = CHAT_PERSONAS.find(persona => chatPersonaMatches(persona, needle));
+          if (first) {
+            event.preventDefault();
+            selectChatPersona(first.id);
+            personaSelect.focus();
+          }
+        }
+      });
+    }
   }
   document.getElementById("chatMessages").addEventListener("scroll", () => updateChatTranscriptBar(), { passive: true });
   // The same rule as the chat transcript: the jump appears only when the reader is not at

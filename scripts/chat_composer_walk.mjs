@@ -135,7 +135,8 @@ try {
   check("keyboard guidance survives dynamic send states", /Enter sends/.test(empty.keyboardHint) && /Shift\+Enter adds a line/.test(empty.keyboardHint) && empty.describedBy.includes("chatKeyboardHint"), empty.keyboardHint);
 
   await page.select("#chatReasoning", "low");
-  await page.select("#chatPersona", "You are an adversarial code reviewer. Focus strictly on bugs, race conditions, UX anti-patterns, and security issues.");
+  // UIV2-19: the picker's value is a persona id; the prompt behind it is what the request carries.
+  await page.select("#chatPersona", "bug-ux-auditor");
   const input = await page.$("#chatInput");
   await input.focus();
   await page.keyboard.type("desktop keyboard send");

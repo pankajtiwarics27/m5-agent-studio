@@ -33,8 +33,7 @@ the pane's width so the pickers fit on one row above 1200px and three rows on a 
     p |
 | 5 | the controls keep the pane's width instead of squeezing into the column | padding-inline: 16px; 
  flex-wrap: nowrap; gap: 10px; padding-block: 8px; 
- gap: 8px; padding-block: 10px; 
- background: |
+ gap: 8px; padding-block: 10px; |
 | 6 | above 1200px the pickers are one row | @media (min-width: 1200px) { |
 | 7 | and their labels cannot wrap the bar onto a second row | the model label is longer than its picker |
 | 8 | the pickers keep the design system's control height rather than a private one | UIV2-07 sets --control-min-h for every field |
@@ -47,9 +46,7 @@ the pane's width so the pickers fit on one row above 1200px and three rows on a 
 | 11 | and keeps clear of a phone's home indicator | padding-bottom is a max() with the inset |
 | 12 | the field can scroll itself above an on-screen keyboard | a keyboard that covers the field is a composer that left the screen |
 | 13 | the shell is measured in dvh, so the keyboard shrinks the pane | vh would keep the pane taller than the visible screen |
-| 14 | a bubble may not grow wider than its column | min-width: 0; overflow-wrap: anywhere; 
-
-  background-color: var(--bg-card); border-color: var(--border); box-shadow: no |
+| 14 | a bubble may not grow wider than its column | min-width: 0; overflow-wrap: anywhere; |
 | 15 | a code block scrolls inside its bubble, never off the pane | a wide line is a scrollbar, not a cut |
 | 16 | images, video and tables are clamped to the bubble | a table that overflows a phone is unreadable, not just wide |
 | 17 | the empty state is one sentence, short enough to read at a glance | 90 chars: 'Nothing has been said yetPick a model, then type below; replies and reasoning ap' |

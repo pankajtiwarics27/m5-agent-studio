@@ -12,9 +12,9 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "8a31f9d317190422f8a96d788aa5ade33b15aa03095507310196fba4acdeaa16",
-      "bytes": 860818,
-      "lines": 14877
+      "sha256": "4bbce1432acc67a9ea8d05ae77dd4d65f73c23c9e9291ef8e1ec390795c3930e",
+      "bytes": 870929,
+      "lines": 15062
     },
     {
       "path": "app.py",
@@ -26,9 +26,9 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "7e9a33473890a02cd9cc0726af7132fecce888fbb88e9aa82557315f3baaf623",
-      "bytes": 3613621,
-      "lines": 78194
+      "sha256": "9e40039fb2799024c5dd0730158306d9a66ac263abfe5f53c1e694f238da9d0a",
+      "bytes": 3623732,
+      "lines": 78379
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -313,9 +313,9 @@
     {
       "path": "scripts/chat_composer_walk.mjs",
       "role": "exercises supplemental Chat stream and recovery states against a throwaway loopback demo",
-      "sha256": "f6cfd5b2a2dd25ca4e71dff78cc3497c70d155c573a25005bcdec3602bf87401",
-      "bytes": 15600,
-      "lines": 247
+      "sha256": "87e3d642df5eaa2b0baccba715cfa6f62aebfaf6c513df0ce0b3d902c9c2ba47",
+      "bytes": 15597,
+      "lines": 248
     },
     {
       "path": "tests/test_uiux_chat_composer.py",
@@ -376,9 +376,9 @@
     {
       "path": "scripts/uiux_preservation_e2e.py",
       "role": "maps each preservation-matrix row to the walk, test, route and control that proves it",
-      "sha256": "15e73c5959dab5f915a79045b680b4e8a39ee07fd28fedd64046cc272524edc7",
-      "bytes": 39822,
-      "lines": 829
+      "sha256": "5392366e94e796ba1c77dd801c573b0179f2ff36fba8f79dc3fffa9465ca310e",
+      "bytes": 40221,
+      "lines": 830
     },
     {
       "path": "tests/test_uiux_preservation_e2e.py",
@@ -418,9 +418,9 @@
     {
       "path": "scripts/uiux_screenshot_review.py",
       "role": "traces every committed capture to the script that made it and checks that the theme in its name is the theme in its pixels",
-      "sha256": "ba0c7a8db1efb045f6899b93e7aec0942396ea9f964b860ba9c009ff3b0e264b",
-      "bytes": 62166,
-      "lines": 1230
+      "sha256": "35016c0d77af399b9127d666ad381ee666c34080c1a93594014410d8ed10d02e",
+      "bytes": 63809,
+      "lines": 1256
     },
     {
       "path": "tests/test_uiux_screenshot_review.py",
@@ -460,8 +460,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "8a31f9d317190422f8a96d788aa5ade33b15aa03095507310196fba4acdeaa16",
-    "lines": 14877,
+    "sha256": "4bbce1432acc67a9ea8d05ae77dd4d65f73c23c9e9291ef8e1ec390795c3930e",
+    "lines": 15062,
     "tab_count": 6,
     "tabs": [
       {

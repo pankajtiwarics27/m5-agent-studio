@@ -2165,20 +2165,58 @@
       "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
       "agent_prompt": "Implement UIV2-19: Chat persona registry audit and complete supported picker. Required outcome: Replace three hardcoded personas with discoverable picker sourced from authoritative supported personas, with search and descriptions. Specific gate: Enumerate actual persona definitions; all valid backend-supported personas appear; unsupported personas never invented; default/missing/deleted persona fallback safe; selection persisted per existing semantics; test registry changes. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempt_count": 0,
-        "started_at": null,
-        "completed_at": null,
+        "status": "done",
+        "progress_percent": 100,
+        "attempt_count": 1,
+        "started_at": "2026-11-06T21:05:00+05:30",
+        "completed_at": "2026-11-07T00:40:00+05:30",
         "commit_sha": null,
-        "changed_files": [],
-        "tests_executed": [],
-        "visual_evidence": [],
-        "acceptance_evidence": [],
-        "known_regressions": [],
+        "changed_files": [
+          "static/index.html (Chat: `CHAT_PERSONAS` - the registry of id, label, description and prompt that is now the authority; `CHAT_PERSONA_DEFAULT` / `CHAT_PERSONA_KEY`; `chatPersonaById`, `chatPersonaSelected`, `chatPersonaMatches`, `renderChatPersonaPicker`, `updateChatPersonaDescription`, `selectChatPersona`; `select#chatPersona` ships no `<option>` and is filled by the renderer; `input#chatPersonaSearch` with `aria-controls`, `Escape` to clear and `Enter` to take the first match; `<p id=\"chatPersonaDescription\">` is one clamped line carrying the whole sentence as its title and `aria-live=\"polite\"`; the request sends `chatPersonaSelected().prompt`; `.chat-persona-*` styles, with the filter as the one documented 32px exception to `--control-min-h` and the two-column grid that keeps the picker on one row)",
+          "studio.py (built from the above by scripts/build_studio.py)",
+          "scripts/chat_persona_walk.mjs (new: 21 checks - the registry reaches the picker, nothing offered that the registry does not name, the default and its description, one clamped line, filtering by label and by description, a filter that matches nothing, Escape, Enter, persistence across a reload, a deleted id falling back, the prompt on the wire, switching persona, the context line, a long reply, a stream in progress, a refused provider, recovery, the one-row bar, the phone width, no console error, one POST route)",
+          "scripts/chat_layout_walk.mjs (the one-row bar threshold follows the picker's description line: 100px above 1200px, 250px below it)",
+          "scripts/chat_composer_walk.mjs (selects the persona by id; the value is no longer the prompt)",
+          "scripts/uiux_chat_persona_inventory.py (new: 34 checks over the registry, the picker, the filter, the description, the request, the fallback and the design system)",
+          "scripts/uiux_v2_preservation_matrix.py (re-classified twice: the persona contract now describes a present registry with a picker drawn from it, and the Council contract describes the DELETE routes UIV2-13 shipped - main was failing this guard before this story)",
+          "scripts/uiux_preservation_e2e.py (registers the persona walk)",
+          "scripts/uiux_screenshot_review.py (classifies the 48 after captures and the 16 before captures as the chat-persona set)",
+          "tests/test_chat_persona.py (new: 28 tests, 14 of them mutations that each break one inventory rule)",
+          "product/M5_2_0_UIUX_Chat_Persona.json, docs/uiux-2-0-chat-persona.md (generated)",
+          "docs/media/chat-persona/ (48 after PNGs + before-uiv2-19/ 16 PNGs + README)"
+        ],
+        "tests_executed": [
+          "pytest tests/test_chat_persona.py tests/test_chat_layout.py tests/test_chat_composer.py tests/test_chat_context.py tests/test_uiux_chat_composer.py -q",
+          "python3 scripts/uiux_chat_persona_inventory.py --check",
+          "python3 scripts/chat_persona_walk.mjs (8 viewport x theme runs, 21/21 each)",
+          "python3 scripts/chat_layout_walk.mjs (8 viewport x theme runs)",
+          "python3 scripts/uiux_v2_preservation_matrix.py --check",
+          "python3 scripts/uiux_release_gate.py"
+        ],
+        "visual_evidence": [
+          "docs/media/chat-persona/*.png (48: six states x four viewports x two themes)",
+          "docs/media/chat-persona/before-uiv2-19/ (16: the empty and populated states served from origin/main at 3bd4890)",
+          "docs/media/chat-persona/README.md"
+        ],
+        "acceptance_evidence": [
+          "registry: `CHAT_PERSONAS` holds three personas with a unique slug id, a label, a 30-140 character description and a prompt; the prompts are byte-identical to the three the pane already sent, so no answer changes",
+          "picker: `select#chatPersona` ships 0 options and is filled by `renderChatPersonaPicker()`; the label carries the count `(3)`, and while filtering `N of 3`",
+          "search: `input#chatPersonaSearch` narrows by label or description, never by prompt; it keeps the selected persona in its own list, says `No other persona matches` when it finds nothing else, clears on Escape and takes the first match on Enter",
+          "descriptions: one clamped line under the picker, the whole sentence in its `title`, announced through `aria-live=\"polite\"` and referenced by the select's `aria-describedby`",
+          "fallback: a stored id that is not in the table resolves to the default persona and the line says so; `chatPersonaById` never synthesises a persona",
+          "persistence: the choice is written to `localStorage[\"m5_chat_persona\"]` and restored on load; the walk reloads the page and finds the auditor still selected",
+          "wire: the request carries `chatPersonaSelected().prompt`, proven by reading the POST body - the id never reaches the model",
+          "backward compatibility: every preserved Chat control, key binding and the single `/api/chat/stream` POST survive; `chatPersonaLabel()` still names the persona on the turn's context line",
+          "layout: the picker, its filter and its description stay on one row above 1200px (94px) and three rows at 390px (224px), both inside the thresholds UIV2-18 set"
+        ],
+        "known_regressions": [
+          "The control bar grew from 79px to 94px above 1200px, and the picker now names its persona twice (once in the select, once in the line under it). UIV2-18's one-row claim is unchanged, but its height threshold had to move from 84px to 100px to allow the 13px description line.",
+          "The picker's value is an id, so any external caller that selected a persona by pasting the prompt (scripts/chat_composer_walk.mjs did) has to select the id instead. Nothing in app.py or studio.py ever read the value.",
+          "`uiux_v2_preservation_matrix.py` was failing on main before this story: the Council contract refused the DELETE routes UIV2-13 shipped. Re-classified here, so the matrix now describes what the API actually does rather than what it did two stories ago."
+        ],
         "blockers": [],
-        "handoff_summary": "",
-        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+        "handoff_summary": "The persona picker is registry-driven: `CHAT_PERSONAS` in static/index.html is the authority for ids, labels, descriptions and prompts, the select ships no options of its own, a filter beside it narrows by label or description without ever dropping the selected persona, one clamped line under both says what the selected persona does, the choice survives a reload and a deleted id falls back to the default with the reason shown. The request still sends the prompt, never the id, and the walk reads it out of the POST body.",
+        "exact_next_action": "Start UIV2-20 from the ledger: read its entry, pin HEAD, and capture the before state before touching the source."
       }
     },
     {
@@ -3171,11 +3209,11 @@
   ],
   "progress": {
     "total": 30,
-    "done": 18,
+    "done": 19,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 12,
-    "percent_complete": 60
+    "not_started": 11,
+    "percent_complete": 63
   },
   "session_recovery_protocol": [
     "Read global prompt and tracking",
