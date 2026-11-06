@@ -178,6 +178,11 @@
     },
     {
       "where": "setStatus(vocabulary)",
+      "tone": "danger",
+      "word": "@failed"
+    },
+    {
+      "where": "setStatus(vocabulary)",
       "tone": "neutral",
       "word": "@not-run"
     },
@@ -240,6 +245,11 @@
       "where": "status chip",
       "tone": "neutral",
       "word": "loading"
+    },
+    {
+      "where": "status chip",
+      "tone": "neutral",
+      "word": "checking"
     },
     {
       "where": "status chip",

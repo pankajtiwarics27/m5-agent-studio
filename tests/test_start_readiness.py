@@ -181,11 +181,12 @@ def test_every_state_the_renderer_emits_has_a_rule(payload):
 # ── the walk exists and knows what to break ──────────────────────────────────
 
 
-def test_the_walk_holds_the_pane_against_the_preflight():
+def test_the_walk_holds_the_pane_against_the_readiness_route():
+    """UIV2-24: the pane reads one route, and the walk holds it against that one."""
     source = WALK.read_text(encoding="utf-8")
-    assert "/api/onboarding/preflight" in source
+    assert "/api/start/command-center" in source
     assert "onboardingLead" in source and "aria-current" in source
-    assert "request.abort" in source, "the walk never refuses the preflight"
+    assert "request.abort" in source, "the walk never refuses the readiness read"
     assert "disabled" in source and "aria-describedby" in source
     assert 'page.keyboard.press("Enter")' in source, (
         "Re-check must be pressed from the keyboard, or focus is never held"
@@ -228,7 +229,7 @@ def test_a_lead_that_ignores_next_step_is_caught(markup_copy):
 def test_a_pane_that_recounts_steps_is_caught(markup_copy):
     payload = markup_copy(
         lambda text: text.replace(
-            "list.innerHTML = onboardingReport.steps.map",
+            "list.innerHTML = report.steps.map",
             'const readyCount = onboardingReport.steps.filter(step => step.status === "ready").length;\n      list.innerHTML = onboardingReport.steps.map',
             1,
         )
@@ -239,7 +240,7 @@ def test_a_pane_that_recounts_steps_is_caught(markup_copy):
 def test_a_pane_that_decides_readiness_itself_is_caught(markup_copy):
     payload = markup_copy(
         lambda text: text.replace(
-            "list.innerHTML = onboardingReport.steps.map",
+            "list.innerHTML = report.steps.map",
             'const allReady = onboardingReport.steps.every(step => step.status === "ready");\n      list.innerHTML = onboardingReport.steps.map',
             1,
         )
@@ -251,7 +252,7 @@ def test_an_invented_aria_current_is_caught(markup_copy):
     payload = markup_copy(
         lambda text: _rename_first(
             text,
-            "list.innerHTML = onboardingReport.steps.map",
+            "list.innerHTML = report.steps.map",
             "const isNext = Boolean(next && step.id === next.id);",
             "const isNext = index === 1;",
         )
@@ -263,7 +264,7 @@ def test_losing_the_waiting_line_is_caught(markup_copy):
     payload = markup_copy(
         lambda text: _rename_first(
             text,
-            "list.innerHTML = onboardingReport.steps.map",
+            "list.innerHTML = report.steps.map",
             "onboarding-step-waiting",
             "onboarding-step-quiet",
         )
@@ -279,27 +280,31 @@ def test_a_run_button_with_no_reason_is_caught(markup_copy):
 
 
 def test_a_clear_that_forgets_focus_is_caught(markup_copy):
-    payload = markup_copy(
-        lambda text: text.replace(
-            "const hadFocus = box.contains(document.activeElement);",
-            "const hadFocus = false;",
-            1,
-        )
-    )
+    def forget(text: str) -> str:
+        # Anchored inside clearPresentation(): the command center also remembers whether
+        # its blocker held focus, and a transform that edits *that* line would pass here
+        # while the rule it is meant to break stayed intact.
+        start = text.index("function clearPresentation")
+        block = text[start : start + 2000]
+        needle = "const hadFocus = box.contains(document.activeElement);"
+        assert needle in block
+        return text[:start] + block.replace(needle, "const hadFocus = false;", 1) + text[start + 2000 :]
+
+    payload = markup_copy(forget)
     assert "focus-lost-on-clear" in _checks(payload)
 
 
 def test_focusing_a_node_about_to_be_replaced_is_caught(markup_copy):
     def reorder(text: str) -> str:
-        old = """      renderOnboardingLead();
-      // The Re-check button lives inside the box this clears, so without a target a
-      // keyboard user would be left on <body> with nothing announced.
-      clearPresentation("onboardingState", { focus: "onboardingLead" });"""
+        old = """    renderOnboardingLead();
+    // The Re-check button lives inside the box this clears, so without a target a
+    // keyboard user would be left on <body> with nothing announced.
+    clearPresentation("onboardingState", { focus: "onboardingLead" });"""
         assert old in text
         return text.replace(
             old,
-            """      clearPresentation("onboardingState", { focus: "onboardingLead" });
-      renderOnboardingLead();""",
+            """    clearPresentation("onboardingState", { focus: "onboardingLead" });
+    renderOnboardingLead();""",
             1,
         )
 

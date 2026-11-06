@@ -42,7 +42,7 @@
   "totals": {
     "tokens": 56,
     "groups": 8,
-    "references": 1463,
+    "references": 1509,
     "theme_overrides": 20,
     "density_overrides": 5,
     "contrast_pairs": 28,
@@ -161,7 +161,7 @@
         "light": "#F1F3F5"
       },
       "density_override": null,
-      "references": 24
+      "references": 26
     },
     {
       "name": "--bg-press",
@@ -211,7 +211,7 @@
         "light": "#1B2430"
       },
       "density_override": null,
-      "references": 98
+      "references": 99
     },
     {
       "name": "--text-dim",
@@ -221,7 +221,7 @@
         "light": "#596579"
       },
       "density_override": null,
-      "references": 167
+      "references": 170
     },
     {
       "name": "--text-faint",
@@ -231,7 +231,7 @@
         "light": "#67717F"
       },
       "density_override": null,
-      "references": 141
+      "references": 145
     },
     {
       "name": "--accent",
@@ -241,7 +241,7 @@
         "light": "#4F5FE8"
       },
       "density_override": null,
-      "references": 37
+      "references": 38
     },
     {
       "name": "--accent-hi",
@@ -281,7 +281,7 @@
         "light": "#286e50"
       },
       "density_override": null,
-      "references": 41
+      "references": 42
     },
     {
       "name": "--amber",
@@ -291,7 +291,7 @@
         "light": "#80580e"
       },
       "density_override": null,
-      "references": 62
+      "references": 63
     },
     {
       "name": "--rose",
@@ -301,7 +301,7 @@
         "light": "#a4313a"
       },
       "density_override": null,
-      "references": 41
+      "references": 43
     },
     {
       "name": "--purple",
@@ -329,7 +329,7 @@
       "value": "11px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 14
+      "references": 16
     },
     {
       "name": "--text-xs",
@@ -337,7 +337,7 @@
       "value": "12px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 12
+      "references": 14
     },
     {
       "name": "--text-sm",
@@ -345,7 +345,7 @@
       "value": "13px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 6
+      "references": 9
     },
     {
       "name": "--text-base",
@@ -377,7 +377,7 @@
       "value": "600",
       "theme_overrides": {},
       "density_override": null,
-      "references": 10
+      "references": 13
     },
     {
       "name": "--lh-tight",
@@ -393,7 +393,7 @@
       "value": "1.5",
       "theme_overrides": {},
       "density_override": null,
-      "references": 9
+      "references": 12
     },
     {
       "name": "--tracking-tight",
@@ -409,7 +409,7 @@
       "value": "8px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 10
+      "references": 13
     },
     {
       "name": "--space-2",
@@ -417,7 +417,7 @@
       "value": "16px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 28
+      "references": 29
     },
     {
       "name": "--space-3",
@@ -425,7 +425,7 @@
       "value": "24px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 21
+      "references": 28
     },
     {
       "name": "--space-4",
@@ -433,7 +433,7 @@
       "value": "32px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 4
+      "references": 5
     },
     {
       "name": "--space-5",
@@ -457,7 +457,7 @@
       "value": "6px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 49
+      "references": 50
     },
     {
       "name": "--radius-md",
@@ -465,7 +465,7 @@
       "value": "8px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 38
+      "references": 39
     },
     {
       "name": "--radius-lg",
@@ -545,7 +545,7 @@
       "value": "cubic-bezier(.2,.8,.2,1)",
       "theme_overrides": {},
       "density_override": null,
-      "references": 12
+      "references": 13
     },
     {
       "name": "--dur-fast",
@@ -553,7 +553,7 @@
       "value": "140ms",
       "theme_overrides": {},
       "density_override": null,
-      "references": 20
+      "references": 21
     },
     {
       "name": "--dur-slow",
@@ -585,7 +585,7 @@
       "value": "\"JetBrains Mono\", \"SFMono-Regular\", Consolas, \"Liberation Mono\", monospace",
       "theme_overrides": {},
       "density_override": null,
-      "references": 96
+      "references": 98
     },
     {
       "name": "--header-height",

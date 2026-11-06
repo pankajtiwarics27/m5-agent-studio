@@ -5,7 +5,7 @@ It is the `UIUX-P0-04` artifact: for state-changing route candidates resolved by
 what can refuse them and what durable state they touch, derived from `app.py` and the route map.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4`.
-* `app.py` digest: `84cd78352f501a8f…` · route map digest: `6fe6b8e4f52a24c6…`.
+* `app.py` digest: `0000db813092aa3e…` · route map digest: `aa57f5c639c4418f…`.
 * 48 resolved state-changing route candidates, out of 79 in `app.py`; 0 fetch site(s) have 0 unresolved URL or method edge(s) (0 method).
 * 20 reference an authority subsystem, 41 a durable-state subsystem, 3 contain a SQL write, and 23 can leave the machine.
 
@@ -34,7 +34,7 @@ never enable an action, an approval or a recovery state on a client-side guess.*
 
 ## The shared boundary
 
-Every request passes `security_boundary()` (`app.py:3684`) before any handler runs.
+Every request passes `security_boundary()` (`app.py:3685`) before any handler runs.
 It protects everything under `/api/`, `/v1/`.
 
 | Gate | Status | When it can refuse |
@@ -187,6 +187,7 @@ A screen that says "this stays local" has to know which of its buttons cannot pr
 | `scoped_grants` | authority | issues, narrows and revokes scoped capabilities for a session |
 | `security_release_gate` | authority | the release gate for security findings |
 | `side_effect_ledger` | state | the idempotency and side-effect ledger |
+| `start_command_center` | support | the Start pane's one-line readiness verdict and its contradictions |
 | `task_events` | state | the durable event log the UI replays |
 | `trusted_transformations` | authority | bounded, reviewed code transformations |
 | `verification_evidence` | state | verification results attached to a task |

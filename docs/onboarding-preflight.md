@@ -15,7 +15,9 @@ answers it in one read-only call and names exactly one next action.
 |---|---|
 | `onboarding_preflight.py` | Pure, offline planner: `build_report(PreflightInputs) -> PreflightReport`. Mypy-gated, no I/O. |
 | `GET /api/onboarding/preflight` | Adapter route: collects local state, returns `{"status": "ok", "preflight": {...}}`. Bearer-authenticated like every `/api/*` route. |
-| `static/index.html` → **Start** tab | Renders the steps, the summary badge, and the actions; "Run the first task" composes the guided prompt into Chat. |
+| `GET /api/start/command-center` | UIV2-24: the preflight composed with what is known about the runtime, reduced to one verdict, one next action and any contradictions. Read-only; `?probe=local` asks the runtime once, and `?telemetry=` echoes which health payload the page is holding. |
+| `start_command_center.py` | Pure builder for that verdict: `build_readiness(preflight, runtime, telemetry) -> dict`. No I/O. |
+| `static/index.html` → **Start** tab | Opens with the task composer, the verdict line and at most one blocker; the checklist, health and workspace are disclosures under them. "Run the first task" composes the guided prompt into Chat. |
 | `tests/test_onboarding_preflight.py` | 29 tests: pure contract, adapter isolation, route auth, probe behaviour, and failure modes. |
 
 There are no new privileged operations. The guided first task reuses the
@@ -80,6 +82,42 @@ neither is returned as `next_step`.
    guided prompt was launched (`localStorage`). There is no new user-profile,
    consent, or telemetry record, and nothing is reported anywhere.
 
+## 3a. The command center: a port that answers is not a runtime that works (UIV2-24)
+
+The preflight answers *what should a first-run reader click*. It does not answer *is the
+local runtime able to run a model*: a process can hold the loopback port, answer
+`/v1/models`, and report zero models, and every step above would still list a model
+source. Start used to lead with the six rows, so a reader met the checklist before the
+composer, and a runtime that answered with nothing still looked like a green card.
+
+`GET /api/start/command-center` composes the same preflight with two separate
+observations and returns:
+
+| Field | Meaning |
+|---|---|
+| `verdict` | `ready` · `needs-you` · `blocked` · `contradiction` |
+| `headline`, `detail` | one sentence each, printed verbatim by the pane |
+| `counts` | `ready` / `total` / `optional` / `unchecked`, from the preflight |
+| `basis` | `measured` only when the runtime was asked and answered; `derived` otherwise |
+| `runtime` | `configured`, `url`, `port_answered`, `model_count`, `probe` — the socket and the model list are kept apart |
+| `checks` | five rows: model source, model available, workspace, execution, local runtime |
+| `contradictions` | where two honest observations disagree, each with `title`, `detail`, `evidence` and the action that settles it |
+| `next` | the single action that advances the reader; `null` when nothing is in the way |
+
+The contradictions it can print, all reachable in `tests/test_start_command_center.py`:
+
+| id | When |
+|---|---|
+| `port-without-models` | the runtime answered and reported zero models — a turn would fail even though a port check passes |
+| `runtime-models-without-usable-selection` | the runtime listed models the readiness check could not use |
+| `checks-passed-without-runtime` | every local check passed and the runtime did not answer when asked |
+| `demo-health-with-live-runtime` | the health card is the simulated payload while a separate probe found the runtime answering |
+
+A verdict of `contradiction` is never `ready`, and the pane prints the evidence
+(`port_answered=True · model_count=0`) rather than smoothing it into a green word. Without
+`?probe=local` the runtime row says *not asked yet* and the basis says `derived`, so
+"ready" is never an inference from a socket.
+
 ## 4. What this does not claim
 
 - It does not prove a model **works**; that is what the guided first task is for,
@@ -97,6 +135,13 @@ neither is returned as `next_step`.
 
 ```bash
 python -m pytest -q tests/test_onboarding_preflight.py     # 29 passed
+python -m pytest -q tests/test_start_command_center.py     # 27 passed (UIV2-24)
+python -m pytest -q tests/test_start_readiness.py  # the 22 pane-contract tests (P2-01)
+python -m pytest -q tests/test_start_health.py  # the 3 bases and 2 routes the health card reads
+python -m pytest -q tests/test_start_recent.py  # recent work, the composer and its handoff
+python scripts/uiux_start_command_center_inventory.py --check  # the story's own artifact is current
+node scripts/start_walk.mjs --base-url URL --token TOKEN  # 31/31 checks against a running app
+node scripts/start_command_center_walk.mjs --out DIR  # 31/31 per run, 56 captures
 python scripts/check_frontend_syntax.py                    # inline JS parses
 python scripts/smoke_local.py                              # loopback startup + auth
 python scripts/build_studio.py                             # regenerate studio.py

@@ -26,11 +26,11 @@
     "approved_inputs": null,
     "current_inputs": {
       "ledger_content_sha256": "d4137cf1e214931953734cc97943732ea5204b5884c6aa26339cc7c27ed5908b",
-      "source_manifest_sha256": "594eac0546226e48f2ae19c5e9c867d47454b49ec1cb122ea55c87fda74697d5",
-      "control_inventory_sha256": "32d59f11a557ed417be761a7e5d55b62dff6307e403d25f236a825f50c4d4932",
-      "route_map_sha256": "6fe6b8e4f52a24c62f09b83d0d9f77cb1f24e7f0e8381f5105e39d5f95ae5edb",
-      "authorization_trace_sha256": "9ff79d3fa75d33022bc659056c5723cd9a398d377eb677a480e9ab60f9a5a29b",
-      "frontend_sha256": "4765fda1538fdc08994c15a37a452d4e0a2c6a3296509cd88eccdc49d72ac1ce",
+      "source_manifest_sha256": "9f71f143a14cd9f8ceb4e63ca77829da4e02ba0e35231f0c54958fa8cbbcbd83",
+      "control_inventory_sha256": "e900baf7185e431069f9070f8e1d6dccd59ad68284a185e7eff46aa312434314",
+      "route_map_sha256": "aa57f5c639c4418f79881c7028d54bfe68345fe8528af4783b19ba8c61558ebf",
+      "authorization_trace_sha256": "786102b74c6a03120c3f0bc20138a29a1436e2b688a59d3750d8f97179affd8b",
+      "frontend_sha256": "8558d2b589d7373ed1519f559b0da44b7ffd6fe95331d10ab85dcf254b31a200",
       "screenshot_manifest_sha256": "b488bf453ae260b6564ae592f0455e3d70cff3121dca1e7c823c7abb270b44d3",
       "screenshot_index_sha256": "16b0620ca1d02a1b181ad15b3a2b0c6aae9e7aa539654d27ed80d9147189634e",
       "generator_sha256": "6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65",
@@ -40,11 +40,11 @@
   },
   "inputs": {
     "ledger_sha256": "1adcb5f5fe82d14855291246cfe4ed08aafb57ab7143703a1ce5e3c5fc0ea43c",
-    "source_manifest_sha256": "594eac0546226e48f2ae19c5e9c867d47454b49ec1cb122ea55c87fda74697d5",
-    "control_inventory_sha256": "32d59f11a557ed417be761a7e5d55b62dff6307e403d25f236a825f50c4d4932",
-    "route_map_sha256": "6fe6b8e4f52a24c62f09b83d0d9f77cb1f24e7f0e8381f5105e39d5f95ae5edb",
-    "authorization_trace_sha256": "9ff79d3fa75d33022bc659056c5723cd9a398d377eb677a480e9ab60f9a5a29b",
-    "frontend_sha256": "4765fda1538fdc08994c15a37a452d4e0a2c6a3296509cd88eccdc49d72ac1ce"
+    "source_manifest_sha256": "9f71f143a14cd9f8ceb4e63ca77829da4e02ba0e35231f0c54958fa8cbbcbd83",
+    "control_inventory_sha256": "e900baf7185e431069f9070f8e1d6dccd59ad68284a185e7eff46aa312434314",
+    "route_map_sha256": "aa57f5c639c4418f79881c7028d54bfe68345fe8528af4783b19ba8c61558ebf",
+    "authorization_trace_sha256": "786102b74c6a03120c3f0bc20138a29a1436e2b688a59d3750d8f97179affd8b",
+    "frontend_sha256": "8558d2b589d7373ed1519f559b0da44b7ffd6fe95331d10ab85dcf254b31a200"
   },
   "approval_request": [
     {
@@ -55,12 +55,12 @@
     {
       "id": 2,
       "ask": "Accept the control inventory as the list of controls that must stay reachable",
-      "evidence": "225 markup controls (126 chrome, 99 panes) plus 71 rendered by script"
+      "evidence": "228 markup controls (126 chrome, 102 panes) plus 71 rendered by script"
     },
     {
       "id": 3,
       "ask": "Review route candidates and preserve confirmed browser-reachable routes and their gates",
-      "evidence": "117 routes exist; 71 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 48 state-changing candidates; the lexical scan is not exhaustive"
+      "evidence": "118 routes exist; 71 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 48 state-changing candidates; the lexical scan is not exhaustive"
     },
     {
       "id": 4,
@@ -76,19 +76,19 @@
   "totals": {
     "panes": 6,
     "preserved_capabilities": 21,
-    "markup_controls": 225,
+    "markup_controls": 228,
     "chrome_controls": 126,
-    "pane_controls": 99,
+    "pane_controls": 102,
     "script_rendered_controls": 71,
-    "routes": 117,
+    "routes": 118,
     "routes_with_resolved_or_possible_caller": 71,
-    "routes_no_caller_observed": 46,
+    "routes_no_caller_observed": 47,
     "routes_unknown_frontend_caller": 0,
     "route_map_unresolved_call_sites": 0,
     "route_map_unresolved_caller_edges": 0,
     "route_map_unresolved_method_edges": 0,
     "state_changing_routes_traced": 48,
-    "pane_routes_reached": 41,
+    "pane_routes_reached": 40,
     "pane_routes_excluded": 34,
     "route_walk_depth": 2,
     "screenshots_captured": 6,
@@ -128,34 +128,14 @@
           "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
         }
       ],
-      "control_count": 11,
+      "control_count": 14,
       "counts": {
         "button": 8,
         "input": 2,
-        "select": 1
+        "select": 1,
+        "summary": 3
       },
       "controls": [
-        {
-          "tag": "button",
-          "id": "onboardingRunBtn",
-          "text": "Run the first task",
-          "onclick": "startGuidedFirstTask()",
-          "handler": "startGuidedFirstTask"
-        },
-        {
-          "tag": "button",
-          "id": null,
-          "text": "Re-check",
-          "onclick": "refreshOnboarding()",
-          "handler": "refreshOnboarding"
-        },
-        {
-          "tag": "button",
-          "id": null,
-          "text": "Providers",
-          "onclick": "openProvidersModal()",
-          "handler": "openProvidersModal"
-        },
         {
           "tag": "input",
           "id": "startTaskInput",
@@ -178,6 +158,41 @@
           "handler": "loadStartRecent"
         },
         {
+          "tag": "summary",
+          "id": null,
+          "text": "Readiness details checking",
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "button",
+          "id": "onboardingRunBtn",
+          "text": "Run the first task",
+          "onclick": "startGuidedFirstTask()",
+          "handler": "startGuidedFirstTask"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "text": "Re-check",
+          "onclick": "refreshOnboarding()",
+          "handler": "refreshOnboarding"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "text": "Providers",
+          "onclick": "openProvidersModal()",
+          "handler": "openProvidersModal"
+        },
+        {
+          "tag": "summary",
+          "id": null,
+          "text": "System health loading",
+          "onclick": null,
+          "handler": null
+        },
+        {
           "tag": "button",
           "id": null,
           "text": "Re-check health",
@@ -190,6 +205,13 @@
           "text": "Inspector",
           "onclick": "toggleMonitorRail()",
           "handler": "toggleMonitorRail"
+        },
+        {
+          "tag": "summary",
+          "id": null,
+          "text": "Project workspace loading",
+          "onclick": null,
+          "handler": null
         },
         {
           "tag": "input",
@@ -250,17 +272,6 @@
         },
         {
           "method": "GET",
-          "path": "/api/onboarding/preflight",
-          "certainty": "certain",
-          "state_changing": false,
-          "gates": [],
-          "handler": "refreshOnboarding",
-          "via": [
-            "refreshOnboarding"
-          ]
-        },
-        {
-          "method": "GET",
           "path": "/api/providers",
           "certainty": "certain",
           "state_changing": false,
@@ -269,6 +280,18 @@
           "via": [
             "openProvidersModal",
             "loadProviders"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/start/command-center",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "refreshStartCommand",
+          "via": [
+            "refreshOnboarding",
+            "refreshStartCommand"
           ]
         },
         {
@@ -1631,19 +1654,6 @@
             "handOffChatToHarness",
             "switchTab",
             "loadHarnessSessions"
-          ]
-        },
-        {
-          "method": "GET",
-          "path": "/api/onboarding/preflight",
-          "certainty": "certain",
-          "state_changing": false,
-          "gates": [],
-          "handler": "refreshOnboarding",
-          "via": [
-            "handOffChatToHarness",
-            "switchTab",
-            "refreshOnboarding"
           ]
         },
         {

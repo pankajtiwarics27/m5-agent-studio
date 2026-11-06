@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "captured_at": "2026-11-06T17:23:53.044Z",
+  "viewport": {
+    "width": 390,
+    "height": 844,
+    "device_scale_factor": 2
+  },
+  "variant": {
+    "theme": "light",
+    "density": null
+  },
+  "shots": [
+    {
+      "id": "start",
+      "tab": "start",
+      "file": "start.png",
+      "bytes": 148083,
+      "sha256": "428e07d8f5001068187e8c82e16f8eed6fea2d2d0f4a2143bb54e67e31ae5faf"
+    }
+  ]
+}

@@ -401,8 +401,13 @@ def test_a_swallowed_failure_is_caught(sources):
 
 
 def test_a_second_workspace_setting_is_caught(sources):
+    # Anchored on the sync list itself, not on the first `, "startWorkspaceInput"` in
+    # the document: the command center also names that input when it opens the
+    # workspace card, and a transform that edits a different line proves nothing.
     payload = sources(
-        html_transform=lambda text: text.replace(', "startWorkspaceInput"', "", 1)
+        html_transform=lambda text: text.replace(
+            '"cgWorkspaceInput", "startWorkspaceInput"', '"cgWorkspaceInput"', 1
+        )
     )
     assert "workspace-split" in _checks(payload)
 
