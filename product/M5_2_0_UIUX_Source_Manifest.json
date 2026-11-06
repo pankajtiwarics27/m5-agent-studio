@@ -299,9 +299,9 @@
     {
       "path": "tests/browser/accessibility_walk.mjs",
       "role": "browser accessibility walk with the current-main Chat handoff checks",
-      "sha256": "280026be916bd38f67574847705ce7c9c864df01e2268a617512d1146cdb7dc2",
-      "bytes": 23515,
-      "lines": 428
+      "sha256": "92a6a8717113dcad8a74a3975ecbab4edc20e096e77749e3e0e0da20db133ad6",
+      "bytes": 24194,
+      "lines": 442
     },
     {
       "path": "tests/test_presentations.py",

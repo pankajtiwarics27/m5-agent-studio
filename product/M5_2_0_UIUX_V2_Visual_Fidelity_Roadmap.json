@@ -2529,7 +2529,8 @@
           "product/M5_2_0_UIUX_MCP_Wizard.json, docs/uiux-2-2-mcp-wizard.md (generated)",
           "docs/media/mcp-wizard-uiv2-22/ (104 after PNGs + before-uiv2-22/ 104 PNGs + README)",
           "scripts/mcp_hub_walk.mjs (the hub walk walks the guide to its last step and ticks the consent a local command now needs, instead of waiting for the old button label; still 40/40), docs/media/mcp-hub/README.md (the hub captures are pinned at the UIV2-21 merge commit)",
-          "product/M5_2_0_UIUX_V2_Visual_Fidelity_Roadmap.json (this entry), scripts/uiux_source_manifest.py, scripts/uiux_control_inventory.py, scripts/uiux_overlay_inventory.py, scripts/uiux_tokens.py, scripts/uiux_polish_inventory.py, scripts/uiux_keyboard_a11y_inventory.py, scripts/uiux_screenshot_review.py, scripts/uiux_preservation_e2e.py + their generated artifacts (regenerated for the new markup)"
+          "product/M5_2_0_UIUX_V2_Visual_Fidelity_Roadmap.json (this entry), scripts/uiux_source_manifest.py, scripts/uiux_control_inventory.py, scripts/uiux_overlay_inventory.py, scripts/uiux_tokens.py, scripts/uiux_polish_inventory.py, scripts/uiux_keyboard_a11y_inventory.py, scripts/uiux_screenshot_review.py, scripts/uiux_preservation_e2e.py + their generated artifacts (regenerated for the new markup)",
+          "tests/browser/accessibility_walk.mjs (a dialog is named by `aria-label` or by an `aria-labelledby` that resolves to text; the hub labels itself from `#mcpHubTitle`, which the browser CI job had been failing on since UIV2-21 merged — main's `Browser safety regressions` job was already red at b06ab96)"
         ],
         "tests_executed": [
           "node scripts/mcp_wizard_walk.mjs (8 viewport x theme runs: 38/38 on all eight)",
@@ -2538,7 +2539,8 @@
           "python3 scripts/uiux_mcp_wizard_inventory.py --check",
           "python3 scripts/uiux_mcp_hub_inventory.py --check",
           "python3 scripts/uiux_release_gate.py",
-          "ruff check ."
+          "ruff check .",
+          "STUDIO_SCREENSHOT_CHROME=... M5_REQUIRE_BROWSER_TESTS=1 pytest -q -p scripts.browser_ci_no_skips tests/test_screenshot_capture_browser.py tests/test_uiux_adversarial_browser.py (32 passed — the browser CI job reproduced locally, green)"
         ],
         "visual_evidence": [
           "docs/media/mcp-wizard-uiv2-22/*.png (104: thirteen states x four viewports x two themes)",
@@ -2559,7 +2561,8 @@
         "known_regressions": [
           "A successful connection test is recorded in Activity, but a failed one is not: the server row keeps the sync note and the guide shows the failure, and the Activity tab only gains an entry for a test that discovered tools.",
           "The guide's `Advanced` disclosure still offers free-text headers and environment JSON; a value with a sensitive name is masked on read as before, but a mistyped header key is not validated until the connection test runs.",
-          "A headless container has no OS keyring, so the walk runs its fixture app with the same memory keyring stand-in the tests use; the app still refuses to persist a secret in SQLite, unchanged."
+          "A headless container has no OS keyring, so the walk runs its fixture app with the same memory keyring stand-in the tests use; the app still refuses to persist a secret in SQLite, unchanged.",
+          "The `Browser safety regressions` job was already failing on main at b06ab96 (UIV2-21's hub names its dialog with `aria-labelledby`); this PR repairs the check in `tests/browser/accessibility_walk.mjs` rather than changing the dialog, and the job passes locally with no skips."
         ],
         "blockers": [],
         "handoff_summary": "UIV2-22 done. Opening the MCP editor now starts a four-step guide instead of a single form: name the server, say how it is reached (HTTP with a password-field token, or a local command), choose what a call costs (with a consent that names the exact command and cannot grant the operator's stdio opt-in), then review the seven things that will be saved and press `Save & test connection`, which saves and tests in one request and reports `Connected — N tools discovered.` or the server's own refusal where the button was. 104 after captures at four viewports x two themes, 104 before captures on b06ab96 where the walk scores 12/38, gate 37/37 checks and 7/7 phase gates with 0 findings.",
