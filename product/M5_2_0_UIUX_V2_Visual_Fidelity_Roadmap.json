@@ -2519,7 +2519,7 @@
         "attempt_count": 1,
         "started_at": "2026-11-06T23:30:00+05:30",
         "completed_at": "2026-11-07T00:35:00+05:30",
-        "commit_sha": "PENDING_STORY_COMMIT",
+        "commit_sha": "76cfecd",
         "changed_files": [
           "static/index.html (MCP: the editor's body is now a four-step guide — `#mcpWizardSteps` rail with `aria-current` and `#mcpWizardProgress` in a live region, four `role=group` panels labelled by their headings, `mcpWizardValidate/Problem/Next/Back/Go`, `mcpWizardRefresh()` for the transport effect, the policy effect, the consent row and the `#mcpReviewList`; the token stays a password field with autocomplete off; `#mcpAdvancedJson` holds the raw headers and environment JSON behind one closed disclosure; `saveMcpServer()` re-checks steps 1-3, shows `Saving and testing…`, and renders `#mcpWizardResult` ok / failed / testing plus a confirmation that names the tool namespace; `mcpReviewRows()` reads only the presence of a typed token, never its characters)",
           "studio.py (built from the above by scripts/build_studio.py)",
