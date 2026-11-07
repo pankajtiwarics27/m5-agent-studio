@@ -380,11 +380,11 @@ provenance; a matching snapshot cannot clear separate review holds.
 | Input | Current digest | Owner-recorded digest |
 |---|---|---|
 | `ledger_content_sha256` | `d4137cf1e214931953734cc97943732ea5204b5884c6aa26339cc7c27ed5908b` | `not recorded` |
-| `source_manifest_sha256` | `6f71409a7649a590d29477eeb36a8c8c9fe84a1eb938ce0872e095cfa1a35cd2` | `not recorded` |
-| `control_inventory_sha256` | `e900baf7185e431069f9070f8e1d6dccd59ad68284a185e7eff46aa312434314` | `not recorded` |
-| `route_map_sha256` | `52c8cb4100c6c88085cf53ebab7aad7a9b64d17dc83c23ca6a278127a16a424a` | `not recorded` |
-| `authorization_trace_sha256` | `5ff22f1f7ded6cda429cf91c097387904fa2039a4c150494ccbac8f8f85e1640` | `not recorded` |
-| `frontend_sha256` | `8558d2b589d7373ed1519f559b0da44b7ffd6fe95331d10ab85dcf254b31a200` | `not recorded` |
+| `source_manifest_sha256` | `fa43fcfe7a4e330961bbeda03fecf1304a84078f9d1e423cff4b624d3f038740` | `not recorded` |
+| `control_inventory_sha256` | `88a42a729e07c0aa971829c4c1a07db2292fa9232ee632ac7acaef2b56803a63` | `not recorded` |
+| `route_map_sha256` | `b1ffdef1a8b0c4523aa34dcd76dd95f9b72c0d54a0b9514d934f6411110011e8` | `not recorded` |
+| `authorization_trace_sha256` | `355ed707b90beef33d8d088289b6cc41daa7cdc5fabfb4fb46dee9ac5a87ceea` | `not recorded` |
+| `frontend_sha256` | `8700b259b1429142cc00cc0e0895cf8fa25e9e5073742bd544a0f01d4427d435` | `not recorded` |
 | `screenshot_manifest_sha256` | `b488bf453ae260b6564ae592f0455e3d70cff3121dca1e7c823c7abb270b44d3` | `not recorded` |
 | `screenshot_index_sha256` | `16b0620ca1d02a1b181ad15b3a2b0c6aae9e7aa539654d27ed80d9147189634e` | `not recorded` |
 | `generator_sha256` | `6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65` | `not recorded` |
