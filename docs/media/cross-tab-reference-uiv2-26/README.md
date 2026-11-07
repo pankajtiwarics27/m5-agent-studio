@@ -44,16 +44,21 @@ annotations explain the on-demand integrations, explicit Inspector, and each pan
 feature-preserving difference. The candidate incorporates the owner-requested task-first layout
 integrated from `origin/main` `1b940bc`.
 
-The final candidate is bound to clean HEAD `5fd9196a902f0d8c6c072a5f0fce78940b248000`, candidate
-manifest SHA-256 `21198cd2cc318d30fdfc1391096a8ce3f7946ccd13cfc44549e43e0a2ae76ced`, and explicit
-human approval `user:Arena ask_user uiv2-26-task-first-approval=approve, 2026-11-07`. It has 48/48
+The final portable candidate is bound to clean HEAD `66eca66f06a6c08c95e5e3b93d24b4bef67854b2`, candidate
+manifest SHA-256 `d1065e2174248919da13307d4253eb6c3cb53aa9550e29f5ce5af762567b1126`, and explicit
+human approval `user:Arena ask_user uiv2-26-pinned-font-approval=approve, 2026-11-07`. It has 48/48
 captures and **2064/2064 checks**. A second independent candidate matched all 48 live and all 48
 reference structural signatures exactly. The subsequent approved `--check` exited 0 with
 **2160/2160 checks**. Exact signatures, image digests, and the approval reference are committed in
 `product/M5_2_0_UIUX_V2_Cross_Tab_Approval.json`; the candidate PNGs/manifests stay local.
 
-The earlier `efbe1c23…` approval at `cafdd08` was explicitly superseded after the task-first merge,
-not reused. The first integrated candidate exposed the old persistent-Inspector/integrations and
+The `21198cd2…` task-first approval was superseded when CI exposed Debian/Ubuntu system-font
+geometry drift. The walk now restricts both browser pages to the exact Open Sans regular/bold/italic
+files shipped by the pinned Chromium package and records their SHA-256 digests; no geometry tolerance
+was added. Diagnostic CI values matched this pinned candidate before its fresh approval. The earlier
+`efbe1c23…` approval at `cafdd08` was likewise superseded after the task-first merge, not reused.
+
+The first integrated candidate exposed the old persistent-Inspector/integrations and
 Harness-sidebar assumptions; the contract now positively asserts closed secondary chrome, visible
 unified task controls, retained but collapsed empty stages, shared desktop navigation/sessions, and
 a closed narrow-screen Sessions panel. Screenshot review also caught D1 outlining closed integrations

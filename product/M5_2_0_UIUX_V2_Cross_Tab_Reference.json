@@ -953,17 +953,17 @@
     "rule": "A human must approve the annotated candidate; the agent cannot infer or self-certify this decision.",
     "human_approval": {
       "decision": "approved",
-      "reference": "user:Arena ask_user uiv2-26-task-first-approval=approve, 2026-11-07",
-      "recorded_at": "2026-11-07T11:26:46.047813+00:00",
+      "reference": "user:Arena ask_user uiv2-26-pinned-font-approval=approve, 2026-11-07",
+      "recorded_at": "2026-11-07T13:12:29.528000+00:00",
       "scope": "Structural fidelity of all 48 annotated live/reference comparisons; not a pixel-clone claim."
     },
     "candidate": {
       "manifest": "docs/media/cross-tab-reference-uiv2-26/candidate/candidate-manifest.json",
-      "manifest_sha256": "21198cd2cc318d30fdfc1391096a8ce3f7946ccd13cfc44549e43e0a2ae76ced",
-      "git_head": "5fd9196a902f0d8c6c072a5f0fce78940b248000"
+      "manifest_sha256": "d1065e2174248919da13307d4253eb6c3cb53aa9550e29f5ce5af762567b1126",
+      "git_head": "66eca66f06a6c08c95e5e3b93d24b4bef67854b2"
     },
     "captures": 48,
-    "approval_sha256": "23b040260117a3f31160fbc9dc830519b793e396cfb057f860ab17303a3211f5"
+    "approval_sha256": "a5697bd3ae3e2b3c304e57f49e396e813ea3ef4d076c95d56a5cd6933252108c"
   },
   "totals": {
     "panes": 6,

@@ -636,8 +636,10 @@ REVIEWS: dict[str, dict[str, object]] = {
             "real 20px select/label overlap; the final frame retains the corrected two-control second row "
             "with non-overlap and >=44px select widths asserted in both themes. D1 outlines the visible "
             "Tools disclosure rather than its closed content; D2/D3 mark explicit Inspector and pane deltas. "
-            "The agent review is distinct from the explicit human decision: candidate 21198cd2cc318d30fdfc1391096a8ce3f7946ccd13cfc44549e43e0a2ae76ced "
-            "was approved through Arena ask_user uiv2-26-task-first-approval=approve on 2026-11-07."
+            "Pinned Chromium Open Sans files keep the raw geometry portable across Debian and Ubuntu; "
+            "there is no cross-host geometry tolerance. The agent review is distinct from the explicit "
+            "human decision: candidate d1065e2174248919da13307d4253eb6c3cb53aa9550e29f5ce5af762567b1126 "
+            "was approved through Arena ask_user uiv2-26-pinned-font-approval=approve on 2026-11-07."
         ),
         "eye": [
             "candidate/dark/1640x900/start/comparison.png",
