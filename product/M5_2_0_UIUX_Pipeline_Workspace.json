@@ -1,0 +1,305 @@
+{
+  "story": "UIV2-25",
+  "title": "Pipeline stage-focused workspace and artifacts",
+  "status": "clean",
+  "check_count": 28,
+  "source": {
+    "frontend": {
+      "path": "static/index.html",
+      "sha256": "b09835677705d4413d619b5d60361f4c92caf75679511369d2bdcf93c97850bb"
+    },
+    "backend": {
+      "path": "app.py",
+      "sha256": "af0b42f1333c4a6093432c7f48aad61233344ac0114bd27bf2e69d8c1aa73ad0"
+    },
+    "walk": {
+      "path": "scripts/pipeline_workspace_walk.mjs",
+      "sha256": "b8f237e79c10542d10fa2164614e6e24ad50e3aaf5c626efb9877e31084dd541"
+    },
+    "fixture": {
+      "path": "scripts/pipeline_recovery_seed.py",
+      "sha256": "d3f2dbb71fb220e5156535f5a5d866e7b8fbd3f9c361de19eb5609605aa7e28b"
+    }
+  },
+  "anchors": {
+    "pane": 3410,
+    "workspace": 3481,
+    "stage_selection": 9768,
+    "state_model": 9096,
+    "activity": 9047,
+    "stream_handlers": 9889,
+    "recovery": 9671
+  },
+  "stage_model": {
+    "overview": 0,
+    "stages": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "route": "/api/council/stream",
+    "payload_keys": [
+      "task",
+      "architect_model",
+      "coder_model",
+      "critic_model",
+      "judge_model",
+      "auto_unload",
+      "reasoning_mode",
+      "skills"
+    ]
+  },
+  "visual_matrix": {
+    "states": [
+      "empty",
+      "loading",
+      "populated",
+      "long-content",
+      "error",
+      "recovery"
+    ],
+    "viewports": [
+      "1640x900",
+      "1440x900",
+      "1280x800",
+      "390x844"
+    ],
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "required_captures": 48
+  },
+  "state_sources": [
+    {
+      "state": "empty",
+      "source": "no councilRun and no stage card",
+      "required_reading": "task, input, absent artifact and no invented events"
+    },
+    {
+      "state": "loading",
+      "source": "observed stage_start/token without stage_done usage",
+      "required_reading": "active seat only; no percentage or completed claim"
+    },
+    {
+      "state": "populated",
+      "source": "stage_done usage and council_done saved run id",
+      "required_reading": "one selected answer plus actual artifact/activity; All Stages remains available"
+    },
+    {
+      "state": "long-content",
+      "source": "real long provider stream in the selected Judge buffer",
+      "required_reading": "internal vertical reader, full output retained, no horizontal overflow"
+    },
+    {
+      "state": "error",
+      "source": "provider exception through the existing error SSE event",
+      "required_reading": "failed Critic selected, terminal Failed, retry and checkpoint visible"
+    },
+    {
+      "state": "recovery",
+      "source": "browser checkpoint restored through applyRecoveredStages",
+      "required_reading": "provenance, original task/output, no POST, workspace focus without scroll"
+    }
+  ],
+  "checks": [
+    {
+      "check": "pane-anchor",
+      "rule": "Pipeline remains #pane-council, opened by the existing council tab",
+      "passed": true,
+      "finding": "",
+      "evidence": "id=\"pane-council\""
+    },
+    {
+      "check": "four-stage-timeline",
+      "rule": "All Stages plus exactly the server's four stage buttons survive",
+      "passed": true,
+      "finding": "",
+      "evidence": "0, 1, 2, 3, 4"
+    },
+    {
+      "check": "original-controls",
+      "rule": "The original task, run, stop, model and reasoning controls are preserved",
+      "passed": true,
+      "finding": "",
+      "evidence": "councilPrompt, councilRunBtn, councilStopBtn, c-arch, c-coder, c-critic, c-judge, c-unload, c-reasoning, step-card-0"
+    },
+    {
+      "check": "task-first",
+      "rule": "Task content leads setup, diagnostics and the selected-stage workspace",
+      "passed": true,
+      "finding": "",
+      "evidence": "prompt \u2192 setup \u2192 timeline \u2192 workspace"
+    },
+    {
+      "check": "setup-disclosure",
+      "rule": "Stage setup is a closed native disclosure whose summary states its contents",
+      "passed": true,
+      "finding": "",
+      "evidence": "#pipelineSetup / #pipelineSetupState"
+    },
+    {
+      "check": "stage-keyboard",
+      "rule": "One delegated strip handler navigates Arrow/Home/End without scrolling; Enter remains native",
+      "passed": true,
+      "finding": "",
+      "evidence": "#pipelineStageStrip keydown delegation + native Enter"
+    },
+    {
+      "check": "roving-selection",
+      "rule": "Selection is bounded to 0..4 and synchronizes aria-pressed, roving tabindex and the workspace",
+      "passed": true,
+      "finding": "",
+      "evidence": "selectStageFilter(n)"
+    },
+    {
+      "check": "selected-workspace",
+      "rule": "The workspace holds selected output, logs and artifacts with the original stage container",
+      "passed": true,
+      "finding": "",
+      "evidence": "#pipelineWorkspace > output + Logs & artifacts"
+    },
+    {
+      "check": "meaningful-empty",
+      "rule": "No-run and not-run stages explain what exists instead of leaving an empty expanse",
+      "passed": true,
+      "finding": "",
+      "evidence": "#pipelineStageEmpty[data-state]"
+    },
+    {
+      "check": "workspace-state-model",
+      "rule": "Empty/loading/populated/error/recovery derive from run state and real buffers, never fake progress",
+      "passed": true,
+      "finding": "",
+      "evidence": "empty, loading, populated, long-content, error, recovery"
+    },
+    {
+      "check": "observed-activity",
+      "rule": "Activity entries originate in run/stream/recovery handlers and are filtered by selected stage",
+      "passed": true,
+      "finding": "",
+      "evidence": "run/start/output/done/unloading/saved/error/stopped/dropped/recovered"
+    },
+    {
+      "check": "bounded-activity",
+      "rule": "The observed event ledger is bounded and the public test surface returns copies",
+      "passed": true,
+      "finding": "",
+      "evidence": "80 observed events"
+    },
+    {
+      "check": "stable-output",
+      "rule": "Identical output is not redrawn and workspace selection does not replace stage DOM",
+      "passed": true,
+      "finding": "",
+      "evidence": "stageContentSignature + stable #councilStagesContainer"
+    },
+    {
+      "check": "artifact-handoff-preserved",
+      "rule": "Measured artifacts, contracts, handoffs and deliberation evidence still render from the same buffers",
+      "passed": true,
+      "finding": "",
+      "evidence": "renderCouncilArtifacts + renderDeliberationEvidence"
+    },
+    {
+      "check": "api-payload-preserved",
+      "rule": "Runs keep the original four-seat payload and POST only the existing council stream",
+      "passed": true,
+      "finding": "",
+      "evidence": "task, architect_model, coder_model, critic_model, judge_model, auto_unload, reasoning_mode, skills"
+    },
+    {
+      "check": "failure-selection",
+      "rule": "Failure, stop and drop select the affected seat even after another stage was selected",
+      "passed": true,
+      "finding": "",
+      "evidence": "error/stopped/closed \u2192 failedStage"
+    },
+    {
+      "check": "truthful-terminal-state",
+      "rule": "Normal close is not a drop, and failed/stopped/dropped overviews cannot keep saying Running",
+      "passed": true,
+      "finding": "",
+      "evidence": "four usage records + terminal overview labels"
+    },
+    {
+      "check": "recovery-priority",
+      "rule": "Failure/checkpoint recovery leads output; routine saved-run confirmation follows it",
+      "passed": true,
+      "finding": "",
+      "evidence": "recorded afterend; other recovery beforebegin"
+    },
+    {
+      "check": "checkpoint-recovery",
+      "rule": "Checkpoint restore draws the kept stages, starts no stream, and lands focus without scrolling",
+      "passed": true,
+      "finding": "",
+      "evidence": "restorePipelineCheckpoint \u2192 applyRecoveredStages"
+    },
+    {
+      "check": "evidence-disclosure",
+      "rule": "Run evidence is progressively disclosed and the old walk opens the real summary",
+      "passed": true,
+      "finding": "",
+      "evidence": "#pipelineEvidenceDetails > summary"
+    },
+    {
+      "check": "contract-progressive-disclosure",
+      "rule": "Contract and handoff stay in the same card, disclosed after the answer they describe",
+      "passed": true,
+      "finding": "",
+      "evidence": "output \u2192 Contract & handoff disclosure"
+    },
+    {
+      "check": "long-output-reader",
+      "rule": "Long output scrolls inside its reader and wraps instead of widening the page",
+      "passed": true,
+      "finding": "",
+      "evidence": "selected .stage-output-body + full-tail assertion"
+    },
+    {
+      "check": "responsive-workspace",
+      "rule": "Desktop, short-desktop and phone layouts preserve a no-horizontal-overflow selected workspace",
+      "passed": true,
+      "finding": "",
+      "evidence": "1640/1440/1280/390 + short-height compaction"
+    },
+    {
+      "check": "inspector-readable",
+      "rule": "Inspector stage metadata is separated and recovered state is not mislabelled done",
+      "passed": true,
+      "finding": "",
+      "evidence": "step-meta spans + terminal overview + immediate selection/stream/finalizer synchronization"
+    },
+    {
+      "check": "walk-matrix",
+      "rule": "The story walk captures every required state, viewport and theme and refuses missing evidence",
+      "passed": true,
+      "finding": "",
+      "evidence": "48 captures + N/N checks + hashed manifest"
+    },
+    {
+      "check": "walk-real-fixture",
+      "rule": "The walk starts its own seeded app/Chromium and exercises real keyboard, focus, scroll, payload and error paths",
+      "passed": true,
+      "finding": "",
+      "evidence": "self-start fixture + real Chromium + interactions"
+    },
+    {
+      "check": "seed-real-stream",
+      "rule": "Slow/long/error states are additive provider behaviours through the server's real stream",
+      "passed": true,
+      "finding": "",
+      "evidence": "architect-loading-demo / judge-long-content-demo / critic-fails-demo"
+    },
+    {
+      "check": "backend-stage-contract",
+      "rule": "The authenticated backend route still constructs exactly four known stages and no invented stage",
+      "passed": true,
+      "finding": "",
+      "evidence": "WorkflowStage(1..4) + existing orchestrator"
+    }
+  ],
+  "findings": []
+}

@@ -6,9 +6,9 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 re-derived from the markup on every run.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
-* Frontend digest: `c987ba5f055cbd14a38dca8508479f466c5b5e07f5ee0265a33c474172b0411d`.
-* Panes: 6 · controls in panes: 102 · controls in the
-  shared chrome: 126 · script-rendered: 71.
+* Frontend digest: `b09835677705d4413d619b5d60361f4c92caf75679511369d2bdcf93c97850bb`.
+* Panes: 6 · controls in panes: 103 · controls in the
+  shared chrome: 127 · script-rendered: 71.
 
 ## What this page is, and is not
 
@@ -24,16 +24,16 @@ the end, attributed to the function that renders them — a heuristic, not a cal
 | start | `pane-start` | 14 | 8 | 0 | button 8, input 2, select 1, summary 3 |
 | harness | `pane-harness` | 30 | 9 | 0 | button 16, input 3, select 9, summary 1, textarea 1 |
 | hall | `pane-hall` | 20 | 3 | 0 | button 9, select 8, summary 2, textarea 1 |
-| council | `pane-council` | 16 | 2 | 0 | button 9, input 1, select 5, textarea 1 |
+| council | `pane-council` | 17 | 2 | 0 | button 9, input 1, select 5, summary 1, textarea 1 |
 | debate | `pane-debate` | 10 | 1 | 0 | button 5, input 1, select 2, summary 1, textarea 1 |
 | chat | `pane-chat` | 12 | 0 | 0 | button 5, input 3, select 3, textarea 1 |
-| (chrome) | outside the panes | 126 | 47 | 0 | button 73, input 31, select 12, summary 4, textarea 6 |
+| (chrome) | outside the panes | 127 | 48 | 0 | button 73, input 31, select 12, summary 5, textarea 6 |
 
 ## What the numbers already say
 
-* 228 controls are in the markup and 71 more are built by script — a checklist written from the markup alone would miss 24% of the interactive surface.
-* The shared chrome carries 126 controls; all six panes together carry 102. Most of the clicking happens in the shell, not inside a tab.
-* 70 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
+* 230 controls are in the markup and 71 more are built by script — a checklist written from the markup alone would miss 24% of the interactive surface.
+* The shared chrome carries 127 controls; all six panes together carry 103. Most of the clicking happens in the shell, not inside a tab.
+* 71 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
 
 ## Pane `start`
 
@@ -122,26 +122,27 @@ Section `pane-hall`, 20 interactive elements.
 
 ## Pane `council`
 
-Section `pane-council`, 16 interactive elements.
+Section `pane-council`, 17 interactive elements.
 
 | # | Element | id | Type | Label or text | Handler |
 |---|---|---|---|---|---|
-| 1 | select | c-arch | — | — | — |
-| 2 | select | c-coder | — | — | — |
-| 3 | select | c-critic | — | — | — |
-| 4 | select | c-judge | — | — | — |
-| 5 | input | c-unload | checkbox | — | — |
-| 6 | select | c-reasoning | — | Off — Direct Fast (~29 tok/s) Low — Bounded (900t cap) Medium — Deep (1800t cap) | — |
-| 7 | textarea | councilPrompt | — | Pipeline task | — |
-| 8 | button | — | button | Token Bucket | setCouncilPreset('Write an async token-bucket rate limiter in Python safe under concurrent asyncio tasks.') |
-| 9 | button | — | button | Portfolio Actor | setCouncilPreset('Design an event-sourced Portfolio Rebalancer Actor in Python with integer atomic units, deterministic MarketSnapshot replay, and stale-price circuit breakers.') |
-| 10 | button | councilStopBtn | — | Stop | stopActiveStream() |
-| 11 | button | councilRunBtn | — | Run pipeline | runCouncil() |
-| 12 | button | step-card-0 | button | VIEWAll Stages Ready | selectStageFilter(0) |
-| 13 | button | step-card-1 | button | 1 • ARCHITECTSpec Idle | selectStageFilter(1) |
-| 14 | button | step-card-2 | button | 2 • CODERDraft Idle | selectStageFilter(2) |
-| 15 | button | step-card-3 | button | 3 • CRITICAudit Idle | selectStageFilter(3) |
-| 16 | button | step-card-4 | button | 4 • JUDGEFinal Idle | selectStageFilter(4) |
+| 1 | textarea | councilPrompt | — | Pipeline task | — |
+| 2 | button | — | button | Token Bucket | setCouncilPreset('Write an async token-bucket rate limiter in Python safe under concurrent asyncio tasks.') |
+| 3 | button | — | button | Portfolio Actor | setCouncilPreset('Design an event-sourced Portfolio Rebalancer Actor in Python with integer atomic units, deterministic MarketSnapshot replay, and stale-price circuit breakers.') |
+| 4 | button | councilStopBtn | — | Stop | stopActiveStream() |
+| 5 | button | councilRunBtn | — | Run pipeline | runCouncil() |
+| 6 | summary | pipelineSetupSummary | — | Stage setup4 voice selectors · auto-unload on · reasoning off | — |
+| 7 | select | c-arch | — | — | — |
+| 8 | select | c-coder | — | — | — |
+| 9 | select | c-critic | — | — | — |
+| 10 | select | c-judge | — | — | — |
+| 11 | input | c-unload | checkbox | — | — |
+| 12 | select | c-reasoning | — | Off — Direct Fast (~29 tok/s) Low — Bounded (900t cap) Medium — Deep (1800t cap) | — |
+| 13 | button | step-card-0 | button | RUNAll stages Ready | selectStageFilter(0) |
+| 14 | button | step-card-1 | button | 01 · ARCHITECTSpec Idle | selectStageFilter(1) |
+| 15 | button | step-card-2 | button | 02 · BUILDERDraft Idle | selectStageFilter(2) |
+| 16 | button | step-card-3 | button | 03 · CRITICAudit Idle | selectStageFilter(3) |
+| 17 | button | step-card-4 | button | 04 · JUDGEFinal Idle | selectStageFilter(4) |
 
 ## Pane `debate`
 
@@ -181,7 +182,7 @@ Section `pane-chat`, 12 interactive elements.
 
 ## Shared chrome
 
-126 interactive elements outside every pane (tab bar,
+127 interactive elements outside every pane (tab bar,
 top bar and monitor rail). These are reachable from all six tabs, which is why they are not
 attributed to one.
 
@@ -313,6 +314,7 @@ attributed to one.
 | 124 | select | integrationsQuickMenu | — | Open studio tools and integrations | openIntegrationFromMenu(this) |
 | 125 | button | monitorToggleBtn | — | Toggle the contextual inspector | toggleMonitorRail() |
 | 126 | button | — | — | Unload every local model to free memory | unloadAllModels() |
+| 127 | summary | — | — | Run evidenceContracts, handoffs and measured verdicts | — |
 
 ## Controls built by script
 

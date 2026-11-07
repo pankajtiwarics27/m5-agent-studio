@@ -26,11 +26,11 @@
     "approved_inputs": null,
     "current_inputs": {
       "ledger_content_sha256": "d4137cf1e214931953734cc97943732ea5204b5884c6aa26339cc7c27ed5908b",
-      "source_manifest_sha256": "1218bb7cbeb890398449c22ed017dfa7a859c86d752d5c2c6af4f080676a0614",
-      "control_inventory_sha256": "ada8bfde73b0e7ac5176cdd9951f7cace9383d1f7ee7b3ea870d304d8606bd6a",
-      "route_map_sha256": "2c8cdcde166df2768ac6692362692b7bff10ba96e42f28348bd239fb0a3cbb2a",
-      "authorization_trace_sha256": "bd220c1c250f1cb371ac0b072dc6091f97061814822115732cdf5666f2d09615",
-      "frontend_sha256": "c987ba5f055cbd14a38dca8508479f466c5b5e07f5ee0265a33c474172b0411d",
+      "source_manifest_sha256": "04ad11a875d067c5d24b84521a58b6fba97c0904959a2c85b6a35a8e4eb42f16",
+      "control_inventory_sha256": "c3473bdada882790e68d1170253bf2d109bebccfbf79aabd239c3368a7d8d316",
+      "route_map_sha256": "e9e39ceef097d77caf0a15aa7ae9fef602008d87ee15fd124aae60066c95c0cd",
+      "authorization_trace_sha256": "d9109dbe62595e92d110c1e0acf5fdc9d16635ba24bf5e3cc5e0917778f01775",
+      "frontend_sha256": "b09835677705d4413d619b5d60361f4c92caf75679511369d2bdcf93c97850bb",
       "screenshot_manifest_sha256": "b488bf453ae260b6564ae592f0455e3d70cff3121dca1e7c823c7abb270b44d3",
       "screenshot_index_sha256": "16b0620ca1d02a1b181ad15b3a2b0c6aae9e7aa539654d27ed80d9147189634e",
       "generator_sha256": "6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65",
@@ -40,11 +40,11 @@
   },
   "inputs": {
     "ledger_sha256": "1adcb5f5fe82d14855291246cfe4ed08aafb57ab7143703a1ce5e3c5fc0ea43c",
-    "source_manifest_sha256": "1218bb7cbeb890398449c22ed017dfa7a859c86d752d5c2c6af4f080676a0614",
-    "control_inventory_sha256": "ada8bfde73b0e7ac5176cdd9951f7cace9383d1f7ee7b3ea870d304d8606bd6a",
-    "route_map_sha256": "2c8cdcde166df2768ac6692362692b7bff10ba96e42f28348bd239fb0a3cbb2a",
-    "authorization_trace_sha256": "bd220c1c250f1cb371ac0b072dc6091f97061814822115732cdf5666f2d09615",
-    "frontend_sha256": "c987ba5f055cbd14a38dca8508479f466c5b5e07f5ee0265a33c474172b0411d"
+    "source_manifest_sha256": "04ad11a875d067c5d24b84521a58b6fba97c0904959a2c85b6a35a8e4eb42f16",
+    "control_inventory_sha256": "c3473bdada882790e68d1170253bf2d109bebccfbf79aabd239c3368a7d8d316",
+    "route_map_sha256": "e9e39ceef097d77caf0a15aa7ae9fef602008d87ee15fd124aae60066c95c0cd",
+    "authorization_trace_sha256": "d9109dbe62595e92d110c1e0acf5fdc9d16635ba24bf5e3cc5e0917778f01775",
+    "frontend_sha256": "b09835677705d4413d619b5d60361f4c92caf75679511369d2bdcf93c97850bb"
   },
   "approval_request": [
     {
@@ -55,7 +55,7 @@
     {
       "id": 2,
       "ask": "Accept the control inventory as the list of controls that must stay reachable",
-      "evidence": "228 markup controls (126 chrome, 102 panes) plus 71 rendered by script"
+      "evidence": "230 markup controls (127 chrome, 103 panes) plus 71 rendered by script"
     },
     {
       "id": 3,
@@ -76,9 +76,9 @@
   "totals": {
     "panes": 6,
     "preserved_capabilities": 21,
-    "markup_controls": 228,
-    "chrome_controls": 126,
-    "pane_controls": 102,
+    "markup_controls": 230,
+    "chrome_controls": 127,
+    "pane_controls": 103,
     "script_rendered_controls": 71,
     "routes": 118,
     "routes_with_resolved_or_possible_caller": 71,
@@ -1216,14 +1216,57 @@
           "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
         }
       ],
-      "control_count": 16,
+      "control_count": 17,
       "counts": {
         "button": 9,
         "input": 1,
         "select": 5,
+        "summary": 1,
         "textarea": 1
       },
       "controls": [
+        {
+          "tag": "textarea",
+          "id": "councilPrompt",
+          "text": "Write an async token-bucket rate limiter in Python safe under concurrent asyncio tasks, with graceful cancellation and unit tests.",
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "text": "Token Bucket",
+          "onclick": "setCouncilPreset('Write an async token-bucket rate limiter in Python safe under concurrent asyncio tasks.')",
+          "handler": "setCouncilPreset"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "text": "Portfolio Actor",
+          "onclick": "setCouncilPreset('Design an event-sourced Portfolio Rebalancer Actor in Python with integer atomic units, deterministic MarketSnapshot replay, and stale-price circuit breakers.')",
+          "handler": "setCouncilPreset"
+        },
+        {
+          "tag": "button",
+          "id": "councilStopBtn",
+          "text": "Stop",
+          "onclick": "stopActiveStream()",
+          "handler": "stopActiveStream"
+        },
+        {
+          "tag": "button",
+          "id": "councilRunBtn",
+          "text": "Run pipeline",
+          "onclick": "runCouncil()",
+          "handler": "runCouncil"
+        },
+        {
+          "tag": "summary",
+          "id": "pipelineSetupSummary",
+          "text": "Stage setup4 voice selectors · auto-unload on · reasoning off",
+          "onclick": null,
+          "handler": null
+        },
         {
           "tag": "select",
           "id": "c-arch",
@@ -1267,72 +1310,37 @@
           "handler": null
         },
         {
-          "tag": "textarea",
-          "id": "councilPrompt",
-          "text": "Write an async token-bucket rate limiter in Python safe under concurrent asyncio tasks, with graceful cancellation and unit tests.",
-          "onclick": null,
-          "handler": null
-        },
-        {
-          "tag": "button",
-          "id": null,
-          "text": "Token Bucket",
-          "onclick": "setCouncilPreset('Write an async token-bucket rate limiter in Python safe under concurrent asyncio tasks.')",
-          "handler": "setCouncilPreset"
-        },
-        {
-          "tag": "button",
-          "id": null,
-          "text": "Portfolio Actor",
-          "onclick": "setCouncilPreset('Design an event-sourced Portfolio Rebalancer Actor in Python with integer atomic units, deterministic MarketSnapshot replay, and stale-price circuit breakers.')",
-          "handler": "setCouncilPreset"
-        },
-        {
-          "tag": "button",
-          "id": "councilStopBtn",
-          "text": "Stop",
-          "onclick": "stopActiveStream()",
-          "handler": "stopActiveStream"
-        },
-        {
-          "tag": "button",
-          "id": "councilRunBtn",
-          "text": "Run pipeline",
-          "onclick": "runCouncil()",
-          "handler": "runCouncil"
-        },
-        {
           "tag": "button",
           "id": "step-card-0",
-          "text": "VIEWAll Stages Ready",
+          "text": "RUNAll stages Ready",
           "onclick": "selectStageFilter(0)",
           "handler": "selectStageFilter"
         },
         {
           "tag": "button",
           "id": "step-card-1",
-          "text": "1 • ARCHITECTSpec Idle",
+          "text": "01 · ARCHITECTSpec Idle",
           "onclick": "selectStageFilter(1)",
           "handler": "selectStageFilter"
         },
         {
           "tag": "button",
           "id": "step-card-2",
-          "text": "2 • CODERDraft Idle",
+          "text": "02 · BUILDERDraft Idle",
           "onclick": "selectStageFilter(2)",
           "handler": "selectStageFilter"
         },
         {
           "tag": "button",
           "id": "step-card-3",
-          "text": "3 • CRITICAudit Idle",
+          "text": "03 · CRITICAudit Idle",
           "onclick": "selectStageFilter(3)",
           "handler": "selectStageFilter"
         },
         {
           "tag": "button",
           "id": "step-card-4",
-          "text": "4 • JUDGEFinal Idle",
+          "text": "04 · JUDGEFinal Idle",
           "onclick": "selectStageFilter(4)",
           "handler": "selectStageFilter"
         }
@@ -1680,12 +1688,12 @@
     }
   ],
   "chrome": {
-    "control_count": 126,
+    "control_count": 127,
     "counts": {
       "button": 73,
       "input": 31,
       "select": 12,
-      "summary": 4,
+      "summary": 5,
       "textarea": 6
     },
     "note": "Tabs, command palette, modals and the shared toolbar. A pane story may restyle chrome, but every control here stays reachable: the inventory test fails if one disappears."

@@ -256,6 +256,12 @@ async function readStages(page) {
 
 /** The deliberation evidence block, as the page renders it. */
 async function readEvidence(page) {
+  // UIV2-25 keeps diagnostics disclosed on demand. Open through the real summary control;
+  // do not set `open` programmatically or expand the pane permanently to satisfy this walk.
+  await page.evaluate(() => {
+    const details = document.getElementById("pipelineEvidenceDetails");
+    if (details && !details.hidden && !details.open) details.querySelector("summary")?.click();
+  });
   return page.evaluate(() => {
     const clean = (text) => (text || "").replace(/\s+/g, " ").trim();
     const host = document.getElementById("deliberationEvidence");

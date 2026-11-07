@@ -5867,6 +5867,140 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
 
+
+  /* UIV2-25 — selected-stage developer workspace. The four server stages and the original
+     controls stay in place; task and output lead, while setup and run evidence disclose on demand. */
+  #pane-council .pipeline-composer { padding: 10px 14px; margin-bottom: 10px; }
+  #pane-council .pipeline-task-head { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; color: var(--text-dim); font-size: 11px; }
+  #pane-council .pipeline-task-head .field-lbl { margin: 0; color: var(--text-dim); }
+  #pane-council .pipeline-route { margin-left: auto; white-space: nowrap; }
+  #pane-council .pipeline-composer textarea { min-height: 48px; max-height: 180px; padding: 2px 0; line-height: 1.45; }
+  #pane-council .pipeline-composer .prompt-footer { margin-top: 6px; }
+  #pane-council .pipeline-setup { margin-bottom: 14px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--bg-card); }
+  #pane-council .pipeline-setup > summary { min-height: 40px; padding: 9px 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; color: var(--text-dim); font-size: 11px; }
+  #pane-council .pipeline-setup > summary strong { color: var(--text); font-size: 12px; }
+  #pane-council .pipeline-setup > summary:focus-visible,
+  #pane-council .pipeline-evidence-details > summary:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; border-radius: var(--radius-md); }
+  #pane-council .pipeline-setup[open] > summary { border-bottom: 1px solid var(--border); }
+  #pane-council .pipeline-setup .config-strip { border: 0; margin: 0; background: transparent; }
+  #pane-council .pipeline-timeline-head { display: flex; justify-content: space-between; margin: 0 1px 8px; color: var(--text-dim); font-size: 11px; }
+  #pane-council .pipeline-timeline-head > div { display: flex; flex-direction: column; gap: 2px; }
+  #pane-council .pipeline-timeline-head .field-lbl { margin: 0; }
+  #pane-council .stepper { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 7px; overflow: visible; margin-bottom: 12px; }
+  #pane-council .step-card { min-width: 0; min-height: 76px; padding: 9px 10px; text-align: left; box-shadow: none; }
+  #pane-council .step-card .step-num { font-size: 9px; letter-spacing: .07em; white-space: nowrap; }
+  #pane-council .step-card .step-title { font-size: 12px; }
+  #pane-council .step-card .step-meta { gap: 5px; flex-wrap: wrap; font-size: 10px; line-height: 1.25; }
+  #pane-council .step-card.selected { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  #pane-council .step-card.running { border-color: var(--accent); }
+  #pane-council .step-card.done:not(.selected) { border-color: color-mix(in srgb, var(--emerald) 38%, var(--border)); }
+  #pane-council .pipeline-overview-button { background: var(--bg-elev); }
+  #pane-council .council-artifacts { margin-bottom: 12px; padding: 10px 12px; font-size: 11px; }
+  #pane-council .pipeline-recovery { margin-bottom: 12px; }
+  #pane-council .pipeline-recovery .presentation { padding: 12px 14px; }
+  #pane-council .pipeline-recovery .presentation-cause,
+  #pane-council .pipeline-recovery .presentation-context { font-size: 11px; line-height: 1.5; }
+  #pane-council .pipeline-recovery[data-state="recorded"] .presentation { min-height: 48px; padding: 8px 12px; }
+  #pane-council .pipeline-recovery[data-state="recorded"] .presentation > div { display: flex; flex: 1; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  #pane-council .pipeline-recovery[data-state="recorded"] .presentation-title { margin: 0; font-size: 11px; }
+  #pane-council .pipeline-recovery[data-state="recorded"] .presentation-cause,
+  #pane-council .pipeline-recovery[data-state="recorded"] .presentation-context { display: none; }
+  #pane-council .pipeline-recovery[data-state="recorded"] .presentation-actions { margin: 0; }
+
+  #pane-council .pipeline-workspace { min-width: 0; margin-bottom: 12px; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--bg-card); }
+  #pane-council .pipeline-workspace-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding: 13px 15px 12px; border-bottom: 1px solid var(--border); }
+  #pane-council .pipeline-workspace-head .field-lbl { margin: 0 0 4px; }
+  #pane-council .pipeline-workspace-head h3 { margin: 0; font-size: 14px; line-height: 1.35; }
+  #pane-council .pipeline-workspace-head h3:focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; border-radius: var(--radius-sm); }
+  #pane-council .pipeline-workspace-head p { margin: 4px 0 0; color: var(--text-dim); font-size: 11px; line-height: 1.45; }
+  #pane-council .pipeline-workspace-head .status { flex: 0 0 auto; margin-top: 2px; }
+  #pane-council .pipeline-workspace-grid { display: grid; grid-template-columns: minmax(0, 1fr) 260px; min-width: 0; }
+  #pane-council .pipeline-output-panel,
+  #pane-council .pipeline-context-panel { min-width: 0; }
+  #pane-council .pipeline-output-panel { border-right: 1px solid var(--border); }
+  #pane-council .pipeline-context-panel { background: color-mix(in srgb, var(--bg-elev) 55%, var(--bg-card)); }
+  #pane-council .pipeline-panel-head { min-height: 42px; padding: 11px 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; border-bottom: 1px solid var(--border); font-size: 11px; }
+  #pane-council .pipeline-panel-head > span { color: var(--text-dim); font-size: 10px; text-align: right; }
+  #pane-council .pipeline-stage-empty { min-height: 190px; padding: 30px 22px; display: flex; flex-direction: column; justify-content: center; gap: 7px; color: var(--text-dim); }
+  #pane-council .pipeline-stage-empty[hidden] { display: none; }
+  #pane-council .pipeline-stage-empty strong { color: var(--text); font-size: 13px; }
+  #pane-council .pipeline-stage-empty span { max-width: 62ch; font-size: 12px; line-height: 1.55; }
+  #pane-council #councilStagesContainer:empty { display: none; }
+  #pane-council #councilStagesContainer > .stage-output-card { margin: 0; border: 0; border-radius: 0; box-shadow: none; }
+  #pane-council #councilStagesContainer > .stage-output-card + .stage-output-card { border-top: 1px solid var(--border); }
+  #pane-council .stage-output-head { padding: 10px 14px; }
+  #pane-council .stage-output-body { max-height: min(52vh, 560px); padding: 12px 14px; overflow-y: auto; overflow-wrap: anywhere; }
+  #pane-council .stage-output-body:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
+  #pane-council .pipeline-workspace:not([data-stage="0"]) .stage-output-head > div:first-child strong { display: none; }
+  #pane-council .stage-evidence { border-top: 1px solid var(--border); }
+  #pane-council .stage-evidence > summary { padding: 7px 14px; cursor: pointer; color: var(--text-dim); font-size: 10px; }
+  #pane-council .stage-evidence > summary:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
+  #pane-council .stage-contract,
+  #pane-council .stage-handoff,
+  #pane-council .stage-artifact { padding-left: 14px; padding-right: 14px; }
+  #pane-council .pipeline-stage-facts { margin: 0; padding: 10px 14px; display: grid; gap: 9px; }
+  #pane-council .pipeline-stage-facts > div { min-width: 0; }
+  #pane-council .pipeline-stage-facts dt { margin-bottom: 2px; color: var(--text-dim); font-size: 9px; text-transform: uppercase; letter-spacing: .06em; }
+  #pane-council .pipeline-stage-facts dd { margin: 0; overflow-wrap: anywhere; color: var(--text); font-size: 11px; line-height: 1.4; }
+  #pane-council .pipeline-activity-head { display: flex; justify-content: space-between; gap: 8px; padding: 10px 14px 7px; border-top: 1px solid var(--border); font-size: 11px; }
+  #pane-council .pipeline-activity-head span { color: var(--text-faint); font-size: 9px; }
+  #pane-council .pipeline-activity-log { max-height: 260px; margin: 0; padding: 0 12px 12px 14px; overflow-y: auto; list-style: none; }
+  #pane-council .pipeline-activity-log li { position: relative; padding: 6px 0 6px 12px; border-left: 1px solid var(--border); color: var(--text-dim); font-size: 10px; line-height: 1.45; overflow-wrap: anywhere; }
+  #pane-council .pipeline-activity-log li::before { content: ""; position: absolute; left: -3px; top: 11px; width: 5px; height: 5px; border-radius: 50%; background: var(--text-faint); }
+  #pane-council .pipeline-activity-log li[data-kind="error"] { color: var(--rose); }
+  #pane-council .pipeline-activity-log li[data-kind="error"]::before { background: var(--rose); }
+  #pane-council .pipeline-activity-log li[data-kind="done"],
+  #pane-council .pipeline-activity-log li[data-kind="saved"] { color: var(--text); }
+  #pane-council .pipeline-activity-log li[data-kind="done"]::before,
+  #pane-council .pipeline-activity-log li[data-kind="saved"]::before { background: var(--emerald); }
+  #pane-council .pipeline-activity-log .pipeline-activity-empty { border-left: 0; padding-left: 0; }
+  #pane-council .pipeline-activity-log .pipeline-activity-empty::before { display: none; }
+  #pane-council .pipeline-activity-time { display: block; color: var(--text-faint); font-family: var(--mono); font-size: 9px; }
+  #pane-council .pipeline-evidence-details { margin-bottom: 12px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--bg-card); }
+  #pane-council .pipeline-evidence-details > summary { padding: 11px 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer; font-size: 11px; }
+  #pane-council .pipeline-evidence-details > summary span { color: var(--text-dim); font-size: 10px; }
+  #pane-council .pipeline-evidence-details[open] > summary { border-bottom: 1px solid var(--border); }
+  #pane-council .pipeline-evidence-details .deliberation-evidence { margin: 0; border: 0; border-radius: 0; overflow-x: auto; }
+
+  @media (min-width: 800px) and (max-height: 820px) {
+    #pane-council .pipeline-composer { padding-top: 8px; padding-bottom: 8px; }
+    #pane-council .pipeline-composer textarea { min-height: 40px; }
+    #pane-council .pipeline-composer .prompt-footer .btn { min-height: 32px; height: 32px; }
+    #pane-council .pipeline-composer .chip { min-height: 26px; }
+    #pane-council .pipeline-timeline-head { margin-bottom: 6px; }
+    #pane-council .step-card { min-height: 64px; padding-top: 6px; padding-bottom: 6px; }
+    #pane-council .council-artifacts { padding-top: 7px; padding-bottom: 7px; line-height: 1.35; }
+    #pane-council .pipeline-workspace-head { padding-top: 10px; padding-bottom: 9px; }
+    #pane-council .pipeline-workspace-head p { margin-top: 2px; }
+    #pane-council .pipeline-panel-head { min-height: 36px; padding-top: 8px; padding-bottom: 8px; }
+    #pane-council .stage-output-head { padding-top: 6px; padding-bottom: 6px; }
+  }
+  @media (max-width: 1279px) {
+    #pane-council .pipeline-workspace-grid { grid-template-columns: minmax(0, 1fr); }
+    #pane-council .pipeline-output-panel { border-right: 0; }
+    #pane-council .pipeline-context-panel { border-top: 1px solid var(--border); }
+    #pane-council .pipeline-stage-facts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    #pane-council .pipeline-activity-log { max-height: 180px; }
+  }
+  @media (max-width: 799px) {
+    #pane-council .pipeline-task-head { flex-wrap: wrap; gap: 4px 8px; }
+    #pane-council .pipeline-route { display: none; }
+    #pane-council .pipeline-composer .prompt-footer { align-items: flex-end; }
+    #pane-council .pipeline-setup > summary { align-items: flex-start; flex-direction: column; gap: 3px; }
+    #pane-council .stepper { grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible; }
+    #pane-council .pipeline-overview-button { grid-column: 1 / -1; min-height: 58px; }
+    #pane-council .step-card { min-height: 70px; }
+    #pane-council .pipeline-workspace-head { padding: 12px; }
+  }
+  @media (max-width: 600px) {
+    #pane-council .role-grid { grid-template-columns: minmax(0, 1fr); }
+    #pane-council .pipeline-stage-facts { grid-template-columns: minmax(0, 1fr); }
+    #pane-council .pipeline-stage-empty { min-height: 160px; padding: 22px 15px; }
+    #pane-council .pipeline-panel-head { padding-left: 12px; padding-right: 12px; }
+    #pane-council .stage-output-body { max-height: 56vh; padding: 12px; }
+    #pane-council .pipeline-evidence-details > summary { align-items: flex-start; flex-direction: column; gap: 3px; }
+    #pane-council .pipeline-recovery[data-state="recorded"] .presentation > div { align-items: flex-start; }
+  }
 </style>
 </head>
 <body>
@@ -7157,28 +7291,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     <section id="pane-council" role="tabpanel" aria-labelledby="tab-council" class="pane">
       <h2 class="pane-title">Pipeline</h2>
       <div id="councilScroll" class="scroll-body">
-        <div class="config-strip">
-          <div class="role-grid">
-            <div><label class="field-lbl" for="c-arch">1. Architect (Local or Cloud)</label><select id="c-arch"></select></div>
-            <div><label class="field-lbl" for="c-coder">2. Fast Coder (Local or Cloud)</label><select id="c-coder"></select></div>
-            <div><label class="field-lbl" for="c-critic">3. Critic (Local or Cloud)</label><select id="c-critic"></select></div>
-            <div><label class="field-lbl" for="c-judge">4. Judge (Local or Cloud)</label><select id="c-judge"></select></div>
-          </div>
-          <div style="display:flex; gap:18px; align-items:center; flex-wrap:wrap; justify-content:space-between;">
-            <label class="chk-lbl"><input type="checkbox" id="c-unload" checked /> Auto-unload local M5 models between stages (Cloud voices skip unload automatically)</label>
-            <div style="display:flex; align-items:center; gap:8px;">
-              <label class="field-lbl" for="c-reasoning" style="margin:0;" title="Seats 1 and 4 reason; the Builder and the Critic run without it">Reasoning (seats 1 and 4):</label>
-              <select id="c-reasoning" style="padding:4px 8px; font-size:12px;">
-                <option value="off" selected>Off — Direct Fast (~29 tok/s)</option>
-                <option value="low">Low — Bounded (900t cap)</option>
-                <option value="medium">Medium — Deep (1800t cap)</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <div class="prompt-box">
-          <textarea id="councilPrompt" aria-label="Pipeline task">Write an async token-bucket rate limiter in Python safe under concurrent asyncio tasks, with graceful cancellation and unit tests.</textarea>
+        <div class="prompt-box pipeline-composer">
+          <div class="pipeline-task-head"><label class="field-lbl" for="councilPrompt">Task</label><span>One task, handed from spec to draft to audit to final.</span><span class="pipeline-route">Architect → Builder → Critic → Judge</span></div>
+          <textarea id="councilPrompt" aria-label="Pipeline task" rows="2">Write an async token-bucket rate limiter in Python safe under concurrent asyncio tasks, with graceful cancellation and unit tests.</textarea>
           <div class="prompt-footer">
             <div style="display:flex; gap:6px; flex-wrap:wrap;">
               <button type="button" class="chip" onclick="setCouncilPreset('Write an async token-bucket rate limiter in Python safe under concurrent asyncio tasks.')">Token Bucket</button>
@@ -7191,43 +7306,87 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           </div>
         </div>
 
+        <details id="pipelineSetup" class="pipeline-setup">
+          <summary id="pipelineSetupSummary"><strong>Stage setup</strong><span id="pipelineSetupState">4 voice selectors · auto-unload on · reasoning off</span></summary>
+          <div class="config-strip">
+            <div class="role-grid">
+              <div><label class="field-lbl" for="c-arch">1. Architect (Local or Cloud)</label><select id="c-arch"></select></div>
+              <div><label class="field-lbl" for="c-coder">2. Fast Coder (Local or Cloud)</label><select id="c-coder"></select></div>
+              <div><label class="field-lbl" for="c-critic">3. Critic (Local or Cloud)</label><select id="c-critic"></select></div>
+              <div><label class="field-lbl" for="c-judge">4. Judge (Local or Cloud)</label><select id="c-judge"></select></div>
+            </div>
+            <div style="display:flex; gap:18px; align-items:center; flex-wrap:wrap; justify-content:space-between;">
+              <label class="chk-lbl"><input type="checkbox" id="c-unload" checked /> Auto-unload local M5 models between stages (Cloud voices skip unload automatically)</label>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <label class="field-lbl" for="c-reasoning" style="margin:0;" title="Seats 1 and 4 reason; the Builder and the Critic run without it">Reasoning (seats 1 and 4):</label>
+                <select id="c-reasoning" style="padding:4px 8px; font-size:12px;">
+                  <option value="off" selected>Off — Direct Fast (~29 tok/s)</option>
+                  <option value="low">Low — Bounded (900t cap)</option>
+                  <option value="medium">Medium — Deep (1800t cap)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </details>
+
         <div id="skillsAppliedNotice" style="display:none; margin-bottom:12px;"></div>
 
-        <div class="stepper">
-          <button type="button" class="step-card selected" id="step-card-0" aria-pressed="true" onclick="selectStageFilter(0)">
-            <span class="step-num">VIEW</span><span class="step-title">All Stages</span>
+        <div class="pipeline-timeline-head"><div><span class="field-lbl">Run timeline</span><span>Select a stage to read its output, activity and artifacts.</span></div></div>
+        <div class="stepper" id="pipelineStageStrip" role="group" aria-label="Pipeline stages">
+          <button type="button" class="step-card selected pipeline-overview-button" id="step-card-0" aria-pressed="true" aria-controls="pipelineWorkspace" tabindex="0" onclick="selectStageFilter(0)">
+            <span class="step-num">RUN</span><span class="step-title">All stages</span>
             <span class="step-meta"><span id="councilTotalStatus">Ready</span><span id="councilTotalTime"></span></span>
           </button>
-          <button type="button" class="step-card" id="step-card-1" aria-pressed="false" onclick="selectStageFilter(1)">
-            <span class="step-num">1 • ARCHITECT</span><span class="step-title">Spec</span>
+          <button type="button" class="step-card" id="step-card-1" aria-pressed="false" aria-controls="pipelineWorkspace" tabindex="-1" onclick="selectStageFilter(1)">
+            <span class="step-num">01 · ARCHITECT</span><span class="step-title">Spec</span>
             <span class="step-meta"><span id="st-state-1">Idle</span><span id="st-tps-1"></span><span id="st-chars-1" class="step-chars"></span></span>
           </button>
-          <button type="button" class="step-card" id="step-card-2" aria-pressed="false" onclick="selectStageFilter(2)">
-            <span class="step-num">2 • CODER</span><span class="step-title">Draft</span>
+          <button type="button" class="step-card" id="step-card-2" aria-pressed="false" aria-controls="pipelineWorkspace" tabindex="-1" onclick="selectStageFilter(2)">
+            <span class="step-num">02 · BUILDER</span><span class="step-title">Draft</span>
             <span class="step-meta"><span id="st-state-2">Idle</span><span id="st-tps-2"></span><span id="st-chars-2" class="step-chars"></span></span>
           </button>
-          <button type="button" class="step-card" id="step-card-3" aria-pressed="false" onclick="selectStageFilter(3)">
-            <span class="step-num">3 • CRITIC</span><span class="step-title">Audit</span>
+          <button type="button" class="step-card" id="step-card-3" aria-pressed="false" aria-controls="pipelineWorkspace" tabindex="-1" onclick="selectStageFilter(3)">
+            <span class="step-num">03 · CRITIC</span><span class="step-title">Audit</span>
             <span class="step-meta"><span id="st-state-3">Idle</span><span id="st-tps-3"></span><span id="st-chars-3" class="step-chars"></span></span>
           </button>
-          <button type="button" class="step-card" id="step-card-4" aria-pressed="false" onclick="selectStageFilter(4)">
-            <span class="step-num">4 • JUDGE</span><span class="step-title">Final</span>
+          <button type="button" class="step-card" id="step-card-4" aria-pressed="false" aria-controls="pipelineWorkspace" tabindex="-1" onclick="selectStageFilter(4)">
+            <span class="step-num">04 · JUDGE</span><span class="step-title">Final</span>
             <span class="step-meta"><span id="st-state-4">Idle</span><span id="st-tps-4"></span><span id="st-chars-4" class="step-chars"></span></span>
           </button>
         </div>
-        <!-- What this run produced, stated before the stage cards: how much each
-             seat left behind, how many handoffs happened, and whether the server
-             actually saved it. Filled by renderCouncilArtifacts(). -->
+        <!-- Existing measured run summary; its figures still come from the seven stream events. -->
         <div id="councilArtifacts" class="council-artifacts" role="status" aria-live="polite" hidden></div>
-        <!-- A run that failed, was stopped, was dropped, or was recovered from a copy.
-             Built with presentInto(), so it cannot ship without a cause, a Kept: line
-             and at least one action - which is what "Error: HTTP 500" never had. -->
+        <!-- Failure, checkpoint and recovery actions retain their original presentation contract. -->
         <div id="pipelineRecovery" class="pipeline-recovery" role="group" aria-label="Pipeline recovery" hidden></div>
-        <!-- One row per seat: what it was allowed (the server's own `stage_start`), what it was
-             handed, what it produced, and whether the run can be audited on it. Filled by
-             renderDeliberationEvidence(); the copy button writes the same table as markdown. -->
-        <div id="deliberationEvidence" class="deliberation-evidence" role="region" aria-label="Deliberation evidence" hidden></div>
-        <div id="councilStagesContainer"></div>
+
+        <section id="pipelineWorkspace" class="pipeline-workspace" data-state="empty" data-stage="0" aria-labelledby="pipelineWorkspaceTitle">
+          <header class="pipeline-workspace-head">
+            <div><span id="pipelineWorkspaceEyebrow" class="field-lbl">Run overview</span><h3 id="pipelineWorkspaceTitle" tabindex="-1">Four stages, one handed-off result</h3><p id="pipelineWorkspaceSubtitle">The Architect's spec feeds the Builder, the Critic audits the draft, and the Judge returns the final answer.</p></div>
+            <span id="pipelineWorkspaceState" class="status" data-tone="info">ready</span>
+          </header>
+          <div class="pipeline-workspace-grid">
+            <section class="pipeline-output-panel" aria-labelledby="pipelineOutputTitle">
+              <div class="pipeline-panel-head"><strong id="pipelineOutputTitle">Stage output</strong><span id="pipelineOutputMeta">Nothing has run yet</span></div>
+              <div id="pipelineStageEmpty" class="pipeline-stage-empty" data-state="empty"><strong id="pipelineStageEmptyTitle">The run starts with the Architect</strong><span id="pipelineStageEmptyText">Write a task above, or open Stage setup to choose the four existing voices. Output appears here only after the server sends it.</span></div>
+              <div id="councilStagesContainer"></div>
+            </section>
+            <aside class="pipeline-context-panel" aria-label="Selected stage logs and artifacts">
+              <div class="pipeline-panel-head"><strong>Logs &amp; artifacts</strong><span id="pipelineContextStage">Run</span></div>
+              <dl class="pipeline-stage-facts">
+                <div><dt>Model</dt><dd id="pipelineSelectedModel">Not started</dd></div>
+                <div><dt>Input</dt><dd id="pipelineSelectedInput">The task</dd></div>
+                <div><dt>Artifact</dt><dd id="pipelineSelectedArtifact">No output artifact yet</dd></div>
+              </dl>
+              <div class="pipeline-activity-head"><strong>Activity</strong><span>Observed events only</span></div>
+              <ol id="pipelineActivityLog" class="pipeline-activity-log" aria-label="Selected stage activity"><li class="pipeline-activity-empty">No run events yet.</li></ol>
+            </aside>
+          </div>
+        </section>
+
+        <details id="pipelineEvidenceDetails" class="pipeline-evidence-details" hidden>
+          <summary><strong>Run evidence</strong><span>Contracts, handoffs and measured verdicts</span></summary>
+          <div id="deliberationEvidence" class="deliberation-evidence" role="region" aria-label="Deliberation evidence" hidden></div>
+        </details>
       </div>
     </section>
 
@@ -7826,6 +7985,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   // the facts that are not in a buffer.
   let councilRun = null;
   let stageRowSignature = {};
+  let stageContentSignature = {};
 
   function escapeHtml(s) { return (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
   function formatInline(s) {
@@ -9509,9 +9669,17 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       const steps = stepper ? [...stepper.children] : [];
       if (!steps.length) { panel.innerHTML = `<div class="insp-empty">No pipeline run yet.</div>`; return; }
       panel.innerHTML = steps.map((s, i) => {
-        const label = String(s.textContent || "").replace(/\s+/g, " ").trim().slice(0, 40);
-        const cls = s.classList.contains("active") ? "active" : (s.classList.contains("done") ? "done" : "");
-        return `<div class="insp-item"><div class="t">${i + 1}. ${escapeHtml(label)}</div><div class="d">${cls || "pending"}</div></div>`;
+        const number = s.querySelector(".step-num");
+        const title = s.querySelector(".step-title");
+        const label = `${number ? number.textContent.trim() : `Stage ${i}`} ${title ? title.textContent.trim() : ""}`.trim();
+        const meta = [...s.querySelectorAll(".step-meta > span")].map(node => String(node.textContent || "").replace(/\s+/g, " ").trim()).filter(Boolean).join(" · ");
+        const overview = s.id === "step-card-0";
+        const terminal = overview && councilRun ? councilRun.endReason : "";
+        const cls = /recovered|partial/i.test(meta) ? "recovered"
+          : (overview && terminal ? (terminal === "done" ? "done" : terminal)
+            : (overview && councilRun ? "active"
+              : (s.classList.contains("running") ? "active" : (s.classList.contains("done") ? "done" : (s.classList.contains("selected") ? "active" : "pending")))));
+        return `<div class="insp-item"><div class="t">${escapeHtml(label)}</div><div class="d">${escapeHtml([meta, cls].filter(Boolean).join(" · "))}</div></div>`;
       }).join("");
       return;
     }
@@ -12523,7 +12691,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   function renderDeliberationEvidence() {
     const host = document.getElementById("deliberationEvidence");
     if (!host) return;
+    const disclosure = document.getElementById("pipelineEvidenceDetails");
     if (!councilRun) {
+      if (disclosure) { disclosure.hidden = true; disclosure.open = false; }
       host.hidden = true;
       host.innerHTML = "";
       host.removeAttribute("data-state");
@@ -12567,6 +12737,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         if (replacement) replacement.focus();
       }
     }
+    if (disclosure) disclosure.hidden = false;
     host.hidden = false;
     host.dataset.state = state;
   }
@@ -12624,16 +12795,24 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   // The run, stated once: how much each seat left behind, how many handoffs happened,
   // and whether the server actually saved it. `save_run()` returns 0 when it cannot
   // write, so a zero is drawn as "not saved" rather than as a run id.
+  function syncPipelineInspector() {
+    // The read-only Inspector is another projection of the same timeline, not a two-second-old
+    // account of it. Stream handlers, selection and finalization all reach this synchronization.
+    if (inspectorPane === "council") refreshInspectorPanel();
+  }
+
   function renderCouncilArtifacts() {
     // The evidence table and the run line read the same buffers, so they are drawn together:
     // two surfaces describing one run must never disagree about how many seats answered.
     renderDeliberationEvidence();
+    renderPipelineWorkspace();
     const host = document.getElementById("councilArtifacts");
     if (!host) return;
     if (!councilRun) {
       host.hidden = true;
       host.innerHTML = "";
       host.removeAttribute("data-state");
+      syncPipelineInspector();
       return;
     }
     const seats = PIPELINE_SEATS.map(seat => {
@@ -12714,9 +12893,11 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     host.dataset.state = state;
     host.dataset.totalChars = String(totalChars);
     host.dataset.handoffs = String(handoffs);
-    if (host.dataset.signature === html) return;
-    host.dataset.signature = html;
-    host.innerHTML = html;
+    if (host.dataset.signature !== html) {
+      host.dataset.signature = html;
+      host.innerHTML = html;
+    }
+    syncPipelineInspector();
   }
 
   window.M5Deliberation = {
@@ -12729,7 +12910,192 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     render: renderDeliberationEvidence,
   };
 
+  /* UIV2-25: a bounded, factual activity ledger shared by the timeline and selected-stage view.
+     Events are recorded only by the existing run/stream/recovery handlers; no timer or token count
+     is turned into progress. The DOM reader is intentionally stable while output streams. */
+  let pipelineEvents = [];
+  let pipelineEventSequence = 0;
+  let pipelineActivitySignature = "";
+  const pipelineOutputEvents = new Set();
+  const PIPELINE_EVENT_LIMIT = 80;
+  const PIPELINE_EVENT_LABELS = {
+    run: "Run requested", start: "Stage started", output: "First output arrived",
+    done: "Stage finished", unloading: "Model unloaded", saved: "Run saved",
+    error: "Stage failed", stopped: "Run stopped", dropped: "Stream ended",
+    recovered: "Run restored",
+  };
+
+  function recordPipelineEvent(kind, stage, detail) {
+    const event = {
+      seq: ++pipelineEventSequence,
+      kind: String(kind),
+      stage: Number(stage) || 0,
+      detail: String(detail || ""),
+      at: new Date().toISOString(),
+    };
+    pipelineEvents.push(event);
+    if (pipelineEvents.length > PIPELINE_EVENT_LIMIT) pipelineEvents = pipelineEvents.slice(-PIPELINE_EVENT_LIMIT);
+    renderPipelineActivity();
+    return event;
+  }
+
+  function renderPipelineActivity() {
+    const list = document.getElementById("pipelineActivityLog");
+    if (!list) return;
+    const selected = Number(stageFilter) || 0;
+    const rows = pipelineEvents.filter(event => selected === 0 || event.stage === 0 || event.stage === selected);
+    const signature = `${selected}|${pipelineEventSequence}|${rows.length}`;
+    if (signature === pipelineActivitySignature) return;
+    pipelineActivitySignature = signature;
+    list.replaceChildren();
+    if (!rows.length) {
+      const empty = document.createElement("li");
+      empty.className = "pipeline-activity-empty";
+      empty.textContent = pipelineEvents.length ? "No events for this stage yet." : "No run events yet.";
+      list.appendChild(empty);
+      return;
+    }
+    rows.slice(-40).forEach(event => {
+      const item = document.createElement("li");
+      item.dataset.kind = event.kind;
+      item.dataset.seq = String(event.seq);
+      const time = document.createElement("time");
+      time.className = "pipeline-activity-time";
+      time.dateTime = event.at;
+      const parsed = new Date(event.at);
+      time.textContent = Number.isNaN(parsed.getTime()) ? event.at : parsed.toLocaleTimeString([], { hour12: false });
+      const label = document.createElement("strong");
+      label.textContent = PIPELINE_EVENT_LABELS[event.kind] || event.kind;
+      const text = document.createElement("span");
+      text.textContent = ` ${event.stage ? `· seat ${event.stage} ` : "· "}${event.detail}`;
+      item.append(time, label, text);
+      list.appendChild(item);
+    });
+    list.scrollTop = list.scrollHeight;
+  }
+
+  function pipelineWorkspaceModel() {
+    const selected = Number(stageFilter) || 0;
+    const run = councilRun;
+    const ended = run && run.endReason;
+    const failed = ended === "failed" || ended === "dropped";
+    if (!selected) {
+      const started = PIPELINE_SEATS.filter(seat => {
+        const buffer = stageBuffers[seat.stage] || {};
+        return Boolean(buffer.m || buffer.c || buffer.u);
+      }).length;
+      const total = PIPELINE_SEATS.reduce((sum, seat) => sum + pipelineChars(seat.stage), 0);
+      let state = "empty", label = "ready", tone = "info";
+      if (run && !ended) { state = "loading"; label = "running"; tone = "busy"; }
+      else if (ended === "recovered") { state = "recovery"; label = "recovered, partial"; tone = "warn"; }
+      else if (failed) { state = "error"; label = ended === "failed" ? "failed" : "stream ended"; tone = "danger"; }
+      else if (ended === "stopped") { state = "error"; label = "stopped by you"; tone = "warn"; }
+      else if (run) { state = "populated"; label = "completed"; tone = "ok"; }
+      return {
+        selected, state, label, tone,
+        title: run ? "All four stages" : "Four stages, one handed-off result",
+        subtitle: run ? `${started} of 4 stages started; every card below is the server's observed output.` : "The Architect's spec feeds the Builder, the Critic audits the draft, and the Judge returns the final answer.",
+        model: run ? `${started} of 4 stage models reported` : "Not started",
+        input: run ? `Task ${run.taskChars} chars plus measured handoffs` : "The task",
+        artifact: total ? `${total} chars across the run` : "No output artifact yet",
+        meta: run ? `${total} chars · ${label.toLowerCase()}` : "Nothing has run yet",
+      };
+    }
+    const seat = pipelineSeat(selected);
+    const buffer = stageBuffers[selected] || {};
+    const chars = typeof buffer.c === "string" ? buffer.c.length : 0;
+    const reasoning = typeof buffer.r === "string" ? buffer.r.length : 0;
+    const affected = run && Number(run.failedStage) === selected;
+    let state = "empty", label = "ready", tone = "info";
+    if (run && run.endReason === "recovered") { state = "recovery"; label = "recovered, partial"; tone = "warn"; }
+    else if (run && affected && (run.endReason === "failed" || run.endReason === "dropped")) { state = "error"; label = run.endReason === "failed" ? "failed" : "stream ended"; tone = "danger"; }
+    else if (run && affected && run.endReason === "stopped") { state = "error"; label = "stopped by you"; tone = "warn"; }
+    else if (buffer.u) {
+      state = "populated";
+      const verdict = pipelineStageVerdict(selected);
+      label = verdict.id === "demo" ? "demo text" : (verdict.id === "capped" ? "cut at the length limit" : (chars ? "completed" : "no reply"));
+      tone = verdict.id === "done" ? "ok" : "warn";
+    } else if (buffer.m || chars || reasoning) { state = "loading"; label = "streaming"; tone = "busy"; }
+    else if (run && run.endReason) { label = "not run"; }
+    else if (run) { label = "queued"; }
+    const subtitles = {
+      1: "Reads the task and produces the spec that feeds the Builder.",
+      2: "Reads the task and the Architect's spec; feeds the Critic.",
+      3: "Reads the task, spec and Builder's draft; feeds the Judge.",
+      4: "Reads the task, spec, draft and Critic's audit; ends the run.",
+    };
+    const handoff = pipelineHandoff(seat);
+    const input = selected === 1
+      ? `The task${run ? ` · ${run.taskChars} chars` : ""}`
+      : `The task + ${handoff.upstream.map(entry => `${entry.key} ${entry.chars} ch`).join(" + ")}`;
+    return {
+      selected, state, label, tone,
+      title: STAGE_TITLES[selected].replace(/^Stage \d+ • /, ""),
+      subtitle: subtitles[selected],
+      model: buffer.m || "Not started",
+      input,
+      artifact: chars ? `${chars} chars${reasoning ? ` · ${reasoning} chars reasoning` : ""}` : (reasoning ? `${reasoning} chars reasoning; no output` : "No output artifact yet"),
+      meta: buffer.u || chars ? `${chars} chars · ${label.toLowerCase()}` : "No server output yet",
+    };
+  }
+
+  function renderPipelineWorkspace() {
+    const host = document.getElementById("pipelineWorkspace");
+    if (!host) return;
+    const view = pipelineWorkspaceModel();
+    host.dataset.state = view.state;
+    host.dataset.stage = String(view.selected);
+    const write = (id, value) => { const node = document.getElementById(id); if (node && node.textContent !== value) node.textContent = value; };
+    write("pipelineWorkspaceEyebrow", view.selected ? `Stage ${view.selected} of 4 · ${pipelineSeat(view.selected).short}` : "Run overview");
+    write("pipelineWorkspaceTitle", view.title);
+    write("pipelineWorkspaceSubtitle", view.subtitle);
+    write("pipelineOutputMeta", view.meta);
+    write("pipelineContextStage", view.selected ? pipelineSeat(view.selected).short : "Run");
+    write("pipelineSelectedModel", view.model);
+    write("pipelineSelectedInput", view.input);
+    write("pipelineSelectedArtifact", view.artifact);
+    setStatus("pipelineWorkspaceState", view.tone, view.label);
+    for (let stage = 1; stage <= 4; stage += 1) {
+      const card = document.getElementById(`stage-dom-${stage}`);
+      if (card) card.style.display = view.selected === 0 || view.selected === stage ? "block" : "none";
+    }
+    const visibleCards = [1, 2, 3, 4].filter(stage => {
+      const card = document.getElementById(`stage-dom-${stage}`);
+      return card && card.style.display !== "none";
+    }).length;
+    const empty = document.getElementById("pipelineStageEmpty");
+    empty.hidden = visibleCards > 0;
+    empty.dataset.state = view.state;
+    if (!visibleCards) {
+      const selectedSeat = pipelineSeat(view.selected);
+      write("pipelineStageEmptyTitle", view.state === "loading"
+        ? `Waiting for ${selectedSeat ? selectedSeat.short : "the first seat"}`
+        : (view.selected ? `No ${selectedSeat.short} output yet` : "The run starts with the Architect"));
+      write("pipelineStageEmptyText", view.state === "loading"
+        ? "The run is active. This space stays empty until the server sends this stage's start or output; no progress is inferred."
+        : (councilRun ? "This stage has not produced a card. Its observed state and input remain above; earlier stages stay available in the timeline." : "Write a task above, or open Stage setup to choose the four existing voices. Output appears here only after the server sends it."));
+    }
+    renderPipelineActivity();
+    return view;
+  }
+
+  function updatePipelineSetupSummary() {
+    const host = document.getElementById("pipelineSetupState");
+    if (!host) return;
+    const unload = document.getElementById("c-unload");
+    const reasoning = document.getElementById("c-reasoning");
+    host.textContent = `4 voice selectors · auto-unload ${unload && unload.checked ? "on" : "off"} · reasoning ${reasoning ? reasoning.value : "off"}`;
+  }
+  ["c-unload", "c-reasoning"].forEach(id => document.getElementById(id)?.addEventListener("change", updatePipelineSetupSummary));
+  updatePipelineSetupSummary();
+
   window.M5Pipeline = {
+    workspace: {
+      render: renderPipelineWorkspace,
+      selected: () => Number(stageFilter) || 0,
+      events: () => pipelineEvents.map(event => ({ ...event })),
+      record: recordPipelineEvent,
+    },
     seats: PIPELINE_SEATS,
     handoff: pipelineHandoff,
     upstreamList: pipelineUpstreamList,
@@ -12920,6 +13286,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     document.getElementById("councilStagesContainer").innerHTML = "";
     stageBuffers = { 1:{c:"",r:"",rCount:0,m:"",u:null,k:null}, 2:{c:"",r:"",rCount:0,m:"",u:null,k:null}, 3:{c:"",r:"",rCount:0,m:"",u:null,k:null}, 4:{c:"",r:"",rCount:0,m:"",u:null,k:null} };
     stageRowSignature = {};
+    stageContentSignature = {};
+    pipelineOutputEvents.clear();
     stages.forEach(stage => {
       const seat = pipelineSeat(stage.stage);
       if (!seat) return;
@@ -12960,6 +13328,9 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       const pill = document.getElementById(`stage-pill-${seat.stage}`);
       if (pill && !buffer.u) setStatus(pill, "warn", uiStatus("partial").label);
     });
+    const restoredStage = councilRun.failedStage || (stageBuffers[4].m || stageBuffers[4].c ? 4 : (PIPELINE_SEATS.find(seat => stageBuffers[seat.stage].m || stageBuffers[seat.stage].c) || PIPELINE_SEATS[0]).stage);
+    selectStageFilter(restoredStage);
+    recordPipelineEvent("recovered", 0, `${councilRun.recoveredFrom === "saved-run" ? "Server record" : "Browser checkpoint"} · no new stream started`);
     scheduleStageUpdate();
     renderCouncilArtifacts();
     return true;
@@ -12985,6 +13356,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       showToast("Restored from this browser's checkpoint - not a server record", "ok");
     }
     renderPipelineRecovery();
+    if (restored) document.getElementById("pipelineWorkspaceTitle")?.focus({ preventScroll: true });
     return restored;
   }
 
@@ -13157,11 +13529,17 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     document.getElementById("councilStagesContainer").innerHTML = "";
     stageBuffers = { 1:{c:"",r:"",rCount:0,m:"",u:null,k:null}, 2:{c:"",r:"",rCount:0,m:"",u:null,k:null}, 3:{c:"",r:"",rCount:0,m:"",u:null,k:null}, 4:{c:"",r:"",rCount:0,m:"",u:null,k:null} };
     stageRowSignature = {};
+    stageContentSignature = {};
+    pipelineOutputEvents.clear();
+    pipelineEvents = [];
+    pipelineEventSequence = 0;
+    pipelineActivitySignature = "";
     councilRun = null;
     [1,2,3,4].forEach(n => { document.getElementById(`st-state-${n}`).textContent = "Idle"; document.getElementById(`st-tps-${n}`).textContent = ""; const ch = document.getElementById(`st-chars-${n}`); if (ch) ch.textContent = ""; });
     document.querySelectorAll(".step-card").forEach(el => el.classList.remove("running", "done"));
     document.getElementById("councilTotalStatus").textContent = "Ready";
     document.getElementById("councilTotalTime").textContent = "";
+    selectStageFilter(0);
     renderCouncilArtifacts();
     renderPipelineRecovery();
     const host = document.getElementById("pipelineRecovery");
@@ -13190,6 +13568,12 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     });
     host.hidden = false;
     host.dataset.state = spec.state;
+    const workspace = document.getElementById("pipelineWorkspace");
+    if (workspace) {
+      // Routine saved-run confirmation follows output; failure and recovery decisions lead it.
+      if (spec.state === "recorded") workspace.insertAdjacentElement("afterend", host);
+      else workspace.insertAdjacentElement("beforebegin", host);
+    }
     if (box) {
       spec.actions.forEach((action, index) => {
         const button = box.querySelectorAll(".presentation-actions .btn")[index];
@@ -13255,7 +13639,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     let card = document.getElementById(`stage-dom-${s}`);
     if (!card) {
       card = document.createElement("div"); card.id = `stage-dom-${s}`; card.className = "stage-output-card";
-      card.innerHTML = `<div class="stage-output-head"><div><strong>${STAGE_TITLES[s]}</strong> <span id="stage-mod-${s}" class="mono" style="color:var(--text-dim); font-size:12px; margin-left:8px;"></span></div><div style="display:flex; gap:8px; align-items:center;"><span id="stage-pill-${s}" class="badge cyan">Connecting...</span><button class="btn btn-xs" onclick="copyStageMarkdown(${s}, this)">Copy MD</button></div></div><div id="stage-contract-${s}" class="stage-contract" hidden></div><div id="stage-handoff-${s}" class="stage-handoff"></div><div class="stage-output-body"><details id="stage-think-${s}" class="think-box" style="display:none;"><summary><span id="stage-think-lbl-${s}">Reasoning</span></summary><pre id="stage-think-pre-${s}"></pre></details><div id="stage-md-${s}"></div></div><div id="stage-artifact-${s}" class="stage-artifact"></div>`;
+      card.innerHTML = `<div class="stage-output-head"><div><strong>${STAGE_TITLES[s]}</strong> <span id="stage-mod-${s}" class="mono" style="color:var(--text-dim); font-size:12px; margin-left:8px;"></span></div><div style="display:flex; gap:8px; align-items:center;"><span id="stage-pill-${s}" class="badge cyan">Connecting...</span><button class="btn btn-xs" onclick="copyStageMarkdown(${s}, this)">Copy MD</button></div></div><div class="stage-output-body"><details id="stage-think-${s}" class="think-box" style="display:none;"><summary><span id="stage-think-lbl-${s}">Reasoning</span></summary><pre id="stage-think-pre-${s}"></pre></details><div id="stage-md-${s}"></div></div><details class="stage-evidence"><summary>Contract &amp; handoff</summary><div id="stage-contract-${s}" class="stage-contract" hidden></div><div id="stage-handoff-${s}" class="stage-handoff"></div></details><div id="stage-artifact-${s}" class="stage-artifact"></div>`;
       container.appendChild(card);
       renderStageContract(s);
       renderStageHandoff(s);
@@ -13263,14 +13647,36 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     for (let k = 1; k <= 4; k++) { const c = document.getElementById(`stage-dom-${k}`); if (c) c.style.display = (stageFilter === 0 || stageFilter === k) ? "block" : "none"; }
   }
   function selectStageFilter(n) {
-    stageFilter = n;
+    n = Number(n);
+    const next = n;
+    if (!Number.isInteger(next) || next < 0 || next > 4) return false;
+    stageFilter = next;
     for (let i = 0; i <= 4; i++) {
       const button = document.getElementById(`step-card-${i}`);
-      button.classList.toggle("selected", i === n);
+      button.classList.toggle("selected", i === next);
       button.setAttribute("aria-pressed", String(i === n));
+      button.tabIndex = i === next ? 0 : -1;
     }
-    for (let k = 1; k <= 4; k++) { const c = document.getElementById(`stage-dom-${k}`); if (c) c.style.display = (n === 0 || n === k) ? "block" : "none"; }
+    renderPipelineWorkspace();
+    syncPipelineInspector();
+    return true;
   }
+
+  function pipelineStageKeydown(event, current) {
+    if (!event || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const next = event.key === "Home" ? 0 : (event.key === "End" ? 4 : Math.max(0, Math.min(4, Number(current) + (event.key === "ArrowRight" ? 1 : -1))));
+    selectStageFilter(next);
+    document.getElementById(`step-card-${next}`)?.focus({ preventScroll: true });
+  }
+  // One delegated keyboard path for the whole strip; native button Enter/Space activation is
+  // deliberately untouched, and no markup handler can run the same key twice.
+  document.getElementById("pipelineStageStrip").addEventListener("keydown", (event) => {
+    const button = event.target.closest(".step-card");
+    if (!button || !event.currentTarget.contains(button)) return;
+    pipelineStageKeydown(event, Number(button.id.replace("step-card-", "")));
+  });
   function scheduleStageUpdate() {
     if (rafPending) return; rafPending = true;
     requestAnimationFrame(() => {
@@ -13280,21 +13686,25 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         if (!st.m && !st.c && !st.r) continue;
         ensureStageCardMounted(k);
         document.getElementById(`stage-mod-${k}`).textContent = st.m;
-        const thinkEl = document.getElementById(`stage-think-${k}`);
-        if (st.r) {
-          thinkEl.style.display = "block";
-          document.getElementById(`stage-think-pre-${k}`).textContent = st.r;
-          document.getElementById(`stage-think-lbl-${k}`).textContent = st.c ? `Reasoning Trace (${st.rCount} chunks)` : `Thinking live... (${st.rCount} chunks)`;
-          if (!st.c && !thinkEl.dataset.autoClosed) thinkEl.open = true;
-          else if (st.c && !thinkEl.dataset.autoClosed) { thinkEl.open = false; thinkEl.dataset.autoClosed = "1"; }
+        const contentSignature = `${(st.c || "").length}|${(st.r || "").length}|${st.rCount}|${st.u ? 1 : 0}`;
+        if (stageContentSignature[k] !== contentSignature) {
+          stageContentSignature[k] = contentSignature;
+          const thinkEl = document.getElementById(`stage-think-${k}`);
+          if (st.r) {
+            thinkEl.style.display = "block";
+            document.getElementById(`stage-think-pre-${k}`).textContent = st.r;
+            document.getElementById(`stage-think-lbl-${k}`).textContent = st.c ? `Reasoning Trace (${st.rCount} chunks)` : `Thinking live... (${st.rCount} chunks)`;
+            if (!st.c && !thinkEl.dataset.autoClosed) thinkEl.open = true;
+            else if (st.c && !thinkEl.dataset.autoClosed) { thinkEl.open = false; thinkEl.dataset.autoClosed = "1"; }
+          }
+          // A finished seat with no output is not still streaming. Skip identical markdown
+          // redraws so code-copy focus and the reader's own scroll position remain stable.
+          document.getElementById(`stage-md-${k}`).innerHTML = st.c
+            ? renderMarkdown(st.c)
+            : (st.u
+              ? `<div class="stage-empty-output">This seat finished with no output.</div>`
+              : `<div style="color:var(--text-faint); font-size:13px;">Streaming...</div>`);
         }
-        // A finished seat with no output is not still streaming: it produced nothing, and the
-        // row under it says what the next seat was handed.
-        document.getElementById(`stage-md-${k}`).innerHTML = st.c
-          ? renderMarkdown(st.c)
-          : (st.u
-            ? `<div class="stage-empty-output">This seat finished with no output.</div>`
-            : `<div style="color:var(--text-faint); font-size:13px;">Streaming...</div>`);
         // A demo reply was written by the server, not generated by a model, so it has no tok/s to
         // report - the same rule the Hall's cards and this pane's evidence table follow. The
         // stepper's own meta is set in the `stage_done` handler for the same reason.
@@ -13322,6 +13732,11 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     document.getElementById("councilStagesContainer").innerHTML = "";
     stageBuffers = { 1:{c:"",r:"",rCount:0,m:"",u:null,k:null}, 2:{c:"",r:"",rCount:0,m:"",u:null,k:null}, 3:{c:"",r:"",rCount:0,m:"",u:null,k:null}, 4:{c:"",r:"",rCount:0,m:"",u:null,k:null} };
     stageRowSignature = {};
+    stageContentSignature = {};
+    pipelineOutputEvents.clear();
+    pipelineEvents = [];
+    pipelineEventSequence = 0;
+    pipelineActivitySignature = "";
     pipelineRecoveryNote = "";
     // The task is the first thing every seat reads, and its size is the one number on
     // this screen that is known before a token arrives.
@@ -13338,6 +13753,8 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       activeStage: null,
       endReason: null,
     };
+    selectStageFilter(1);
+    recordPipelineEvent("run", 0, `Attempt ${councilRun.attempt} · task ${councilRun.taskChars} chars`);
     renderCouncilArtifacts();
     renderPipelineRecovery();
     document.getElementById("councilTotalStatus").textContent = "Running";
@@ -13365,9 +13782,18 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         if (councilRun) councilRun.activeStage = Number(d.stage);
         document.getElementById(`step-card-${d.stage}`).classList.add("running");
         document.getElementById(`st-state-${d.stage}`).textContent = "Streaming";
+        recordPipelineEvent("start", Number(d.stage), `${d.model} · ${d.max_tokens} token budget`);
         scheduleStageUpdate();
       },
-      token(d) { if (d.kind === "reasoning") { stageBuffers[d.stage].r += d.text; stageBuffers[d.stage].rCount++; } else stageBuffers[d.stage].c += d.text; scheduleStageUpdate(); },
+      token(d) {
+        if (d.kind === "reasoning") { stageBuffers[d.stage].r += d.text; stageBuffers[d.stage].rCount++; }
+        else stageBuffers[d.stage].c += d.text;
+        if (!pipelineOutputEvents.has(Number(d.stage))) {
+          pipelineOutputEvents.add(Number(d.stage));
+          recordPipelineEvent("output", Number(d.stage), d.kind === "reasoning" ? "Reasoning token received" : "Content token received");
+        }
+        scheduleStageUpdate();
+      },
       stage_done(d) {
         stageBuffers[d.stage].u = d.usage;
         document.getElementById(`step-card-${d.stage}`).classList.remove("running");
@@ -13377,9 +13803,13 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         // model produced). The stepper used to print one; it now says what the reply was.
         const demo = d.usage && (d.usage.demo === true || d.usage.demo === "true");
         document.getElementById(`st-tps-${d.stage}`).textContent = demo ? "demo" : `${d.usage.decode_tps} t/s`;
+        recordPipelineEvent("done", Number(d.stage), `${(stageBuffers[d.stage].c || "").length} chars${demo ? " · demo text" : ` · ${d.usage.decode_tps} tok/s`}`);
         scheduleStageUpdate();
       },
-      unloading(d) { document.getElementById(`st-state-${d.stage}`).textContent = uiStatus("unloaded").label; },
+      unloading(d) {
+        document.getElementById(`st-state-${d.stage}`).textContent = uiStatus("unloaded").label;
+        recordPipelineEvent("unloading", Number(d.stage), "The server reported its unload event");
+      },
       council_done(d) {
         document.getElementById("councilTotalStatus").textContent = uiStatus("completed").label;
         document.getElementById("councilTotalTime").textContent = `${d.total_elapsed_s}s`;
@@ -13387,6 +13817,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           // `run_id` is 0 when save_run() could not write; drawn as "not saved".
           councilRun.savedRunId = Number(d.run_id || 0);
           councilRun.totalS = d.total_elapsed_s;
+          recordPipelineEvent(councilRun.savedRunId ? "saved" : "done", 0, councilRun.savedRunId ? `Server run #${councilRun.savedRunId} · ${d.total_elapsed_s}s` : `Finished without a server run id · ${d.total_elapsed_s}s`);
           renderCouncilArtifacts();
         }
       },
@@ -13400,18 +13831,28 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           councilRun.failedStage = councilRun.activeStage;
           councilRun.endReason = "failed";
         }
+        recordPipelineEvent("error", Number(councilRun && councilRun.failedStage) || 0, d.message || "The server reported an error");
+        if (councilRun && councilRun.failedStage) selectStageFilter(councilRun.failedStage);
         renderPipelineRecovery();
       },
       stopped() {
         if (!councilRun) return;
         councilRun.endReason = "stopped";
         councilRun.failedStage = councilRun.activeStage;
+        recordPipelineEvent("stopped", Number(councilRun.failedStage) || 0, "Stop was requested; kept output is not a saved run");
+        if (councilRun.failedStage) selectStageFilter(councilRun.failedStage);
         renderPipelineRecovery();
       },
       closed() {
         if (!councilRun || councilRun.endReason) return;
+        // The normal response closes after council_done but before consumeSSE finalizes it.
+        // Four usage records are completion evidence, not a dropped stream.
+        const allDone = [1, 2, 3, 4].every(stage => stageBuffers[stage] && stageBuffers[stage].u);
+        if (allDone) return;
         councilRun.endReason = "dropped";
         councilRun.failedStage = councilRun.activeStage;
+        recordPipelineEvent("dropped", Number(councilRun.failedStage) || 0, "The stream ended before all four stages reported usage");
+        if (councilRun.failedStage) selectStageFilter(councilRun.failedStage);
         renderPipelineRecovery();
       },
     };
@@ -13435,8 +13876,12 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     } else if (!councilRun.endReason) {
       councilRun.endReason = "dropped";
       councilRun.failedStage = councilRun.failedStage || councilRun.activeStage;
+      recordPipelineEvent("dropped", Number(councilRun.failedStage) || 0, "Finalization found an incomplete stream");
+      if (councilRun.failedStage) selectStageFilter(councilRun.failedStage);
     }
     if (!allDone) {
+      const total = document.getElementById("councilTotalStatus");
+      if (total) total.textContent = councilRun.endReason === "failed" ? "Failed" : (councilRun.endReason === "dropped" ? "Ended" : "Stopped");
       // A seat whose `stage_done` never arrived kept saying "Streaming" after the stream ended.
       // The run is over; the card must say what the seat was left doing.
       [1,2,3,4].forEach(n => {

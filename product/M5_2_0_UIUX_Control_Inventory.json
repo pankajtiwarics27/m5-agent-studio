@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "c987ba5f055cbd14a38dca8508479f466c5b5e07f5ee0265a33c474172b0411d",
+  "frontend_sha256": "b09835677705d4413d619b5d60361f4c92caf75679511369d2bdcf93c97850bb",
   "panes": [
     {
       "dom_id": "start",
@@ -528,46 +528,22 @@
     {
       "dom_id": "council",
       "section_id": "pane-council",
-      "control_count": 16,
+      "control_count": 17,
       "counts": {
         "button": 9,
         "input": 1,
         "select": 5,
+        "summary": 1,
         "textarea": 1
       },
       "controls_without_id": 2,
       "controls_without_label": 0,
       "controls": [
         {
-          "tag": "select",
-          "id": "c-arch"
-        },
-        {
-          "tag": "select",
-          "id": "c-coder"
-        },
-        {
-          "tag": "select",
-          "id": "c-critic"
-        },
-        {
-          "tag": "select",
-          "id": "c-judge"
-        },
-        {
-          "tag": "input",
-          "id": "c-unload",
-          "type": "checkbox"
-        },
-        {
-          "tag": "select",
-          "id": "c-reasoning",
-          "text": "Off — Direct Fast (~29 tok/s) Low — Bounded (900t cap) Medium — Deep (1800t cap)"
-        },
-        {
           "tag": "textarea",
           "id": "councilPrompt",
           "aria-label": "Pipeline task",
+          "rows": "2",
           "text": "Write an async token-bucket rate limiter in Python safe under concurrent asyncio tasks, with graceful cancellation and unit tests."
         },
         {
@@ -599,12 +575,43 @@
           "text": "Run pipeline"
         },
         {
+          "tag": "summary",
+          "id": "pipelineSetupSummary",
+          "text": "Stage setup4 voice selectors · auto-unload on · reasoning off"
+        },
+        {
+          "tag": "select",
+          "id": "c-arch"
+        },
+        {
+          "tag": "select",
+          "id": "c-coder"
+        },
+        {
+          "tag": "select",
+          "id": "c-critic"
+        },
+        {
+          "tag": "select",
+          "id": "c-judge"
+        },
+        {
+          "tag": "input",
+          "id": "c-unload",
+          "type": "checkbox"
+        },
+        {
+          "tag": "select",
+          "id": "c-reasoning",
+          "text": "Off — Direct Fast (~29 tok/s) Low — Bounded (900t cap) Medium — Deep (1800t cap)"
+        },
+        {
           "tag": "button",
           "id": "step-card-0",
           "type": "button",
-          "class": "step-card selected",
+          "class": "step-card selected pipeline-overview-button",
           "onclick": "selectStageFilter(0)",
-          "text": "VIEWAll Stages Ready"
+          "text": "RUNAll stages Ready"
         },
         {
           "tag": "button",
@@ -612,7 +619,7 @@
           "type": "button",
           "class": "step-card",
           "onclick": "selectStageFilter(1)",
-          "text": "1 • ARCHITECTSpec Idle"
+          "text": "01 · ARCHITECTSpec Idle"
         },
         {
           "tag": "button",
@@ -620,7 +627,7 @@
           "type": "button",
           "class": "step-card",
           "onclick": "selectStageFilter(2)",
-          "text": "2 • CODERDraft Idle"
+          "text": "02 · BUILDERDraft Idle"
         },
         {
           "tag": "button",
@@ -628,7 +635,7 @@
           "type": "button",
           "class": "step-card",
           "onclick": "selectStageFilter(3)",
-          "text": "3 • CRITICAudit Idle"
+          "text": "03 · CRITICAudit Idle"
         },
         {
           "tag": "button",
@@ -636,7 +643,7 @@
           "type": "button",
           "class": "step-card",
           "onclick": "selectStageFilter(4)",
-          "text": "4 • JUDGEFinal Idle"
+          "text": "04 · JUDGEFinal Idle"
         }
       ]
     },
@@ -823,12 +830,12 @@
     }
   ],
   "chrome": {
-    "control_count": 126,
+    "control_count": 127,
     "counts": {
       "button": 73,
       "input": 31,
       "select": 12,
-      "summary": 4,
+      "summary": 5,
       "textarea": 6
     },
     "controls": [
@@ -1700,14 +1707,18 @@
         "title": "Unload local models to free memory",
         "onclick": "unloadAllModels()",
         "text": "Unload models"
+      },
+      {
+        "tag": "summary",
+        "text": "Run evidenceContracts, handoffs and measured verdicts"
       }
     ]
   },
   "totals": {
     "panes": 6,
-    "markup_controls": 228,
-    "pane_controls": 102,
-    "chrome_controls": 126,
+    "markup_controls": 230,
+    "pane_controls": 103,
+    "chrome_controls": 127,
     "script_rendered_controls": 71,
     "script_rendered_by_function": {
       "ensureStageCardMounted": 1,

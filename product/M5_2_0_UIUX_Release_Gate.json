@@ -51,9 +51,9 @@
           "artifact": "product/M5_2_0_UIUX_Control_Inventory.json",
           "totals": {
             "panes": 6,
-            "markup_controls": 228,
-            "pane_controls": 102,
-            "chrome_controls": 126,
+            "markup_controls": 230,
+            "pane_controls": 103,
+            "chrome_controls": 127,
             "script_rendered_controls": 71,
             "script_rendered_by_function": {
               "ensureStageCardMounted": 1,
@@ -213,9 +213,9 @@
           "totals": {
             "panes": 6,
             "preserved_capabilities": 21,
-            "markup_controls": 228,
-            "chrome_controls": 126,
-            "pane_controls": 102,
+            "markup_controls": 230,
+            "chrome_controls": 127,
+            "pane_controls": 103,
             "script_rendered_controls": 71,
             "routes": 118,
             "routes_with_resolved_or_possible_caller": 71,
@@ -250,7 +250,7 @@
           "totals": {
             "tokens": 56,
             "groups": 8,
-            "references": 1508,
+            "references": 1563,
             "theme_overrides": 20,
             "density_overrides": 5,
             "contrast_pairs": 28,
@@ -275,10 +275,10 @@
           "totals": {
             "tones": 6,
             "bases": 4,
-            "status_surfaces": 23,
+            "status_surfaces": 24,
             "live_regions": 7,
             "states": 10,
-            "set_status_calls": 29,
+            "set_status_calls": 30,
             "findings": 0
           }
         }
@@ -820,7 +820,7 @@
         {
           "artifact": "product/M5_2_0_UIUX_Polish.json",
           "totals": {
-            "radius_rules": 126,
+            "radius_rules": 134,
             "motion_rules": 18,
             "press_rules": 2,
             "hover_rules": 34,
@@ -852,7 +852,7 @@
             "route_provers": 9,
             "control_provers": 2,
             "walks": 17,
-            "support_walks": 25,
+            "support_walks": 26,
             "findings": 0
           }
         }
@@ -1146,8 +1146,8 @@
   "inventory": {
     "tabs": 6,
     "routes": 118,
-    "markup_controls": 228,
-    "chrome_controls": 126,
+    "markup_controls": 230,
+    "chrome_controls": 127,
     "script_rendered_controls": 71,
     "capabilities": 21,
     "e2e_rows": 21,

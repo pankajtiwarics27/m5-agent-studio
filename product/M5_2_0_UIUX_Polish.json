@@ -5,7 +5,7 @@
     "frontend": "static/index.html",
     "walk": "scripts/polish_walk.mjs",
     "style_blocks": 2,
-    "rules": 1113
+    "rules": 1226
   },
   "tokens": {
     "radius": [
@@ -106,7 +106,11 @@
       ":is(input, textarea, select):focus-visible",
       ".mcp-wizard-heading:focus-visible",
       ".mcp-hub-tab:focus-visible",
-      ".inspector-tab:focus-visible"
+      ".inspector-tab:focus-visible",
+      "#pane-council .pipeline-setup > summary:focus-visible,\n  #pane-council .pipeline-evidence-details > summary:focus-visible",
+      "#pane-council .pipeline-workspace-head h3:focus-visible",
+      "#pane-council .stage-output-body:focus-visible",
+      "#pane-council .stage-evidence > summary:focus-visible"
     ],
     "composed_ring_rules": [
       ".prompt-box:focus-within"
@@ -133,7 +137,7 @@
     ]
   },
   "totals": {
-    "radius_rules": 126,
+    "radius_rules": 134,
     "motion_rules": 18,
     "press_rules": 2,
     "hover_rules": 34,
