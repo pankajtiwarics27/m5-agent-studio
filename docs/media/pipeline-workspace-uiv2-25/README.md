@@ -12,8 +12,8 @@ or generated-evidence inputs to Git.
   `stageBuffers` or substitutes markup for a running state.
 - `after/` is the strict verification run: six states × four viewports × light/dark, **50/50 checks
   per run, 400/400 overall, 48/48 captures**. The final manifest was captured at
-  `2026-11-07T05:39:14.131Z`; its SHA-256 is
-  `c13630d2ddd545eee70ba5099cbd1d3dd7a82f4c23c728bc6b323438d223578d`.
+  `2026-11-07T06:17:53.824Z`; its SHA-256 is
+  `3314183788000adf881d46f98b74c4ed87103b41ca2a46df84f28f0020bea5ff`.
 - `before-uiv2-25/` uses the same final driver in `--capture-only` against a detached worktree at
   pre-change commit `605b977a25e430d6b2cbe9608a9c3df578a66c8a`. Only the new walk and additive
   provider fixture are overlaid there; `app.py` and `static/index.html` are the pre-change files.

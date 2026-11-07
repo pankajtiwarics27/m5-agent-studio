@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_v2_preservation_matrix.py --check",
   "statement": "Control -> DOM handler -> API route -> test coverage for every interactive control in static/index.html, plus the three UIV2-02 contract investigations. api_status is existing when every call the handler makes resolves to a mounted @app route, absent-route when a call matches no mounted route, unknown when the resolver left an edge open, no-api for handlers that never fetch, and no-handler for controls without an inline handler. The contracts distinguish existing / partial / absent / unknown and cite file evidence; the generator hard-fails if the sources drift from the classification, so --check is a gate.",
   "pinned_source_commit": "9a584a36f1fbe29ba467562dd12a705626769f00",
-  "frontend_sha256": "964872a42f6f26189045cc0f3fc14694bebbb47d4fd778e3079e8cb953eb464e",
+  "frontend_sha256": "61ab90eadb851d0aca6be6887ae14f05a98a4e84b0e07c50926d4ac8d052cd08",
   "app_sha256": "af0b42f1333c4a6093432c7f48aad61233344ac0114bd27bf2e69d8c1aa73ad0",
   "totals": {
     "controls": 230,

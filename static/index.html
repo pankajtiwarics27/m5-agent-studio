@@ -10087,6 +10087,179 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
      redacted export, and exports the comparison whole - every panel, the
      arbiter's verdict under its own heading, and no answer picked.
   */
+  /* M5-P1-07-PURE-BEGIN */
+  // The Compare stories (UIV2-16/17 in the visual-fidelity ledger) named this as a follow-up, and
+  // it is done: a comparison this browser kept is restored at load, and that path reaches uiStatus()
+  // before the bottom of the file would have evaluated this table. The shared vocabulary is therefore
+  // initialized above the Debate pane's boot path, and the whole PURE region - the marker the node
+  // tests slice between - ships as one block here, so the slice sees what the page sees.
+  // One word per state, everywhere. Six panes used to invent their own: the same failed run read
+  // `FAILED`, `ERROR`, `Check failed` and `failed`, the same running workflow was green in one pane
+  // and busy in another, and a stop said `CANCELLED` here and `stopped by you` there. A state is
+  // named once, with its tone, and every pane draws it from this table - the terminology inventory
+  // reads this object as the whole vocabulary and fails when a pane restates a state in its own
+  // words. Tones come from STATUS_TONES, so a state cannot invent a colour either.
+  const UI_STATUS = {
+    ready: { label: "ready", tone: "info" },
+    // A room that pinned its decision is closed, and it must say so: the badge read `ready`
+    // after a conclusion because the only two words this mapping had were running and ready.
+    closed: { label: "closed", tone: "neutral" },
+    queued: { label: "queued", tone: "neutral" },
+    running: { label: "running", tone: "busy" },
+    "waiting-approval": { label: "waiting approval", tone: "warn" },
+    paused: { label: "paused", tone: "warn" },
+    blocked: { label: "blocked", tone: "danger" },
+    completed: { label: "completed", tone: "ok" },
+    failed: { label: "failed", tone: "danger" },
+    stopped: { label: "stopped by you", tone: "warn" },
+    partial: { label: "recovered, partial", tone: "warn" },
+    unavailable: { label: "unavailable", tone: "danger" },
+    "not-run": { label: "not run", tone: "neutral" },
+    answered: { label: "answered", tone: "ok" },
+    cut: { label: "cut at the length limit", tone: "warn" },
+    demo: { label: "demo text", tone: "warn" },
+    empty: { label: "no reply", tone: "warn" },
+    lost: { label: "stream ended", tone: "warn" },
+    draft: { label: "new draft", tone: "neutral" },
+    checking: { label: "checking", tone: "neutral" },
+    loading: { label: "loading", tone: "neutral" },
+    connecting: { label: "connecting", tone: "busy" },
+    streaming: { label: "streaming", tone: "busy" },
+    unloaded: { label: "unloaded", tone: "neutral" },
+    ok: { label: "ok", tone: "ok" },
+    "over-cap": { label: "over cap", tone: "danger" },
+    check: { label: "check", tone: "warn" },
+    absent: { label: "—", tone: "neutral" },
+    live: { label: "live", tone: "ok" },
+    offline: { label: "offline", tone: "danger" },
+    "demo-data": { label: "demo data", tone: "warn" },
+    "needs-you": { label: "needs you", tone: "warn" },
+    "needs-load": { label: "needs load", tone: "warn" },
+    "needs-key": { label: "needs key", tone: "danger" },
+    halted: { label: "halted", tone: "neutral" },
+    configured: { label: "configured", tone: "ok" },
+  };
+  /** The word and the tone for a state. An unknown state is a caller's bug, not a new word. */
+  function uiStatus(state) {
+    const hit = UI_STATUS[state];
+    if (!hit) throw new Error(`unknown ui status: ${state}`);
+    return hit;
+  }
+
+  function harnessEventCursor(events) {
+    let cursor = 0;
+    for (const ev of events || []) {
+      const seq = Number(ev && ev.seq);
+      if (Number.isInteger(seq) && seq > cursor) cursor = seq;
+    }
+    return cursor;
+  }
+
+  function harnessEventGap(page, cursor) {
+    // Can this page extend `cursor`, or must the UI reload from a snapshot?
+    if (!page) return { gap: true, reason: "no_page" };
+    if (page.snapshot_required) return { gap: true, reason: page.resync_reason || "snapshot_required" };
+    const start = Number.isInteger(Number(cursor)) ? Number(cursor) : 0;
+    const latest = Number(page.latest_seq || 0);
+    const retained = Number(page.retained_from_seq || 0);
+    if (latest < start) return { gap: true, reason: "cursor_ahead" };
+    if (start > 0 && retained && start + 1 < retained) return { gap: true, reason: "events_pruned" };
+    const seqs = (page.events || []).map(ev => Number(ev && ev.seq)).filter(s => Number.isInteger(s) && s > 0).sort((a, b) => a - b);
+    let expected = start > 0 ? start + 1 : (retained || 1);
+    for (const seq of seqs) {
+      if (seq > expected) return { gap: true, reason: "sequence_gap" };
+      expected = seq + 1;
+    }
+    if (!seqs.length && start < latest) return { gap: true, reason: "missing_events" };
+    return { gap: false, reason: "" };
+  }
+
+  function harnessMergeEvents(existing, incoming) {
+    // Sequence-keyed merge: a replayed or duplicated record renders at most once. Both sides arrive
+    // in seq order in practice - the cache keeps its keys ascending and the server pages in order -
+    // so insertion order is seq order and the keys only need a walk, not a sort. Sorting them every
+    // render made drawing the newest 300 cards cost the length of a 5,000-event log.
+    const bySeq = new Map();
+    let ascending = true;
+    let last = -Infinity;
+    for (const ev of existing || []) {
+      const seq = Number(ev && ev.seq);
+      if (!Number.isInteger(seq) || seq <= 0) continue;
+      if (seq <= last) ascending = false;
+      last = seq;
+      bySeq.set(seq, ev);
+    }
+    for (const ev of incoming || []) {
+      const seq = Number(ev && ev.seq);
+      if (!Number.isInteger(seq) || seq <= 0) continue;
+      if (!bySeq.has(seq)) {
+        if (seq <= last) ascending = false;
+        last = seq;
+        bySeq.set(seq, ev);
+      }
+    }
+    const seqs = [...bySeq.keys()];
+    if (!ascending) seqs.sort((a, b) => a - b);
+    return seqs.map(seq => bySeq.get(seq));
+  }
+
+  // Can the next render append to the window that is on screen, or must it draw again?
+  // The window is a claim about what the reader can see, and a claim about one session is not a
+  // claim about another: every session's log starts at seq 1, so two screens can share every seq
+  // number and hold different cards. Comparing seqs alone let a selection inherit the previous
+  // session's window - a rejected turn kept showing the verified card, and the rejection that the
+  // contract turned on was never drawn (Harness: #169).
+  function harnessStreamAppendWindow(rendered, shown) {
+    const drawn = Array.isArray(rendered && rendered.seqs) ? rendered.seqs : [];
+    if (!drawn.length) return null;
+    if (String((rendered && rendered.session) || "") !== String((shown && shown.session) || "")) return null;
+    if (Number(rendered && rendered.pending) !== Number(shown && shown.pending)) return null;
+    if (Number(rendered && rendered.decisions) !== Number(shown && shown.decisions)) return null;
+    const incoming = Array.isArray(shown && shown.seqs) ? shown.seqs : [];
+    if (incoming.length < drawn.length) return null;
+    // The card that was drawn last has to still be on screen: it anchors the run the reader has.
+    const tail = incoming.indexOf(drawn[drawn.length - 1]);
+    if (tail < 0) return null;
+    const dropped = drawn.filter(seq => seq < incoming[0]).length;
+    const shared = drawn.length - dropped;
+    // Where the cards that stayed begin in the new window: the last drawn card anchors them.
+    const kept = tail + 1 - shared;
+    if (shared < 0 || kept < 0) return null;
+    for (let i = 0; i < shared; i += 1) {
+      if (drawn[dropped + i] !== incoming[kept + i]) return null;
+    }
+    return { dropped, from: tail + 1 };
+  }
+
+  // The run states the server actually reports, mapped to the shared vocabulary. This map used to
+  // hold its own words in capitals, and it is where the drift started: FAILED and ERROR were two
+  // words for one outcome, CANCELLED and stopped by you were two spellings of one, and READY was
+  // both pending and idle.
+  const HARNESS_STATUS_STATE = {
+    waiting_approval: "waiting-approval",
+    running: "running",
+    paused: "paused",
+    blocked: "blocked",
+    pending: "queued",
+    idle: "ready",
+    completed: "completed",
+    cancelled: "stopped",
+    failed: "failed",
+    error: "failed",
+  };
+  function harnessStatusBadge(state) {
+    const status = String((state && (state.status || state.task_status)) || "idle").toLowerCase();
+    const name = HARNESS_STATUS_STATE[status];
+    if (!name) {
+      // A state this table has never seen is drawn as the server's own word rather than mapped
+      // onto a word that would be wrong; the pane still says something true.
+      return { cls: "neutral", label: status.replace(/_/g, " ") };
+    }
+    const hit = uiStatus(name);
+    return { cls: hit.tone, label: hit.label };
+  }
+  /* M5-P1-07-PURE-END */
+
   const DEBATE_RECORD_KEY = "m5_debate_comparison";
   const DEBATE_RECORD_MAX_CHARS = 60000;
   let debateRunId = 0;
@@ -11217,14 +11390,21 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     renderDebate();
     // A reload used to be a deletion. The copy this browser kept is drawn back with its source
     // stated on the record bar, because a restored comparison must never pass for a live one.
-    const keptComparison = debateRecordRead();
-    if (keptComparison) {
-      debateRestoreModels = (keptComparison.models || []).slice();
-      debateApplySnapshot(keptComparison, "browser", {
-        kept_at: keptComparison.saved_at ? new Date(keptComparison.saved_at).toLocaleString() : "",
-        truncated: Boolean(keptComparison.truncated),
-        dropped_chars: keptComparison.dropped_chars || 0,
-      });
+    // Restoring it is best-effort from here on: a failure must cost the Debate pane a redraw,
+    // never the whole boot (an early restore-path ReferenceError used to strand every pane on
+    // its placeholder, with no console-free way to see why).
+    try {
+      const keptComparison = debateRecordRead();
+      if (keptComparison) {
+        debateRestoreModels = (keptComparison.models || []).slice();
+        debateApplySnapshot(keptComparison, "browser", {
+          kept_at: keptComparison.saved_at ? new Date(keptComparison.saved_at).toLocaleString() : "",
+          truncated: Boolean(keptComparison.truncated),
+          dropped_chars: keptComparison.dropped_chars || 0,
+        });
+      }
+    } catch (error) {
+      console.error("The stored comparison could not be restored at load; the Debate pane starts empty.", error);
     }
     const prompt = document.getElementById("debatePrompt");
     if (prompt) prompt.addEventListener("input", updateDebateRunControl);
@@ -12514,173 +12694,6 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   let harnessRunActive = false;           // a POST run stream owns the transcript
   let harnessLastResyncAt = 0;
 
-  /* M5-P1-07-PURE-BEGIN */
-  // One word per state, everywhere. Six panes used to invent their own: the same failed run read
-  // `FAILED`, `ERROR`, `Check failed` and `failed`, the same running workflow was green in one pane
-  // and busy in another, and a stop said `CANCELLED` here and `stopped by you` there. A state is
-  // named once, with its tone, and every pane draws it from this table - the terminology inventory
-  // reads this object as the whole vocabulary and fails when a pane restates a state in its own
-  // words. Tones come from STATUS_TONES, so a state cannot invent a colour either.
-  const UI_STATUS = {
-    ready: { label: "ready", tone: "info" },
-    // A room that pinned its decision is closed, and it must say so: the badge read `ready`
-    // after a conclusion because the only two words this mapping had were running and ready.
-    closed: { label: "closed", tone: "neutral" },
-    queued: { label: "queued", tone: "neutral" },
-    running: { label: "running", tone: "busy" },
-    "waiting-approval": { label: "waiting approval", tone: "warn" },
-    paused: { label: "paused", tone: "warn" },
-    blocked: { label: "blocked", tone: "danger" },
-    completed: { label: "completed", tone: "ok" },
-    failed: { label: "failed", tone: "danger" },
-    stopped: { label: "stopped by you", tone: "warn" },
-    partial: { label: "recovered, partial", tone: "warn" },
-    unavailable: { label: "unavailable", tone: "danger" },
-    "not-run": { label: "not run", tone: "neutral" },
-    answered: { label: "answered", tone: "ok" },
-    cut: { label: "cut at the length limit", tone: "warn" },
-    demo: { label: "demo text", tone: "warn" },
-    empty: { label: "no reply", tone: "warn" },
-    lost: { label: "stream ended", tone: "warn" },
-    draft: { label: "new draft", tone: "neutral" },
-    checking: { label: "checking", tone: "neutral" },
-    loading: { label: "loading", tone: "neutral" },
-    connecting: { label: "connecting", tone: "busy" },
-    streaming: { label: "streaming", tone: "busy" },
-    unloaded: { label: "unloaded", tone: "neutral" },
-    ok: { label: "ok", tone: "ok" },
-    "over-cap": { label: "over cap", tone: "danger" },
-    check: { label: "check", tone: "warn" },
-    absent: { label: "—", tone: "neutral" },
-    live: { label: "live", tone: "ok" },
-    offline: { label: "offline", tone: "danger" },
-    "demo-data": { label: "demo data", tone: "warn" },
-    "needs-you": { label: "needs you", tone: "warn" },
-    "needs-load": { label: "needs load", tone: "warn" },
-    "needs-key": { label: "needs key", tone: "danger" },
-    halted: { label: "halted", tone: "neutral" },
-    configured: { label: "configured", tone: "ok" },
-  };
-  /** The word and the tone for a state. An unknown state is a caller's bug, not a new word. */
-  function uiStatus(state) {
-    const hit = UI_STATUS[state];
-    if (!hit) throw new Error(`unknown ui status: ${state}`);
-    return hit;
-  }
-
-  function harnessEventCursor(events) {
-    let cursor = 0;
-    for (const ev of events || []) {
-      const seq = Number(ev && ev.seq);
-      if (Number.isInteger(seq) && seq > cursor) cursor = seq;
-    }
-    return cursor;
-  }
-
-  function harnessEventGap(page, cursor) {
-    // Can this page extend `cursor`, or must the UI reload from a snapshot?
-    if (!page) return { gap: true, reason: "no_page" };
-    if (page.snapshot_required) return { gap: true, reason: page.resync_reason || "snapshot_required" };
-    const start = Number.isInteger(Number(cursor)) ? Number(cursor) : 0;
-    const latest = Number(page.latest_seq || 0);
-    const retained = Number(page.retained_from_seq || 0);
-    if (latest < start) return { gap: true, reason: "cursor_ahead" };
-    if (start > 0 && retained && start + 1 < retained) return { gap: true, reason: "events_pruned" };
-    const seqs = (page.events || []).map(ev => Number(ev && ev.seq)).filter(s => Number.isInteger(s) && s > 0).sort((a, b) => a - b);
-    let expected = start > 0 ? start + 1 : (retained || 1);
-    for (const seq of seqs) {
-      if (seq > expected) return { gap: true, reason: "sequence_gap" };
-      expected = seq + 1;
-    }
-    if (!seqs.length && start < latest) return { gap: true, reason: "missing_events" };
-    return { gap: false, reason: "" };
-  }
-
-  function harnessMergeEvents(existing, incoming) {
-    // Sequence-keyed merge: a replayed or duplicated record renders at most once. Both sides arrive
-    // in seq order in practice - the cache keeps its keys ascending and the server pages in order -
-    // so insertion order is seq order and the keys only need a walk, not a sort. Sorting them every
-    // render made drawing the newest 300 cards cost the length of a 5,000-event log.
-    const bySeq = new Map();
-    let ascending = true;
-    let last = -Infinity;
-    for (const ev of existing || []) {
-      const seq = Number(ev && ev.seq);
-      if (!Number.isInteger(seq) || seq <= 0) continue;
-      if (seq <= last) ascending = false;
-      last = seq;
-      bySeq.set(seq, ev);
-    }
-    for (const ev of incoming || []) {
-      const seq = Number(ev && ev.seq);
-      if (!Number.isInteger(seq) || seq <= 0) continue;
-      if (!bySeq.has(seq)) {
-        if (seq <= last) ascending = false;
-        last = seq;
-        bySeq.set(seq, ev);
-      }
-    }
-    const seqs = [...bySeq.keys()];
-    if (!ascending) seqs.sort((a, b) => a - b);
-    return seqs.map(seq => bySeq.get(seq));
-  }
-
-  // Can the next render append to the window that is on screen, or must it draw again?
-  // The window is a claim about what the reader can see, and a claim about one session is not a
-  // claim about another: every session's log starts at seq 1, so two screens can share every seq
-  // number and hold different cards. Comparing seqs alone let a selection inherit the previous
-  // session's window - a rejected turn kept showing the verified card, and the rejection that the
-  // contract turned on was never drawn (Harness: #169).
-  function harnessStreamAppendWindow(rendered, shown) {
-    const drawn = Array.isArray(rendered && rendered.seqs) ? rendered.seqs : [];
-    if (!drawn.length) return null;
-    if (String((rendered && rendered.session) || "") !== String((shown && shown.session) || "")) return null;
-    if (Number(rendered && rendered.pending) !== Number(shown && shown.pending)) return null;
-    if (Number(rendered && rendered.decisions) !== Number(shown && shown.decisions)) return null;
-    const incoming = Array.isArray(shown && shown.seqs) ? shown.seqs : [];
-    if (incoming.length < drawn.length) return null;
-    // The card that was drawn last has to still be on screen: it anchors the run the reader has.
-    const tail = incoming.indexOf(drawn[drawn.length - 1]);
-    if (tail < 0) return null;
-    const dropped = drawn.filter(seq => seq < incoming[0]).length;
-    const shared = drawn.length - dropped;
-    // Where the cards that stayed begin in the new window: the last drawn card anchors them.
-    const kept = tail + 1 - shared;
-    if (shared < 0 || kept < 0) return null;
-    for (let i = 0; i < shared; i += 1) {
-      if (drawn[dropped + i] !== incoming[kept + i]) return null;
-    }
-    return { dropped, from: tail + 1 };
-  }
-
-  // The run states the server actually reports, mapped to the shared vocabulary. This map used to
-  // hold its own words in capitals, and it is where the drift started: FAILED and ERROR were two
-  // words for one outcome, CANCELLED and stopped by you were two spellings of one, and READY was
-  // both pending and idle.
-  const HARNESS_STATUS_STATE = {
-    waiting_approval: "waiting-approval",
-    running: "running",
-    paused: "paused",
-    blocked: "blocked",
-    pending: "queued",
-    idle: "ready",
-    completed: "completed",
-    cancelled: "stopped",
-    failed: "failed",
-    error: "failed",
-  };
-  function harnessStatusBadge(state) {
-    const status = String((state && (state.status || state.task_status)) || "idle").toLowerCase();
-    const name = HARNESS_STATUS_STATE[status];
-    if (!name) {
-      // A state this table has never seen is drawn as the server's own word rather than mapped
-      // onto a word that would be wrong; the pane still says something true.
-      return { cls: "neutral", label: status.replace(/_/g, " ") };
-    }
-    const hit = uiStatus(name);
-    return { cls: hit.tone, label: hit.label };
-  }
-  /* M5-P1-07-PURE-END */
 
   // How this view of the log was filled, so the pane can say it instead of leaving the
   // reader to guess whether they are looking at the live stream, a re-read, or a snapshot.

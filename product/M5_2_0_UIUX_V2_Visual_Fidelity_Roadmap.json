@@ -2883,8 +2883,8 @@
         "progress_percent": 100,
         "attempt_count": 1,
         "started_at": "2026-11-06T21:08:47Z",
-        "completed_at": "2026-11-07T11:23:39+05:30",
-        "commit_sha": "3c1b8faaa483ab3ae57edd232d37956f21450ffa",
+        "completed_at": "2026-11-07T12:05:00+05:30",
+        "commit_sha": "569a8531ba4e77096b45501637aabad908dec640",
         "changed_files": [
           "docs/media/pipeline-workspace-uiv2-25/.gitignore",
           "docs/media/pipeline-workspace-uiv2-25/README.md",
@@ -2934,7 +2934,8 @@
           "tests/test_uiux_screenshot_review.py"
         ],
         "tests_executed": [
-          "python -m pytest -q  ->  3141 passed, 28 skipped (14m50s); explicit live-container/browser-environment skips only",
+          "python -m pytest -q  ->  3146 passed, 28 skipped (15m21s); explicit live-container/browser-environment skips only",
+          "python -m pytest -q tests/test_frontend_boot_order.py tests/test_pipeline_workspace.py tests/test_ollama_discovery.py  ->  63 passed after integrating origin/main 8545f58",
           "python -m pytest -q tests/test_screenshot_capture_browser.py tests/test_uiux_adversarial_browser.py  ->  32 passed with pinned Chromium",
           "python -m pytest -q tests/test_checkout_store_isolation.py::test_selected_security_tests_preserve_source_store[test_trusted_transformations.py::test_http_endpoints_and_standalone_studio_bundle_parity]  ->  1 passed in 5.13s on Python 3.11 at be58926",
           "python -m pytest -q tests/test_pipeline_workspace.py  ->  37 passed, including 29 copied-source mutations and real authorization/SSE provider-error tests",
@@ -2949,7 +2950,7 @@
           "ruff check .  ->  clean; mypy  ->  61 source files, no issues; python scripts/check_frontend_syntax.py  ->  OK; git diff --check  ->  clean"
         ],
         "visual_evidence": [
-          "docs/media/pipeline-workspace-uiv2-25/after/capture-manifest.json — 400/400 checks, 48 captures, captured 2026-11-07T05:39:14.131Z, sha256 c13630d2ddd545eee70ba5099cbd1d3dd7a82f4c23c728bc6b323438d223578d (Git-ignored local evidence)",
+          "docs/media/pipeline-workspace-uiv2-25/after/capture-manifest.json — 400/400 checks, 48 captures, captured 2026-11-07T06:17:53.824Z, sha256 3314183788000adf881d46f98b74c4ed87103b41ca2a46df84f28f0020bea5ff (Git-ignored local evidence)",
           "docs/media/pipeline-workspace-uiv2-25/before-uiv2-25/capture-manifest.json — capture-only-pre-change at 605b977, 48 captures, 0 checks, sha256 3fa10a2c638df7537dc146cfbc3c9a3ab484bb4115e8b90a2a18686f238dbb3d (Git-ignored local evidence)",
           "docs/media/pipeline-workspace-uiv2-25/after/light/empty-1440x900.png",
           "docs/media/pipeline-workspace-uiv2-25/after/dark/populated-1440x900.png",
@@ -2965,13 +2966,13 @@
           "No fake progress and no invented backend stage: activity is an 80-entry ledger written only by run/stream/recovery handlers; loading has no percentage; the server route still constructs WorkflowStage(1..4), the payload keeps all four seats, and provider failures emit the existing error SSE event without saving a run.",
           "Visual target is task/output-first: closed stage setup, four-stage timeline, measured summary, selected answer with logs/artifacts, then disclosed evidence. Contract/handoff stays after its answer in a native disclosure. Short desktops compact at max-height 820px; mobile captures scroll to the surface proving each state. The before set at 605b977 records the previous diagnostics-first/empty-expanse layout.",
           "Keyboard, focus, scroll and responsive behavior verified: one delegated #pipelineStageStrip keydown handler supports Arrow/Home/End, native Enter works, roving aria-pressed/tabindex remains compatible, streaming and same-state redraws preserve Copy focus and scroll, checkpoint restore focuses the workspace without scrolling, and all 400 checks report no page or timeline horizontal overflow.",
-          "All impacted features work with no new regression: 3141 full-suite passes, 32 pinned-browser safety passes, artifact/recovery/deliberation walks 22/27/14, release gate 37/37 and 7/7, V2 matrix 230 controls with no absent route, Ruff/mypy/frontend syntax clean. The Inspector now mirrors terminal timeline state instead of showing stale Running/Streaming/pending metadata."
+          "All impacted features work with no new regression: 3146 full-suite passes, 32 pinned-browser safety passes, artifact/recovery/deliberation walks 22/27/14, release gate 37/37 and 7/7, V2 matrix 230 controls with no absent route, Ruff/mypy/frontend syntax clean. The Inspector now mirrors terminal timeline state instead of showing stale Running/Streaming/pending metadata."
         ],
         "known_regressions": [],
         "blockers": [],
-        "handoff_summary": "UIV2-25 is complete at integrated commit 3c1b8fa (story implementation 569a853), including origin/main 9d38402 without losing its Ollama provider fix. Pipeline is now an output-first selected-stage workspace over the unchanged four-stage orchestrator: task first, setup and evidence disclosed, factual activity/artifacts, responsive long-output reading, persistent failure/retry/checkpoint recovery, stable focus/scroll, and a synchronized Inspector. Evidence is 400/400 browser checks with 48 after captures plus 48 capture-only baseline frames, 3141 full-suite and 32 browser-safety passes, 37 new story tests, and all generated gates clean. Local PNGs/manifests remain Git-ignored; reproducible scripts, README policy and authored review are committed. Next story: UIV2-26 'Cross-tab visual regression reference gate'.",
+        "handoff_summary": "UIV2-25 story implementation is 569a853; the PR integrates origin/main through 8545f58, preserving both the Ollama provider fix and the UI_STATUS boot-order fix. Pipeline is now an output-first selected-stage workspace over the unchanged four-stage orchestrator: task first, setup and evidence disclosed, factual activity/artifacts, responsive long-output reading, persistent failure/retry/checkpoint recovery, stable focus/scroll, and a synchronized Inspector. Evidence is 400/400 browser checks with 48 after captures plus 48 capture-only baseline frames, 3146 full-suite and 32 browser-safety passes, 37 new story tests, and all generated gates clean. Local PNGs/manifests remain Git-ignored; reproducible scripts, README policy and authored review are committed. Next story: UIV2-26 'Cross-tab visual regression reference gate'.",
         "exact_next_action": "After PR #219 is merged, start UIV2-26: pin the new HEAD and turn the approved cross-tab captures into a visual regression reference gate without committing new PNG binaries.",
-        "updated_at": "2026-11-07T11:23:39+05:30"
+        "updated_at": "2026-11-07T12:05:00+05:30"
       }
     },
     {
