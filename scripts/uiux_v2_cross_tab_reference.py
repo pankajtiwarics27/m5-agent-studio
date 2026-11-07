@@ -516,9 +516,9 @@ def render_doc(payload: dict[str, Any]) -> str:
         human = approval["human_approval"]
         lines.extend([
             f"**Approved.** `{human['reference']}` at `{human['recorded_at']}`.", "",
-            f"Candidate: `{approval['candidate']['manifest']}`  ",
-            f"Candidate SHA-256: `{approval['candidate']['manifest_sha256']}`  ",
-            f"HEAD: `{approval['candidate']['git_head']}`", "",
+            f"- Candidate: `{approval['candidate']['manifest']}`",
+            f"- Candidate SHA-256: `{approval['candidate']['manifest_sha256']}`",
+            f"- HEAD: `{approval['candidate']['git_head']}`", "",
             "Future `--check` runs compare all 48 live structural signatures with this approval and still rerun every independent reference/layout assertion.", "",
         ])
     else:

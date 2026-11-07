@@ -11,7 +11,7 @@
     "static": "static/index.html",
     "static_sha256": "749cad6760d294f62fe7b0821469bdeeac56f50f6eaa65dabf1f084f293c9941",
     "walk": "scripts/uiux_v2_cross_tab_reference_walk.mjs",
-    "walk_sha256": "15b55a2c89563bdfad8219931bacf3412e7d6ef842cfe34c4a0efe79aa68326b"
+    "walk_sha256": "a83f32a2263feb969df20b6b7cbc79fdf3dc3e746decc52af37d9a5f5e577fee"
   },
   "approved_reference": {
     "wireframe": "docs/media/uiv2-v2/reference/wireframe.html",
@@ -941,9 +941,22 @@
   ],
   "approval": {
     "required": true,
-    "status": "pending",
+    "status": "approved",
     "artifact": "product/M5_2_0_UIUX_V2_Cross_Tab_Approval.json",
-    "rule": "A human must approve the annotated candidate; the agent cannot infer or self-certify this decision."
+    "rule": "A human must approve the annotated candidate; the agent cannot infer or self-certify this decision.",
+    "human_approval": {
+      "decision": "approved",
+      "reference": "user:Arena ask_user uiv2-26-structural-approval=approve, 2026-11-07",
+      "recorded_at": "2026-11-07T10:32:50.565748+00:00",
+      "scope": "Structural fidelity of all 48 annotated live/reference comparisons; not a pixel-clone claim."
+    },
+    "candidate": {
+      "manifest": "docs/media/cross-tab-reference-uiv2-26/candidate/candidate-manifest.json",
+      "manifest_sha256": "683f239264d06bf9facb4da301b969de4bf3c5b3d8c7da64c0de3ac8c2a370be",
+      "git_head": "6943adb8bb22637ff28e15c1e96ce391da4603df"
+    },
+    "captures": 48,
+    "approval_sha256": "d4be640ab2a4b24b251d1a4341a7dbc15651262d51cbfbe686761112dffa03ec"
   },
   "totals": {
     "panes": 6,

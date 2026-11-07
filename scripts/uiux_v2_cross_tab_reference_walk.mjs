@@ -574,7 +574,16 @@ async function main() {
       await livePage.waitForFunction(() => document.querySelectorAll(".mode-tab[data-tab]").length === 6 && Boolean(window.switchTab), { timeout: args.timeoutMs });
       await livePage.evaluate((tab) => document.querySelector(`.mode-tab[data-tab="${tab}"]`).focus(), pane.tab);
       await livePage.keyboard.press("Enter");
-      await sleep(350);
+      await sleep(1200);
+      if (pane.tab === "hall") {
+        // The seeded demo transitions from an unread/0-of-4 readiness summary to its factual
+        // demo verdict after telemetry + provider reads. Capturing between those states moves
+        // the transcript when the sentence wraps; wait for the one defined matrix state.
+        await livePage.waitForFunction(
+          () => document.querySelector("#councilReadinessSummary")?.textContent.includes("would receive demo text"),
+          { timeout: args.timeoutMs },
+        );
+      }
       await livePage.evaluate(() => document.activeElement?.blur());
       await referencePage.setViewport({ width, height, deviceScaleFactor: 1 });
       await referencePage.setContent(wireframe, { waitUntil: "load" });

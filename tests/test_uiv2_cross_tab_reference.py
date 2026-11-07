@@ -258,6 +258,8 @@ def test_browser_gate_measures_pixels_without_a_tolerance_verdict() -> None:
     assert "informational only; structural checks and human review decide" in source
     assert not re.search(r"changed_pixel_ratio_0_1\s*(?:<|>|<=|>=)", source)
     assert 'livePage.keyboard.press("Enter")' in source
+    assert "await sleep(1200)" in source
+    assert 'textContent.includes("would receive demo text")' in source
     assert "approved.live-structural-signature" in source
     assert "approved.reference-structural-signature" in source
     assert "candidate" in source and "inferred: false" in source
