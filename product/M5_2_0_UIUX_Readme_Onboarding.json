@@ -17,7 +17,7 @@
   ],
   "totals": {
     "pages": 5,
-    "links": 23,
+    "links": 24,
     "commands": 47,
     "claims": 7,
     "claims_verified": 7,
@@ -76,6 +76,12 @@
       "page": "README.md",
       "target": "docs/configuration-contracts.md",
       "resolved": "docs/configuration-contracts.md",
+      "resolves": true
+    },
+    {
+      "page": "README.md",
+      "target": "docs/host-path-picker.md",
+      "resolved": "docs/host-path-picker.md",
       "resolves": true
     },
     {

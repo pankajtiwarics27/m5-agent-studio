@@ -189,6 +189,8 @@ REFUSALS = [
 #: Writes whose refusal is answered by the function that made them, with the reason the
 #: inventory accepts instead of `guardedWrite`. Everything else must be guarded.
 REPORTING_WRITES = {
+    "createPathPickerFolder": "checks the response status and shows the server detail without applying or switching the workspace",
+    "askPathPickerModel": "checks the response status and shows the server detail while retaining manual entry and separate create/apply consent",
     "resolveHarnessApproval": "re-checks the live slot, then resyncs the session on a refusal and prints the server's detail",
     "revokeHarnessGrant": "renders the refusal in the grants panel and keeps the grant listed",
     "abortHarnessRun": "states that the server did not confirm the abort and refreshes the recovery panel",

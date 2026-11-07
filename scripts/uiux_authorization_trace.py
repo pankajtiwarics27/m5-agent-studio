@@ -66,6 +66,7 @@ STATE_CHANGING = {"POST", "PUT", "PATCH", "DELETE"}
 # statement about what the module is for, not a claim about any single call site;
 # `support` is the honest default for logic that neither refuses nor persists.
 SUBSYSTEM_ROLES: dict[str, tuple[str, str]] = {
+    "workspace_paths": ("authority", "bounds explicit operator host-path browsing and confirmed folder creation with no-follow directory capabilities"),
     "execution_spine": ("authority", "admission decisions: whether a task may run, and against which budget"),
     "model_admission": ("authority", "decides whether a model may be loaded or used"),
     "resource_admission": ("authority", "decides whether the host can take another concurrent unit of work"),

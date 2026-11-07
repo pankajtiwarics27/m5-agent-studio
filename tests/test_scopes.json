@@ -180,6 +180,7 @@
     "poetry.lock"
   ],
   "source_areas": {
+    "workspace_paths.py": ["ui.harness", "security.execution"],
     "onboarding_preflight.py": [
       "ui.start"
     ],

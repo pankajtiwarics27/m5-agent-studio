@@ -5,7 +5,7 @@
     "frontend": "static/index.html",
     "walk": "scripts/polish_walk.mjs",
     "style_blocks": 2,
-    "rules": 1336
+    "rules": 1356
   },
   "tokens": {
     "radius": [
@@ -90,7 +90,8 @@
       ".chip:hover, .chip.active",
       ".mcp-hub-tab:hover",
       ".inspector-tab:hover",
-      ".studio-tools > summary:hover, .harness-task-settings > summary:hover, .harness-run-review > summary:hover"
+      ".studio-tools > summary:hover, .harness-task-settings > summary:hover, .harness-run-review > summary:hover",
+      ".path-picker-entry:hover, .path-picker-entry[aria-pressed=\"true\"]"
     ],
     "ring_rules": [
       "button:focus-visible, select:focus-visible, textarea:focus-visible, input:focus-visible,\n  summary:focus-visible, [tabindex]:focus-visible",
@@ -140,10 +141,10 @@
     ]
   },
   "totals": {
-    "radius_rules": 141,
+    "radius_rules": 142,
     "motion_rules": 18,
     "press_rules": 2,
-    "hover_rules": 35,
+    "hover_rules": 36,
     "captures": 8,
     "findings": 0
   },

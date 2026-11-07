@@ -47,6 +47,7 @@ WALK = ROOT / "scripts" / "overlay_walk.mjs"
 FRONTEND = ROOT / "static" / "index.html"
 
 DIALOG_IDS = {
+    "pathPickerModal",
     "cmdPaletteModal",
     "contextModal",
     "mcpModal",
@@ -108,7 +109,7 @@ def test_every_dialog_is_named_labelled_and_wired() -> None:
     payload = _payload()
     ids = {dialog["id"] for dialog in payload["dialogs"]}
     assert ids == DIALOG_IDS
-    assert payload["totals"]["dialogs_via_controller"] == 12
+    assert payload["totals"]["dialogs_via_controller"] == 13
     for dialog in payload["dialogs"]:
         assert dialog["role"] == "dialog", dialog["id"]
         assert dialog["label"], dialog["id"]

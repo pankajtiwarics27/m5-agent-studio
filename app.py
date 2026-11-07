@@ -98,6 +98,7 @@ import trusted_transformations
 import verification_evidence
 import workspace_quarantine
 import workspace_snapshots
+import workspace_paths
 from workflow_orchestration import WorkflowOrchestrator, WorkflowStage
 
 STUDIO_VERSION = "9.0.1"
@@ -137,6 +138,7 @@ class StudioSettings:
     workspace_root: Path
     database_path: Path
     history_retention_days: int
+    path_picker_roots: tuple[Path, ...] = ()
 
 
 def _config_bool(env: Mapping[str, str], name: str, default: bool) -> bool:
@@ -265,6 +267,24 @@ def _config_origins(env: Mapping[str, str]) -> frozenset[str]:
     return frozenset(origin.rstrip("/") for origin in origins)
 
 
+def _config_picker_roots(env: Mapping[str, str], home: Path) -> tuple[Path, ...]:
+    try:
+        raw = json.loads(env.get("STUDIO_PATH_PICKER_ROOTS", "[]"))
+        if not isinstance(raw, list) or len(raw) > 32:
+            raise ValueError
+        paths = []
+        for value in raw:
+            if not isinstance(value, str) or not value.strip() or "\x00" in value:
+                raise ValueError
+            path = _expand_config_path(value, home)
+            if not path.is_absolute() or ".." in path.parts:
+                raise ValueError
+            paths.append(path)
+        return tuple(paths)
+    except (ValueError, TypeError):
+        raise ConfigurationError("STUDIO_PATH_PICKER_ROOTS must be a JSON array of at most 32 absolute host directories.") from None
+
+
 def load_settings(
     environ: Mapping[str, str] | None = None,
     *,
@@ -355,6 +375,7 @@ def load_settings(
         workspace_root=workspace_path.resolve(),
         database_path=db_path,
         history_retention_days=_config_int(env, "STUDIO_HISTORY_RETENTION_DAYS", 0, 0, 3650),
+        path_picker_roots=_config_picker_roots(env, home_dir),
     )
 
 
@@ -3815,7 +3836,7 @@ class RequestBodyTooLarge(Exception):
 _RATE_LIMIT_PATHS = {
     "/api/chat/stream", "/api/council/stream", "/api/debate/stream",
     "/api/harness/run", "/api/harness/gsd-wave", "/api/harness/sdlc/run",
-    "/v1/chat/completions",
+    "/v1/chat/completions", "/api/workspace/picker/folders", "/api/workspace/picker/suggest",
 }
 _RATE_WINDOWS: dict[str, deque[float]] = {}
 _RATE_LOCK = threading.Lock()
@@ -5210,6 +5231,107 @@ async def api_set_workspace_directory(request: Request) -> JSONResponse:
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+def _path_picker_locations() -> tuple[list[Path], str]:
+    # Do not call _load_workspace_prefs: opening a browser must not mkdir a store.
+    prefs: dict[str, Any] = {}
+    try:
+        loaded = json.loads((HARNESS_STORE_DIR / "workspace_prefs.json").read_text(encoding="utf-8"))
+        if isinstance(loaded, dict):
+            prefs = loaded
+    except (OSError, ValueError):
+        pass
+    recent = prefs.get("recent_dirs")
+    candidates = [Path.home(), WORKSPACE_ROOT, *SETTINGS.path_picker_roots]
+    if isinstance(recent, list):
+        candidates.extend(Path(p) for p in recent[:20] if isinstance(p, str) and Path(p).is_absolute())
+    default = prefs.get("default_dir")
+    if isinstance(default, str) and Path(default).is_absolute():
+        candidates.append(Path(default))
+    allowed = workspace_paths.roots(candidates)
+    initial = str(allowed[0])
+    for candidate in (WORKSPACE_ROOT, Path(default) if isinstance(default, str) and Path(default).is_absolute() else WORKSPACE_ROOT):
+        try:
+            preferred = candidate.expanduser().resolve(strict=True)
+            if preferred in allowed:
+                initial = str(preferred)
+        except (OSError, ValueError, RuntimeError):
+            continue
+    return allowed, initial
+
+
+@app.get("/api/workspace/picker")
+async def api_workspace_picker(path: str = "", kind: str = "directory", query: str = "") -> JSONResponse:
+    try:
+        allowed, initial = _path_picker_locations()
+        return JSONResponse(workspace_paths.browse(path or initial, allowed, kind=kind, query=query))
+    except (workspace_paths.PickerError, OSError, RuntimeError) as exc:
+        message = str(exc) if isinstance(exc, workspace_paths.PickerError) else "Host folder is unavailable. Use another location or manual entry."
+        raise HTTPException(status_code=400, detail=message) from None
+
+
+async def _picker_request_body(request: Request) -> dict[str, Any]:
+    try:
+        body = await request.json()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="A JSON object is required.") from None
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="A JSON object is required.")
+    return body
+
+
+@app.post("/api/workspace/picker/folders")
+async def api_workspace_picker_create(request: Request) -> JSONResponse:
+    body = await _picker_request_body(request)
+    if not isinstance(body, dict) or body.get("confirmed") is not True:
+        raise HTTPException(status_code=400, detail="Explicit folder-creation confirmation is required.")
+    try:
+        name = workspace_paths.folder_name(body.get("name"))
+        parent = body.get("parent")
+        if not isinstance(parent, str):
+            raise workspace_paths.PickerError("Choose a parent folder first.")
+        allowed, _ = _path_picker_locations()
+        event = _audit_tool_start("path-picker", "workspace_create_folder", "operator", True, {"parent": parent, "name": name})
+        try:
+            path = workspace_paths.create_folder(parent, name, allowed, confirmed=True)
+        except Exception:
+            _audit_tool_finish(event, {"ok": False, "output": "Folder creation refused or failed"}, 0)
+            raise
+        _audit_tool_finish(event, {"ok": True, "output": path}, 0)
+        return JSONResponse({"path": path, "workspace_changed": False}, status_code=201)
+    except (workspace_paths.PickerError, OSError, RuntimeError) as exc:
+        message = str(exc) if isinstance(exc, workspace_paths.PickerError) else "Folder creation failed. Check access and refresh the location before retrying."
+        raise HTTPException(status_code=400, detail=message) from None
+
+
+@app.post("/api/workspace/picker/suggest")
+async def api_workspace_picker_suggest(request: Request) -> JSONResponse:
+    body = await _picker_request_body(request)
+    if not isinstance(body, dict) or body.get("confirmed") is not True:
+        raise HTTPException(status_code=400, detail="Explicit model-request confirmation is required.")
+    description, model = body.get("description"), body.get("model")
+    if not isinstance(description, str) or not 1 <= len(description.strip()) <= 1000 or not isinstance(model, str) or not 1 <= len(model) <= 512:
+        raise HTTPException(status_code=400, detail="Choose a model and provide a project description (1–1000 characters).")
+    _heavy_model_preflight(model)
+    messages = [{"role": "system", "content": 'Suggest a short portable project folder NAME for the description. Return only JSON {"name":"example-project"}. No paths, hidden names, commands or extra fields. This is a suggestion, not an action.'},
+                {"role": "user", "content": description.strip()}]
+    token = _CHAT_NATIVE_TOOLS.set(None)
+    try:
+        chunks: list[str] = []
+        async with asyncio.timeout(45):
+            async for item in stream_any_model(request.app.state.http, model, messages, 0.0, 128, "off"):
+                if item.get("type") == "content":
+                    chunks.append(str(item.get("text") or ""))
+                    if sum(map(len, chunks)) > 4096:
+                        raise workspace_paths.PickerError("Model suggestion was too long. Enter a folder name yourself.")
+        return JSONResponse({"name": workspace_paths.suggestion("".join(chunks)), "created": False, "workspace_changed": False})
+    except workspace_paths.PickerError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+    except Exception:
+        raise HTTPException(status_code=502, detail="Model suggestion unavailable. No folder was created. Check the selected model or enter a name yourself.") from None
+    finally:
+        _CHAT_NATIVE_TOOLS.reset(token)
 
 
 @app.get("/api/hall/sessions")

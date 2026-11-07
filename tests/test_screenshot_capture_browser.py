@@ -473,12 +473,12 @@ def test_real_isolated_demo_captures_all_six_panes(
         assert overlays.returncode == 0, overlays.stderr
         overlay_result = json.loads(overlays.stdout)
         assert overlay_result["failed"] == 0
-        # Eleven of the twelve dialogs are reachable with no session; the remaining ones
+        # Ten of the thirteen dialogs are reachable with no session; the remaining ones
         # (UIUX-P3-04's verification record, the diff dialog, P3-03's permissions surface)
         # are blocked for the same reason: each describes a Harness session and refuses to
         # open without one, and the walk opens none. UIV2-12's expanded-conclusion dialog
         # is reachable through its command-palette row.
-        assert overlay_result["passed"] == 89
+        assert overlay_result["passed"] == 98
         assert overlay_result["blocked"] == 3
         assert banner["token"] not in overlays.stdout + overlays.stderr
         assert sentinel.read_bytes() == before
@@ -698,3 +698,14 @@ def test_chat_tool_protocol_controls_and_frozen_context(browser_env: dict[str, s
     assert result.returncode == 0, f"{result.stdout}\n{result.stderr}"
     report = json.loads(result.stdout)
     assert report["passed"] == 20 and report["network"] == 0 and report["errors"] == []
+
+
+def test_host_path_picker_consent_focus_and_draft_edits(browser_env: dict[str, str]) -> None:
+    """Real dialog/controller, synthetic host replies; no model/MCP/network activity."""
+    result = subprocess.run(
+        ["node", str(ROOT / "tests" / "browser" / "path_picker_walk.mjs")],
+        cwd=ROOT, env=browser_env, capture_output=True, text=True, timeout=60, check=False,
+    )
+    assert result.returncode == 0, f"{result.stdout}\n{result.stderr}"
+    report = json.loads(result.stdout)
+    assert report["passed"] == 25 and report["network"] == 0 and report["errors"] == []
