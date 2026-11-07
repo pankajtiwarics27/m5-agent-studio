@@ -265,6 +265,10 @@ def test_browser_gate_measures_pixels_without_a_tolerance_verdict() -> None:
     assert "candidate" in source and "inferred: false" in source
     assert 'detached: process.platform !== "win32"' in source
     assert 'process.kill(-child.pid, name)' in source
+    workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    assert "Run approved cross-tab visual structure gate" in workflow
+    assert "node scripts/uiux_v2_cross_tab_reference_walk.mjs" in workflow
+    assert "--check" in workflow
 
 
 def test_nested_structural_signature_mutation_is_detected() -> None:

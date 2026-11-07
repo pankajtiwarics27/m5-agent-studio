@@ -3046,20 +3046,57 @@
       "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
       "agent_prompt": "Implement UIV2-26: Cross-tab visual regression reference gate. Required outcome: Capture actual running UI and compare against approved reference screenshots in light/dark and responsive viewports. Specific gate: Required 1640x900,1440x900,1280x800,390x844 screenshots; annotate differences; human approval of structural fidelity; cannot mark done using source inspection alone. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
       "tracking": {
-        "status": "in_progress",
-        "progress_percent": 5,
+        "status": "done",
+        "progress_percent": 100,
         "attempt_count": 1,
         "started_at": "2026-11-07T12:50:00+05:30",
-        "completed_at": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "tests_executed": [],
-        "visual_evidence": [],
-        "acceptance_evidence": [],
+        "completed_at": "2026-11-07T16:18:01+05:30",
+        "commit_sha": "cafdd08",
+        "changed_files": [
+          "scripts/uiux_v2_cross_tab_reference_walk.mjs (new: authenticated isolated demo, keyboard tab activation, settled Council readiness, 48 live + 48 same-variant approved-wireframe captures + 48 annotated comparisons, informational pixel metrics, independent DOM/layout checks, exact approved structural-signature drift checks, process-group cleanup)",
+          "scripts/uiux_v2_cross_tab_reference.py (new: deterministic semantic contract/reference inventory, candidate and 144-image digest validation, explicit human-only approval binding, fail-closed --check; approval status is excluded from the stable semantic fingerprint)",
+          "product/M5_2_0_UIUX_V2_Cross_Tab_Reference.json + docs/uiv2-v2-cross-tab-reference.md (new: six panes x four viewports x light/dark, 18 authored D1-D3 difference annotations, existing state-producer map, approved candidate binding)",
+          "product/M5_2_0_UIUX_V2_Cross_Tab_Approval.json (new: user approval user:Arena ask_user uiv2-26-settled-approval=approve, candidate efbe1c23, 48 live + 48 reference signatures, image digests, zero failures)",
+          ".github/workflows/ci.yml (new required browser-job step: node scripts/uiux_v2_cross_tab_reference_walk.mjs --check with the pinned Chromium and temporary local output)",
+          "static/index.html + studio.py (one measured mobile Chat CSS fix: Persona and Reasoning receive the intended second-row 50% flex basis; no API, session, authorization or workspace contract changed)",
+          "tests/test_uiv2_cross_tab_reference.py + tests/test_scopes.json (new targeted DOM, candidate/hash, approval-refusal, fail-closed, pixel-policy, nested-signature mutation and CI registration tests)",
+          "scripts/uiux_screenshot_review.py + docs/media/cross-tab-reference-uiv2-26/README.md + .gitignore (authored agent visual readings kept distinct from human approval; all new PNGs/manifests are local-only)",
+          "scripts/uiux_preservation_e2e.py and regenerated UIUX inventory/release artifacts (the new walk is a listed support prover; source hashes and the mobile Chat layout inventory follow the small CSS correction)"
+        ],
+        "tests_executed": [
+          "python -m pytest -q  ->  3158 passed, 29 skipped (19m15s; explicit live-sandbox/browser-env skips; browser safety ran separately)",
+          "python -m pytest -q -p scripts.browser_ci_no_skips tests/test_screenshot_capture_browser.py tests/test_uiux_adversarial_browser.py  ->  33 passed (pinned Chromium 153.0.8010.0)",
+          "python -m pytest -q tests/test_uiv2_cross_tab_reference.py  ->  12 passed",
+          "python -m pytest -q tests/test_uiv2_cross_tab_reference.py tests/test_chat_persona.py tests/test_chat_layout.py tests/test_chat_recovery.py tests/test_scoped_tests.py  ->  118 passed",
+          "node scripts/uiux_v2_cross_tab_reference_walk.mjs --candidate ...  ->  48/48 captures, 1904/1904 checks, 144 PNGs; HEAD cafdd08; manifest SHA-256 efbe1c23dcba32ceec6618db271e605eaf2532f76b13d1c4d3aa099a7c38191b",
+          "second independent full candidate  ->  48/48 live signatures exact and 48/48 reference signatures exact against the approved candidate",
+          "node scripts/uiux_v2_cross_tab_reference_walk.mjs --check ...  ->  direct exit 0; 48 captures, 2000/2000 checks, including 96 approved live/reference signature comparisons",
+          "node scripts/start_command_center_walk.mjs  ->  248/248 checks, 56 captures across seven states; node scripts/pipeline_workspace_walk.mjs  ->  400/400 checks, 48 captures across six states",
+          "node scripts/chat_layout_walk.mjs (all six states) + compare_evidence_walk + council_state_walk  ->  all checks passed; mobile Chat rerun after the CSS fix also passed all six states",
+          "node scripts/harness_recovery_walk.mjs  ->  23/23; node scripts/harness_evidence_walk.mjs  ->  29/29",
+          "python scripts/uiux_screenshot_review.py --review-local  ->  1928 captures in 39 sets, 39 reviewed, 110 files opened, 0 findings; committed artifacts unchanged",
+          "python scripts/uiux_v2_cross_tab_reference.py --check  ->  48 matrix captures, 18 authored differences, approval=approved, 0 findings",
+          "python scripts/uiux_release_gate.py --check  ->  37/37 artifact checks, 7/7 phase gates, 0 findings; V2 preservation matrix 230 controls and preservation map 21/21 rows clean",
+          "ruff check .; mypy; scripts/check_frontend_syntax.py; scripts/build_studio.py --check  ->  all clean"
+        ],
+        "visual_evidence": [
+          "docs/media/cross-tab-reference-uiv2-26/candidate/light/1440x900/start/comparison.png",
+          "docs/media/cross-tab-reference-uiv2-26/candidate/light/390x844/harness/comparison.png",
+          "docs/media/cross-tab-reference-uiv2-26/candidate/dark/1440x900/hall/comparison.png",
+          "docs/media/cross-tab-reference-uiv2-26/candidate/dark/1280x800/council/comparison.png",
+          "docs/media/cross-tab-reference-uiv2-26/candidate/light/1640x900/debate/comparison.png",
+          "docs/media/cross-tab-reference-uiv2-26/candidate/dark/390x844/chat/comparison.png"
+        ],
+        "acceptance_evidence": [
+          "Required screenshots, annotations and human structural approval: 48 actual running-app frames cover six tabs x 1640x900/1440x900/1280x800/390x844 x light/dark, each with a same-variant approved-wireframe frame and annotated comparison (144 local PNGs). D1-D3 explain the wrapping integrations band, preserved global controls and each pane-specific delta. The user explicitly selected approve for settled candidate efbe1c23dcba32ceec6618db271e605eaf2532f76b13d1c4d3aa099a7c38191b; Approval.json binds that decision, 48 live/reference signatures and all image digests.",
+          "User-facing structural fidelity, not source-only completion: candidate browser checks passed 1904/1904; two independent candidates matched all 48 live and 48 reference signatures exactly; approved --check exited 0 with 2000/2000. Visual review caught and corrected a real 390px Chat Persona/Reasoning overlap, and a Council readiness timing difference was resolved by waiting for the defined seeded state rather than weakening or retrying the assertion.",
+          "All six-tab functions and safety boundaries preserved: no backend route or payload changed. The only app change is the measured mobile Chat flex-basis fix plus rebuilt studio.py. Full suite 3158 passed, browser safety 33 passed, Start/Pipeline/Chat/Compare/Council/Harness real state walks passed, V2 preservation has 230 mapped controls, release gate is 37/37 and 7/7, and authorization/workspace behavior remains unchanged."
+        ],
         "known_regressions": [],
         "blockers": [],
-        "handoff_summary": "Claimed UIV2-26 at d769353 (main immediately after UIV2-25 merged). Existing approved wireframe and committed captures are present; the missing piece is one live six-tab comparison gate with authored difference annotations and explicit human structural-fidelity approval.",
-        "exact_next_action": "Inspect the existing capture/walk contracts, reproduce the live six-tab matrix, and design the smallest reference-comparison gate without committing new PNG binaries."
+        "handoff_summary": "UIV2-26 is a CI-registered, human-approved cross-tab structural regression gate. Six tabs x four viewports x light/dark produce live/reference/annotated-comparison triplets with no pixel-tolerance pass. Settled candidate efbe1c23 has explicit user approval, 1904/1904 candidate checks, exact repeat signatures, and a direct approved-check exit 0 with 2000/2000 checks. A small mobile Chat overlap found by the review is fixed; no backend/API/session/authorization/workspace contract changed. Next story: UIV2-27 functional preservation and defect closure.",
+        "exact_next_action": "Start UIV2-27 from the merged UIV2-26 HEAD: pin the commit, rerun the complete control/API preservation map and historical defect cases, and keep the approved cross-tab structural gate required in CI.",
+        "updated_at": "2026-11-07T16:18:01+05:30"
       }
     },
     {
@@ -3463,20 +3500,20 @@
       "id": "P6",
       "name": "Cross-tab QA and release gate",
       "total": 5,
-      "done": 0,
-      "in_progress": 1,
+      "done": 1,
+      "in_progress": 0,
       "blocked": 0,
       "not_started": 4,
-      "percent_complete": 0
+      "percent_complete": 20
     }
   ],
   "progress": {
     "total": 30,
-    "done": 25,
-    "in_progress": 1,
+    "done": 26,
+    "in_progress": 0,
     "blocked": 0,
     "not_started": 4,
-    "percent_complete": 83
+    "percent_complete": 87
   },
   "session_recovery_protocol": [
     "Read global prompt and tracking",
