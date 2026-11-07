@@ -136,3 +136,9 @@ retrieval and mocked native SSE. Ruff, mypy62, ADR/docs checks pass; regenerated
 inventories show37/37 checks,7/7 phase gates,0findings. Complete multi-version
 and browser CI plus the owner's same-model manual retry remain required. No live
 endpoint validation or new human/security acceptance is asserted.
+
+CI follow-up: the first full matrix found one stale post-roadmap Pipeline
+inventory backend SHA-256 (not part of the main37-generator list). Regenerated
+it with `uiux_pipeline_workspace_inventory.py`; no runtime code or checks were
+weakened. Pipeline/Start/protocol rerun:105passed. Updated full CI is required
+before merging this fix.
