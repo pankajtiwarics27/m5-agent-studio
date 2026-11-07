@@ -81,6 +81,7 @@ class StudioSettings:
     """Typed snapshot of process-start configuration; external credentials stay separate."""
 
     omlx_base_url: str
+    ollama_base_url: str
     host: str
     port: int
     api_token: str = field(repr=False)
@@ -186,6 +187,30 @@ def _config_omlx_url(env: Mapping[str, str]) -> str:
     return raw
 
 
+def _config_ollama_url(env: Mapping[str, str]) -> str:
+    """Ollama may live on the loopback or on any operator-chosen host (any_host decision).
+
+    Trust is read-only discovery (GET /api/tags); scheme/host/no-credentials validation still applies.
+    """
+    raw = env.get("OLLAMA_BASE_URL", "http://127.0.0.1:11434").strip().rstrip("/")
+    try:
+        parts = urlsplit(raw)
+        # Accessing .port also checks for a malformed port value.
+        _ = parts.port
+    except ValueError:
+        raise ConfigurationError("OLLAMA_BASE_URL must be an absolute HTTP(S) URL with a valid port.") from None
+    if (
+        parts.scheme not in {"http", "https"}
+        or not parts.hostname
+        or parts.username is not None
+        or parts.password is not None
+        or parts.query
+        or parts.fragment
+    ):
+        raise ConfigurationError("OLLAMA_BASE_URL must be an absolute HTTP(S) URL without credentials, query, or fragment.")
+    return raw
+
+
 def _config_origins(env: Mapping[str, str]) -> frozenset[str]:
     origins = _config_list(env, "STUDIO_ALLOWED_ORIGINS")
     for origin in origins:
@@ -274,6 +299,7 @@ def load_settings(
     runtime = env.get("STUDIO_SANDBOX_RUNTIME", "docker").strip() or "docker"
     return StudioSettings(
         omlx_base_url=_config_omlx_url(env),
+        ollama_base_url=_config_ollama_url(env),
         host=host,
         port=port,
         api_token=api_token,
@@ -303,6 +329,7 @@ BASE_DIR = Path(__file__).resolve().parent
 SETTINGS = load_settings(os.environ, base_dir=BASE_DIR)
 # Keep the established module-level names as typed compatibility aliases for the standalone build and callers.
 OMLX_BASE = SETTINGS.omlx_base_url
+OLLAMA_BASE = SETTINGS.ollama_base_url
 STUDIO_HOST = SETTINGS.host
 STUDIO_PORT = SETTINGS.port
 STUDIO_API_TOKEN = SETTINGS.api_token
@@ -2650,6 +2677,8 @@ def is_local_omlx_model(model_spec: str) -> bool:
     """Return True ONLY if this model runs on local oMLX Metal Unified Memory."""
     if model_spec.startswith("combo/"):
         return False
+    if model_spec.startswith("ollama::") or model_spec.startswith("ollama/"):
+        return False
     if "::" in model_spec:
         prov = model_spec.split("::", 1)[0]
         return prov == "omlx"
@@ -2664,6 +2693,11 @@ def parse_model_route(model_spec: str) -> tuple[str, dict[str, Any] | None, str]
     Resolve `model_spec` into `("omlx" | "cloud" | "combo", provider_dict_or_combo, remote_model_id)`.
     Supports both `provider::model_id` and OmniRoute-style `provider/model_id`.
     """
+    if model_spec.startswith("ollama::"):
+        return "cloud", ollama_virtual_provider(), model_spec.split("::", 1)[1]
+    if model_spec.startswith("ollama/"):
+        return "cloud", ollama_virtual_provider(), model_spec.split("/", 1)[1]
+
     if model_spec.startswith("combo/"):
         calias = model_spec.split("/", 1)[1]
         combos = {c["alias"]: c for c in list_model_combos()}
@@ -3439,15 +3473,17 @@ def _build_unified_catalog(local_models: list[dict[str, Any]], *, loaded_only: b
             continue
         size_val = lm.get("size_gb") or 0.0
         size_label = f" ({size_val} GB)" if size_val else ""
+        is_resident = bool(lm.get("loaded") or lm.get("is_loading"))
+        state_label = "Loaded" if is_resident else "On-Demand"
         catalog.append(
             {
                 "id": lm["id"],
-                "label": f"[M5 Local • Loaded] {lm['id']}{size_label}",
-                "group": "Local M5 (Loaded in RAM)",
+                "label": f"[M5 Local • {state_label}] {lm['id']}{size_label}",
+                "group": "Local M5 (Loaded in RAM)" if is_resident else "Local M5 (On-Demand)",
                 "source": "local",
                 "provider": "omlx",
                 "size_gb": size_val,
-                "loaded": bool(lm.get("loaded", True)),
+                "loaded": bool(lm.get("loaded", False)),
             }
         )
     for cp in list_cloud_providers(include_secret=False):
@@ -3477,6 +3513,99 @@ def _build_unified_catalog(local_models: list[dict[str, Any]], *, loaded_only: b
             }
         )
     return catalog
+
+
+OLLAMA_PROBE_TIMEOUT_SECONDS = 2.5
+OLLAMA_PROBE_TTL_SECONDS = 10.0
+OLLAMA_MAX_MODELS = 100
+_ollama_probe_cache: dict[str, Any] = {"expires": 0.0, "snapshot": None}
+
+
+def ollama_virtual_provider() -> dict[str, Any]:
+    """Server-built OpenAI-wire provider descriptor for Ollama; never accepted from the database.
+
+    `base_url` keeps the `/v1` suffix convention of OpenAI-wire providers; the probe uses OLLAMA_BASE directly.
+    """
+    return {
+        "alias": "ollama",
+        "name": "Ollama (Local)",
+        "base_url": f"{OLLAMA_BASE}/v1",
+        "wire": "openai",
+        "effective_key": "",
+        "enabled": True,
+        "group": "Ollama (Local)",
+        "builtin_private_ok": True,
+        "models": list((_ollama_probe_cache["snapshot"] or {}).get("models", [])) if _ollama_probe_cache["snapshot"] else [],
+    }
+
+
+async def _ollama_snapshot(client: httpx.AsyncClient) -> dict[str, Any]:
+    """Read-only GET {OLLAMA_BASE}/api/tags with defensive parsing; never raises."""
+    snapshot: dict[str, Any] = {"online": False, "base_url": OLLAMA_BASE, "models": [], "error": None}
+    try:
+        await _validate_outbound_url(OLLAMA_BASE, allow_private=True)
+        response = await client.get(f"{OLLAMA_BASE}/api/tags", timeout=OLLAMA_PROBE_TIMEOUT_SECONDS)
+        _reject_redirect_response(response, f"{OLLAMA_BASE}/api/tags")
+        if response.status_code != 200:
+            snapshot["error"] = f"HTTP {response.status_code}"
+            return snapshot
+        raw = response.json()
+        entries = raw.get("models") if isinstance(raw, dict) else None
+        if not isinstance(entries, list):
+            snapshot["error"] = "malformed response"
+            return snapshot
+        models: list[dict[str, Any]] = []
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            name = str(entry.get("name") or "").strip()
+            if not name:
+                continue
+            size_bytes = entry.get("size")
+            size_gb = round(float(size_bytes) / (1024**3), 2) if isinstance(size_bytes, (int, float)) and size_bytes else 0.0
+            details = entry.get("details") if isinstance(entry.get("details"), dict) else {}
+            quantization = details.get("quantization_level") if isinstance(details.get("quantization_level"), str) else None
+            modified_at = entry.get("modified_at") if isinstance(entry.get("modified_at"), str) else None
+            models.append({"id": name, "size_gb": size_gb, "quantization": quantization, "modified_at": modified_at})
+            if len(models) >= OLLAMA_MAX_MODELS:
+                break
+        snapshot["online"] = True
+        snapshot["models"] = models
+        return snapshot
+    except Exception as exc:  # noqa: BLE001 - discovery must never break the telemetry path
+        snapshot["error"] = str(exc) or exc.__class__.__name__ or "unreachable"
+        if isinstance(exc, (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout, httpx.NetworkError)):
+            snapshot["error"] = "unreachable"
+        return snapshot
+
+
+async def _probe_ollama(client: httpx.AsyncClient) -> dict[str, Any]:
+    cached = _ollama_probe_cache["snapshot"]
+    if cached is not None and time.monotonic() < _ollama_probe_cache["expires"]:
+        return cached
+    snapshot = await _ollama_snapshot(client)
+    _ollama_probe_cache["snapshot"] = snapshot
+    _ollama_probe_cache["expires"] = time.monotonic() + OLLAMA_PROBE_TTL_SECONDS
+    return snapshot
+
+
+def _catalog_with_ollama(catalog: list[dict[str, Any]], ollama: dict[str, Any]) -> list[dict[str, Any]]:
+    if not ollama.get("online"):
+        return catalog
+    merged = list(catalog)
+    for model in ollama.get("models", []):
+        merged.append(
+            {
+                "id": f"ollama::{model['id']}",
+                "label": f"[Ollama • Local] {model['id']}" + (f" ({model['size_gb']} GB)" if model.get("size_gb") else ""),
+                "group": "Ollama (Local)",
+                "source": "ollama",
+                "provider": "ollama",
+                "size_gb": model.get("size_gb", 0.0),
+                "loaded": False,
+            }
+        )
+    return merged
 
 
 def _demo_telemetry_payload() -> dict[str, Any]:
@@ -3547,7 +3676,7 @@ def _demo_telemetry_payload() -> dict[str, Any]:
         "models": demo_models,
         "loaded_models": loaded_models,
         "unloaded_models": unloaded_models,
-        "catalog": _build_unified_catalog(loaded_models, loaded_only=True),
+        "catalog": _build_unified_catalog(demo_models, loaded_only=False),
         "docker": {
             "state": "running", "orbstack_detected": True, "running_count": 2,
             "containers_mem_gb": 1.12, "vm_footprint_gb": 1.35, "total_cpu_pct": 2.4,
@@ -11045,6 +11174,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       const head = model.slice(0, cut);
       const remote = model.slice(cut + (model.includes("::") ? 2 : 1));
       if (head === "omlx") return { kind: "local", model: remote };
+      if (head === "ollama") {
+        const online = Boolean(lastTelemetry && lastTelemetry.ollama && lastTelemetry.ollama.online);
+        return { kind: "ollama", model: remote, online };
+      }
       const configured = provider(head);
       if (configured) return { kind: "cloud", provider: configured, model: remote };
       if (model.includes("::")) return { kind: "unconfigured", alias: head, model: remote };
@@ -11061,6 +11194,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     if (!model) return "No model selected";
     const route = councilRouteOf(model);
     if (route.kind === "local") return "Local · oMLX";
+    if (route.kind === "ollama") return "Local · Ollama";
     if (route.kind === "cloud") return `Cloud · ${route.provider.alias}`;
     if (route.kind === "combo") return `Fallback combo · ${route.alias}`;
     if (route.kind === "unconfigured") return `Unavailable provider · ${route.alias}`;
@@ -11114,6 +11248,23 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         state: "stale", tone: "warn", tag: "STALE READ",
         text: `Telemetry is ${Math.max(0, Math.round(readAge / 1000))} seconds old; refresh it before using ${model}.`,
         action: { id: "check", label: "Check again", title: "Read /api/telemetry and /api/providers again" },
+      };
+    }
+    const ollamaModel = model.startsWith("ollama::") || model.startsWith("ollama/");
+    if (ollamaModel) {
+      const snap = telemetry && telemetry.ollama;
+      const base = (snap && snap.base_url) || "the configured Ollama host";
+      if (snap && snap.online) {
+        return {
+          state: "ready", tone: "ok", tag: "READY",
+          text: `Ollama is answering at ${base}; this seat dispatches over Ollama's /v1 endpoint.`,
+          action: { id: "check", label: "Check again", title: "Read /api/telemetry again" },
+        };
+      }
+      return {
+        state: "demo", tone: "warn", tag: "OLLAMA DOWN",
+        text: `Ollama is not answering at ${base}, so dispatching this seat produces no model reply; start Ollama or choose another seat.`,
+        action: { id: "check", label: "Check again", title: "Read /api/telemetry again" },
       };
     }
     const providerShaped = model.startsWith("combo/") || (model.includes("::") && !model.startsWith("omlx::"));
@@ -21281,7 +21432,7 @@ async def _stream_cloud_openai(
     finish_reason = "stop"
     usage_sent = False
 
-    await _validate_outbound_url(provider["base_url"], allow_private=_is_builtin_local_gateway(provider.get("alias"), provider.get("base_url")))
+    await _validate_outbound_url(provider["base_url"], allow_private=_is_builtin_local_gateway(provider.get("alias"), provider.get("base_url")) or bool(provider.get("builtin_private_ok")))
     async with client.stream("POST", f"{provider['base_url']}/chat/completions", headers=headers, json=body) as resp:
         _reject_redirect_response(resp, f"{provider['base_url']}/chat/completions")
         if resp.status_code >= 400:
@@ -21402,7 +21553,7 @@ async def _stream_cloud_anthropic(
     finish_reason = "stop"
     provider_alias = str(provider.get("alias") or "anthropic")
 
-    await _validate_outbound_url(provider["base_url"], allow_private=_is_builtin_local_gateway(provider.get("alias"), provider.get("base_url")))
+    await _validate_outbound_url(provider["base_url"], allow_private=_is_builtin_local_gateway(provider.get("alias"), provider.get("base_url")) or bool(provider.get("builtin_private_ok")))
     async with client.stream("POST", f"{provider['base_url']}/messages", headers=headers, json=body) as resp:
         _reject_redirect_response(resp, f"{provider['base_url']}/messages")
         if resp.status_code >= 400:
@@ -21905,8 +22056,9 @@ async def openai_gateway_models(request: Request) -> JSONResponse:
         if r.status_code == 200:
             local_mods = [{"id": m["id"], "size_gb": 0.0} for m in r.json().get("data", [])]
     except Exception:
-        local_mods = [{"id": "Qwen3.8-27B-oQ4e-mtp", "size_gb": 16.6}]
-    cat = _build_unified_catalog(local_mods)
+        local_mods = []
+    cat = _build_unified_catalog(local_mods, loaded_only=False)
+    cat = _catalog_with_ollama(cat, await _probe_ollama(client))
     return JSONResponse(
         {
             "object": "list",
@@ -22425,6 +22577,7 @@ async def api_delete_hall_session(session_id: str) -> JSONResponse:
 async def api_telemetry(request: Request) -> JSONResponse:
     client: httpx.AsyncClient = request.app.state.http
     docker_task = asyncio.create_task(get_docker_telemetry())
+    ollama_task = asyncio.create_task(_probe_ollama(client))
     try:
         await _validate_outbound_url(OMLX_BASE, allow_private=True)
         models_res, act_res, stats_res, gs_res, v1_res = await asyncio.gather(
@@ -22441,12 +22594,16 @@ async def api_telemetry(request: Request) -> JSONResponse:
             raise RuntimeError("Local model runtime is unreachable")
     except Exception:
         docker_task.cancel()
+        ollama = await ollama_task
         payload = _demo_telemetry_payload()
         payload["telemetry_source"] = "simulated_demo"
+        payload["ollama"] = ollama
+        payload["catalog"] = _catalog_with_ollama(payload.get("catalog") or [], ollama)
         payload["perf"] = _recent_perf_summary()
         return JSONResponse(payload)
 
     docker_data = await docker_task
+    ollama = await ollama_task
     raw_models = (models_res.json().get("models", []) if (isinstance(models_res, httpx.Response) and models_res.status_code == 200) else [])
     act_data = (act_res.json().get("active_models", {}) if (isinstance(act_res, httpx.Response) and act_res.status_code == 200) else {})
     stats_data = (stats_res.json() if (isinstance(stats_res, httpx.Response) and stats_res.status_code == 200) else {})
@@ -22533,7 +22690,8 @@ async def api_telemetry(request: Request) -> JSONResponse:
             "models": clean_models,
             "loaded_models": loaded_models,
             "unloaded_models": unloaded_models,
-            "catalog": _build_unified_catalog(loaded_models, loaded_only=True),
+            "catalog": _catalog_with_ollama(_build_unified_catalog(clean_models, loaded_only=False), ollama),
+            "ollama": ollama,
             "docker": docker_data,
             "perf": _recent_perf_summary(),
         }

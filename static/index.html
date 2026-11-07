@@ -7293,6 +7293,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
       const head = model.slice(0, cut);
       const remote = model.slice(cut + (model.includes("::") ? 2 : 1));
       if (head === "omlx") return { kind: "local", model: remote };
+      if (head === "ollama") {
+        const online = Boolean(lastTelemetry && lastTelemetry.ollama && lastTelemetry.ollama.online);
+        return { kind: "ollama", model: remote, online };
+      }
       const configured = provider(head);
       if (configured) return { kind: "cloud", provider: configured, model: remote };
       if (model.includes("::")) return { kind: "unconfigured", alias: head, model: remote };
@@ -7309,6 +7313,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     if (!model) return "No model selected";
     const route = councilRouteOf(model);
     if (route.kind === "local") return "Local · oMLX";
+    if (route.kind === "ollama") return "Local · Ollama";
     if (route.kind === "cloud") return `Cloud · ${route.provider.alias}`;
     if (route.kind === "combo") return `Fallback combo · ${route.alias}`;
     if (route.kind === "unconfigured") return `Unavailable provider · ${route.alias}`;
@@ -7362,6 +7367,23 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         state: "stale", tone: "warn", tag: "STALE READ",
         text: `Telemetry is ${Math.max(0, Math.round(readAge / 1000))} seconds old; refresh it before using ${model}.`,
         action: { id: "check", label: "Check again", title: "Read /api/telemetry and /api/providers again" },
+      };
+    }
+    const ollamaModel = model.startsWith("ollama::") || model.startsWith("ollama/");
+    if (ollamaModel) {
+      const snap = telemetry && telemetry.ollama;
+      const base = (snap && snap.base_url) || "the configured Ollama host";
+      if (snap && snap.online) {
+        return {
+          state: "ready", tone: "ok", tag: "READY",
+          text: `Ollama is answering at ${base}; this seat dispatches over Ollama's /v1 endpoint.`,
+          action: { id: "check", label: "Check again", title: "Read /api/telemetry again" },
+        };
+      }
+      return {
+        state: "demo", tone: "warn", tag: "OLLAMA DOWN",
+        text: `Ollama is not answering at ${base}, so dispatching this seat produces no model reply; start Ollama or choose another seat.`,
+        action: { id: "check", label: "Check again", title: "Read /api/telemetry again" },
       };
     }
     const providerShaped = model.startsWith("combo/") || (model.includes("::") && !model.startsWith("omlx::"));

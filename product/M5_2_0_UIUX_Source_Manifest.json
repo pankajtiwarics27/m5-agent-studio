@@ -12,23 +12,23 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "da33fec434c7afa9be1930bab94a41ba7aa2035bb0b43894a54aea9a623af07e",
-      "bytes": 995249,
-      "lines": 17194
+      "sha256": "964872a42f6f26189045cc0f3fc14694bebbb47d4fd778e3079e8cb953eb464e",
+      "bytes": 996373,
+      "lines": 17216
     },
     {
       "path": "app.py",
       "role": "the FastAPI server the UI talks to; source of the route table",
-      "sha256": "11601f3c9efbc4c55d90171b286c1452e1e8d1100025cd1d0a0e1a422f82c999",
-      "bytes": 1028031,
-      "lines": 22146
+      "sha256": "af0b42f1333c4a6093432c7f48aad61233344ac0114bd27bf2e69d8c1aa73ad0",
+      "bytes": 1034251,
+      "lines": 22282
     },
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "18c858539da44c36bb6fd9fe643bc726efe68b236d2e277ef80b44c1552ae88d",
-      "bytes": 3770800,
-      "lines": 81013
+      "sha256": "98e0c7ae201e6276cb6fcec1ab29a051d298cd611102b54bc5e7572c4c7616b4",
+      "bytes": 3778144,
+      "lines": 81171
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -460,8 +460,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "da33fec434c7afa9be1930bab94a41ba7aa2035bb0b43894a54aea9a623af07e",
-    "lines": 17194,
+    "sha256": "964872a42f6f26189045cc0f3fc14694bebbb47d4fd778e3079e8cb953eb464e",
+    "lines": 17216,
     "tab_count": 6,
     "tabs": [
       {
@@ -568,7 +568,7 @@
   },
   "api": {
     "path": "app.py",
-    "sha256": "11601f3c9efbc4c55d90171b286c1452e1e8d1100025cd1d0a0e1a422f82c999",
+    "sha256": "af0b42f1333c4a6093432c7f48aad61233344ac0114bd27bf2e69d8c1aa73ad0",
     "route_count": 118,
     "by_method": {
       "DELETE": 7,
