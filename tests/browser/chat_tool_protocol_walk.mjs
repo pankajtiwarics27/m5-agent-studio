@@ -33,6 +33,7 @@ try {
     document.querySelectorAll('.pane').forEach(p => p.classList.toggle('active', p.id === 'pane-chat'));
     document.getElementById('chatModel').innerHTML = '<option>Fixture model</option>';
     document.getElementById('chatPersona').innerHTML = '<option>Fixture persona</option>';
+    document.getElementById('chatPersonaDescription').textContent = 'A concise technical assistant with clear explanations.';
   });
   for (const theme of ['light', 'dark']) for (const density of ['comfortable', 'compact']) for (const width of [390, 900, 1280, 1440]) {
     await page.setViewport({ width, height: 900 });
@@ -43,11 +44,13 @@ try {
       const pane = document.getElementById('pane-chat');
       return { width: rect.width, height: rect.height, left: rect.left, right: rect.right,
         paneLeft: pane.getBoundingClientRect().left, paneRight: pane.getBoundingClientRect().right,
+        headerHeight: document.querySelector(".chat-header-bar").getBoundingClientRect().height,
         labels: selector.labels.length, hidden: getComputedStyle(selector).visibility === 'hidden' };
     });
     assert(layout.width >= 96 && layout.height >= 30 && !layout.hidden, JSON.stringify({ width, layout }));
     assert(layout.left >= layout.paneLeft - 1 && layout.right <= layout.paneRight + 1, JSON.stringify({ width, layout }));
     assert.equal(layout.labels, 1);
+    if (width === 390) assert(layout.headerHeight <= 320, JSON.stringify(layout));
     passed++;
   }
   await page.select('#chatToolProtocol', 'native');

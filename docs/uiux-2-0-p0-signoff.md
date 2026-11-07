@@ -303,8 +303,8 @@ A single streaming conversation with the selected model.
 | select | chatPersona | — | — |
 | input | chatPersonaSearch | — | — |
 | select | chatReasoning | Off Low Medium | — |
-| input | chatToolsEnabled | — | — |
 | select | chatToolProtocol | Native (OpenAI-compatible) Tagged text (compatibility) | — |
+| input | chatToolsEnabled | — | — |
 | input | chatUnload | — | — |
 | button | chatClearBtn | Clear | clearChat() |
 | button | chatHandoffBtn | Open in Harness | handOffChatToHarness() |
@@ -386,11 +386,11 @@ provenance; a matching snapshot cannot clear separate review holds.
 | Input | Current digest | Owner-recorded digest |
 |---|---|---|
 | `ledger_content_sha256` | `d4137cf1e214931953734cc97943732ea5204b5884c6aa26339cc7c27ed5908b` | `not recorded` |
-| `source_manifest_sha256` | `29cfbf86bb066f85aa7dd1b896b9bca2b5f5eb39e33464e5497fc3e7090969bb` | `not recorded` |
-| `control_inventory_sha256` | `8d1aa9bbf69385366fef5a89544b2605adff756f55b1a2de4f49c9ed160956d4` | `not recorded` |
-| `route_map_sha256` | `ea5417f926f57cf7c65f349d13af06996e8f623b523562e62d794e9878b1cc37` | `not recorded` |
-| `authorization_trace_sha256` | `d804172c69d6692d97d8413c1e5106639e1dfc33447cfdefb0cd5e6348a8d6be` | `not recorded` |
-| `frontend_sha256` | `5a53fbca71fb092f2bc0db89eba91a9803501cfc6668ceddd4f8681146d050eb` | `not recorded` |
+| `source_manifest_sha256` | `4bee20e7ec455eeb6e1122552b523fb839e097266bb44705cde91e1986f916d8` | `not recorded` |
+| `control_inventory_sha256` | `7b9c55ad2a1a8f0ec0ebd981a96cfb37f11b89b0ba4fe7edeaea83ed4d9ab67a` | `not recorded` |
+| `route_map_sha256` | `03ae027e668c27f1aaac0cb1bd33bfaa59cb2bfc884fbfe82ac4a3a7e11ae63f` | `not recorded` |
+| `authorization_trace_sha256` | `027c6e28ea158b6b4d8f1ce4922359cd8b3b5a081cfa8ef24d5e992284a0145a` | `not recorded` |
+| `frontend_sha256` | `e26e60e03dbbba3ff943d51b164fd253c8ed4b9145364e30de06d9ea732ed78a` | `not recorded` |
 | `screenshot_manifest_sha256` | `b488bf453ae260b6564ae592f0455e3d70cff3121dca1e7c823c7abb270b44d3` | `not recorded` |
 | `screenshot_index_sha256` | `16b0620ca1d02a1b181ad15b3a2b0c6aae9e7aa539654d27ed80d9147189634e` | `not recorded` |
 | `generator_sha256` | `6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65` | `not recorded` |

@@ -6,7 +6,7 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 re-derived from the markup on every run.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
-* Frontend digest: `5a53fbca71fb092f2bc0db89eba91a9803501cfc6668ceddd4f8681146d050eb`.
+* Frontend digest: `e26e60e03dbbba3ff943d51b164fd253c8ed4b9145364e30de06d9ea732ed78a`.
 * Panes: 6 · controls in panes: 108 · controls in the
   shared chrome: 135 · script-rendered: 72.
 
@@ -175,8 +175,8 @@ Section `pane-chat`, 13 interactive elements.
 | 2 | select | chatPersona | — | — | — |
 | 3 | input | chatPersonaSearch | search | Filter personas | — |
 | 4 | select | chatReasoning | — | Off Low Medium | — |
-| 5 | input | chatToolsEnabled | checkbox | — | — |
-| 6 | select | chatToolProtocol | — | Native (OpenAI-compatible) Tagged text (compatibility) | — |
+| 5 | select | chatToolProtocol | — | Native (OpenAI-compatible) Tagged text (compatibility) | — |
+| 6 | input | chatToolsEnabled | checkbox | — | — |
 | 7 | input | chatUnload | checkbox | — | — |
 | 8 | button | chatClearBtn | button | Clear | clearChat() |
 | 9 | button | chatHandoffBtn | button | Open in Harness | handOffChatToHarness() |

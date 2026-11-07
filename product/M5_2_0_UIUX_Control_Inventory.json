@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "5a53fbca71fb092f2bc0db89eba91a9803501cfc6668ceddd4f8681146d050eb",
+  "frontend_sha256": "e26e60e03dbbba3ff943d51b164fd253c8ed4b9145364e30de06d9ea732ed78a",
   "panes": [
     {
       "dom_id": "start",
@@ -790,15 +790,15 @@
           "text": "Off Low Medium"
         },
         {
-          "tag": "input",
-          "id": "chatToolsEnabled",
-          "type": "checkbox"
-        },
-        {
           "tag": "select",
           "id": "chatToolProtocol",
           "aria-describedby": "chatToolProtocolHint",
           "text": "Native (OpenAI-compatible) Tagged text (compatibility)"
+        },
+        {
+          "tag": "input",
+          "id": "chatToolsEnabled",
+          "type": "checkbox"
         },
         {
           "tag": "input",

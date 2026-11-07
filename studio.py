@@ -7645,16 +7645,14 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
             <option value="low">Low</option>
             <option value="medium">Medium</option>
           </select>
-        </div>
-        <div>
-          <label class="chk-lbl" title="Read workspace files, CodeGraph and notes, or inventory configured MCP servers locally. External MCP execution requires the Harness."><input type="checkbox" id="chatToolsEnabled" checked /> Read-only tools</label>
-          <label class="field-lbl" for="chatToolProtocol">Tool protocol</label>
+          <label class="field-lbl" for="chatToolProtocol" style="margin-top:6px;">Tool protocol</label>
           <select id="chatToolProtocol" aria-describedby="chatToolProtocolHint">
             <option value="native" selected>Native (OpenAI-compatible)</option>
             <option value="tagged">Tagged text (compatibility)</option>
           </select>
-          <div id="chatToolProtocolHint" style="font-size:11px; color:var(--text-dim); margin-top:5px;">Server rejects tools? Choose tagged text. Reasoning is never executed.</div>
+          <span id="chatToolProtocolHint" class="sr-only">Server rejects tools? Choose tagged text. Reasoning is never executed.</span>
         </div>
+        <label class="chk-lbl" style="margin-top:14px;" title="Read workspace files, CodeGraph and notes, or inventory configured MCP servers locally. External MCP execution requires the Harness."><input type="checkbox" id="chatToolsEnabled" checked /> Read-only tools</label>
         <label class="chk-lbl" style="margin-top:14px;"><input type="checkbox" id="chatUnload" /> Unload M5 after reply</label>
         <button class="btn btn-xs" id="chatClearBtn" type="button" style="margin-top:14px; margin-left:auto;" onclick="clearChat()" title="Clear the transcript on this pane (undoable)">Clear</button>
       </div>

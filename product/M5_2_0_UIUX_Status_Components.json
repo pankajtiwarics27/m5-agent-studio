@@ -107,29 +107,41 @@
       "id": null,
       "tone": "warn",
       "live": false,
-      "line": 7134
+      "line": 7132
     },
     {
       "id": null,
       "tone": "warn",
       "live": false,
-      "line": 7232
+      "line": 7230
     },
     {
       "id": null,
       "tone": "neutral",
       "live": false,
-      "line": 11092
+      "line": 11090
     },
     {
       "id": null,
       "tone": "busy",
       "live": false,
-      "line": 11093
+      "line": 11091
     },
     {
       "id": null,
       "tone": "ok",
+      "live": false,
+      "line": 11092
+    },
+    {
+      "id": null,
+      "tone": "warn",
+      "live": false,
+      "line": 11093
+    },
+    {
+      "id": null,
+      "tone": "warn",
       "live": false,
       "line": 11094
     },
@@ -141,7 +153,7 @@
     },
     {
       "id": null,
-      "tone": "warn",
+      "tone": "danger",
       "live": false,
       "line": 11096
     },
@@ -153,27 +165,15 @@
     },
     {
       "id": null,
-      "tone": "danger",
+      "tone": "warn",
       "live": false,
       "line": 11098
     },
     {
       "id": null,
-      "tone": "warn",
-      "live": false,
-      "line": 11099
-    },
-    {
-      "id": null,
-      "tone": "warn",
-      "live": false,
-      "line": 11100
-    },
-    {
-      "id": null,
       "tone": "neutral",
       "live": false,
-      "line": 11101
+      "line": 11099
     }
   ],
   "state_matrix": [
