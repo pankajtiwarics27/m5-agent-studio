@@ -2936,6 +2936,7 @@
         "tests_executed": [
           "python -m pytest -q  ->  3141 passed, 28 skipped (14m50s); explicit live-container/browser-environment skips only",
           "python -m pytest -q tests/test_screenshot_capture_browser.py tests/test_uiux_adversarial_browser.py  ->  32 passed with pinned Chromium",
+          "python -m pytest -q tests/test_checkout_store_isolation.py::test_selected_security_tests_preserve_source_store[test_trusted_transformations.py::test_http_endpoints_and_standalone_studio_bundle_parity]  ->  1 passed in 5.13s on Python 3.11 at be58926",
           "python -m pytest -q tests/test_pipeline_workspace.py  ->  37 passed, including 29 copied-source mutations and real authorization/SSE provider-error tests",
           "node scripts/pipeline_workspace_walk.mjs  ->  50/50 checks on each of 8 runs, 400/400 overall, 48/48 after captures",
           "node scripts/pipeline_workspace_walk.mjs --capture-only (detached 605b977 worktree)  ->  48/48 before captures, 0 checks; historical evidence, not a verification pass",
