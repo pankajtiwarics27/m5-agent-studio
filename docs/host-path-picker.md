@@ -217,3 +217,16 @@ static source SHA; it neither approves a candidate nor alters the inherited
 approval, structural rules or fingerprint. All five CI-reported failures now
 pass locally, as do Ruff/mypy62/docs checks. Required full CI must rerun on the
 corrected head before merge; owner test4 acceptance is still pending.
+
+A second CI correction addresses scoped push collection, not the scrolling fix:
+full PR Python3.11/3.12 passed while the scoped push order imported the security
+CLI wrapper instead of the runtime module. `tests/test_screenshots.py` prepended
+`scripts/` globally to `sys.path`; unlike full collection, this selection had not
+yet cached the runtime security module. A fresh screenshot→security collection
+reproduced the missing evaluator error. Importing the screenshot validator via
+its `scripts` namespace removes the global path mutation. A clean-child regression
+fails before this change and now checks both an unchanged import path and the
+runtime module's exact file/evaluator. Screenshot/security/scoped-selector tests
+pass61 cases in that order; Ruff/mypy62/map/sign-off checks pass. Security/runtime
+code, approvals and CI selections are unchanged. Both push and PR checks must
+succeed on the corrected head; no release or owner test4 acceptance is inferred.

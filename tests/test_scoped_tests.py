@@ -124,3 +124,27 @@ def test_local_scope_selector_includes_staged_unstaged_and_untracked_changes(tmp
     untracked.write_text("untracked = True\n", encoding="utf-8")
 
     assert set(_git_worktree_paths(tmp_path)) == {"tracked.py", "staged.py", "untracked.py"}
+
+
+def test_screenshot_collection_cannot_shadow_the_runtime_security_module() -> None:
+    """A fresh scoped collection must not import scripts/security_release_gate.py.
+
+    Full-suite collection can mask this bug by caching the runtime module first.
+    Keep this child clean and execute the actual screenshot test module's imports.
+    """
+    import sys
+
+    result = subprocess.run(
+        [sys.executable, "-c", "\n".join([
+            "import runpy, sys",
+            "from pathlib import Path",
+            "before = list(sys.path)",
+            "runpy.run_path('tests/test_screenshots.py')",
+            "assert sys.path == before, 'screenshot collection polluted sys.path'",
+            "import security_release_gate as gate",
+            "assert Path(gate.__file__).resolve() == Path('security_release_gate.py').resolve()",
+            "assert callable(gate.evaluate_security_signoff_gate)",
+        ])],
+        cwd=ROOT, capture_output=True, text=True, timeout=30, check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
