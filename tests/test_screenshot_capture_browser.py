@@ -665,3 +665,13 @@ def test_compare_history_browser_browse_export_and_error_recovery(browser_env: d
     assert report["failed"] == 0, report["checks"]
     assert report["passed"] == 8
     assert demo["token"] not in result.stdout + result.stderr
+
+
+def test_integrations_strip_wraps_without_horizontal_scroll(browser_env: dict[str, str]) -> None:
+    """Real CSS/renderers at seven widths, offline and with no user state."""
+    result = subprocess.run(
+        ["node", str(ROOT / "tests" / "browser" / "integrations_strip_walk.mjs")],
+        cwd=ROOT, env=browser_env, capture_output=True, text=True, timeout=90, check=False,
+    )
+    assert result.returncode == 0, f"{result.stdout}\n{result.stderr}"
+    assert json.loads(result.stdout)["passed"] == 21
