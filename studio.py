@@ -22011,6 +22011,8 @@ def _chat_tool_schemas() -> list[dict[str, Any]]:
     specs.extend((name, "Read-only CodeGraph workspace inspection.", {"path": {"type": "string"}, "query": {"type": "string"}, "top_n": {"type": "integer"}})
                  for name in ("codegraph_architecture", "codegraph_context", "codegraph_path", "codegraph_impact"))
     specs.extend([
+        ("ctx_search", "Retrieve compressed tool output from this session's Context-Mode vault. Use ctx- IDs here, not oc_read/oc_search; omit query to read a document's first chunks.",
+         {"query": {"type": "string"}, "doc_id": {"type": "string"}, "limit": {"type": "integer", "minimum": 1, "maximum": 6}}),
         ("oc_search", "Search saved OpenContext notes.", {"query": {"type": "string"}}),
         ("oc_read", "Read a saved OpenContext note.", {"doc_id": {"type": "string"}}),
     ])
@@ -23657,6 +23659,7 @@ Use the native function-call interface when available. Never put executable tool
 - `grep_search`: `{{"pattern": "search_regex", "path": "."}}`
 - `read_file`: `{{"path": "README.md", "start_line": 1, "end_line": 180}}`
 - `codegraph_architecture` / `codegraph_context` / `codegraph_path` / `codegraph_impact`
+- `ctx_search`: `{{"doc_id": "ctx-xxxxxxxx", "query": "", "limit": 6}}` retrieves compressed tool output from this chat session. If a result contains a Context-Mode vault reference, use this tool, not oc_read or oc_search. An empty query reads the first chunks; a specific term searches them. Do not search configuration files to reconstruct cached inventory. A vault ID is not a filesystem path or an OpenContext note ID.
 - `oc_search`: `{{"query": "topic"}}` / `oc_read`: `{{"doc_id": "oc-..."}}`
 (Note: External MCP execution is disabled in Direct Chat. Use mcp_list_servers for inventory, then switch to the Harness for approved MCP execution. File edits and shell execution are disabled in Direct Chat — answer directly once you have enough facts, or advise switching to Tab 1 Agent Harness for code edits.)
 """
@@ -26208,6 +26211,7 @@ def sandbox_tool_output_if_large(
 
 
 def search_ctx_vault(session_id: str, query: str, doc_id: str = "", limit: int = 6) -> str:
+    limit = max(1, min(int(limit), 6))
     fts_q = context_store.sanitize_fts5_query(query)
     if not fts_q and not doc_id:
         return "Provide a `query` or `doc_id` to search the Context-Mode FTS5 Vault."
@@ -26219,10 +26223,10 @@ def search_ctx_vault(session_id: str, query: str, doc_id: str = "", limit: int =
                 """
                 SELECT doc_id, source_tool, content, bm25(ctx_vault_fts) AS rk
                 FROM ctx_vault_fts
-                WHERE ctx_vault_fts MATCH ? AND doc_id = ?
+                WHERE ctx_vault_fts MATCH ? AND doc_id = ? AND session_id = ?
                 ORDER BY rk ASC LIMIT ?
                 """,
-                (fts_q, doc_id, limit),
+                (fts_q, doc_id, session_id, limit),
             ).fetchall()
         if fts_q:
             return conn.execute(
@@ -26235,8 +26239,8 @@ def search_ctx_vault(session_id: str, query: str, doc_id: str = "", limit: int =
                 (fts_q, session_id, limit),
             ).fetchall()
         return conn.execute(
-            "SELECT doc_id, source_tool, content FROM ctx_vault_chunks WHERE doc_id = ? ORDER BY chunk_idx ASC LIMIT ?",
-            (doc_id, limit),
+            "SELECT doc_id, source_tool, content FROM ctx_vault_chunks WHERE doc_id = ? AND session_id = ? ORDER BY chunk_idx ASC LIMIT ?",
+            (doc_id, session_id, limit),
         ).fetchall()
 
     rows = runtime_persistence.run_read(STORAGE, DB_PATH, _read_vault)
