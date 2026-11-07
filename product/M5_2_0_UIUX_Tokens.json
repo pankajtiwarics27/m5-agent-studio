@@ -5,7 +5,7 @@
   "source": {
     "frontend": "static/index.html",
     "style_block": "#m5-redesign-system",
-    "style_block_sha256": "4addb3b025ac160c983510515ceb2693bb2b9d65e58d3f7ceb6091634b3ab8a6",
+    "style_block_sha256": "bc85992ffe74667fe9057ba69394ebe251b987d1aeece3c1f82c0fd2a9803e74",
     "superseded_blocks": [
       "the first <style> block declares an older palette that this one overrides; it is kept only so a stale rule cannot resolve to an undefined name"
     ]
@@ -42,7 +42,7 @@
   "totals": {
     "tokens": 56,
     "groups": 8,
-    "references": 1620,
+    "references": 1629,
     "theme_overrides": 20,
     "density_overrides": 5,
     "contrast_pairs": 28,
@@ -131,7 +131,7 @@
         "light": "#F8F9FB"
       },
       "density_override": null,
-      "references": 22
+      "references": 23
     },
     {
       "name": "--bg-elev",
@@ -141,7 +141,7 @@
         "light": "#FFFFFF"
       },
       "density_override": null,
-      "references": 44
+      "references": 45
     },
     {
       "name": "--bg-card",
@@ -191,7 +191,7 @@
         "light": "#DDE2E8"
       },
       "density_override": null,
-      "references": 204
+      "references": 207
     },
     {
       "name": "--border-hi",
@@ -211,7 +211,7 @@
         "light": "#1B2430"
       },
       "density_override": null,
-      "references": 108
+      "references": 109
     },
     {
       "name": "--text-dim",
@@ -321,7 +321,7 @@
         "light": "#4F5FE8"
       },
       "density_override": null,
-      "references": 13
+      "references": 14
     },
     {
       "name": "--text-2xs",
@@ -457,7 +457,7 @@
       "value": "6px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 55
+      "references": 56
     },
     {
       "name": "--radius-md",
@@ -497,7 +497,7 @@
       "value": "44px",
       "theme_overrides": {},
       "density_override": "32px",
-      "references": 6
+      "references": 7
     },
     {
       "name": "--control-min-h-sm",

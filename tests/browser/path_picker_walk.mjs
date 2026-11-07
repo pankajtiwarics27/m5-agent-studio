@@ -30,7 +30,7 @@ try {
     window.fetch = async (url, init = {}) => {
       const parsed = new URL(url, 'https://studio.invalid');
       const route = parsed.pathname, path = parsed.searchParams.get('path') || '/host';
-      calls.push({route, method:init.method || 'GET', body:init.body ? JSON.parse(init.body) : null});
+      calls.push({route, query:parsed.searchParams.get('query'), method:init.method || 'GET', body:init.body ? JSON.parse(init.body) : null});
       if (holds[route]) await new Promise(resolve => releases[route] = resolve);
       const entries = [{name:"project's folder",path:"/host/project's folder",kind:'directory'}];
       if (parsed.searchParams.get('kind') === 'file') entries.push({name:"runner's script.py", path:"/host/runner's script.py",kind:'file'});
@@ -56,6 +56,10 @@ try {
   const value = id => page.$eval(`#${id}`, node => node.value);
   const close = async () => page.evaluate(() => picker.close());
   await page.evaluate(() => { document.querySelectorAll('.pane').forEach(n=>n.classList.toggle('active',n.id==='pane-start'));  document.getElementById('startWorkspaceInput').value='/original'; });
+  // Selection-first host UX must be explicit before opening any chooser.
+  assert(await page.$$eval('[data-path-for]', nodes => nodes.every(n=>n.textContent.includes('Studio host'))));
+  assert.equal(await page.$eval('#pathPickerApplyBtn',n=>n.getAttribute('aria-describedby')),'pathPickerSelectionHint');
+  passed++;
   // Owner test4: Start must be scrollable BEFORE invoking the picker. The old walk
   // focused an offscreen field/programmatically opened the dialog, masking clipping.
   await page.evaluate(() => {
@@ -139,7 +143,50 @@ try {
     assert.equal(await page.evaluate(()=>document.activeElement.id), 'startWorkspaceInput');
     assert.equal(await value('startWorkspaceInput'), '/original');
     passed++;
+    // Expanded creation/model forms scroll in the body, not over Choose/Cancel.
+    await open();
+    assert.equal(await page.$eval('#pathPickerNewFolder', n=>n.open),false);
+    assert.equal(await page.$eval('.path-picker-ai', n=>n.open),false);
+    await page.$eval('#pathPickerNewFolder', n=>n.open=true);
+    await page.$eval('.path-picker-ai', n=>n.open=true);
+    await page.$eval('#pathPickerSelected', n=>n.textContent='/host/'+'long-folder/'.repeat(80));
+    const footer = await page.$eval('.path-picker-footer', n=>{
+      const r=n.getBoundingClientRect(), body=document.querySelector('.path-picker-body');
+      return {top:r.top,bottom:r.bottom,overflow:n.scrollWidth>n.clientWidth+1,
+        scroll:getComputedStyle(body).overflowY,content:body.scrollHeight,height:body.clientHeight};
+    });
+    assert(footer.top>=0 && footer.bottom<=layout.height+1 && !footer.overflow && footer.scroll==='auto' && footer.content>footer.height, JSON.stringify(footer));
+    await page.focus('#pathPickerApplyBtn');
+    const action = await page.$eval('#pathPickerApplyBtn', n=>{const r=n.getBoundingClientRect();return {top:r.top,bottom:r.bottom};});
+    assert(action.top>=0 && action.bottom<=layout.height+1,JSON.stringify(action));
+    await page.keyboard.press('Escape');
+    passed++;
   }
+  for (const [id,options,label,hint] of [
+    ['startWorkspaceInput',{workspace:true},'Choose folder',/shared workspace/],
+    ['mcpCommand',{kind:'file'},'Choose file',/draft/],
+    ['mcpArgs',{kind:'file',append:true},'Choose file',/quoted/],
+    ['mcpEnvJson',{env:true},'Choose folder',/named environment/],
+  ]) {
+    await open(id,options);
+    assert.equal(await page.$eval('#pathPickerApplyBtn',n=>n.textContent),label);
+    assert.match(await page.$eval('#pathPickerSelectionHint',n=>n.textContent),hint);
+    assert.equal(await page.$eval('.path-picker-ai',n=>n.open),false);
+    await close(); passed++;
+  }
+  await open();
+  await page.focus('#pathPickerLocation'); await page.keyboard.down('Control');
+  await page.keyboard.press('A'); await page.keyboard.up('Control');
+  await page.keyboard.type('/recent');
+  const beforeEnter = await page.evaluate(()=>calls.length);
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(()=>document.getElementById('pathPickerSelected').textContent==='/recent');
+  assert.equal(await page.evaluate(()=>calls.length),beforeEnter+1);
+  await page.type('#pathPickerSearch','project'); await page.keyboard.press('Enter');
+  await page.waitForFunction(()=>calls.at(-1).query==='project');
+  assert.equal(await page.evaluate(()=>calls.length),beforeEnter+2);
+  assert.equal(await value('startWorkspaceInput'),'/original');
+  await close(); passed++;
   assert.equal(await page.evaluate(()=>calls.filter(c=>c.method==='POST'||c.route.endsWith('/directory')).length),0);
   passed++;
   await open(); await page.evaluate(()=>picker.load('/bad'));

@@ -2264,14 +2264,23 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
   .path-field { display:flex; gap:6px; align-items:center; min-width:0; flex:1 1 200px; }
   .path-field > input { flex:1; width:100%; min-width:0; }
   .path-field > button { flex:0 0 auto; }
-  .path-picker { width:min(720px, 96vw); max-height:92dvh; overflow-y:auto; padding:16px; }
+  .path-picker { width:min(720px, 96vw); height:min(700px, 92dvh); max-height:92dvh; overflow:hidden; padding:0; }
+  .path-picker-header, .path-picker-footer { flex:0 0 auto; padding:12px 16px; }
+  .path-picker-header { border-bottom:1px solid var(--border); }
+  .path-picker-header p { margin:8px 0 0; }
+  .path-picker-body { flex:1; min-height:0; overflow-y:auto; padding:12px 16px; }
+  .path-picker-footer { border-top:1px solid var(--border); background:var(--bg-elev); }
+  .path-picker-footer p { margin:4px 0; }
+  .path-picker-footer .path-picker-preview { max-height:64px; overflow-y:auto; }
   .path-picker p, #pathPickerStatus { font-size:12px; line-height:1.5; color:var(--text-dim); }
   .path-picker-head, .path-picker-tools, .path-picker-actions, .path-picker-insert { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-  .path-picker-head { justify-content:space-between; }
-  .path-picker-head h2 { margin:0; font-size:20px; }
+  .path-picker-head { justify-content:space-between; flex-wrap:nowrap; }
+  .path-picker-head h2 { flex:1; min-width:0; margin:0; font-size:20px; }
   .path-picker-tools > select { flex:1; min-width:120px; max-width:100%; }
   .path-picker input:not([type="checkbox"]), .path-picker textarea, .path-picker select { width:100%; min-width:0; }
   .path-picker .field-lbl { margin-top:10px; }
+  .path-picker input[type="search"] { min-height:var(--control-min-h); padding:9px 11px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--bg); color:var(--text); font:inherit; }
+  .path-picker input[type="search"]:focus { outline:2px solid var(--ring); outline-offset:2px; }
   .path-picker-entries { display:flex; flex-direction:column; min-height:80px; max-height:28dvh; overflow-y:auto; border:1px solid var(--border); border-radius:var(--radius-sm); margin:8px 0; }
   .path-picker-entry { border:0; border-bottom:1px solid var(--border); padding:10px; text-align:left; background:var(--bg-card); color:var(--text); cursor:pointer; min-height:var(--control-min-h); overflow-wrap:anywhere; }
   .path-picker-entry:hover, .path-picker-entry[aria-pressed="true"] { background:var(--bg-hover); }
@@ -2499,7 +2508,7 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
             <button class="btn btn-cyan btn-xs" onclick="refreshCodeGraphOverview()">Scan Workspace Graph</button>
           </div>
           <div style="display:grid; grid-template-columns:1.3fr 1.1fr 1.3fr auto; gap:8px; align-items:end;">
-            <div><label class="field-lbl" for="cgWorkspaceInput">Workspace Folder</label><div class="path-field"><input type="text" id="cgWorkspaceInput" style="width:100%; font-family:var(--mono); font-size:11.4px;" /><button type="button" class="btn btn-xs" data-path-for="cgWorkspaceInput" onclick="openPathPicker('cgWorkspaceInput', {workspace:true})" aria-label="Browse host workspace folders">Browse…</button></div></div>
+            <div><label class="field-lbl" for="cgWorkspaceInput">Workspace Folder</label><div class="path-field"><input type="text" id="cgWorkspaceInput" style="width:100%; font-family:var(--mono); font-size:11.4px;" /><button type="button" class="btn btn-xs" data-path-for="cgWorkspaceInput" onclick="openPathPicker('cgWorkspaceInput', {workspace:true})" aria-label="Browse Studio host workspace folders">Browse Studio host…</button></div></div>
             <div>
               <label class="field-lbl" for="cgModeSelect">Graph Tool Mode</label>
               <select id="cgModeSelect" style="width:100%;">
@@ -2628,7 +2637,7 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
               <!-- Stdio Transport Fields -->
               <div id="mcpStdioFields" style="display:none;">
                 <div class="mcp-wizard-grid two">
-                  <div><label class="field-lbl" for="mcpCommand">Executable Command</label><div class="path-field"><input type="text" id="mcpCommand" style="width:100%; font-family:var(--mono);" placeholder="python3, uv, npx, uvx, docker" oninput="mcpWizardRefresh()" /><button type="button" class="btn btn-xs" data-path-for="mcpCommand" onclick="openPathPicker('mcpCommand', {kind:'file'})" aria-label="Browse host executable files">Browse…</button></div></div>
+                  <div><label class="field-lbl" for="mcpCommand">Executable Command</label><div class="path-field"><input type="text" id="mcpCommand" style="width:100%; font-family:var(--mono);" placeholder="python3, uv, npx, uvx, docker" oninput="mcpWizardRefresh()" /><button type="button" class="btn btn-xs" data-path-for="mcpCommand" onclick="openPathPicker('mcpCommand', {kind:'file'})" aria-label="Browse Studio host executable files">Browse Studio host…</button></div></div>
                   <div><label class="field-lbl" for="mcpArgs">Arguments (Shell-quoted or space-separated)</label><input type="text" id="mcpArgs" style="width:100%; font-family:var(--mono);" placeholder="-y @playwright/mcp@latest --headless" oninput="mcpWizardRefresh()" /><div class="path-picker-insert"><button type="button" class="btn btn-xs" onclick="openPathPicker('mcpArgs', {kind:'file',append:true})">Append file path…</button><button type="button" class="btn btn-xs" onclick="openPathPicker('mcpArgs', {append:true})">Append folder path…</button></div></div>
                 </div>
               </div>
@@ -2998,7 +3007,7 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
         <div style="display:grid; grid-template-columns:1fr auto; gap:8px; align-items:end; margin-bottom:8px;">
           <div>
             <label class="field-lbl" for="sdlcWorkspaceInput">Target Project Directory (Created automatically if missing)</label>
-            <div class="path-field"><input type="text" id="sdlcWorkspaceInput" style="width:100%; font-family:var(--mono); font-size:11.4px;" placeholder="~/Projects/my-new-app" onchange="syncProjectDirInputs(this.value)" /><button type="button" class="btn btn-xs" data-path-for="sdlcWorkspaceInput" onclick="openPathPicker('sdlcWorkspaceInput', {workspace:true})" aria-label="Browse host workspace folders">Browse…</button></div>
+            <div class="path-field"><input type="text" id="sdlcWorkspaceInput" style="width:100%; font-family:var(--mono); font-size:11.4px;" placeholder="~/Projects/my-new-app" onchange="syncProjectDirInputs(this.value)" /><button type="button" class="btn btn-xs" data-path-for="sdlcWorkspaceInput" onclick="openPathPicker('sdlcWorkspaceInput', {workspace:true})" aria-label="Browse Studio host workspace folders">Browse Studio host…</button></div>
           </div>
           <button type="button" class="btn btn-xs" onclick="saveWorkspaceDirectory(document.getElementById('sdlcWorkspaceInput').value)">Set Directory</button>
         </div>
@@ -3277,7 +3286,7 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
             </div>
             <div class="start-workspace-actions">
               <label for="startWorkspaceInput" style="position:absolute; left:-9999px;">Project directory</label>
-              <div class="path-field"><input type="text" id="startWorkspaceInput" autocomplete="off" placeholder="~/Projects/my-app" aria-describedby="startWorkspaceHint" /><button type="button" class="btn btn-xs" data-path-for="startWorkspaceInput" onclick="openPathPicker('startWorkspaceInput', {workspace:true})" aria-label="Browse host workspace folders">Browse…</button></div>
+              <div class="path-field"><input type="text" id="startWorkspaceInput" autocomplete="off" placeholder="~/Projects/my-app" aria-describedby="startWorkspaceHint" /><button type="button" class="btn btn-xs" data-path-for="startWorkspaceInput" onclick="openPathPicker('startWorkspaceInput', {workspace:true})" aria-label="Browse Studio host workspace folders">Browse Studio host…</button></div>
               <select id="startWorkspaceRecent" aria-label="Recent project folders" onchange="if(this.value) pickStartWorkspace(this.value)">
                 <option value="">Recent folders…</option>
               </select>
@@ -3398,7 +3407,7 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
                 <label class="field-lbl" style="margin:0;" for="harnessWorkspaceInput">Project Directory</label>
                 <button type="button" class="btn btn-xs" style="padding:3px 6px;" onclick="saveWorkspaceDirectory()" title="Save as default project directory (creates folder if missing)">Set / Create</button>
               </div>
-              <div class="path-field"><input type="text" id="harnessWorkspaceInput" style="width:100%; font-family:var(--mono); font-size:11.2px;" placeholder="~/Projects/my-app" onchange="syncProjectDirInputs(this.value)" /><button type="button" class="btn btn-xs" data-path-for="harnessWorkspaceInput" onclick="openPathPicker('harnessWorkspaceInput', {workspace:true})" aria-label="Browse host workspace folders">Browse…</button></div>
+              <div class="path-field"><input type="text" id="harnessWorkspaceInput" style="width:100%; font-family:var(--mono); font-size:11.2px;" placeholder="~/Projects/my-app" onchange="syncProjectDirInputs(this.value)" /><button type="button" class="btn btn-xs" data-path-for="harnessWorkspaceInput" onclick="openPathPicker('harnessWorkspaceInput', {workspace:true})" aria-label="Browse Studio host workspace folders">Browse Studio host…</button></div>
               <select id="harnessRecentDirsSelect" aria-label="Recent project directories" style="width:100%; margin-top:4px; font-size:11px; padding:3px 6px; display:none;" onchange="if(this.value)saveWorkspaceDirectory(this.value)"></select>
             </div>
             <label class="chk-lbl" title="When unchecked (default), projects are saved directly inside your Project Directory above. Check only to isolate in a temporary .harnesses/wt-<id> git worktree.">
@@ -3844,17 +3853,21 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
 
 <div id="pathPickerModal" class="modal-backdrop" onclick="if(event.target===this)closePathPicker()">
   <div class="modal path-picker" role="dialog" aria-modal="true" aria-labelledby="pathPickerTitle" aria-describedby="pathPickerHostNote">
-    <div class="path-picker-head"><h2 id="pathPickerTitle">Choose a workspace</h2><button type="button" class="btn btn-xs" onclick="closePathPicker()" aria-label="Close path picker">Close</button></div>
-    <p id="pathPickerHostNote">Browsing the <strong>Studio host</strong>, not necessarily this browser’s computer. No file contents are read. Hidden/secret entries and symlinks are not browsed. Manual entry remains available.</p>
+    <div class="path-picker-header">
+    <div class="path-picker-head"><h2 id="pathPickerTitle">Choose a workspace folder</h2><button type="button" class="btn btn-xs" onclick="closePathPicker()" aria-label="Close path picker">Close</button></div>
+    <p id="pathPickerHostNote">Browsing the <strong>Studio host</strong>, not necessarily this browser’s computer. This is Studio’s web picker, not Finder or an upload dialog. You can also cancel and enter a host path manually.</p>
+    </div>
+    <div class="path-picker-body">
+    <p>Open a folder to browse it. Choose below to apply your selection. Hidden/secret entries and symlinks are not listed; file contents are never read.</p>
     <div class="path-picker-tools"><label class="sr-only" for="pathPickerRoots">Approved locations</label><select id="pathPickerRoots" onchange="if(this.value)loadPathPicker(this.value)"><option value="">Approved locations…</option></select><button type="button" class="btn btn-xs" onclick="loadPathPicker('')">Default location</button><button type="button" class="btn btn-xs" id="pathPickerUp" disabled>Up</button></div>
     <label class="field-lbl" for="pathPickerLocation">Current host folder</label>
     <div class="path-field"><input type="text" id="pathPickerLocation" autocomplete="off" /><button type="button" class="btn btn-xs" onclick="loadPathPicker(document.getElementById('pathPickerLocation').value)">Go</button></div>
     <label class="field-lbl" for="pathPickerSearch">Filter names in this folder</label>
     <div class="path-field"><input type="search" id="pathPickerSearch" maxlength="100" /><button type="button" class="btn btn-xs" onclick="loadPathPicker(pathPickerState.path)">Filter</button></div>
-    <div id="pathPickerStatus" role="status" aria-live="polite"></div>
     <div id="pathPickerEntries" class="path-picker-entries" aria-label="Host folders and files"></div>
     <div id="pathPickerEnvRow" hidden><label class="field-lbl" for="pathPickerEnvKey">Environment variable receiving this path (only this key changes)</label><input type="text" id="pathPickerEnvKey" maxlength="128" placeholder="PROJECT_DIRECTORY" /></div>
-    <details id="pathPickerNewFolder"><summary>New folder</summary>
+    <details id="pathPickerNewFolder"><summary>New folder… (optional)</summary>
+      <p>Create a folder in the location above only if you need one. Creation does not change the workspace or draft field. Apply your selection separately afterwards. Cancel does not undo a folder already created.</p>
       <label class="field-lbl" for="pathPickerNewName">Folder name (editable)</label><input type="text" id="pathPickerNewName" autocomplete="off" oninput="pathPickerNameChanged()" />
       <div id="pathPickerCreatePreview" class="path-picker-preview"></div>
       <label class="chk-lbl"><input type="checkbox" id="pathPickerCreateConfirm" onchange="pathPickerCreateReady()" /> I confirm creating this folder at the location above.</label>
@@ -3867,8 +3880,13 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
         <output id="pathPickerSuggestion" for="pathPickerDescription" class="path-picker-preview"></output><button type="button" class="btn btn-xs" id="pathPickerUseSuggestion" onclick="usePathPickerSuggestion()" disabled>Use suggested name</button>
       </details>
     </details>
-    <div class="path-picker-preview">Selection: <span id="pathPickerSelected">Nothing selected.</span></div>
-    <div class="path-picker-actions"><button type="button" class="btn btn-xs" onclick="closePathPicker()">Cancel</button><button type="button" class="btn" id="pathPickerApplyBtn" onclick="applyPathPicker()" disabled>Use this folder</button></div>
+    </div>
+    <div class="path-picker-footer">
+    <div id="pathPickerStatus" role="status" aria-live="polite"></div>
+    <div class="path-picker-preview">Selected: <span id="pathPickerSelected">Nothing selected.</span></div>
+    <p id="pathPickerSelectionHint">Choose folder updates the shared workspace. Browsing and Cancel do not change it.</p>
+    <div class="path-picker-actions"><button type="button" class="btn btn-xs" onclick="closePathPicker()">Cancel</button><button type="button" class="btn btn-primary" id="pathPickerApplyBtn" aria-describedby="pathPickerSelectionHint" onclick="applyPathPicker()" disabled>Choose folder</button></div>
+    </div>
   </div>
 </div>
 
@@ -12816,8 +12834,13 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
     const state = { targetId, options, kind: options.kind || "directory", path: "", selected: "", request: 0 };
     pathPickerState = state;
     document.getElementById("pathPickerAskModel").disabled = false;
-    document.getElementById("pathPickerTitle").textContent = options.workspace ? "Choose a workspace" : options.env ? "Choose an environment path" : options.append ? "Append a path argument" : "Choose a file";
-    document.getElementById("pathPickerApplyBtn").textContent = state.kind === "file" ? "Use this file" : "Use this folder";
+    document.getElementById("pathPickerTitle").textContent = options.workspace ? "Choose a workspace folder" : options.env ? "Choose an environment path" : options.append ? "Append a host path" : "Choose a host file";
+    document.getElementById("pathPickerApplyBtn").textContent = state.kind === "file" ? "Choose file" : "Choose folder";
+    document.getElementById("pathPickerSelectionHint").textContent = options.workspace
+      ? "Choose folder updates the shared workspace. Browsing and Cancel do not change it."
+      : options.env ? "Choose changes only the named environment value in this draft. Save the MCP draft separately."
+      : options.append ? "Choose appends one quoted path to Arguments in this draft. Save the MCP draft separately."
+      : "Choose replaces the path field in this draft. It does not save, launch or sync an MCP server.";
     document.getElementById("pathPickerApplyBtn").disabled = true;
     document.getElementById("pathPickerEnvRow").hidden = !options.env;
     document.getElementById("pathPickerEnvKey").value = "";
@@ -12825,6 +12848,7 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
     document.getElementById("pathPickerDescription").value = "";
     document.getElementById("pathPickerSearch").value = "";
     document.getElementById("pathPickerNewFolder").open = false;
+    document.querySelector(".path-picker-ai").open = false;
     document.getElementById("pathPickerSuggestion").textContent = "";
     document.getElementById("pathPickerUseSuggestion").disabled = true;
     const modelSelect = document.getElementById("pathPickerModel");
@@ -12887,7 +12911,7 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
       }
       document.getElementById("pathPickerApplyBtn").disabled = !state.selected;
       pathPickerCreateReady();
-      pathPickerMessage(data.truncated ? "Only a bounded part of this folder is shown. Refine the name filter or enter a known child path." : data.entries.length ? "Choose a folder or file. Nothing changes until you press Use." : "No matching entries. You can still select this folder or create one.");
+      pathPickerMessage(data.truncated ? "Only a bounded part of this folder is shown. Refine the name filter or enter a known child path." : data.entries.length ? (state.kind === "file" ? "Select a file, then press Choose file. Opening folders only navigates." : "Open folders to browse. Press Choose folder to apply the current location.") : state.kind === "file" ? "No matching files or folders. Try another location or filter." : "No matching entries. You can still choose this folder.");
     } catch (error) {
       if (pathPickerActive(state) && request === state.request) pathPickerMessage(error.message + " Try Default location or keep the original field and type a path manually.", true);
     }
@@ -12911,7 +12935,9 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
       document.getElementById("pathPickerNewName").value = "";
       document.getElementById("pathPickerNewFolder").open = false;
       await loadPathPicker(data.path);
-      if (pathPickerActive(state)) pathPickerMessage("Folder created. Review this location, then press Use to apply it. Cancel does not delete a folder you already created.");
+      if (pathPickerActive(state)) pathPickerMessage(state.kind === "file"
+        ? "Folder created. Select a file inside it, then press Choose file. Cancel does not delete the folder."
+        : "Folder created, not yet applied. Review this location, then press Choose folder to use it. Cancel does not delete a folder you already created.");
     } catch (error) {
       if (pathPickerActive(state)) pathPickerMessage(error.message, true);
     } finally {
