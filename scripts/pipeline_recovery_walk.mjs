@@ -434,7 +434,7 @@ async function run(args) {
       );
       record(
         "the card of the seat that died says it stopped",
-        failed.cards[3].state === "Stopped" && failed.cards[1].state === "Done" && failed.cards[4].state === "Queued",
+        failed.cards[3].state === "Stopped" && failed.cards[1].state === "completed" && failed.cards[4].state === "Queued",
         JSON.stringify({ 1: failed.cards[1].state, 3: failed.cards[3].state, 4: failed.cards[4].state }),
       );
       record(
@@ -646,7 +646,7 @@ async function run(args) {
 
       // ── J: nothing broke ───────────────────────────────────────────────────
       const unexpectedPosts = posts.filter((entry) => entry.path !== "/api/council/stream").map((entry) => entry.path);
-      const unexpectedGets = gets.filter((path) => path !== "/api/history/export" && path !== "/api/models" && path !== "/api/telemetry" && path !== "/api/providers" && path !== "/api/harness/sessions" && path !== "/api/start/recent" && path !== "/api/start/health" && path !== "/api/skills" && path !== "/api/mcp/servers" && path !== "/api/hall/sessions" && path !== "/api/opencontext/docs" && path !== "/api/onboarding" && path !== "/api/onboarding/preflight");
+      const unexpectedGets = gets.filter((path) => path !== "/api/history/export" && path !== "/api/models" && path !== "/api/telemetry" && path !== "/api/providers" && path !== "/api/harness/sessions" && path !== "/api/start/recent" && path !== "/api/start/health" && path !== "/api/start/command-center" && path !== "/api/skills" && path !== "/api/mcp/servers" && path !== "/api/hall/sessions" && path !== "/api/opencontext/docs" && path !== "/api/onboarding" && path !== "/api/onboarding/preflight");
       record(
         "the pane posted only the council stream it posted before",
         unexpectedPosts.length === 0,

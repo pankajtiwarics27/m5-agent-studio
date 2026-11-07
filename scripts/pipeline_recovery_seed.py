@@ -30,6 +30,7 @@ nothing on record - which is the fact the surface has to state.
 from __future__ import annotations
 
 import argparse
+import asyncio
 import importlib.util
 import json
 import sys
@@ -45,6 +46,20 @@ FAILING_MODEL = "critic-fails-demo"
 FAILING_FAST_MODEL = "architect-fails-fast-demo"
 FAILURE_MESSAGE = "provider stream ended unexpectedly (HTTP 502 from the inference endpoint)"
 TOKENS_BEFORE_FAILURE = 6
+# UIV2-25 additive fixtures: the same provider wrapper drives a real slow first seat and a
+# genuinely long final answer through the unchanged orchestrator and SSE route.
+SLOW_MODEL = "architect-loading-demo"
+LONG_MODEL = "judge-long-content-demo"
+LONG_REPLY = """## Durable queue review
+
+The lease must be fenced before a worker can write. Recovery replays only acknowledged entries,
+and a worker that loses its lease cannot acknowledge new work.
+
+""" + "\n\n".join(
+    f"### Check {index}: recovery decision {index}\nLease fencing, backpressure, replay ordering and audit evidence remain explicit at step {index}. "
+    f"The queue records the observed transition, preserves the idempotency key, and refuses a stale writer before committing result {index}."
+    for index in range(1, 13)
+) + "\n\nThe final response ends with Check 12 and the complete audit trail."
 
 
 def _demo_cli():
@@ -67,9 +82,19 @@ def patch_stream(studio):
         if model_spec == FAILING_FAST_MODEL:
             raise RuntimeError(FAILURE_MESSAGE)
         emitted = 0
+        slow_delayed = False
+        long_sent = False
         async for item in original(
             client, model_spec, messages, temperature, max_tokens, reasoning_mode, _depth
         ):
+            if model_spec == SLOW_MODEL and item.get("type") == "content" and not slow_delayed:
+                slow_delayed = True
+                await asyncio.sleep(2.0)
+            if model_spec == LONG_MODEL and item.get("type") == "content":
+                if not long_sent:
+                    long_sent = True
+                    yield {**item, "text": LONG_REPLY}
+                continue
             if model_spec == FAILING_MODEL:
                 if item.get("type") == "content":
                     emitted += 1
@@ -123,6 +148,9 @@ def main(argv: list[str] | None = None) -> int:
         "failing_model": FAILING_MODEL,
         "failing_fast_model": FAILING_FAST_MODEL,
         "failure_message": FAILURE_MESSAGE,
+        "slow_model": SLOW_MODEL,
+        "long_model": LONG_MODEL,
+        "long_reply_chars": len(LONG_REPLY),
         "seeded_at": round(time.time(), 3),
         "root": str(environment.root),
     }

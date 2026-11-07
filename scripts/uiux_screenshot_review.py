@@ -4,6 +4,7 @@
     python3 scripts/uiux_screenshot_review.py            # regenerate JSON + docs
     python3 scripts/uiux_screenshot_review.py --check    # fail if either drifted, or a rule broke
     python3 scripts/uiux_screenshot_review.py --json     # print the review
+    python3 scripts/uiux_screenshot_review.py --review-local  # also review Git-ignored local evidence
 
 The program committed **228 PNGs across 27 capture sets** and nothing looked at them together.
 Each story photographed its own surface with its own walk, wrote a README beside it, and moved on;
@@ -619,6 +620,35 @@ REVIEWS: dict[str, dict[str, object]] = {
         "re_taken": True,
         "theme": "light and dark, desktop 1280-1640 and narrow 390",
     },
+    "pipeline-workspace-uiv2-25": {
+        "story": "UIV2-25",
+        "note": (
+            "The selected-stage Pipeline workspace: six states (empty, loading, populated, long content, "
+            "error and checkpoint recovery) at 1640x900, 1440x900, 1280x800 and 390x844 in light and dark, "
+            "written by `scripts/pipeline_workspace_walk.mjs` against the real seeded provider/orchestrator/"
+            "SSE path after 50/50 checks on every run and 400/400 overall. The equivalent pre-change set comes "
+            "from 605b977 in capture-only mode and makes no passing-check claim. Opened and read: the light "
+            "1440x900 empty capture (task first, closed setup, four real stages and an explicit empty Architect "
+            "reader), the dark 1440x900 populated capture (one Builder answer beside measured model/input/"
+            "artifact facts, with timeline and Inspector both completed/done), the dark 390x844 long-content "
+            "capture (the real Judge answer in its own vertical reader, with the full Check 12 tail asserted "
+            "rather than inferred from the crop), the light 1280x800 error capture (failed Critic, persistent "
+            "Retry/Forget controls and the browser-checkpoint distinction after its toast is gone), the dark "
+            "390x844 recovery capture (checkpoint provenance, an explained unavailable server reload, and "
+            "recovered/partial Critic output), and the pre-change populated frame. Local PNGs and manifests are "
+            "Git-ignored by policy; `--review-local` reviews them without turning them into committed artifacts."
+        ),
+        "eye": [
+            "after/light/empty-1440x900.png",
+            "after/dark/populated-1440x900.png",
+            "after/dark/long-content-390x844.png",
+            "after/light/error-1280x800.png",
+            "after/dark/recovery-390x844.png",
+            "before-uiv2-25/light/populated-1440x900.png",
+        ],
+        "re_taken": True,
+        "theme": "light and dark, desktop 1280-1640 and narrow 390",
+    },
     "start-command-center-uiv2-24": {
         "story": "UIV2-24",
         "note": (
@@ -903,10 +933,27 @@ def known_failing_walks() -> set[str]:
     return failing
 
 
-def capture_sets(media_root: Path) -> dict[str, dict[str, object]]:
-    """Each `docs/media/<name>` directory that holds at least one PNG."""
+def ignored_local_captures(media_root: Path) -> set[Path]:
+    """Git-ignored evidence is local by design, not an input to committed review artifacts."""
+    if media_root.resolve() != MEDIA.resolve():
+        return set()
+    relative_root = media_root.relative_to(PROJECT_ROOT)
+    result = subprocess.run(
+        ["git", "ls-files", "--others", "--ignored", "--exclude-standard", "--", relative_root.as_posix()],
+        cwd=PROJECT_ROOT, capture_output=True, text=True, check=False,
+    )
+    if result.returncode:
+        raise RuntimeError(f"cannot distinguish committed captures from ignored local evidence: {result.stderr.strip()}")
+    return {(PROJECT_ROOT / line).resolve() for line in result.stdout.splitlines() if line.lower().endswith(".png")}
+
+
+def capture_sets(media_root: Path, *, include_ignored: bool = False) -> dict[str, dict[str, object]]:
+    """Each `docs/media/<name>` directory with committed PNGs (or local ones on explicit request)."""
+    ignored = set() if include_ignored else ignored_local_captures(media_root)
     sets: dict[str, dict[str, object]] = {}
     for png in sorted(media_root.rglob("*.png")):
+        if png.resolve() in ignored:
+            continue
         relative = png.relative_to(media_root)
         name = relative.parts[0]
         bucket = sets.setdefault(name, {"files": []})
@@ -1147,13 +1194,13 @@ def published_files(media_root: Path, published: list[dict[str, object]]) -> lis
     return ordered
 
 
-def build(media_root: Path = MEDIA, *, measure: bool = True) -> dict[str, object]:
+def build(media_root: Path = MEDIA, *, measure: bool = True, include_ignored: bool = False) -> dict[str, object]:
     """The whole review.
 
     `measure=False` skips the `identify` pass. The checks that need pixels say so in their own
     names, and a run without them records `luminance_measured: false` rather than a pass.
     """
-    sets_raw = capture_sets(media_root)
+    sets_raw = capture_sets(media_root, include_ignored=include_ignored)
     all_files = [png for entry in sets_raw.values() for png in entry["files"]]
     luminances = mean_luminance(all_files) if measure else None
     failing = known_failing_walks()
@@ -1364,15 +1411,28 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--check", action="store_true", help="fail if the artifacts drifted or a rule broke")
     parser.add_argument("--json", action="store_true", help="print the review instead of writing it")
     parser.add_argument("--media", type=Path, default=MEDIA, help="media root (default: docs/media)")
+    parser.add_argument("--review-local", action="store_true", help="include ignored local evidence; never read or write committed artifacts")
     args = parser.parse_args(argv)
+    if args.review_local and args.check:
+        parser.error("--review-local is a review, not an artifact drift check; use --check separately")
 
-    payload = build(args.media)
+    payload = build(args.media, include_ignored=args.review_local)
     text = dumps(payload)
     doc = render_doc(payload)
     totals = payload["totals"]
 
     if args.json:
         print(text, end="")
+        return 0 if not payload["findings"] else 1
+
+    if args.review_local:
+        print(
+            f"local screenshot review: {totals['files']} captures in {totals['sets']} sets, "
+            f"{totals['reviewed_sets']} reviewed ({totals['files_eyed']} files opened), "
+            f"{len(payload['findings'])} findings; committed artifacts were not changed"
+        )
+        for finding in payload["findings"]:
+            print(f"finding: {finding['check']} — {finding['set']}: {finding['detail']}", file=sys.stderr)
         return 0 if not payload["findings"] else 1
 
     if args.check:

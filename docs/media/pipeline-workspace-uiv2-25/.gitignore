@@ -1,0 +1,4 @@
+# Local visual evidence is reviewed and hashed, never committed as PNG binaries.
+*.png
+capture-manifest.json
+index.json
