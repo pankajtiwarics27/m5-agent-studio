@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "d6cc4db68edb409ecab9ea6d26c6d75680654e5bcdd19784873ff185d5c98b01",
+  "frontend_sha256": "c987ba5f055cbd14a38dca8508479f466c5b5e07f5ee0265a33c474172b0411d",
   "panes": [
     {
       "dom_id": "start",
@@ -1688,6 +1688,7 @@
         "tag": "button",
         "id": "monitorToggleBtn",
         "class": "btn btn-xs",
+        "aria-label": "Toggle the contextual inspector",
         "title": "Hide the contextual inspector",
         "onclick": "toggleMonitorRail()",
         "text": "Inspector"
@@ -1695,6 +1696,7 @@
       {
         "tag": "button",
         "class": "btn btn-xs btn-danger",
+        "aria-label": "Unload every local model to free memory",
         "title": "Unload local models to free memory",
         "onclick": "unloadAllModels()",
         "text": "Unload models"

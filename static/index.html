@@ -1167,12 +1167,15 @@ select { min-width: 0; max-width: 100%; }
 .kbd { font-size: var(--text-2xs); border-color: var(--border); background: var(--bg-code); color: var(--text-dim); }
 .layout { height: calc(100dvh - var(--header-height)); grid-template-columns: minmax(0, 1fr) 320px; }
 .workspace { min-width: 0; }
-.skills-strip { background: var(--bg-elev); border-bottom: 1px solid var(--border); padding: var(--strip-pad-y) var(--space-5); gap: 7px;
-  /* UIV2-05: the skills/MCP chrome is one row, not two - pill groups scroll inside their
-     own box and the strip itself never wraps onto a second line. */
-  flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; flex-shrink: 0; }
-#activeSkillsPills, #activeMcpPills { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; min-width: 0; flex: 0 1 auto; }
-.skills-strip > div:last-child { flex: 0 0 auto; flex-wrap: nowrap; }
+.skills-strip { background: var(--bg-elev); border-bottom: 1px solid var(--border); padding: var(--strip-pad-y) var(--space-5); gap: 8px 16px;
+  /* Keep labels with their wrapping pills; a long list scrolls vertically, never sideways.
+     Cap the band so integrations cannot consume the whole task workspace. */
+  flex-wrap: wrap; overflow-x: hidden; overflow-y: auto; max-height: 30dvh; flex-shrink: 0; }
+.integration-group { display: flex; align-items: baseline; gap: 8px; flex: 1 1 280px; min-width: 0; }
+#activeSkillsPills, #activeMcpPills { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 0; flex: 1; }
+.skills-strip > div:last-child { display: flex; align-items: center; margin-left: auto; flex: 1 1 100%; min-width: 0; flex-wrap: wrap; justify-content: flex-end; }
+.skills-strip .skill-pill { white-space: normal; overflow-wrap: anywhere; max-width: 100%; min-width: 0; }
+.integration-empty { font-size: var(--text-xs); color: var(--text-dim); overflow-wrap: anywhere; }
 .skills-strip .field-lbl[hidden] { display: none; }
 .field-lbl { color: var(--text-dim) !important; font-size: 12px; }
   .skills-strip > span[aria-hidden="true"] { color: var(--border-hi) !important; }
@@ -2799,12 +2802,15 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   <main class="workspace">
     <!-- UNIFIED INTEGRATIONS & TELEMETRY BAND ("Ponytail Band" Pattern) -->
     <div class="skills-strip" tabindex="0" aria-label="Integrations and telemetry controls">
-      <span class="field-lbl" style="margin:0;">Skills:</span>
-      <div id="activeSkillsPills" style="display:flex; gap:6px; flex-wrap:nowrap; align-items:center; overflow-x:auto; min-width:0;"></div>
-      <span style="color:var(--border-hi); margin:0 2px;" aria-hidden="true">|</span>
-      <span class="field-lbl" style="margin:0;">MCP:</span>
-      <div id="activeMcpPills" style="display:flex; gap:6px; flex-wrap:nowrap; align-items:center; overflow-x:auto; min-width:0;"></div>
-      <div style="margin-left:auto; display:flex; gap:6px; align-items:center; flex-wrap:nowrap; flex:0 0 auto;">
+      <div class="integration-group">
+        <span class="field-lbl" style="margin:0;">Skills:</span>
+        <div id="activeSkillsPills"></div>
+      </div>
+      <div class="integration-group">
+        <span class="field-lbl" style="margin:0;">MCP:</span>
+        <div id="activeMcpPills"></div>
+      </div>
+      <div>
         <span style="font-size:11px; color:var(--text-faint); font-family:var(--mono);" title="Configured integrations summary">
           MCP:<span id="mcpToolsCountBadge">0</span> · Prov:<span id="providersCountBadge">0</span> · Skills:<span id="skillsCountBadge">0</span> · Docs:<span id="ocDocsCountBadge">1</span>
         </span>
@@ -2816,10 +2822,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           <option value="context">Knowledge &amp; CodeGraph</option>
           <option value="external">External Harness CLI Bridge</option>
         </select>
-        <button id="monitorToggleBtn" class="btn btn-xs" onclick="toggleMonitorRail()" aria-controls="monitorRail" aria-expanded="true" title="Hide the contextual inspector">
+        <button id="monitorToggleBtn" class="btn btn-xs" onclick="toggleMonitorRail()" aria-controls="monitorRail" aria-expanded="true" title="Hide the contextual inspector" aria-label="Toggle the contextual inspector">
           <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span>Inspector</span>
         </button>
-        <button class="btn btn-xs btn-danger" onclick="unloadAllModels()" title="Unload local models to free memory">
+        <button class="btn btn-xs btn-danger" onclick="unloadAllModels()" title="Unload local models to free memory" aria-label="Unload every local model to free memory">
           <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg><span>Unload models</span>
         </button>
       </div>
@@ -5936,7 +5942,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     document.getElementById("skillsCountBadge").textContent = `${selectedSkills.size}/${installedSkills.length}`;
     const strip = document.getElementById("activeSkillsPills");
     strip.innerHTML = !installedSkills.length
-      ? `<span style="font-size:11.8px; color:var(--text-dim); white-space:nowrap;">0 skills — click <strong>+ Skills</strong> to install <code>ui-ux-pro-max</code></span>`
+      ? `<span class="integration-empty" title="Open Tools &amp; Integrations… → Agent Skills (SKILL.md)">0 skills — add via <strong>Tools &amp; Integrations</strong></span>`
       : installedSkills.map(s => {
           const on = selectedSkills.has(s.id);
           return `<span class="skill-pill ${on ? 'active' : ''}" role="button" tabindex="0" data-key-activate onclick="toggleSkill('${escapeHtml(s.id)}')">${on ? UI_ICONS.check + ' ' : ''}${escapeHtml(s.name)}${s.has_design_engine ? ' • Design Engine' : ''}</span>`;
@@ -15865,7 +15871,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     // Top Strip Pills
     const strip = document.getElementById("activeMcpPills");
     if (!mcpServers.length) {
-      strip.innerHTML = `<span style="font-size:11.6px; color:var(--text-faint); white-space:nowrap;">0 servers — click <strong>+ MCP</strong> for Context7 / Exa / GitHub / Custom</span>`;
+      strip.innerHTML = `<span class="integration-empty" title="Open Tools &amp; Integrations… → MCP Tools Hub (Context7, Exa, DeepWiki, GitHub, custom stdio/HTTP)">0 MCP servers — connect via <strong>Tools &amp; Integrations</strong></span>`;
     } else {
       strip.innerHTML = mcpServers.map(s => {
         const on = s.enabled;

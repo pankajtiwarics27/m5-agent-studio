@@ -5,7 +5,7 @@
   "source": {
     "frontend": "static/index.html",
     "style_block": "#m5-redesign-system",
-    "style_block_sha256": "a0fabc28e6681e829a34411f36128cf8637ecfa61a84650104e310c1239b6947",
+    "style_block_sha256": "478b432ca4ddafee77717b45207f79c7279111ec03e6e576edcd5ffc26cc8c30",
     "superseded_blocks": [
       "the first <style> block declares an older palette that this one overrides; it is kept only so a stale rule cannot resolve to an undefined name"
     ]
@@ -42,7 +42,7 @@
   "totals": {
     "tokens": 56,
     "groups": 8,
-    "references": 1509,
+    "references": 1508,
     "theme_overrides": 20,
     "density_overrides": 5,
     "contrast_pairs": 28,
@@ -201,7 +201,7 @@
         "light": "#C6CDD8"
       },
       "density_override": null,
-      "references": 34
+      "references": 33
     },
     {
       "name": "--text",
@@ -231,7 +231,7 @@
         "light": "#67717F"
       },
       "density_override": null,
-      "references": 145
+      "references": 144
     },
     {
       "name": "--accent",
@@ -337,7 +337,7 @@
       "value": "12px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 14
+      "references": 15
     },
     {
       "name": "--text-sm",

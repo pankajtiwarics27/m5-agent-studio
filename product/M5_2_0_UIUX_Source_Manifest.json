@@ -12,9 +12,9 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "d6cc4db68edb409ecab9ea6d26c6d75680654e5bcdd19784873ff185d5c98b01",
-      "bytes": 965180,
-      "lines": 16784
+      "sha256": "c987ba5f055cbd14a38dca8508479f466c5b5e07f5ee0265a33c474172b0411d",
+      "bytes": 965501,
+      "lines": 16790
     },
     {
       "path": "app.py",
@@ -26,9 +26,9 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "fd36b00653e00256eab40735584bfd1466acfdcf8995509c918829e887bcd0aa",
-      "bytes": 3746951,
-      "lines": 80739
+      "sha256": "14ad18ed2df5a4d7bd19779fefdc63baf25d1d608a8893bbf9e1ae92cbb61f96",
+      "bytes": 3747272,
+      "lines": 80745
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -327,9 +327,9 @@
     {
       "path": "tests/test_screenshot_capture_browser.py",
       "role": "runs browser-backed UI and screenshot safety regressions",
-      "sha256": "5ec6d3a92816b83f6ac3ba8b89acd57091e11d2150977c7eae1679b67ca75665",
-      "bytes": 26172,
-      "lines": 667
+      "sha256": "6cc07891be822b5bba947523343f0907ed33d39694b26cea534519629d58dd05",
+      "bytes": 26684,
+      "lines": 677
     },
     {
       "path": "tests/test_uiux_source_manifest.py",
@@ -460,8 +460,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "d6cc4db68edb409ecab9ea6d26c6d75680654e5bcdd19784873ff185d5c98b01",
-    "lines": 16784,
+    "sha256": "c987ba5f055cbd14a38dca8508479f466c5b5e07f5ee0265a33c474172b0411d",
+    "lines": 16790,
     "tab_count": 6,
     "tabs": [
       {

@@ -45,29 +45,29 @@ through `setStatus()`, so the state, the tone and the label cannot disagree.
 
 | Element | Tone | Announced | Line |
 |---|---|---|---|
-| (unnamed) | `ok` | no | 2023 |
-| `#dockerStateBadge` | `neutral` | no | 2070 |
-| `#sdlcProgressBadge` | `neutral` | no | 2687 |
-| `#startReadinessPill` | `neutral` | yes | 2840 |
-| `#startRecentSummary` | `neutral` | yes | 2868 |
-| `#onboardingSummary` | `neutral` | yes | 2886 |
-| `#startHealthSummary` | `neutral` | yes | 2927 |
-| `#startWorkspaceSummary` | `neutral` | yes | 2947 |
-| `#harnessActiveStatusBadge` | `info` | yes | 3080 |
-| `#hallStatusBadge` | `info` | yes | 3170 |
-| `#councilReadinessCount` | `neutral` | no | 3184 |
-| (unnamed) | `warn` | no | 6675 |
-| (unnamed) | `warn` | no | 6773 |
-| (unnamed) | `neutral` | no | 10347 |
-| (unnamed) | `busy` | no | 10348 |
-| (unnamed) | `ok` | no | 10349 |
-| (unnamed) | `warn` | no | 10350 |
-| (unnamed) | `warn` | no | 10351 |
-| (unnamed) | `warn` | no | 10352 |
-| (unnamed) | `danger` | no | 10353 |
-| (unnamed) | `warn` | no | 10354 |
-| (unnamed) | `warn` | no | 10355 |
-| (unnamed) | `neutral` | no | 10356 |
+| (unnamed) | `ok` | no | 2026 |
+| `#dockerStateBadge` | `neutral` | no | 2073 |
+| `#sdlcProgressBadge` | `neutral` | no | 2690 |
+| `#startReadinessPill` | `neutral` | yes | 2846 |
+| `#startRecentSummary` | `neutral` | yes | 2874 |
+| `#onboardingSummary` | `neutral` | yes | 2892 |
+| `#startHealthSummary` | `neutral` | yes | 2933 |
+| `#startWorkspaceSummary` | `neutral` | yes | 2953 |
+| `#harnessActiveStatusBadge` | `info` | yes | 3086 |
+| `#hallStatusBadge` | `info` | yes | 3176 |
+| `#councilReadinessCount` | `neutral` | no | 3190 |
+| (unnamed) | `warn` | no | 6681 |
+| (unnamed) | `warn` | no | 6779 |
+| (unnamed) | `neutral` | no | 10353 |
+| (unnamed) | `busy` | no | 10354 |
+| (unnamed) | `ok` | no | 10355 |
+| (unnamed) | `warn` | no | 10356 |
+| (unnamed) | `warn` | no | 10357 |
+| (unnamed) | `warn` | no | 10358 |
+| (unnamed) | `danger` | no | 10359 |
+| (unnamed) | `warn` | no | 10360 |
+| (unnamed) | `warn` | no | 10361 |
+| (unnamed) | `neutral` | no | 10362 |
 
 ## Writers
 
