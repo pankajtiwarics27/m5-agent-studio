@@ -11,6 +11,8 @@ from pathlib import Path
 
 import pytest
 
+from scripts import validate_screenshots as vs
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -21,8 +23,6 @@ CAPTURE = ROOT / "scripts" / "capture_screenshots.mjs"
 MANIFEST = ROOT / "docs" / "media" / "screenshots" / "manifest.json"
 INDEX = ROOT / "docs" / "media" / "screenshots" / "index.json"
 
-sys.path.insert(0, str(ROOT / "scripts"))
-import validate_screenshots as vs  # noqa: E402
 
 
 def _png(width: int, height: int) -> bytes:

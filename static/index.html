@@ -303,7 +303,9 @@
   /* `margin: 0 auto` on a flex item turns off the cross-axis stretch: without a definite
      width the shell sized to its own max-content (589px) and the pane, which hides its
      overflow, clipped the right third of the Start pane at 480 and 360. */
-  .onboarding-shell { width: 100%; max-width: 860px; margin: 0 auto; padding: 18px 16px 28px; }
+  /* The pane clips overflow; its content must shrink to the remaining height and
+     own scrolling, or the lower readiness/health/workspace disclosures are unreachable. */
+  .onboarding-shell { flex: 1; min-height: 0; overflow-y: auto; width: 100%; max-width: 860px; margin: 0 auto; padding: 18px 16px 28px; }
   .onboarding-lede { font-size: 12.4px; line-height: 1.55; color: var(--text-dim); margin: 8px 0 14px; }
   .onboarding-steps { display: flex; flex-direction: column; gap: 8px; }
   .onboarding-step { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--bg-card); }
