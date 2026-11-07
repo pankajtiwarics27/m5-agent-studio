@@ -49,6 +49,34 @@ suppresses native schemas and prevents execution in either protocol. Other
 workflows and ordinary model requests do not inherit Chat's schemas. The
 selected protocol is captured with the turn's request context.
 
+## Tools-off replies and completion status
+
+With `tools_enabled:false`, Chat now adds explicit disabled-tool system guidance
+instead of merely omitting native schemas and the active read-tool guide. The
+model should explain that it cannot inspect current inventory/files/notes, not
+invent current results or emit a tool request. Prior quoted results are not
+current evidence or permission to execute.
+
+If the model nevertheless returns only bare tool-call-shaped text, or returns
+no user-facing text (including reasoning-only/whitespace replies), the stream
+clears partial/withheld answer text and emits an explanatory `error`, not `done`.
+The existing UI error handler therefore shows Failed rather than Complete and
+states that tools were disabled and no tool calls executed. This is not an
+HTTP error response or a new route; it is the existing SSE error contract.
+
+Bare supported and unsupported Gemma/JSON/function/fenced-tool shapes are
+recognized for this diagnostic only, never turned into executable calls.
+Normal text answers and explanatory prose containing quoted examples remain
+valid. A bare call-shaped literal with no explanatory prose is intentionally
+not accepted as a completed tools-off answer. Reasoning remains private planning,
+not authority. Native tool deltas received despite absent schemas remain ignored;
+if they produce no text answer, that is an empty-answer failure.
+
+No retry, provider switch, extra inference round, tool dispatch or permission is
+added. System guidance cannot guarantee any particular model/template will obey;
+the runtime's no-execution boundary and truthful terminal state do not depend on
+that obedience. See [ADR-0030](adr/0030-tools-off-chat-response-completion.md).
+
 ## Large inventories and compressed tool output
 
 A successful inventory call can exceed the 2400-character Context-Mode threshold.
@@ -142,3 +170,24 @@ inventory backend SHA-256 (not part of the main37-generator list). Regenerated
 it with `uiux_pipeline_workspace_inventory.py`; no runtime code or checks were
 weakened. Pipeline/Start/protocol rerun:105passed. Updated full CI is required
 before merging this fix.
+
+
+### Tools-off manual regression ([issue #234](https://github.com/pankajtiwarics27/m5-agent-studio/issues/234))
+
+The owner reproduced test2 in a fresh conversation: tools stayed off, but a bare
+namespaced Gemma-shaped request was marked Complete instead of explaining the
+limitation. Nineteen new negative/guidance cases failed before this patch. The
+focused protocol/privacy/execution/admission/session-trust run now passes119tests,
+including fragmented content/reasoning cases, native/tagged modes, mocked Ollama
+native-wire responses and standalone parity (37 replayed cases). Ordinary text
+and explanatory examples still complete; no-dispatch assertions remain strict.
+Full multi-version/browser CI and the owner's same-model test2 retry remain
+separate acceptance steps. No live provider/MCP or human/security review is claimed.
+
+
+Tools-off author checkpoint: Pipeline/Start/protocol/remote-boundary regression
+run141passed; Ruff, mypy62, frontend syntax, docs/ADR and both modular/standalone
+auth smoke checks pass. Regenerated all normal inventories plus the separate
+post-roadmap Pipeline/Start generators:37/37 artifact checks,7/7 phase gates,
+0findings. Required complete multi-version/browser CI is pending; no new visual
+or independent security approval is recorded.

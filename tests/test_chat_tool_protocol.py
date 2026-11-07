@@ -126,7 +126,7 @@ def test_tools_off_sends_no_schemas_and_executes_nothing(configured, monkeypatch
         yield {"type": "content", "text": GEMMA}
     monkeypatch.setattr(studio, "stream_any_model", stream)
     result = events(post_chat(tools_enabled=False).text)
-    assert result[-1][0] == "done"
+    assert result[-1][0] == "error"
     assert not any(name == "chat_tool" for name, _ in result)
 
 
@@ -442,7 +442,110 @@ def test_standalone_large_inventory_retrieval_without_sibling_sources(tmp_path):
     env = os.environ.copy()
     env.pop("PYTHONPATH", None)
     env.update(HOME=str(tmp_path / "home"), STUDIO_DB_PATH=str(tmp_path / "standalone.db"))
-    code = "import app, pytest; assert app.runtime_persistence is app; raise SystemExit(pytest.main(['-q','test_protocol.py','-k','(large_inventory or session_scope or retrieval_limit or native_ollama_wire or another_sessions) and not standalone','--tb=short']))"
+    code = "import app, pytest; assert app.runtime_persistence is app; raise SystemExit(pytest.main(['-q','test_protocol.py','-k','(large_inventory or session_scope or retrieval_limit or native_ollama_wire or another_sessions or tools_off) and not standalone','--tb=short']))"
     result = subprocess.run([sys.executable, "-c", code], cwd=isolated, env=env, capture_output=True, text=True, timeout=60)
     assert result.returncode == 0, result.stdout + result.stderr
-    assert "10 passed" in result.stdout
+    assert "37 passed" in result.stdout
+
+
+@pytest.mark.parametrize("protocol", ["native", "tagged"])
+@pytest.mark.parametrize("channel", ["content", "reasoning"])
+@pytest.mark.parametrize("frame", [
+    GEMMA,
+    '<|tool_call>call:mcp_list_servers{}<tool_call|>',
+    '<|tool_call>call:mcp__server__mcp_list_servers{}<tool_call|>',
+    '<tool_call>{"name":"mcp_list_servers","arguments":{}}</tool_call>',
+])
+def test_tools_off_tool_only_response_is_not_complete(configured, monkeypatch, protocol, channel, frame):
+    calls = 0
+    def forbidden(*args, **kwargs):
+        pytest.fail("Tools-off response handling must never execute or fetch inventory")
+    monkeypatch.setattr(studio, "_execute_harness_tool", forbidden)
+    monkeypatch.setattr(studio, "_mcp_server_inventory", forbidden)
+    async def stream(*args):
+        nonlocal calls
+        calls += 1
+        assert studio._CHAT_NATIVE_TOOLS.get() is None
+        # Fragmented frames must not evade the completed-response check.
+        for offset in range(0, len(frame), 5):
+            yield {"type": channel, "text": frame[offset:offset + 5]}
+    monkeypatch.setattr(studio, "stream_any_model", stream)
+    trace = events(post_chat(tools_enabled=False, tool_protocol=protocol).text)
+    assert trace[-1][0] == "error"
+    assert "tools are disabled" in trace[-1][1]["message"].lower()
+    assert "no tool calls were executed" in trace[-1][1]["message"].lower()
+    assert not any(kind in {"done", "chat_tool"} for kind, _ in trace)
+    assert calls == 1 and studio._CHAT_NATIVE_TOOLS.get() is None
+    assert any(kind == "step_clean" and data["content"] == "" for kind, data in trace)
+
+
+@pytest.mark.parametrize("text", ["", "   \n"])
+def test_tools_off_empty_answer_is_not_complete(configured, monkeypatch, text):
+    async def stream(*args):
+        yield {"type": "reasoning", "text": "I should answer the request."}
+        yield {"type": "content", "text": text}
+    monkeypatch.setattr(studio, "stream_any_model", stream)
+    trace = events(post_chat(tools_enabled=False).text)
+    assert trace[-1][0] == "error" and "no user-facing answer" in trace[-1][1]["message"].lower()
+    assert not any(kind in {"done", "chat_tool"} for kind, _ in trace)
+
+
+def test_tools_off_system_guidance_is_explicit_without_active_tool_guide(configured, monkeypatch):
+    async def stream(*args):
+        system = args[2][0]["content"]
+        assert "Tools are disabled for this turn" in system
+        assert "Do not emit tool-call requests" in system
+        assert "Active in Direct Chat" not in system
+        assert studio._CHAT_NATIVE_TOOLS.get() is None
+        yield {"type": "content", "text": "I cannot inspect the current inventory with tools disabled."}
+    monkeypatch.setattr(studio, "stream_any_model", stream)
+    trace = events(post_chat(tools_enabled=False).text)
+    assert trace[-1][0] == "done" and not any(kind == "chat_tool" for kind, _ in trace)
+
+
+@pytest.mark.parametrize("protocol", ["native", "tagged"])
+@pytest.mark.parametrize("text", [
+    "I cannot inspect inventory because tools are disabled.",
+    'A literal example is `<|tool_call>call:mcp_list_servers{}<tool_call|>`; this is text, not execution.',
+])
+def test_tools_off_plain_answers_and_explanations_still_complete(configured, monkeypatch, protocol, text):
+    async def stream(*args):
+        # Private planning is not authority; a real text answer should still be accepted.
+        yield {"type": "reasoning", "text": GEMMA}
+        yield {"type": "content", "text": text}
+    monkeypatch.setattr(studio, "stream_any_model", stream)
+    trace = events(post_chat(tools_enabled=False, tool_protocol=protocol).text)
+    assert trace[-1][0] == "done"
+    assert not any(kind in {"error", "chat_tool"} for kind, _ in trace)
+
+
+@pytest.mark.parametrize("wire_kind", ["native", "content", "reasoning"])
+def test_tools_off_native_wire_responses_remain_non_executable(configured, monkeypatch, wire_kind):
+    seen = []
+    async def validate(*args, **kwargs):
+        pass
+    def forbidden(*args, **kwargs):
+        pytest.fail("Unsolicited model output cannot enable tool execution")
+    monkeypatch.setattr(studio, "_validate_outbound_url", validate)
+    monkeypatch.setattr(studio, "_execute_harness_tool", forbidden)
+    def respond(request):
+        body = json.loads(request.content)
+        seen.append(body)
+        assert "tools" not in body and "tool_choice" not in body
+        assert "Tools are disabled for this turn" in body["messages"][0]["content"]
+        frame = '<|tool_call>call:mcp__server__mcp_list_servers{}<tool_call|>'
+        if wire_kind == "native":
+            delta = {"tool_calls": [{"index": 0, "function": {"name": "mcp_list_servers", "arguments": "{}"}}]}
+        else:
+            delta = {"reasoning_content" if wire_kind == "reasoning" else "content": frame}
+        packet = {"choices": [{"delta": delta, "finish_reason": "tool_calls" if wire_kind == "native" else "stop"}]}
+        return httpx.Response(200, text='data: ' + json.dumps(packet) + '\n\ndata: [DONE]\n\n')
+    async def run():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as provider:
+            studio.app.state.http = provider
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=studio.app), base_url="http://testserver") as client:
+                return await client.post("/api/chat/stream", headers={"Authorization": "Bearer fixture-token-not-a-secret-0123456789"}, json={"model": "ollama::fixture-model", "messages": [{"role": "user", "content": "Inventory MCP servers"}], "tools_enabled": False})
+    trace = events(asyncio.run(run()).text)
+    assert trace[-1][0] == "error" and len(seen) == 1
+    assert not any(kind in {"done", "chat_tool"} for kind, _ in trace)
+    assert studio._CHAT_NATIVE_TOOLS.get() is None
