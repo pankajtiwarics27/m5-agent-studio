@@ -52,7 +52,7 @@
         "Re-check",
         "Providers"
       ],
-      "line": 4939
+      "line": 4957
     },
     {
       "container": "startRecentState",
@@ -65,7 +65,7 @@
         "Start a session",
         "Open Harness"
       ],
-      "line": 5004
+      "line": 5022
     },
     {
       "container": "startRecentState",
@@ -78,7 +78,7 @@
         "Retry",
         "Open Harness"
       ],
-      "line": 5079
+      "line": 5097
     },
     {
       "container": "startHealthState",
@@ -91,7 +91,7 @@
         "Re-check",
         "Monitor rail"
       ],
-      "line": 5177
+      "line": 5195
     },
     {
       "container": "startWorkspaceState",
@@ -104,7 +104,7 @@
         "Retry",
         "Open Harness"
       ],
-      "line": 5261
+      "line": 5279
     },
     {
       "container": "hallStream",
@@ -118,7 +118,7 @@
         "Ask one model",
         "Configure providers"
       ],
-      "line": 5794
+      "line": 5812
     },
     {
       "container": "debateSynthesisArea",
@@ -130,7 +130,7 @@
       "actions": [
         "Start Compare"
       ],
-      "line": 5808
+      "line": 5826
     },
     {
       "container": "chatState",
@@ -142,7 +142,7 @@
       "actions": [
         "Dismiss"
       ],
-      "line": 5857
+      "line": 5875
     },
     {
       "container": "harnessStreamState",
@@ -155,7 +155,7 @@
         "Reconnect now",
         "Reload from snapshot"
       ],
-      "line": 5880
+      "line": 5898
     },
     {
       "container": "hallSummonState",
@@ -168,7 +168,7 @@
         "Start a new session",
         "Reload the session list"
       ],
-      "line": 6786
+      "line": 6804
     },
     {
       "container": "hallSummonState",
@@ -181,7 +181,7 @@
         "Read it again",
         "Reload the session list"
       ],
-      "line": 6799
+      "line": 6817
     },
     {
       "container": "hallSummonState",
@@ -195,7 +195,7 @@
         "Read the conclusion",
         "Start a new session"
       ],
-      "line": 6813
+      "line": 6831
     },
     {
       "container": "hallSummonState",
@@ -208,7 +208,7 @@
         "Read it now",
         "Stop watching"
       ],
-      "line": 6829
+      "line": 6847
     },
     {
       "container": "hallSummonState",
@@ -222,7 +222,7 @@
         "Read the session",
         "Check readiness"
       ],
-      "line": 6845
+      "line": 6863
     },
     {
       "container": "hallSummonState",
@@ -235,7 +235,7 @@
         "Read the old conclusion",
         "Convene the round"
       ],
-      "line": 7439
+      "line": 7457
     },
     {
       "container": "hallSummonState",
@@ -249,7 +249,7 @@
         "Check readiness",
         "Ask one model"
       ],
-      "line": 8107
+      "line": 8125
     },
     {
       "container": "chatState",
@@ -262,7 +262,7 @@
         "Retry",
         "Dismiss"
       ],
-      "line": 12269
+      "line": 12287
     },
     {
       "container": "chatState",
@@ -275,7 +275,7 @@
         "Back to Chat",
         "Open Harness"
       ],
-      "line": 12295
+      "line": 12313
     },
     {
       "container": "chatState",
@@ -288,7 +288,7 @@
         "Undo",
         "Dismiss"
       ],
-      "line": 12479
+      "line": 12497
     }
   ],
   "containers": [
@@ -349,11 +349,11 @@
   ],
   "remaining_raw_writers": [
     {
-      "line": 6489,
+      "line": 6507,
       "handler": "installSkill"
     },
     {
-      "line": 14594,
+      "line": 14620,
       "handler": "openHarnessDiffModal"
     }
   ],

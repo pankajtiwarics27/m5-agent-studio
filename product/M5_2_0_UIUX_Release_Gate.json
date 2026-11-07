@@ -251,7 +251,7 @@
           "totals": {
             "tokens": 56,
             "groups": 8,
-            "references": 1620,
+            "references": 1629,
             "theme_overrides": 20,
             "density_overrides": 5,
             "contrast_pairs": 28,
@@ -821,7 +821,7 @@
         {
           "artifact": "product/M5_2_0_UIUX_Polish.json",
           "totals": {
-            "radius_rules": 142,
+            "radius_rules": 143,
             "motion_rules": 18,
             "press_rules": 2,
             "hover_rules": 36,
