@@ -1,0 +1,625 @@
+{
+  "schema_version": 1,
+  "document_type": "m5_uiv2_accessibility_adversarial_contract",
+  "story": "UIV2-28",
+  "statement": "Measured runtime accessibility and recovery evidence, not a screen-reader certification or a cosmetic-only completion.",
+  "execution_policy": {
+    "contract_is_not_run_evidence": true,
+    "run_manifest": "product/M5_2_0_UIUX_V2_Accessibility_Adversarial_Run.json",
+    "browser_ci_job": "Browser safety regressions",
+    "external_requests": "blocked except the isolated loopback fixture",
+    "screen_reader_scope": "DOM names, roles, tab order and focus are asserted; this is not a claim of NVDA/JAWS/VoiceOver certification"
+  },
+  "thresholds": {
+    "normal_text_contrast": 4.5,
+    "large_text_contrast": 3.0,
+    "target_css_px": 24,
+    "zoom_factor": 2
+  },
+  "source_sha256": {
+    "static/index.html": "97815ea2e3d3cdc25479fa1e9420053a8682517baf2fd3c8c4c07e128b9a6f79",
+    "scripts/uiv2_accessibility_adversarial_walk.mjs": "831d65473af6d28d3e77294420fa49130addb5c02d132b433d0141ded525e0c7",
+    "scripts/a11y_walk.mjs": "191400491161725465f2f87acd78456e75be08938e29cfcef99d733ea9037c7d",
+    "scripts/responsive_walk.mjs": "f39b774a33f1122458c5435d8e566c57e30cba64834239091a26034b1cd40cbd",
+    ".github/workflows/ci.yml": "5f79983f2c62a1c66a43e56199828d4a5a5bb7e19a97782d3552c781f083dd16"
+  },
+  "matrix": {
+    "panes": [
+      "start",
+      "harness",
+      "hall",
+      "council",
+      "debate",
+      "chat"
+    ],
+    "viewports": [
+      "1640x900",
+      "1440x900",
+      "1280x800",
+      "390x844"
+    ],
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "rendered": "1440x900 × light/dark × six panes",
+    "zoom_200": "four viewports × light/dark × six panes; half CSS viewport and deviceScaleFactor=2",
+    "long_recovery": "1280x800 dark and 390x844 light at 200%, with route-created transcript and conclusion",
+    "rendered_rows": [
+      {
+        "viewport": "1440x900",
+        "theme": "light",
+        "pane": "start"
+      },
+      {
+        "viewport": "1440x900",
+        "theme": "light",
+        "pane": "harness"
+      },
+      {
+        "viewport": "1440x900",
+        "theme": "light",
+        "pane": "hall"
+      },
+      {
+        "viewport": "1440x900",
+        "theme": "light",
+        "pane": "council"
+      },
+      {
+        "viewport": "1440x900",
+        "theme": "light",
+        "pane": "debate"
+      },
+      {
+        "viewport": "1440x900",
+        "theme": "light",
+        "pane": "chat"
+      },
+      {
+        "viewport": "1440x900",
+        "theme": "dark",
+        "pane": "start"
+      },
+      {
+        "viewport": "1440x900",
+        "theme": "dark",
+        "pane": "harness"
+      },
+      {
+        "viewport": "1440x900",
+        "theme": "dark",
+        "pane": "hall"
+      },
+      {
+        "viewport": "1440x900",
+        "theme": "dark",
+        "pane": "council"
+      },
+      {
+        "viewport": "1440x900",
+        "theme": "dark",
+        "pane": "debate"
+      },
+      {
+        "viewport": "1440x900",
+        "theme": "dark",
+        "pane": "chat"
+      }
+    ],
+    "zoom_rows": [
+      {
+        "viewport": "1640x900",
+        "theme": "light",
+        "pane": "start",
+        "effective_css_viewport": "820x450",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "1640x900",
+        "theme": "light",
+        "pane": "harness",
+        "effective_css_viewport": "820x450",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "1640x900",
+        "theme": "light",
+        "pane": "hall",
+        "effective_css_viewport": "820x450",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "1640x900",
+        "theme": "light",
+        "pane": "council",
+        "effective_css_viewport": "820x450",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "1640x900",
+        "theme": "light",
+        "pane": "debate",
+        "effective_css_viewport": "820x450",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "1640x900",
+        "theme": "light",
+        "pane": "chat",
+        "effective_css_viewport": "820x450",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "1640x900",
+        "theme": "dark",
+        "pane": "start",
+        "effective_css_viewport": "820x450",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "1640x900",
+        "theme": "dark",
+        "pane": "harness",
+        "effective_css_viewport": "820x450",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "1640x900",
+        "theme": "dark",
+        "pane": "hall",
+        "effective_css_viewport": "820x450",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "1640x900",
+        "theme": "dark",
+        "pane": "council",
+        "effective_css_viewport": "820x450",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "1640x900",
+        "theme": "dark",
+        "pane": "debate",
+        "effective_css_viewport": "820x450",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "1640x900",
+        "theme": "dark",
+        "pane": "chat",
+        "effective_css_viewport": "820x450",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "1440x900",
+        "theme": "light",
+        "pane": "start",
+        "effective_css_viewport": "720x450",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "1440x900",
+        "theme": "light",
+        "pane": "harness",
+        "effective_css_viewport": "720x450",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "1440x900",
+        "theme": "light",
+        "pane": "hall",
+        "effective_css_viewport": "720x450",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "1440x900",
+        "theme": "light",
+        "pane": "council",
+        "effective_css_viewport": "720x450",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "1440x900",
+        "theme": "light",
+        "pane": "debate",
+        "effective_css_viewport": "720x450",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "1440x900",
+        "theme": "light",
+        "pane": "chat",
+        "effective_css_viewport": "720x450",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "1440x900",
+        "theme": "dark",
+        "pane": "start",
+        "effective_css_viewport": "720x450",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "1440x900",
+        "theme": "dark",
+        "pane": "harness",
+        "effective_css_viewport": "720x450",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "1440x900",
+        "theme": "dark",
+        "pane": "hall",
+        "effective_css_viewport": "720x450",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "1440x900",
+        "theme": "dark",
+        "pane": "council",
+        "effective_css_viewport": "720x450",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "1440x900",
+        "theme": "dark",
+        "pane": "debate",
+        "effective_css_viewport": "720x450",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "1440x900",
+        "theme": "dark",
+        "pane": "chat",
+        "effective_css_viewport": "720x450",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "1280x800",
+        "theme": "light",
+        "pane": "start",
+        "effective_css_viewport": "640x400",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "1280x800",
+        "theme": "light",
+        "pane": "harness",
+        "effective_css_viewport": "640x400",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "1280x800",
+        "theme": "light",
+        "pane": "hall",
+        "effective_css_viewport": "640x400",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "1280x800",
+        "theme": "light",
+        "pane": "council",
+        "effective_css_viewport": "640x400",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "1280x800",
+        "theme": "light",
+        "pane": "debate",
+        "effective_css_viewport": "640x400",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "1280x800",
+        "theme": "light",
+        "pane": "chat",
+        "effective_css_viewport": "640x400",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "1280x800",
+        "theme": "dark",
+        "pane": "start",
+        "effective_css_viewport": "640x400",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "1280x800",
+        "theme": "dark",
+        "pane": "harness",
+        "effective_css_viewport": "640x400",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "1280x800",
+        "theme": "dark",
+        "pane": "hall",
+        "effective_css_viewport": "640x400",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "1280x800",
+        "theme": "dark",
+        "pane": "council",
+        "effective_css_viewport": "640x400",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "1280x800",
+        "theme": "dark",
+        "pane": "debate",
+        "effective_css_viewport": "640x400",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "1280x800",
+        "theme": "dark",
+        "pane": "chat",
+        "effective_css_viewport": "640x400",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "390x844",
+        "theme": "light",
+        "pane": "start",
+        "effective_css_viewport": "195x422",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "390x844",
+        "theme": "light",
+        "pane": "harness",
+        "effective_css_viewport": "195x422",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "390x844",
+        "theme": "light",
+        "pane": "hall",
+        "effective_css_viewport": "195x422",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "390x844",
+        "theme": "light",
+        "pane": "council",
+        "effective_css_viewport": "195x422",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "390x844",
+        "theme": "light",
+        "pane": "debate",
+        "effective_css_viewport": "195x422",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "390x844",
+        "theme": "light",
+        "pane": "chat",
+        "effective_css_viewport": "195x422",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "390x844",
+        "theme": "dark",
+        "pane": "start",
+        "effective_css_viewport": "195x422",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "390x844",
+        "theme": "dark",
+        "pane": "harness",
+        "effective_css_viewport": "195x422",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "390x844",
+        "theme": "dark",
+        "pane": "hall",
+        "effective_css_viewport": "195x422",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "390x844",
+        "theme": "dark",
+        "pane": "council",
+        "effective_css_viewport": "195x422",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "390x844",
+        "theme": "dark",
+        "pane": "debate",
+        "effective_css_viewport": "195x422",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "390x844",
+        "theme": "dark",
+        "pane": "chat",
+        "effective_css_viewport": "195x422",
+        "device_scale_factor": 2
+      }
+    ],
+    "long_recovery_rows": [
+      {
+        "viewport": "1280x800",
+        "theme": "dark",
+        "device_scale_factor": 2
+      },
+      {
+        "viewport": "390x844",
+        "theme": "light",
+        "device_scale_factor": 2
+      }
+    ],
+    "expected_check_groups": {
+      "rendered": 36,
+      "keyboard": 12,
+      "zoom-200": 48,
+      "long-recovery": 12,
+      "browser": 12
+    },
+    "expected_capture_groups": {
+      "rendered": 12,
+      "zoom-200": 48,
+      "long-recovery": 2
+    },
+    "expected_checks": 120,
+    "expected_captures": 62
+  },
+  "behavioral_contract": {
+    "contrast": "WCAG relative luminance on computed foreground and composited solid backgrounds; non-solid backgrounds fail rather than pass by inference",
+    "semantics": "accessible names for every tabbable and no positive tabindex; browser checks are not a screen-reader certification",
+    "keyboard": "real Tab/Enter/Escape input, no pane focus loop, intentional modal containment, exact focus restoration",
+    "zoom": "every control reachable, at least 24 CSS px, and no document horizontal overflow at 200%",
+    "nested_scroll": "nonzero active outer and pinned-conclusion offsets; modal reaches its final marker without moving either; Escape restores both exactly",
+    "reduced_motion": "non-essential animation, transition and smooth scrolling are effectively disabled",
+    "safety": "anonymous 401/authenticated 200 preflight, generated synthetic token, isolated fixture, outbound browser requests blocked, no real provider or user workspace"
+  },
+  "impacted_controls": [
+    ".brand-chip",
+    "#harnessProjectSummary",
+    "#startTaskInput",
+    "#monitorToggleBtn",
+    "#hallClearSessionBtn",
+    "#chatPersona",
+    "#chatReasoning",
+    "#hallConclusionBody"
+  ],
+  "measured_repairs": [
+    {
+      "control": "dark brand chip",
+      "before": "2.41:1 computed contrast",
+      "after_contract": "explicit var(--primary-text) foreground; every final rendered pair passes"
+    },
+    {
+      "control": "#harnessProjectSummary",
+      "before": "113×18 CSS px",
+      "after_contract": "24px minimum target height; responsive walk passes"
+    },
+    {
+      "control": "#hallClearSessionBtn",
+      "before": "right=430px at a 360px viewport",
+      "after_contract": "contained horizontal action scrolling; the control remains reachable"
+    },
+    {
+      "control": "#chatPersona",
+      "before": "20×44 CSS px at 200% phone zoom",
+      "after_contract": "140px group minimum wraps only when two columns cannot fit"
+    },
+    {
+      "control": "#monitorToggleBtn",
+      "before": "clipped at a 195px effective viewport",
+      "after_contract": "wrapping workspace toolbar; reachable at 200%"
+    },
+    {
+      "control": "#startTaskInput",
+      "before": "220px fixed minimum caused horizontal overflow",
+      "after_contract": "zero flex minimum with the desktop basis retained"
+    },
+    {
+      "control": "Start / Council / Chat recovery",
+      "before": "short-height content had no reachable scroll path",
+      "after_contract": "native Start-shell and Council/Chat main overflow recovery"
+    }
+  ],
+  "state_coverage": {
+    "start": {
+      "title": "Start",
+      "states": {
+        "empty": "scripts/start_command_center_walk.mjs",
+        "populated": "scripts/start_command_center_walk.mjs",
+        "long-content": "scripts/start_command_center_walk.mjs",
+        "loading": "scripts/start_command_center_walk.mjs",
+        "error": "scripts/start_command_center_walk.mjs",
+        "recovery": "scripts/start_command_center_walk.mjs"
+      }
+    },
+    "harness": {
+      "title": "Harness",
+      "states": {
+        "empty": "scripts/harness_settings_walk.mjs",
+        "populated": "scripts/harness_timeline_walk.mjs",
+        "long-content": "scripts/harness_evidence_walk.mjs",
+        "loading": "scripts/harness_timeline_walk.mjs",
+        "error": "scripts/harness_recovery_walk.mjs",
+        "recovery": "scripts/harness_recovery_walk.mjs"
+      }
+    },
+    "hall": {
+      "title": "Council",
+      "states": {
+        "empty": "scripts/council_state_walk.mjs",
+        "populated": "scripts/council_deliberation_walk.mjs",
+        "long-content": "scripts/council_deliberation_walk.mjs",
+        "loading": "scripts/council_state_walk.mjs",
+        "error": "scripts/council_state_walk.mjs",
+        "recovery": "scripts/council_state_walk.mjs"
+      }
+    },
+    "council": {
+      "title": "Pipeline",
+      "states": {
+        "empty": "scripts/pipeline_workspace_walk.mjs",
+        "populated": "scripts/pipeline_workspace_walk.mjs",
+        "long-content": "scripts/pipeline_workspace_walk.mjs",
+        "loading": "scripts/pipeline_workspace_walk.mjs",
+        "error": "scripts/pipeline_workspace_walk.mjs",
+        "recovery": "scripts/pipeline_workspace_walk.mjs"
+      }
+    },
+    "debate": {
+      "title": "Compare",
+      "states": {
+        "empty": "scripts/compare_balanced_walk.mjs",
+        "populated": "scripts/compare_evidence_walk.mjs",
+        "long-content": "scripts/compare_provenance_walk.mjs",
+        "loading": "scripts/compare_evidence_walk.mjs",
+        "error": "scripts/compare_history_walk.mjs",
+        "recovery": "scripts/compare_continuity_walk.mjs"
+      }
+    },
+    "chat": {
+      "title": "Chat",
+      "states": {
+        "empty": "scripts/chat_layout_walk.mjs",
+        "populated": "scripts/chat_layout_walk.mjs",
+        "long-content": "scripts/chat_layout_walk.mjs",
+        "loading": "scripts/chat_layout_walk.mjs",
+        "error": "scripts/chat_layout_walk.mjs",
+        "recovery": "scripts/chat_layout_walk.mjs"
+      }
+    }
+  },
+  "visual_reference": {
+    "contract": "product/M5_2_0_UIUX_V2_Cross_Tab_Reference.json",
+    "walk": "scripts/uiux_v2_cross_tab_reference_walk.mjs",
+    "required": "48 actual/reference/annotated variants and explicit human structural approval after intentional target-size changes"
+  },
+  "preservation": {
+    "matrix": "product/M5_2_0_UIUX_V2_Preservation_Matrix.json",
+    "run": "product/M5_2_0_UIUX_Preservation_Run.json",
+    "required": "all 21 rows, every source-mapped control/route/test/walk, no API/session/workspace/authorization/sandbox/ledger/fencing/model-memory regression"
+  },
+  "evidence": {
+    "run": "product/M5_2_0_UIUX_V2_Accessibility_Adversarial_Run.json",
+    "status": "passed",
+    "totals": {
+      "checks": 120,
+      "passed": 120,
+      "failed": 0,
+      "captures": 62
+    },
+    "git": {
+      "head": "f6d7b7a9c37db14137e82bdc9e533c6ffdc5281e",
+      "dirty": true
+    },
+    "validation_errors": []
+  },
+  "findings": []
+}

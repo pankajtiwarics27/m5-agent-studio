@@ -364,13 +364,21 @@ async function run(args) {
       );
 
       // ── 4. Enter and Space press the controls that are not native ─────────
-      await page.evaluate(() => switchTab("harness"));
+      await page.evaluate(() => {
+        switchTab("harness");
+        startFreshHarnessDraft();
+      });
       await sleep(args.settleMs * 3);
+      // The examples are a real native disclosure. Open it from the keyboard and
+      // use Tab to reach its first card; focusing a descendant of the closed
+      // disclosure would report a defect in the test, not in the product.
+      await page.focus(".harness-examples > summary");
+      await page.keyboard.press("Space");
+      await page.waitForFunction(() => document.querySelector(".harness-examples")?.open === true);
+      await page.keyboard.press("Tab");
       const cardFocused = await page.evaluate(() => {
         const card = document.querySelector(".starter-card[data-key-activate]");
-        if (!card) return false;
-        card.focus();
-        return document.activeElement === card;
+        return Boolean(card && document.activeElement === card);
       });
       await page.keyboard.press("Enter");
       await sleep(args.settleMs * 4);
@@ -385,15 +393,17 @@ async function run(args) {
       );
       await shoot(page, args, "a11y-card-focus");
 
-      // The preset chips live in the MCP modal, so the keyboard path is: open it, Tab to a chip,
-      // Space it, and the preset's fields fill in exactly as they do under the pointer.
-      await page.evaluate(() => openMcpModal());
-      await sleep(args.settleMs * 5);
+      // Provider presets live in the Providers dialog (not the MCP hub). Open
+      // that actual dialog, then Space a reachable preset chip and verify the
+      // provider alias field it owns. This is the same action as the pointer.
+      await page.evaluate(() => openProvidersModal());
+      await page.waitForSelector("#providersModal.open .chip[data-key-activate]", { timeout: 10000 });
+      await sleep(args.settleMs * 3);
       const chipPressed = await page.evaluate(() => {
-        const chip = document.querySelector('.chip[data-key-activate]');
+        const chip = document.querySelector('#providersModal .chip[data-key-activate]');
         if (!chip) return { found: false };
         chip.focus();
-        const field = document.getElementById("mcpAlias");
+        const field = document.getElementById("provAlias");
         return {
           found: true,
           focused: document.activeElement === chip,
@@ -408,15 +418,15 @@ async function run(args) {
         await sleep(args.settleMs * 4);
       }
       const chipState = await page.evaluate(() => {
-        const chip = document.querySelector('.chip[data-key-activate]');
-        const field = document.getElementById("mcpAlias");
+        const chip = document.querySelector('#providersModal .chip[data-key-activate]');
+        const field = document.getElementById("provAlias");
         return { role: chip ? chip.getAttribute("role") : "", tabindex: chip ? chip.getAttribute("tabindex") : "", after: field ? field.value : "" };
       });
       record(
         "Space presses a chip, and the chip says it is a button rather than a decoration",
         chipPressed.found && chipPressed.focused && chipState.role === "button" && chipState.tabindex === "0"
           && chipState.after.length > 0 && chipState.after !== chipPressed.before,
-        `chip "${chipPressed.text}" → mcpAlias "${chipState.after}" (was "${chipPressed.before}")`,
+        `chip "${chipPressed.text}" → provAlias "${chipState.after}" (was "${chipPressed.before}")`,
       );
       await shoot(page, args, "a11y-chip-focus");
       await page.keyboard.press("Escape");
@@ -460,7 +470,7 @@ async function run(args) {
       await page.keyboard.up("Control");
       await sleep(args.settleMs * 6);
       const overlayOpen = await page.evaluate(() => {
-        const dialog = document.querySelector('[role="dialog"]');
+        const dialog = document.querySelector('#cmdPaletteModal [role="dialog"]');
         return {
           dialog: Boolean(dialog),
           modal: dialog ? dialog.getAttribute("aria-modal") : "",
@@ -474,7 +484,7 @@ async function run(args) {
         await page.keyboard.press("Tab");
         await sleep(40);
         const inside = await page.evaluate(() => {
-          const dialog = document.querySelector('[role="dialog"]');
+          const dialog = document.querySelector('#cmdPaletteModal [role="dialog"]');
           return Boolean(dialog && dialog.contains(document.activeElement));
         });
         trapped = trapped && inside;
@@ -482,7 +492,7 @@ async function run(args) {
       await page.keyboard.press("Escape");
       await sleep(args.settleMs * 5);
       const overlayClosed = await page.evaluate(() => {
-        const dialog = document.querySelector('[role="dialog"]');
+        const dialog = document.querySelector('#cmdPaletteModal [role="dialog"]');
         const open = dialog ? Boolean(dialog.closest(".open")) : false;
         const el = document.activeElement;
         const returned = Boolean(el) && el.getAttribute("data-a11y-opener") === "1";

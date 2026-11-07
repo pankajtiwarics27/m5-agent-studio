@@ -1,0 +1,4 @@
+# Source-hashed local UIV2-28 evidence is reviewed, never committed as binaries/results.
+*.png
+*.json
+*.log
