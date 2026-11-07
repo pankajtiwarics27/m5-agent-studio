@@ -396,6 +396,7 @@ SUPPORT_WALKS = {
     "compare_evidence_walk.mjs": "the Compare evidence walk (UIV2-17) proves what the results table, the verdict card and the inspector's evidence lines say about a reply; the capability it belongs to is the comparison itself, which the matrix already enumerates from the pane's own controls",
     "compare_balanced_walk.mjs": "the Compare composition walk (UIV2-16) proves how the question, the folded criteria and the answer columns are drawn; the capability it belongs to is the comparison itself, which the matrix already enumerates from the pane's own controls",
     "uiv2_preservation_visual_walk.mjs": "the UIV2-27 long-conclusion visual walk proves real route-created content at four viewports in light and dark: independent body scrolling, keyboard disclosure and resize, sticky geometry, shared-overlay focus, narrow composer reachability, and page overflow; these are state/layout proofs for the Council capability already enumerated by the matrix",
+    "uiv2_accessibility_adversarial_walk.mjs": "the UIV2-28 accessibility adversarial walk proves measured contrast, DOM names, real Tab traversal, reduced motion, all 48 viewport/theme/pane rows at 200%, and exact modal focus/scroll recovery over the existing six panes; it adds no capability beyond the matrix's controls",
 }
 
 

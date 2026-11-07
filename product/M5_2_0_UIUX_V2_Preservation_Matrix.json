@@ -8,26 +8,26 @@
   "check_with": "python3 scripts/uiux_v2_preservation_matrix.py --check",
   "statement": "Control -> DOM handler -> API route -> test coverage for every interactive control in static/index.html, plus the three UIV2-02 contract investigations. api_status is existing when every call the handler makes resolves to a mounted @app route, absent-route when a call matches no mounted route, unknown when the resolver left an edge open, no-api for handlers that never fetch, and no-handler for controls without an inline handler. The contracts distinguish existing / partial / absent / unknown and cite file evidence; the generator hard-fails if the sources drift from the classification, so --check is a gate.",
   "pinned_source_commit": "9a584a36f1fbe29ba467562dd12a705626769f00",
-  "frontend_sha256": "d6ec0efecc0930de333cdc268e41befb70cfc9dd19964c35051e9fb53dab2255",
-  "app_sha256": "fbbb2642ecab90992b545a9db8e2bfb15404609b3ae50758f27c79d572c3b0d3",
+  "frontend_sha256": "0e483245c2f655e223b9c06f5c534b7dffd4d523b14c83a71f6cca8b3726a2e7",
+  "app_sha256": "61fc096c3a1530cb371bf9029e5e80499732aede5deff61d23d81b19df1afac4",
   "totals": {
-    "controls": 243,
+    "controls": 272,
     "by_pane": {
-      "start": 14,
-      "harness": 34,
+      "start": 15,
+      "harness": 35,
       "hall": 20,
       "council": 17,
       "debate": 10,
       "chat": 13
     },
-    "chrome_controls": 135,
+    "chrome_controls": 162,
     "api_status_counts": {
-      "existing": 32,
-      "no-api": 126,
-      "no-handler": 85
+      "existing": 37,
+      "no-api": 142,
+      "no-handler": 93
     },
-    "mounted_routes": 118,
-    "fetch_call_sites": 68
+    "mounted_routes": 121,
+    "fetch_call_sites": 71
   },
   "controls": [
     {
@@ -184,6 +184,16 @@
       "handler": null,
       "calls": [],
       "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "start",
+      "id": null,
+      "tag": "button",
+      "text": "Browse\u2026",
+      "handler": "openPathPicker",
+      "calls": [],
+      "api_status": "no-api",
       "tests": []
     },
     {
@@ -491,6 +501,16 @@
       "tag": "input",
       "text": null,
       "handler": "syncProjectDirInputs",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": null,
+      "tag": "button",
+      "text": "Browse\u2026",
+      "handler": "openPathPicker",
       "calls": [],
       "api_status": "no-api",
       "tests": []
@@ -1605,6 +1625,16 @@
     },
     {
       "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Browse\u2026",
+      "handler": "openPathPicker",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
       "id": "cgModeSelect",
       "tag": "select",
       "text": "codegraph_architecture (Hubs & God Nodes) codegraph_path (Graphify Shortest Path A -> B) codegraph_impact (Caller Blast-Radius) codegraph_context (Symbol Search) codegraph_quality (Complexity Hotspots) ponytail-debt (Shortcut & Rationale Ledger)",
@@ -1843,10 +1873,40 @@
     },
     {
       "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Browse\u2026",
+      "handler": "openPathPicker",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
       "id": "mcpArgs",
       "tag": "input",
       "text": null,
       "handler": "mcpWizardRefresh",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Append file path\u2026",
+      "handler": "openPathPicker",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Append folder path\u2026",
+      "handler": "openPathPicker",
       "calls": [],
       "api_status": "no-api",
       "tests": []
@@ -1879,6 +1939,26 @@
       "handler": null,
       "calls": [],
       "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Insert folder value\u2026",
+      "handler": "openPathPicker",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Insert file value\u2026",
+      "handler": "openPathPicker",
+      "calls": [],
+      "api_status": "no-api",
       "tests": []
     },
     {
@@ -2569,6 +2649,16 @@
       "pane": "chrome",
       "id": null,
       "tag": "button",
+      "text": "Browse\u2026",
+      "handler": "openPathPicker",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
       "text": "Set Directory",
       "handler": "saveWorkspaceDirectory",
       "calls": [
@@ -2756,7 +2846,8 @@
         "test_council_session_list.py",
         "test_council_state_consistency.py",
         "test_demo_tour.py",
-        "test_uiux_preservation_signoff.py"
+        "test_uiux_preservation_signoff.py",
+        "test_uiv2_accessibility_adversarial.py"
       ]
     },
     {
@@ -2779,7 +2870,8 @@
         "test_council_session_list.py",
         "test_council_state_consistency.py",
         "test_demo_tour.py",
-        "test_uiux_preservation_signoff.py"
+        "test_uiux_preservation_signoff.py",
+        "test_uiv2_accessibility_adversarial.py"
       ]
     },
     {
@@ -2907,6 +2999,246 @@
       "calls": [],
       "api_status": "no-api",
       "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Close",
+      "handler": "closePathPicker",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "pathPickerRoots",
+      "tag": "select",
+      "text": "Approved locations\u2026",
+      "handler": "if",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Default location",
+      "handler": "loadPathPicker",
+      "calls": [
+        {
+          "method": "GET",
+          "route": "/api/workspace/picker",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": [
+        "test_workspace_paths.py"
+      ]
+    },
+    {
+      "pane": "chrome",
+      "id": "pathPickerUp",
+      "tag": "button",
+      "text": "Up",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "pathPickerLocation",
+      "tag": "input",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Go",
+      "handler": "loadPathPicker",
+      "calls": [
+        {
+          "method": "GET",
+          "route": "/api/workspace/picker",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": [
+        "test_workspace_paths.py"
+      ]
+    },
+    {
+      "pane": "chrome",
+      "id": "pathPickerSearch",
+      "tag": "input",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Filter",
+      "handler": "loadPathPicker",
+      "calls": [
+        {
+          "method": "GET",
+          "route": "/api/workspace/picker",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": [
+        "test_workspace_paths.py"
+      ]
+    },
+    {
+      "pane": "chrome",
+      "id": "pathPickerEnvKey",
+      "tag": "input",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "summary",
+      "text": "New folder",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "pathPickerNewName",
+      "tag": "input",
+      "text": null,
+      "handler": "pathPickerNameChanged",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "pathPickerCreateConfirm",
+      "tag": "input",
+      "text": null,
+      "handler": "pathPickerCreateReady",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "pathPickerCreateBtn",
+      "tag": "button",
+      "text": "Create folder",
+      "handler": "createPathPickerFolder",
+      "calls": [
+        {
+          "method": "POST",
+          "route": "/api/workspace/picker/folders",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": [
+        "test_workspace_paths.py"
+      ]
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "summary",
+      "text": "Ask a model for a name (optional)",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "pathPickerModel",
+      "tag": "select",
+      "text": "Choose a model\u2026",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "pathPickerDescription",
+      "tag": "textarea",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "pathPickerAskModel",
+      "tag": "button",
+      "text": "Ask model for a name",
+      "handler": "askPathPickerModel",
+      "calls": [
+        {
+          "method": "POST",
+          "route": "/api/workspace/picker/suggest",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": [
+        "test_workspace_paths.py"
+      ]
+    },
+    {
+      "pane": "chrome",
+      "id": "pathPickerUseSuggestion",
+      "tag": "button",
+      "text": "Use suggested name",
+      "handler": "usePathPickerSuggestion",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Cancel",
+      "handler": "closePathPicker",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "pathPickerApplyBtn",
+      "tag": "button",
+      "text": "Use this folder",
+      "handler": "applyPathPicker",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
     }
   ],
   "contracts": {
@@ -2915,7 +3247,7 @@
       "classification": "present_registry__picker_rendered_from_it",
       "picker": {
         "status": "rendered_from_registry",
-        "evidence": "select#chatPersona at static/index.html:3759 ships no <option>; renderChatPersonaPicker() fills it from CHAT_PERSONAS on load and on every filter",
+        "evidence": "select#chatPersona at static/index.html:3802 ships no <option>; renderChatPersonaPicker() fills it from CHAT_PERSONAS on load and on every filter",
         "option_source": "CHAT_PERSONAS"
       },
       "registry": {

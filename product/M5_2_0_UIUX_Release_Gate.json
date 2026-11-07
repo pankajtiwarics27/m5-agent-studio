@@ -22,8 +22,8 @@
     {
       "script": "scripts/uiux_source_manifest.py",
       "command": "python3 scripts/uiux_source_manifest.py --check",
-      "exit_code": 0,
-      "failure_output": null,
+      "exit_code": 1,
+      "failure_output": "       changed: studio.py",
       "story": "UIUX-P0-01",
       "artifacts": [
         "product/M5_2_0_UIUX_Source_Manifest.json"
@@ -95,8 +95,8 @@
     {
       "script": "scripts/uiux_route_map.py",
       "command": "python3 scripts/uiux_route_map.py --check",
-      "exit_code": 0,
-      "failure_output": null,
+      "exit_code": 1,
+      "failure_output": "           python3 scripts/uiux_route_map.py",
       "story": "UIUX-P0-03",
       "artifacts": [
         "product/M5_2_0_UIUX_Route_Map.json"
@@ -238,8 +238,8 @@
     {
       "script": "scripts/uiux_tokens.py",
       "command": "python3 scripts/uiux_tokens.py --check",
-      "exit_code": 0,
-      "failure_output": null,
+      "exit_code": 1,
+      "failure_output": "           python3 scripts/uiux_tokens.py",
       "story": "UIUX-P1-01",
       "artifacts": [
         "product/M5_2_0_UIUX_Tokens.json"
@@ -263,8 +263,8 @@
     {
       "script": "scripts/uiux_status_components.py",
       "command": "python3 scripts/uiux_status_components.py --check",
-      "exit_code": 0,
-      "failure_output": null,
+      "exit_code": 1,
+      "failure_output": "           python3 scripts/uiux_status_components.py",
       "story": "UIUX-P1-03",
       "artifacts": [
         "product/M5_2_0_UIUX_Status_Components.json"
@@ -288,8 +288,8 @@
     {
       "script": "scripts/uiux_overlay_inventory.py",
       "command": "python3 scripts/uiux_overlay_inventory.py --check",
-      "exit_code": 0,
-      "failure_output": null,
+      "exit_code": 1,
+      "failure_output": "           python3 scripts/uiux_overlay_inventory.py",
       "story": "UIUX-P1-04",
       "artifacts": [
         "product/M5_2_0_UIUX_Overlays.json"
@@ -312,8 +312,8 @@
     {
       "script": "scripts/uiux_presentation_inventory.py",
       "command": "python3 scripts/uiux_presentation_inventory.py --check",
-      "exit_code": 0,
-      "failure_output": null,
+      "exit_code": 1,
+      "failure_output": "           python3 scripts/uiux_presentation_inventory.py",
       "story": "UIUX-P1-05",
       "artifacts": [
         "product/M5_2_0_UIUX_Presentations.json"
@@ -341,8 +341,8 @@
     {
       "script": "scripts/uiux_onboarding_inventory.py",
       "command": "python3 scripts/uiux_onboarding_inventory.py --check",
-      "exit_code": 0,
-      "failure_output": null,
+      "exit_code": 1,
+      "failure_output": "           python3 scripts/uiux_onboarding_inventory.py",
       "story": "UIUX-P2-01",
       "artifacts": [
         "product/M5_2_0_UIUX_Onboarding.json"
@@ -810,8 +810,8 @@
     {
       "script": "scripts/uiux_polish_inventory.py",
       "command": "python3 scripts/uiux_polish_inventory.py --check",
-      "exit_code": 0,
-      "failure_output": null,
+      "exit_code": 1,
+      "failure_output": "           python3 scripts/uiux_polish_inventory.py",
       "story": "UIUX-P5-05",
       "artifacts": [
         "product/M5_2_0_UIUX_Polish.json"
@@ -834,8 +834,8 @@
     {
       "script": "scripts/uiux_preservation_e2e.py",
       "command": "python3 scripts/uiux_preservation_e2e.py --check",
-      "exit_code": 0,
-      "failure_output": null,
+      "exit_code": 1,
+      "failure_output": "           python3 scripts/uiux_preservation_e2e.py",
       "story": "UIUX-P6-01",
       "artifacts": [
         "product/M5_2_0_UIUX_Preservation_E2E.json"
@@ -853,7 +853,7 @@
             "route_provers": 13,
             "control_provers": 4,
             "walks": 18,
-            "support_walks": 27,
+            "support_walks": 28,
             "findings": 0
           }
         }
@@ -862,8 +862,8 @@
     {
       "script": "scripts/uiux_adversarial_inventory.py",
       "command": "python3 scripts/uiux_adversarial_inventory.py --check",
-      "exit_code": 0,
-      "failure_output": null,
+      "exit_code": 1,
+      "failure_output": "           python3 scripts/uiux_adversarial_inventory.py",
       "story": "UIUX-P6-02",
       "artifacts": [
         "product/M5_2_0_UIUX_Adversarial.json"
@@ -965,7 +965,7 @@
         "scripts/uiux_authorization_trace.py",
         "scripts/uiux_preservation_signoff.py"
       ],
-      "met": true
+      "met": false
     },
     {
       "id": "P1",
@@ -985,7 +985,7 @@
         "scripts/uiux_overlay_inventory.py",
         "scripts/uiux_presentation_inventory.py"
       ],
-      "met": true
+      "met": false
     },
     {
       "id": "P2",
@@ -1008,7 +1008,7 @@
         "scripts/uiux_chat_context_inventory.py",
         "scripts/uiux_chat_handoff_inventory.py"
       ],
-      "met": true
+      "met": false
     },
     {
       "id": "P3",
@@ -1077,7 +1077,7 @@
         "scripts/uiux_stream_perf_inventory.py",
         "scripts/uiux_polish_inventory.py"
       ],
-      "met": true
+      "met": false
     },
     {
       "id": "P6",
@@ -1097,7 +1097,7 @@
         "scripts/uiux_screenshot_review.py",
         "scripts/uiux_docs_verification.py"
       ],
-      "met": true
+      "met": false
     }
   ],
   "acceptance": [
@@ -1457,14 +1457,71 @@
   },
   "totals": {
     "checks": 37,
-    "checks_passed": 37,
+    "checks_passed": 27,
     "gates": 7,
-    "gates_met": 7,
+    "gates_met": 2,
     "acceptance_criteria": 5,
     "known_regressions": 46,
     "resolved_regressions": 3,
     "regenerated_files": 2,
-    "findings": 0
+    "findings": 14
   },
-  "findings": []
+  "findings": [
+    {
+      "check": "artifact-check",
+      "detail": "`python3 scripts/uiux_source_manifest.py --check` exited 1:        changed: studio.py"
+    },
+    {
+      "check": "artifact-check",
+      "detail": "`python3 scripts/uiux_route_map.py --check` exited 1:            python3 scripts/uiux_route_map.py"
+    },
+    {
+      "check": "artifact-check",
+      "detail": "`python3 scripts/uiux_tokens.py --check` exited 1:            python3 scripts/uiux_tokens.py"
+    },
+    {
+      "check": "artifact-check",
+      "detail": "`python3 scripts/uiux_status_components.py --check` exited 1:            python3 scripts/uiux_status_components.py"
+    },
+    {
+      "check": "artifact-check",
+      "detail": "`python3 scripts/uiux_overlay_inventory.py --check` exited 1:            python3 scripts/uiux_overlay_inventory.py"
+    },
+    {
+      "check": "artifact-check",
+      "detail": "`python3 scripts/uiux_presentation_inventory.py --check` exited 1:            python3 scripts/uiux_presentation_inventory.py"
+    },
+    {
+      "check": "artifact-check",
+      "detail": "`python3 scripts/uiux_onboarding_inventory.py --check` exited 1:            python3 scripts/uiux_onboarding_inventory.py"
+    },
+    {
+      "check": "artifact-check",
+      "detail": "`python3 scripts/uiux_polish_inventory.py --check` exited 1:            python3 scripts/uiux_polish_inventory.py"
+    },
+    {
+      "check": "artifact-check",
+      "detail": "`python3 scripts/uiux_preservation_e2e.py --check` exited 1:            python3 scripts/uiux_preservation_e2e.py"
+    },
+    {
+      "check": "artifact-check",
+      "detail": "`python3 scripts/uiux_adversarial_inventory.py --check` exited 1:            python3 scripts/uiux_adversarial_inventory.py"
+    },
+    {
+      "check": "phase-gate",
+      "detail": "P0 is not met: 6/6 stories done"
+    },
+    {
+      "check": "phase-gate",
+      "detail": "P1 is not met: 5/5 stories done"
+    },
+    {
+      "check": "phase-gate",
+      "detail": "P2 is not met: 6/6 stories done"
+    },
+    {
+      "check": "phase-gate",
+      "detail": "P5 is not met: 5/5 stories done"
+    }
+  ]
 }

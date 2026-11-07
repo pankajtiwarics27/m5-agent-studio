@@ -4204,6 +4204,10 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   /* `margin: 0 auto` on a flex item turns off the cross-axis stretch: without a definite
      width the shell sized to its own max-content (589px) and the pane, which hides its
      overflow, clipped the right third of the Start pane at 480 and 360. */
+  /* Start is one document-like column, not a fixed transcript shell. At short
+     heights and 200% zoom its readiness and recovery controls extend below the
+     fold; the pane itself must scroll instead of clipping them at overflow:hidden. */
+  #pane-start { overflow-y: auto; overscroll-behavior: contain; }
   .onboarding-shell { width: 100%; max-width: 860px; margin: 0 auto; padding: 18px 16px 28px; }
   .onboarding-lede { font-size: 12.4px; line-height: 1.55; color: var(--text-dim); margin: 8px 0 14px; }
   .onboarding-steps { display: flex; flex-direction: column; gap: 8px; }
@@ -4283,7 +4287,7 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   .start-recent-title { font-size: var(--text-sm); font-weight: var(--weight-semibold); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .start-recent-meta { font-size: var(--text-2xs); color: var(--text-faint); font-family: var(--mono); }
   .start-launch { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; margin-top: var(--space-4); }
-  .start-launch input { flex: 1 1 320px; min-width: 220px; }
+  .start-launch input { flex: 1 1 320px; min-width: 0; }
 
   /* ── The command center ─────────────────────────────────────────────────────
      Start opens with the composer, one sentence of verdict, and at most one
@@ -5029,7 +5033,7 @@ body { font-family: var(--sans); }
   flex-wrap: nowrap;
 }
 .brand { gap: 10px; font-size: var(--text-base); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); }
-.brand-chip { width: 28px; height: 28px; border-radius: var(--radius-sm); background: var(--accent); box-shadow: none; font-weight: 650; }
+.brand-chip { width: 28px; height: 28px; border-radius: var(--radius-sm); background: var(--accent); color: var(--primary-text); box-shadow: none; font-weight: 650; }
 .ver-badge { display: none; }
 .status-pill { background: transparent; border-color: var(--border); color: var(--text-dim); font-size: 12px; font-weight: 500; }
 .status-pill .dot { box-shadow: none; width: 6px; height: 6px; }
@@ -5822,7 +5826,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   .chat-composer textarea { flex: 1 1 100% !important; width: 100%; min-width: 0; }
   .chat-composer #chatStopBtn, .chat-composer #chatSendBtn { min-width: 76px; }
   .hall-header { padding: 8px 12px; }
-  .hall-header > div:last-child { width: 100%; }
+  .hall-header > div:last-child { width: 100%; overflow-x: auto; overscroll-behavior-x: contain; }
   .hall-header > div:last-child .btn { flex: 1; justify-content: center; }
   .hall-composer, .chat-composer { padding: 8px 12px; }
   .harness-stream { padding-left: 10px; padding-right: 10px; }
@@ -5842,13 +5846,30 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   }
 }
 @media (max-width: 390px) {
-  .topbar { padding: 5px 8px; }
+  /* At 200% on a 390px phone the CSS viewport is 195px. Keep every header
+     action in one horizontally scrollable row rather than clipping the last
+     three buttons behind the document's overflow:hidden boundary. */
+  .topbar { padding: 5px 8px; overflow-x: auto; overflow-y: hidden; }
+  .topbar > * { flex-shrink: 0; }
+  .workspace-toolbar { flex-wrap: wrap; }
+  .presentation { flex-wrap: wrap; }
+  .presentation > div { flex: 1 1 160px; min-width: 0; }
   .brand { gap: 4px; }
   .mode-tab { padding: 5px 6px; }
   .mode-tab .svg-ico { display: none; }
+  /* Persona + filter cannot share half of a 195px row: the 92px filter would
+     leave only 20px for the select. A 140px minimum wraps each group only when
+     two columns no longer fit; the approved 390px two-column geometry remains. */
+  .chat-header-bar > div:nth-child(2),
+  .chat-header-bar > div:nth-child(3) { min-width: 140px; }
   .harness-shell { grid-template-rows: minmax(150px, 24vh) minmax(0, 1fr); }
   .hall-shell { grid-template-rows: minmax(118px, 20vh) minmax(0, 1fr); }
   .stepper { grid-template-columns: repeat(5, minmax(104px, 1fr)); }
+}
+@media (max-height: 600px) {
+  /* Short desktop zoom and landscape viewports still need a recovery scroll
+     path. Normal-height Council and Chat retain their existing internal regions. */
+  .hall-main, #pane-chat { overflow-y: auto; overscroll-behavior: contain; }
 }
 
   /* UIV2-06: global telemetry lives in a header popover; the rail is a contextual
@@ -6071,7 +6092,7 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
 .composer-spacer { flex: 1; }
 #harnessRunBtn { min-width: 72px; }
 .composer-context-line { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; border-top: 1px solid var(--border); padding-top: 8px; min-width: 0; }
-.project-summary { cursor: pointer; color: var(--text-dim); background: transparent; border: 0; text-align: left; font: inherit; font-size: 12px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.project-summary { cursor: pointer; color: var(--text-dim); background: transparent; border: 0; text-align: left; font: inherit; font-size: 12px; min-width: 0; min-height: var(--target-min); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .harness-run-review { flex: 0 0 auto; }
 .harness-run-review[open] { position: static; }
 .harness-run-review .harness-plan { position: absolute; bottom: calc(100% + 8px); left: 0; right: 0; max-height: 45dvh; overflow: auto; box-shadow: 0 8px 30px rgba(0,0,0,.12); background: var(--bg-card); padding: 16px; border-radius: var(--radius-lg); z-index: 25; }

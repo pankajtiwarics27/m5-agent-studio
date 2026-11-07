@@ -167,3 +167,14 @@ jobs:
             --timeout-ms 60000
         env:
           STUDIO_PYTHON: python
+      - name: Run UIV2-28 keyboard, responsive and accessibility adversarial gates
+        run: |
+          node scripts/a11y_walk.mjs \
+            --screenshots "${RUNNER_TEMP:-/tmp}/uiv2-28-keyboard"
+          node scripts/responsive_walk.mjs \
+            --screenshots "${RUNNER_TEMP:-/tmp}/uiv2-28-responsive"
+          node scripts/uiv2_accessibility_adversarial_walk.mjs \
+            --screenshots "${RUNNER_TEMP:-/tmp}/uiv2-28-accessibility" \
+            --timeout-ms 60000
+        env:
+          STUDIO_PYTHON: python

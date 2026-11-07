@@ -3342,20 +3342,81 @@
       "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
       "agent_prompt": "Implement UIV2-28: Accessibility, scroll and responsive adversarial suite. Required outcome: Keyboard-only navigation, screen reader semantics, contrast, zoom, nested scrolling, long content and reduced motion. Specific gate: No focus traps except intentional modal; Esc restores focus and scroll; 200% zoom no inaccessible controls; long conclusions and dialogs readable; color contrast measured. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempt_count": 0,
-        "started_at": null,
+        "status": "in_progress",
+        "progress_percent": 95,
+        "attempt_count": 1,
+        "started_at": "2026-11-08T00:20:16+05:30",
         "completed_at": null,
         "commit_sha": null,
-        "changed_files": [],
-        "tests_executed": [],
-        "visual_evidence": [],
-        "acceptance_evidence": [],
-        "known_regressions": [],
-        "blockers": [],
-        "handoff_summary": "",
-        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+        "changed_files": [
+          ".github/workflows/ci.yml",
+          "docs/README.md",
+          "docs/media/uiv2-28-accessibility/.gitignore",
+          "docs/uiux-2-0-control-inventory.md",
+          "docs/uiux-2-0-handover.md",
+          "docs/uiux-2-0-p0-signoff.md",
+          "docs/uiux-2-0-preservation-e2e.md",
+          "docs/uiux-2-0-release-gate.md",
+          "docs/uiv2-v2-accessibility-adversarial-evidence.md",
+          "docs/uiv2-v2-accessibility-adversarial.md",
+          "docs/uiv2-v2-preservation-matrix.md",
+          "product/M5_2_0_UIUX_Control_Inventory.json",
+          "product/M5_2_0_UIUX_Preservation_E2E.json",
+          "product/M5_2_0_UIUX_Preservation_Run.json",
+          "product/M5_2_0_UIUX_Preservation_Signoff.json",
+          "product/M5_2_0_UIUX_Release_Gate.json",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "product/M5_2_0_UIUX_V2_Accessibility_Adversarial.json",
+          "product/M5_2_0_UIUX_V2_Accessibility_Adversarial_Run.json",
+          "product/M5_2_0_UIUX_V2_Cross_Tab_Reference.json",
+          "product/M5_2_0_UIUX_V2_Preservation_Matrix.json",
+          "product/M5_2_0_UIUX_V2_Visual_Fidelity_Roadmap.json",
+          "scripts/a11y_walk.mjs",
+          "scripts/responsive_walk.mjs",
+          "scripts/uiux_preservation_e2e.py",
+          "scripts/uiv2_accessibility_adversarial.py",
+          "scripts/uiv2_accessibility_adversarial_walk.mjs",
+          "static/index.html",
+          "studio.py",
+          "tests/test_scopes.json",
+          "tests/test_uiv2_accessibility_adversarial.py"
+        ],
+        "tests_executed": [
+          "Focused pre-change pytest baseline -> 79 passed; existing browser baselines -> accessibility 12/15 and responsive 16/27; computed dark brand-chip contrast -> six readings at 2.41:1.",
+          "node scripts/uiv2_accessibility_adversarial_walk.mjs --screenshots /tmp/uiv2-28-adversarial-after -> 120/120 checks, 62 captures; all 48 zoom rows, all rendered contrast/name/reduced-motion/Tab rows, and six long-recovery assertions at each of desktop dark and phone light pass.",
+          "Long recovery starts from outer=96px and conclusion=72px at both 200% variants, follows hallStream versus .hall-main, scrolls the modal to its terminal marker without moving underlying regions, and restores Expand focus plus all offsets exactly on Escape.",
+          "node scripts/a11y_walk.mjs -> 15/15; node scripts/responsive_walk.mjs -> 27/27 on the final frontend.",
+          "node scripts/uiux_v2_cross_tab_reference_walk.mjs --candidate -> 48/48 variants, 2104/2104 independent checks, 144 PNGs; reviewed candidate sha256 aac70c601ab1ff8ccdd504372688f59618dc749d42617f7528db40204a262268; explicit user approval received for its structure, with clean-HEAD recapture still required by the binder.",
+          "Council state matrix -> 184/184 checks and 40 captures over four viewports in light/dark; long-conclusion visual matrix -> 72/72 checks and 16 captures.",
+          "python scripts/preservation_suite.py --save product/M5_2_0_UIUX_Preservation_Run.json -> 21/21 rows, 32/32 steps, 0 failures in 446.0s.",
+          "python -m pytest -q tests/test_uiv2_accessibility_adversarial.py tests/test_uiv2_cross_tab_reference.py tests/test_uiux_preservation_e2e.py tests/test_browser_ci_configuration.py tests/test_uiux_preservation_signoff.py -> 100 passed, 1 third-party deprecation warning.",
+          "UIV2-28 contract --check -> 120/120 source-bound checks, 62 captures, 0 findings; preservation map -> 21/21 rows, 73 provers, 0 findings; V2 matrix -> 272 controls and 121 mounted routes; documentation validation -> 235 files passed; git diff --check -> clean."
+        ],
+        "visual_evidence": [
+          "docs/media/uiv2-28-accessibility/before-keyboard/ and before-responsive/ plus contrast-before.json — original browser and computed-style baselines (Git-ignored local evidence).",
+          "docs/media/uiv2-28-accessibility/after/capture-manifest.json — 120/120 checks and 62 captures, sha256 ea0169fc323f20eb0994bbd4ec03b91b31ee1c875f8e278bdf2efb1afe494a4d (Git-ignored local evidence).",
+          "docs/media/uiv2-28-accessibility/cross-tab-candidate/ — 48 actual/reference/annotated variants, 2104/2104 independent checks; reviewed manifest sha256 aac70c601ab1ff8ccdd504372688f59618dc749d42617f7528db40204a262268; clean-HEAD recapture required before binding.",
+          "docs/media/uiv2-28-accessibility/council-state/ — 184/184 checks and 40 captures; council-long/ — 72/72 checks and 16 captures (Git-ignored local evidence)."
+        ],
+        "acceptance_evidence": [
+          "No pane-level focus loop passes; the intentional long-conclusion modal contains Tab and Escape restores the Expand trigger plus exact nonzero nested scroll offsets.",
+          "All 48 viewport/theme/pane 200% rows keep controls reachable and at least 24 CSS px without document overflow; long dialogs reach their final marker without moving the underlying transcript or conclusion.",
+          "Contrast is measured from computed/composited colors with WCAG luminance, not inferred from tokens; accessible names, positive tabindex and reduced motion are checked in the real DOM without claiming screen-reader certification.",
+          "All six tabs, backend routes, sessions/workspaces and safety boundaries remain covered by the 21/21 preservation run; no backend source or API payload changed.",
+          "Visual structure was explicitly approved in the reviewed candidate, but final acceptance remains pending the mandatory clean-HEAD candidate and approved-check evidence."
+        ],
+        "known_regressions": [
+          {
+            "regression": "Initial cross-tab approved-check reported 12 structural deltas after the accessibility fixes.",
+            "status": "closed_by_geometry_preservation_and_explicit_review",
+            "resolution": "Hall and Chat normal-phone geometry was restored; the remaining eight Harness deltas are the intentional 18-to-24px project-summary target and 3px y adjustment. Independent candidate checks are 2104/2104 and the user approved that reviewed structure."
+          }
+        ],
+        "blockers": [
+          "The approval binder requires a clean tracked worktree and a candidate captured at that exact HEAD. Commit the implementation, recapture the unchanged matrix, obtain binding confirmation for the resulting manifest hash, and run the final approved check before marking done."
+        ],
+        "handoff_summary": "UIV2-28 behavioral work is green: 120/120 adversarial checks, 15/15 keyboard, 27/27 responsive, 184/184 state, 72/72 long-content, and 21/21 preservation. Targeted tests are 100/100. The reviewed 48-variant candidate is independently green and its only new structural delta is the intentional 24px Harness project-summary target. Final clean-HEAD approval binding and approved-check evidence remain.",
+        "exact_next_action": "Commit the implementation on the session branch, regenerate the candidate at that clean HEAD, verify structure/images are unchanged, bind explicit approval to the new manifest hash, run the 2200-check approved matrix, then update UIV2-28 to done and run final CI."
       }
     },
     {
@@ -3591,18 +3652,18 @@
       "name": "Cross-tab QA and release gate",
       "total": 5,
       "done": 2,
-      "in_progress": 0,
+      "in_progress": 1,
       "blocked": 0,
-      "not_started": 3,
+      "not_started": 2,
       "percent_complete": 40
     }
   ],
   "progress": {
     "total": 30,
     "done": 27,
-    "in_progress": 0,
+    "in_progress": 1,
     "blocked": 0,
-    "not_started": 3,
+    "not_started": 2,
     "percent_complete": 90
   },
   "session_recovery_protocol": [

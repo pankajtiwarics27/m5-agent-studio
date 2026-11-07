@@ -168,6 +168,8 @@ measurements without trusting them).
 · [`uiux-2-0-harness-evidence.md`](uiux-2-0-harness-evidence.md) (generated P3-04 Harness layer: a completion claim drawn as the evidence behind it - one card for the runtime's three outcomes that states the contract digest, the command and its exit code, the revision, the files and the patch - and the record it opens: the contract the session set, the observation the runtime wrote with the criteria an observed test actually covered, the change counted per file from the same diff the dialog draws, the checkpoints and revision a re-run would be tied to, and an absent verdict, contract or diff drawn as an absence)· [`../M5_2_0_UIUX_AGENT_PROMPT.md`](../M5_2_0_UIUX_AGENT_PROMPT.md) (UI/UX claim, review and merge protocol)
 · [`uiux-2-0-coordination.md`](uiux-2-0-coordination.md) (read-only readiness check, current handoff and capture risks)
 · [`uiux-coordination-ledger-drift-followup.md`](uiux-coordination-ledger-drift-followup.md) (reconciled UI/UX phase summaries and status-walk token-exposure follow-up)
+· [`uiv2-v2-accessibility-adversarial.md`](uiv2-v2-accessibility-adversarial.md) (source-bound UIV2-28 keyboard, measured-contrast, 200% zoom, reduced-motion and nested-scroll recovery contract)
+· [`uiv2-v2-accessibility-adversarial-evidence.md`](uiv2-v2-accessibility-adversarial-evidence.md) (executed before/after, full visual-matrix and preservation evidence, with explicit approval status)
 
 ## M5 2.0 ground-truth evidence (2026-10-30)
 
