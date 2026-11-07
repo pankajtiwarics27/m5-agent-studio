@@ -249,9 +249,21 @@ shim** — the shim requirement in Part 2 applies only to Council chat/routing t
 
 ### M5 Agent Studio registration
 
-Launch the same script as a stdio MCP server from the Studio's MCP settings
-(same shape: command `python`, args `["moneyprinter_mcp.py"]`, env
-`MONEYPRINTER_TURBO_DIR=…`). The Studio launches MCP servers only after you
+Choose **MoneyPrinterTurbo AI Video Generation** in **MCP Tools Hub → Catalog**.
+The card prefills the bundled wrapper's absolute path and Studio's Python
+interpreter with **Always Ask** approval. Set `MONEYPRINTER_TURBO_DIR` in the
+advanced environment JSON to your separately installed MoneyPrinterTurbo checkout.
+Discovery alone does not need that checkout and does not render a video.
+
+**Studio client limitation:** its MCP tool-call budget is currently **45 seconds**,
+regardless of the wrapper's longer render timeout. Long renders are therefore not
+yet supported through this client. Executables such as `uv` and `ffmpeg` must also
+be reachable in the wrapper's restricted child environment. See
+[local-command troubleshooting](mcp-local-command-troubleshooting.md) for the
+restricted-PATH behavior and reviewed launcher configuration.
+
+You can also launch the same script as a custom stdio server
+(command `python`, args `["moneyprinter_mcp.py"]`, env `MONEYPRINTER_TURBO_DIR=…`). The Studio launches MCP servers only after you
 configure them, and its own MCP client policy (tool approval, timeouts) applies
 unchanged; this module does not bypass or widen the admission boundary.
 

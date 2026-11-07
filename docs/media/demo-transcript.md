@@ -75,7 +75,7 @@ MCP servers are listed as presets; each connection is a separate, explicit actio
 
 `GET /api/mcp/servers` -> 200
 
-Observed: 18 MCP server presets listed and 0 connected; connecting a server is an explicit action, not a side effect of opening the pane
+Observed: 19 MCP server presets listed and 0 connected; connecting a server is an explicit action, not a side effect of opening the pane
 
 ## 8. Open a council session
 

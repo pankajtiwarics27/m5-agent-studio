@@ -178,3 +178,31 @@ def test_budget_rejects_non_budget_values() -> None:
     transport, _ = _transport_for(_payload("moneyprinter-gateway"))
     with pytest.raises(TypeError):
         MoneyPrinterAPIAdapter(transport, budget="not-a-budget")  # type: ignore[arg-type]
+
+
+def test_moneyprinter_mcp_catalog_card_uses_the_bundled_wrapper():
+    """The video tool is discoverable without pretending it is an OpenAI provider."""
+    import sys
+    from pathlib import Path
+
+    preset = studio.MCP_SERVER_PRESETS["moneyprinter"]
+    assert preset["name"] == "MoneyPrinterTurbo AI Video Generation"
+    assert preset["transport"] == "stdio"
+    assert preset["command"] == sys.executable
+    assert preset["args"] == [str(studio.BASE_DIR / "moneyprinter_mcp.py")]
+    assert Path(preset["args"][0]).is_file()
+    assert preset["env"] == {}  # no guessed checkout, credentials or opt-in
+    assert preset["approval_policy"] == "always_ask"
+    assert "MONEYPRINTER_TURBO_DIR" in preset["notes"]
+    assert "45 seconds" in preset["notes"]
+    assert "Discovery does not render" in preset["notes"]
+
+
+def test_moneyprinter_card_is_exposed_by_the_catalog_endpoint(monkeypatch):
+    import json
+
+    monkeypatch.setattr(studio, "list_mcp_servers", lambda **kwargs: [])
+    response = asyncio.run(studio.api_list_mcp_servers())
+    payload = json.loads(response.body)
+    assert payload["presets"]["moneyprinter"] == studio.MCP_SERVER_PRESETS["moneyprinter"]
+    assert payload["servers"] == []

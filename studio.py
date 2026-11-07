@@ -23463,6 +23463,16 @@ MCP_SERVER_PRESETS: dict[str, dict[str, Any]] = {
         "approval_policy": "inherit",
         "notes": "Connect any custom FastMCP, Go, Rust, or OrbStack Docker Streamable HTTP MCP endpoint.",
     },
+    "moneyprinter": {
+        "name": "MoneyPrinterTurbo AI Video Generation",
+        "category": "custom",
+        "transport": "stdio",
+        "command": sys.executable,
+        "args": [str(BASE_DIR / "moneyprinter_mcp.py")],
+        "env": {},
+        "approval_policy": "always_ask",
+        "notes": "Exposes moneyprinter_video_generate through the bundled MCP wrapper (requires the full Studio checkout). Set MONEYPRINTER_TURBO_DIR in environment JSON to your separately installed MoneyPrinterTurbo checkout; rendering also needs uv, ffmpeg and its own provider configuration. Discovery does not render a video. Studio currently limits tool calls to 45 seconds, so longer video renders are not yet supported through this client.",
+    },
     "custom-stdio": {
         "name": "Custom Local Command / Script MCP (stdio)",
         "category": "custom",
@@ -24052,6 +24062,16 @@ async def _mcp_stdio_rpc(
                 start_new_session=True,
                 env=merged_env,
             )
+        except FileNotFoundError as exc:
+            supervisor.abort_spawn(sup_id)
+            raise RuntimeError(
+                "Local MCP launch failed: the executable, its script interpreter, or the working directory "
+                "could not be found. MCP subprocesses use a restricted PATH, not your Terminal PATH. "
+                "For npx servers, verify Node.js/npm are installed where Studio runs, then use a reviewed "
+                "launcher with explicit executable paths and a minimal PATH containing Node.js. "
+                "Setting PATH in the server environment JSON is intentionally ignored. "
+                "See docs/mcp-local-command-troubleshooting.md. No MCP connection was established."
+            ) from exc
         except BaseException:
             supervisor.abort_spawn(sup_id)
             raise
