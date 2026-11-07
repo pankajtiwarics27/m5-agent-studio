@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 import struct
 from pathlib import Path
 
@@ -175,11 +176,8 @@ def test_removing_the_select_shrink_rule_is_a_finding(sources):
 
 def test_a_content_sized_shell_is_a_finding(sources):
     def strip(html: str) -> str:
-        return html.replace(
-            "  .onboarding-shell { width: 100%; max-width: 860px; margin: 0 auto; padding: 18px 16px 28px; }",
-            "  .onboarding-shell { max-width: 860px; margin: 0 auto; padding: 18px 16px 28px; }",
-            1,
-        )
+        # Mutate only width, retaining the shell's independent scrolling rules.
+        return re.sub(r"(\.onboarding-shell\s*\{[^}]*?)\bwidth:\s*100%;", r"\1", html, count=1)
 
     report = sources(html_transform=strip)
     assert "the Start shell has a definite width, so `margin: 0 auto` cannot size it to its content" in failing(report)
@@ -187,10 +185,9 @@ def test_a_content_sized_shell_is_a_finding(sources):
 
 def test_a_pinned_shell_width_is_a_finding(sources):
     def pin(html: str) -> str:
-        return html.replace(
-            "  .onboarding-shell { width: 100%;",
-            "  .onboarding-shell { width: 640px;",
-            1,
+        return re.sub(
+            r"(\.onboarding-shell\s*\{[^}]*?)\bwidth:\s*100%;",
+            r"\1width: 640px;", html, count=1,
         )
 
     report = sources(html_transform=pin)

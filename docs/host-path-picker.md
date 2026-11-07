@@ -204,3 +204,16 @@ syntax and docs checks pass. Regenerated all37 normal UI/UX artifact sources,
 the separate Pipeline/Start inventories and preservation second pass; the
 aggregate reports37/37 checks,7/7 gates,0findings. The inherited cross-tab approval
 and security review records are unchanged.
+
+Full-CI correction on PR #237: the Python jobs found five failures missed by the
+initial focused run (the browser job passed). Two responsive negative tests
+matched the entire old CSS prefix, so their mutations stopped changing the source
+after scrolling declarations were added. They now target only the shell's width
+while preserving its independent scroll rules; their mutation/finding assertions
+are unchanged. Three cross-tab contract tests failed because the separate
+`scripts/uiux_v2_cross_tab_reference.py` generator, outside the37-source release
+gate, had not been run. Regenerating it changes only the reference artifact's
+static source SHA; it neither approves a candidate nor alters the inherited
+approval, structural rules or fingerprint. All five CI-reported failures now
+pass locally, as do Ruff/mypy62/docs checks. Required full CI must rerun on the
+corrected head before merge; owner test4 acceptance is still pending.
