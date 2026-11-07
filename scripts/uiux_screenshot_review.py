@@ -620,6 +620,39 @@ REVIEWS: dict[str, dict[str, object]] = {
         "re_taken": True,
         "theme": "light and dark, desktop 1280-1640 and narrow 390",
     },
+    "cross-tab-reference-uiv2-26": {
+        "story": "UIV2-26",
+        "note": (
+            "The cross-tab structural-fidelity candidate: 48 actual running-app frames, the approved "
+            "wireframe rendered at the same variant, and 48 annotated side-by-side comparisons (144 "
+            "PNGs) over six tabs, four viewports and light/dark. `scripts/uiux_v2_cross_tab_reference_walk.mjs` "
+            "starts its own authenticated demo, activates each tab with keyboard Enter, and completed "
+            "1904/1904 independent live/reference DOM, responsive, palette, overflow and browser-safety "
+            "checks. Pixel RGB delta and changed-pixel ratio are printed for review, never used as a blanket "
+            "pass threshold. Opened and read by the agent: the 1440x900-light Start comparison (task and "
+            "one blocker first, recent work and diagnostics below), the 390x844-light Harness comparison "
+            "(the integrations band wraps without sideways overflow and the empty session/model controls "
+            "stay real), the 1440x900-dark Council comparison (session/transcript hierarchy with readiness "
+            "evidence rather than an invented conclusion), the 1280x800-dark Pipeline comparison (task, All "
+            "stages plus four real stages, factual empty output), the 1640x900-light Compare comparison "
+            "(question first, explicit model choices and folded criteria), and the 390x844-dark Chat "
+            "comparison. That Chat review found a real 20px select/label overlap; the final frame shows "
+            "the corrected two-control second row, with non-overlap and >=44px select widths asserted in "
+            "both themes. D1-D3 mark the wrapping integrations band, preserved global controls and each "
+            "pane's feature-preserving delta. This agent review is not human structural-fidelity approval: "
+            "that decision remains pending until an explicit user response is bound to the exact candidate."
+        ),
+        "eye": [
+            "candidate/light/1440x900/start/comparison.png",
+            "candidate/light/390x844/harness/comparison.png",
+            "candidate/dark/1440x900/hall/comparison.png",
+            "candidate/dark/1280x800/council/comparison.png",
+            "candidate/light/1640x900/debate/comparison.png",
+            "candidate/dark/390x844/chat/comparison.png",
+        ],
+        "re_taken": True,
+        "theme": "light and dark, desktop 1280-1640 and narrow 390; live/reference/comparison triplets",
+    },
     "pipeline-workspace-uiv2-25": {
         "story": "UIV2-25",
         "note": (
