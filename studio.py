@@ -4721,6 +4721,11 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
     .chat-header-bar { gap: 8px; padding-block: 10px; }
     .chat-header-bar > div:first-child { flex: 1 1 100%; }
     .chat-header-bar > div:not(:first-child) { flex: 1 1 120px; min-width: 0; }
+    /* A zero flex-basis let the following toggles onto this row and shrunk both pickers to
+       20px at 390px, overlapping their labels. Give persona + reasoning the whole second row;
+       the toggles and Clear then wrap onto the third row as this layout always intended. */
+    .chat-header-bar > div:nth-child(2),
+    .chat-header-bar > div:nth-child(3) { flex: 1 1 calc(50% - 8px); min-width: 0; }
     .chat-header-bar > .chk-lbl { flex: 1 1 auto; min-width: 0; margin-top: 0 !important; font-size: 11px; line-height: 1.3; }
     .chat-header-bar > #chatClearBtn { flex: 0 0 auto; margin-top: 0 !important; margin-left: auto !important; }
   }
@@ -40419,7 +40424,10 @@ class BusyRetryPolicy:
     max_attempts: int = 4
     initial_backoff_s: float = 0.01
     max_backoff_s: float = 0.08
-    max_total_wait_s: float = 0.25
+    # Leave room for retries after one full SQLite busy wait. With a total
+    # budget equal to busy_timeout_ms, the default four-attempt policy always
+    # exhausted itself on the first contended BEGIN IMMEDIATE.
+    max_total_wait_s: float = 1.0
     busy_timeout_ms: int = 250
 
     def __post_init__(self) -> None:

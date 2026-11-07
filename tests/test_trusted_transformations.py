@@ -640,14 +640,20 @@ def test_http_endpoints_and_standalone_studio_bundle_parity(
         if studio.STUDIO_API_TOKEN and not studio.STUDIO_AUTH_DISABLED:
             headers["Authorization"] = f"Bearer {studio.STUDIO_API_TOKEN}"
 
+        # Match the three paired trials used by the measured-benefit unit test. With two
+        # trials, one CI scheduler/cold-I/O outlier is averaged into the median; three retain
+        # the same overhead gate while making the sample robust to a single pause.
         r_eval = tc.post(
             "/api/harness/transformations/evaluate",
-            json={"runs_per_variant": 2, "persist_summary": True},
+            json={"runs_per_variant": 3, "persist_summary": True},
             headers=headers,
         )
         assert r_eval.status_code == 200, r_eval.text
         eval_json = r_eval.json()
-        assert eval_json["ab_gate_passed"] is True
+        assert eval_json["ab_gate_passed"] is True, json.dumps(
+            {"overall": eval_json.get("overall"), "scenarios": eval_json.get("scenarios")},
+            sort_keys=True,
+        )
         assert eval_json["config"]["effective_enabled"] is True
 
         r_exec_blocked = tc.post(

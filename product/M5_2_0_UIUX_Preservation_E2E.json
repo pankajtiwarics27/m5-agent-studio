@@ -464,7 +464,7 @@
     "route_provers": 9,
     "control_provers": 2,
     "walks": 17,
-    "support_walks": 26,
+    "support_walks": 27,
     "findings": 0
   },
   "walks": [
@@ -523,7 +523,8 @@
     "status_walk.mjs": "the status component (P1-03) is the vocabulary every row is drawn in",
     "stream_perf_walk.mjs": "the streaming bound (P5-04) is a cost property, not a capability",
     "terminology_walk.mjs": "the vocabulary walk (P5-01) proves the same states say the same words",
-    "uiux_interaction_polish_walk.mjs": "the supplemental P5-05 evidence walk measures hover/focus parity and captures 72 screenshots; it proves presentation, not a capability the matrix enumerates"
+    "uiux_interaction_polish_walk.mjs": "the supplemental P5-05 evidence walk measures hover/focus parity and captures 72 screenshots; it proves presentation, not a capability the matrix enumerates",
+    "uiux_v2_cross_tab_reference_walk.mjs": "the cross-tab reference gate (UIV2-26) proves the shared visual contract over the existing six panes at four viewports in light and dark, with keyboard selection, live/reference DOM assertions, authored differences and a separately human-approved structural baseline; it adds no capability beyond the matrix's existing six-tab controls"
   },
   "pytest_nodes": [
     "tests/test_harness_evidence.py::test_apply_still_refuses_and_reports",

@@ -67,8 +67,9 @@
       "test_stream_perf.py",
       "test_task_layout.py",
       "test_terminology.py",
-      "test_ui_disclosure.py",
-      "test_uiux_accessible_overlays.py",
+    "test_ui_disclosure.py",
+    "test_uiv2_cross_tab_reference.py",
+    "test_uiux_accessible_overlays.py",
       "test_uiux_chat_composer.py",
       "test_uiux_interaction_polish.py",
       "test_uiux_tokens.py"

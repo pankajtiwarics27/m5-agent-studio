@@ -12,9 +12,9 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "e26e60e03dbbba3ff943d51b164fd253c8ed4b9145364e30de06d9ea732ed78a",
-      "bytes": 1018664,
-      "lines": 17529
+      "sha256": "ece020737be575bfc58b22873a33421a1db360f9888fefc16747d7a08d82963b",
+      "bytes": 1019070,
+      "lines": 17534
     },
     {
       "path": "app.py",
@@ -26,9 +26,9 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "dedacde50349b04afed9030745248690071934607e8e348157aa04dd315e56bb",
-      "bytes": 3811509,
-      "lines": 81660
+      "sha256": "20f97e6010d1f276171598a99f5411546c1be3ad05b454cd794b9bf2bc632446",
+      "bytes": 3812130,
+      "lines": 81668
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -376,9 +376,9 @@
     {
       "path": "scripts/uiux_preservation_e2e.py",
       "role": "maps each preservation-matrix row to the walk, test, route and control that proves it",
-      "sha256": "fe1e16302494954cd43e60aa81d4d42ff8bec1d8eeb9e8181b513ca8e37d44f3",
-      "bytes": 44257,
-      "lines": 836
+      "sha256": "f832cd1ddeb1698bf2f2bf2e73b5b8a7214c50d148cd331b1c5133c7b411a17d",
+      "bytes": 44640,
+      "lines": 837
     },
     {
       "path": "tests/test_uiux_preservation_e2e.py",
@@ -418,9 +418,9 @@
     {
       "path": "scripts/uiux_screenshot_review.py",
       "role": "traces every committed capture to the script that made it and checks that the theme in its name is the theme in its pixels",
-      "sha256": "c0a1c9cc36d53d99253513734838758bbb73a921adc551338bc8310c670979ab",
-      "bytes": 80083,
-      "lines": 1487
+      "sha256": "53b9fda8e38d3dc866282d3d4516397d4606160dacfd0f18f04bf92f45cd46fc",
+      "bytes": 82616,
+      "lines": 1519
     },
     {
       "path": "tests/test_uiux_screenshot_review.py",
@@ -460,8 +460,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "e26e60e03dbbba3ff943d51b164fd253c8ed4b9145364e30de06d9ea732ed78a",
-    "lines": 17529,
+    "sha256": "ece020737be575bfc58b22873a33421a1db360f9888fefc16747d7a08d82963b",
+    "lines": 17534,
     "tab_count": 6,
     "tabs": [
       {

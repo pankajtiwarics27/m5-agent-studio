@@ -143,7 +143,10 @@ class BusyRetryPolicy:
     max_attempts: int = 4
     initial_backoff_s: float = 0.01
     max_backoff_s: float = 0.08
-    max_total_wait_s: float = 0.25
+    # Leave room for retries after one full SQLite busy wait. With a total
+    # budget equal to busy_timeout_ms, the default four-attempt policy always
+    # exhausted itself on the first contended BEGIN IMMEDIATE.
+    max_total_wait_s: float = 1.0
     busy_timeout_ms: int = 250
 
     def __post_init__(self) -> None:
