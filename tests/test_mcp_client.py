@@ -337,3 +337,58 @@ def test_idempotency_key_header_attached_only_to_tools_call() -> None:
     assert call_hdrs["Idempotency-Key"] == "act-77"
     assert "Idempotency-Key" not in list_hdrs
 
+
+
+@pytest.mark.parametrize("error_kind", [FileNotFoundError, PermissionError])
+def test_stdio_launch_failure_cleans_up_without_exposing_command_or_secrets(monkeypatch, tmp_path, error_kind):
+    """Missing executable gives instructions; other launch failures keep their category."""
+    from contextlib import nullcontext
+
+    aborted = []
+    calls = []
+
+    class Supervisor:
+        def new_supervision_id(self):
+            return "sup-launch-test"
+
+        def supervision_context(self, _supervision_id):
+            return nullcontext()
+
+        def abort_spawn(self, supervision_id):
+            aborted.append(supervision_id)
+
+    async def fail_spawn(*args, **kwargs):
+        calls.append((args, kwargs))
+        raise error_kind("synthetic-private-command-detail")
+
+    monkeypatch.setattr(studio, "STUDIO_ALLOW_MCP_STDIO", True)
+    monkeypatch.setattr(studio, "get_process_supervisor", lambda: Supervisor())
+    monkeypatch.setattr(studio, "_begin_active_subprocess_spawn", lambda *args, **kwargs: None)
+    monkeypatch.setattr(studio, "_collect_registered_secret_values", lambda **kwargs: ())
+    monkeypatch.setattr(studio.asyncio, "create_subprocess_exec", fail_spawn)
+    server = {"alias": "fixture", "command": "missing-command", "args": [], "env": {"PATH": "/untrusted/bin", "NODE_OPTIONS": "--require=evil"}}
+    expected = RuntimeError if error_kind is FileNotFoundError else PermissionError
+    with pytest.raises(expected) as caught:
+        run(studio._mcp_stdio_rpc(server, "tools/list", cwd=tmp_path))
+    assert aborted == ["sup-launch-test"]
+    assert len(calls) == 1
+    assert "/untrusted/bin" not in calls[0][1]["env"]["PATH"]
+    assert "NODE_OPTIONS" not in calls[0][1]["env"]
+    if error_kind is FileNotFoundError:
+        assert "restricted PATH" in str(caught.value)
+        assert "Node.js/npm" in str(caught.value)
+        assert "intentionally ignored" in str(caught.value)
+        assert "synthetic-private-command-detail" not in str(caught.value)
+    else:
+        assert str(caught.value) == "synthetic-private-command-detail"
+
+
+def test_missing_stdio_command_does_not_bypass_the_operator_opt_in(monkeypatch):
+    monkeypatch.setattr(studio, "STUDIO_ALLOW_MCP_STDIO", False)
+
+    def unexpected_supervisor():
+        pytest.fail("disabled stdio must refuse before preparing any process")
+
+    monkeypatch.setattr(studio, "get_process_supervisor", unexpected_supervisor)
+    with pytest.raises(PermissionError, match="disabled by default"):
+        run(studio._mcp_stdio_rpc({"alias": "fixture", "command": "npx"}, "tools/list"))

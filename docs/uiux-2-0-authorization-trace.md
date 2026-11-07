@@ -5,7 +5,7 @@ It is the `UIUX-P0-04` artifact: for state-changing route candidates resolved by
 what can refuse them and what durable state they touch, derived from `app.py` and the route map.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4`.
-* `app.py` digest: `af0b42f1333c4a60…` · route map digest: `8d3f4a2025bcd108…`.
+* `app.py` digest: `c6148474111133f7…` · route map digest: `19a3b972224fe25b…`.
 * 48 resolved state-changing route candidates, out of 79 in `app.py`; 0 fetch site(s) have 0 unresolved URL or method edge(s) (0 method).
 * 20 reference an authority subsystem, 41 a durable-state subsystem, 3 contain a SQL write, and 23 can leave the machine.
 
