@@ -78,7 +78,7 @@
     {
       "check": "on a phone the controls are three rows, not five",
       "ok": true,
-      "detail": "14 line phone block"
+      "detail": "19 line phone block"
     },
     {
       "check": "the composer is pinned to the bottom of the pane",

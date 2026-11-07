@@ -37,7 +37,7 @@ the pane's width so the pickers fit on one row above 1200px and three rows on a 
 | 6 | above 1200px the pickers are one row | @media (min-width: 1200px) { |
 | 7 | and their labels cannot wrap the bar onto a second row | the model label is longer than its picker |
 | 8 | the pickers keep the design system's control height rather than a private one | UIV2-07 sets --control-min-h for every field |
-| 9 | on a phone the controls are three rows, not five | 14 line phone block |
+| 9 | on a phone the controls are three rows, not five | 19 line phone block |
 | 10 | the composer is pinned to the bottom of the pane | padding-inline: max(20px, calc((100% - var(--chat-column)) / 2));
   
 

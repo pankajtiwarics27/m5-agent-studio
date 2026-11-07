@@ -720,6 +720,48 @@ def test_transient_busy_lock_recovers_within_bounded_retry_budget(tmp_path: Path
         assert released.is_set()
 
 
+def test_default_busy_policy_retries_after_one_full_sqlite_busy_timeout(tmp_path: Path) -> None:
+    """The default retry budget must not expire during its first SQLite wait."""
+    db_path = tmp_path / "default-policy-retry.db"
+    rp.upgrade_database(_LocalStorage(), db_path, base_ddl=studio._ensure_base_tables, target_version=3)
+    attempts = 0
+
+    class _CountingStorage:
+        def connect(self, database: Path, *, timeout: float = 5.0) -> sqlite3.Connection:
+            nonlocal attempts
+            attempts += 1
+            return sqlite3.connect(database, timeout=timeout)
+
+    locked = threading.Event()
+    released = threading.Event()
+    hold_s = rp.DEFAULT_BUSY_RETRY_POLICY.busy_timeout_ms / 1000 + 0.05
+
+    def _hold_lock_past_first_attempt() -> None:
+        locker = sqlite3.connect(db_path, timeout=0.01, isolation_level=None)
+        try:
+            locker.execute("BEGIN IMMEDIATE")
+            locked.set()
+            time.sleep(hold_s)
+            locker.commit()
+        finally:
+            locker.close()
+            released.set()
+
+    t = threading.Thread(target=_hold_lock_past_first_attempt, daemon=True)
+    t.start()
+    try:
+        assert locked.wait(timeout=2.0)
+        task = rp.RuntimePersistenceStore(_CountingStorage(), db_path).create_task(
+            "tsk-default-retry", session_id="s1", title="Default retry"
+        )
+    finally:
+        t.join(timeout=2.0)
+        assert released.is_set()
+
+    assert task.task_id == "tsk-default-retry"
+    assert attempts >= 2, "a full SQLite busy timeout must leave budget for another attempt"
+
+
 def test_sustained_busy_lock_exhausts_bounded_retries_and_fails_closed(tmp_path: Path) -> None:
     db_path = tmp_path / "sustained-busy.db"
     storage = _LocalStorage()

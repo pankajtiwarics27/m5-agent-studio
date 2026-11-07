@@ -620,6 +620,38 @@ REVIEWS: dict[str, dict[str, object]] = {
         "re_taken": True,
         "theme": "light and dark, desktop 1280-1640 and narrow 390",
     },
+    "cross-tab-reference-uiv2-26": {
+        "story": "UIV2-26",
+        "note": (
+            "The integrated task-first cross-tab candidate: 48 actual running-app frames, the approved "
+            "wireframe rendered at the same variant, and 48 annotated side-by-side comparisons (144 "
+            "PNGs) over six tabs, four viewports and light/dark. The authenticated keyboard-driven walk "
+            "completed 2104/2104 independent checks; the separately approved check completed 2200/2200. "
+            "Pixel RGB delta and changed-pixel ratio remain informational, never a blanket pass threshold. "
+            "Opened and read by the agent: dark 1640x900 Start (task/blocker first), light 390x844 Harness "
+            "(one usable unified composer, closed Sessions/Tools/Inspector and no sideways overflow), dark "
+            "1440x900 Council (readiness evidence, no invented conclusion), dark 1280x800 Pipeline (All "
+            "stages plus four real stages and factual empty output), light 1640x900 Compare (question, "
+            "explicit models and folded criteria), and dark 390x844 Chat. The earlier Chat review found a "
+            "real 20px select/label overlap; the final frame retains the corrected two-control second row "
+            "with non-overlap and >=44px select widths asserted in both themes. Explicit Tool protocol and Read-only tools controls are also required, measured and overlap-checked. D1 outlines the visible "
+            "Tools disclosure rather than its closed content; D2/D3 mark explicit Inspector and pane deltas. "
+            "Pinned Chromium Open Sans files keep the raw geometry portable across Debian and Ubuntu; "
+            "there is no cross-host geometry tolerance. The agent review is distinct from the explicit "
+            "human decision: candidate 66dde5fc52a8bf84f5dcbe17210f80ca1d57dd1c4fa025159027f4fdd9ecc130 "
+            "was approved through Arena ask_user uiv2-26-chat-protocol-approval=approve on 2026-11-07."
+        ),
+        "eye": [
+            "candidate/dark/1640x900/start/comparison.png",
+            "candidate/light/390x844/harness/comparison.png",
+            "candidate/dark/1440x900/hall/comparison.png",
+            "candidate/dark/1280x800/council/comparison.png",
+            "candidate/light/1640x900/debate/comparison.png",
+            "candidate/dark/390x844/chat/comparison.png",
+        ],
+        "re_taken": True,
+        "theme": "light and dark, desktop 1280-1640 and narrow 390; live/reference/comparison triplets",
+    },
     "pipeline-workspace-uiv2-25": {
         "story": "UIV2-25",
         "note": (

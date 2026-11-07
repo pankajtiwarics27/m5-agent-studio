@@ -1,0 +1,983 @@
+{
+  "schema_version": 1,
+  "document_type": "m5_uiv2_cross_tab_visual_reference_gate",
+  "story": "UIV2-26",
+  "generated_by": "scripts/uiux_v2_cross_tab_reference.py",
+  "regenerate_with": "python3 scripts/uiux_v2_cross_tab_reference.py",
+  "check_with": "python3 scripts/uiux_v2_cross_tab_reference.py --check",
+  "candidate_walk": "scripts/uiux_v2_cross_tab_reference_walk.mjs",
+  "statement": "The actual app and the explicitly approved UIV2-03 wireframe are captured at the same six-tab viewport/theme matrix. Pixel differences are measured and annotated, never hidden by a blanket tolerance. Independent structural rules must pass, and future --check runs also require a live structural baseline approved by a human. New PNGs are local evidence, not Git inputs.",
+  "source": {
+    "static": "static/index.html",
+    "static_sha256": "f1cec8f38634dbb4615f02dceb25d86535fbb19e7cb9cf358f0badfef7ea7382",
+    "walk": "scripts/uiux_v2_cross_tab_reference_walk.mjs",
+    "walk_sha256": "f84f40cbd9007909f272f851dcee94d45d9e2ef5b7e1eb0d9e5da3c26e5cb81a"
+  },
+  "approved_reference": {
+    "wireframe": "docs/media/uiv2-v2/reference/wireframe.html",
+    "wireframe_sha256": "f1232a0ea81fccbfb343f6f16d8f8878edbcc20a478a96dbea8b45a44cba8a17",
+    "spec": "docs/uiv2-v2-reference.md",
+    "spec_sha256": "5e08457d29ca97700fa4938cbbca6b3bc520e03b42b22830eea66b875e7677ad",
+    "approval": "UIV2-03 explicit user approval on 2026-11-04 (ask_user answer approve)",
+    "committed_fixtures": [
+      {
+        "set": "1280x800-light",
+        "pane": "harness",
+        "file": "docs/media/uiv2-v2/reference/1280x800-light/harness.png",
+        "sha256": "abd08de75f4b8ee39f305d2703c7ae3bd202fe56de508786b1c57391fa6378b9",
+        "bytes": 48565,
+        "recorded_sha256": "abd08de75f4b8ee39f305d2703c7ae3bd202fe56de508786b1c57391fa6378b9",
+        "viewport": {
+          "width": 1280,
+          "height": 800,
+          "device_scale_factor": 1
+        },
+        "theme": "light"
+      },
+      {
+        "set": "1280x800-light",
+        "pane": "start",
+        "file": "docs/media/uiv2-v2/reference/1280x800-light/start.png",
+        "sha256": "8be9bd92a0aacef408eb0bce5203422aeb079f72147a13a8905caa7f4af3a447",
+        "bytes": 38655,
+        "recorded_sha256": "8be9bd92a0aacef408eb0bce5203422aeb079f72147a13a8905caa7f4af3a447",
+        "viewport": {
+          "width": 1280,
+          "height": 800,
+          "device_scale_factor": 1
+        },
+        "theme": "light"
+      },
+      {
+        "set": "1280x800-light",
+        "pane": "hall",
+        "file": "docs/media/uiv2-v2/reference/1280x800-light/hall.png",
+        "sha256": "12e4b7dbbe04d93d6f799cf67e7c3b0e806653920dfa8aa0bb727aca35930064",
+        "bytes": 41201,
+        "recorded_sha256": "12e4b7dbbe04d93d6f799cf67e7c3b0e806653920dfa8aa0bb727aca35930064",
+        "viewport": {
+          "width": 1280,
+          "height": 800,
+          "device_scale_factor": 1
+        },
+        "theme": "light"
+      },
+      {
+        "set": "1280x800-light",
+        "pane": "council",
+        "file": "docs/media/uiv2-v2/reference/1280x800-light/pipeline.png",
+        "sha256": "8705eb6087ccd656e4184ae51438dc7274fe7efd7e6faa56a06b03173099942f",
+        "bytes": 36981,
+        "recorded_sha256": "8705eb6087ccd656e4184ae51438dc7274fe7efd7e6faa56a06b03173099942f",
+        "viewport": {
+          "width": 1280,
+          "height": 800,
+          "device_scale_factor": 1
+        },
+        "theme": "light"
+      },
+      {
+        "set": "1280x800-light",
+        "pane": "debate",
+        "file": "docs/media/uiv2-v2/reference/1280x800-light/compare.png",
+        "sha256": "70b0fd3d7b5c13d21314bde0f2c33a127cb240550a63d0bbc920aabb70720945",
+        "bytes": 39488,
+        "recorded_sha256": "70b0fd3d7b5c13d21314bde0f2c33a127cb240550a63d0bbc920aabb70720945",
+        "viewport": {
+          "width": 1280,
+          "height": 800,
+          "device_scale_factor": 1
+        },
+        "theme": "light"
+      },
+      {
+        "set": "1280x800-light",
+        "pane": "chat",
+        "file": "docs/media/uiv2-v2/reference/1280x800-light/chat.png",
+        "sha256": "72ee707654fbdda8b939c0b88bf3cb7e34bfa1120575ed111999fc64e3092186",
+        "bytes": 36828,
+        "recorded_sha256": "72ee707654fbdda8b939c0b88bf3cb7e34bfa1120575ed111999fc64e3092186",
+        "viewport": {
+          "width": 1280,
+          "height": 800,
+          "device_scale_factor": 1
+        },
+        "theme": "light"
+      },
+      {
+        "set": "1440x900-light",
+        "pane": "harness",
+        "file": "docs/media/uiv2-v2/reference/1440x900-light/harness.png",
+        "sha256": "e0c8d08f5e6a1dbc67a8314a8e8c9362b0c0d4cb505a45ad901320d82855b75b",
+        "bytes": 67296,
+        "recorded_sha256": "e0c8d08f5e6a1dbc67a8314a8e8c9362b0c0d4cb505a45ad901320d82855b75b",
+        "viewport": {
+          "width": 1440,
+          "height": 900,
+          "device_scale_factor": 1
+        },
+        "theme": "light"
+      },
+      {
+        "set": "1440x900-light",
+        "pane": "start",
+        "file": "docs/media/uiv2-v2/reference/1440x900-light/start.png",
+        "sha256": "0c4e4908140d5d96ed7dcb27d607fb5a1bb6bbc0ed89255590ee35c312940eb1",
+        "bytes": 57557,
+        "recorded_sha256": "0c4e4908140d5d96ed7dcb27d607fb5a1bb6bbc0ed89255590ee35c312940eb1",
+        "viewport": {
+          "width": 1440,
+          "height": 900,
+          "device_scale_factor": 1
+        },
+        "theme": "light"
+      },
+      {
+        "set": "1440x900-light",
+        "pane": "hall",
+        "file": "docs/media/uiv2-v2/reference/1440x900-light/hall.png",
+        "sha256": "a6febd6892f02e411e986e7baffd3edbf69ea5ab01a115892d9f1139d95551b8",
+        "bytes": 59096,
+        "recorded_sha256": "a6febd6892f02e411e986e7baffd3edbf69ea5ab01a115892d9f1139d95551b8",
+        "viewport": {
+          "width": 1440,
+          "height": 900,
+          "device_scale_factor": 1
+        },
+        "theme": "light"
+      },
+      {
+        "set": "1440x900-light",
+        "pane": "council",
+        "file": "docs/media/uiv2-v2/reference/1440x900-light/pipeline.png",
+        "sha256": "411565e9858048bbf3d0b7774d0c5007b16ae034185c30a804302ba6c39de576",
+        "bytes": 54715,
+        "recorded_sha256": "411565e9858048bbf3d0b7774d0c5007b16ae034185c30a804302ba6c39de576",
+        "viewport": {
+          "width": 1440,
+          "height": 900,
+          "device_scale_factor": 1
+        },
+        "theme": "light"
+      },
+      {
+        "set": "1440x900-light",
+        "pane": "debate",
+        "file": "docs/media/uiv2-v2/reference/1440x900-light/compare.png",
+        "sha256": "ed170f3e4e59dcc924a5d8419b7c6c26e3e2b55a4ee658f2de9b30fb6f79dcaa",
+        "bytes": 57107,
+        "recorded_sha256": "ed170f3e4e59dcc924a5d8419b7c6c26e3e2b55a4ee658f2de9b30fb6f79dcaa",
+        "viewport": {
+          "width": 1440,
+          "height": 900,
+          "device_scale_factor": 1
+        },
+        "theme": "light"
+      },
+      {
+        "set": "1440x900-light",
+        "pane": "chat",
+        "file": "docs/media/uiv2-v2/reference/1440x900-light/chat.png",
+        "sha256": "addf45d1de45524b2768396553e3096155504e03a30253d2fce5d6a232143621",
+        "bytes": 54311,
+        "recorded_sha256": "addf45d1de45524b2768396553e3096155504e03a30253d2fce5d6a232143621",
+        "viewport": {
+          "width": 1440,
+          "height": 900,
+          "device_scale_factor": 1
+        },
+        "theme": "light"
+      },
+      {
+        "set": "1640x900-light",
+        "pane": "harness",
+        "file": "docs/media/uiv2-v2/reference/1640x900-light/harness.png",
+        "sha256": "416265a18206020c301979c6a9f5c7103373469069a4dc830665b8c18ed0a50c",
+        "bytes": 67962,
+        "recorded_sha256": "416265a18206020c301979c6a9f5c7103373469069a4dc830665b8c18ed0a50c",
+        "viewport": {
+          "width": 1640,
+          "height": 900,
+          "device_scale_factor": 1
+        },
+        "theme": "light"
+      },
+      {
+        "set": "1640x900-light",
+        "pane": "start",
+        "file": "docs/media/uiv2-v2/reference/1640x900-light/start.png",
+        "sha256": "2e5e7fa768638286185f92d66fe7d848fc840868043802afa2dfbe3557a2e4a7",
+        "bytes": 57143,
+        "recorded_sha256": "2e5e7fa768638286185f92d66fe7d848fc840868043802afa2dfbe3557a2e4a7",
+        "viewport": {
+          "width": 1640,
+          "height": 900,
+          "device_scale_factor": 1
+        },
+        "theme": "light"
+      },
+      {
+        "set": "1640x900-light",
+        "pane": "hall",
+        "file": "docs/media/uiv2-v2/reference/1640x900-light/hall.png",
+        "sha256": "e7fecfd97a55a8ad55e7eb1203be3d0e8b4cb2afc6fe57a1cb227e9ad449cb23",
+        "bytes": 59749,
+        "recorded_sha256": "e7fecfd97a55a8ad55e7eb1203be3d0e8b4cb2afc6fe57a1cb227e9ad449cb23",
+        "viewport": {
+          "width": 1640,
+          "height": 900,
+          "device_scale_factor": 1
+        },
+        "theme": "light"
+      },
+      {
+        "set": "1640x900-light",
+        "pane": "council",
+        "file": "docs/media/uiv2-v2/reference/1640x900-light/pipeline.png",
+        "sha256": "4ab38d726ef3919f875bcb1a0192283d76d6b5a516e12a65cfc4df5fdf96e297",
+        "bytes": 55310,
+        "recorded_sha256": "4ab38d726ef3919f875bcb1a0192283d76d6b5a516e12a65cfc4df5fdf96e297",
+        "viewport": {
+          "width": 1640,
+          "height": 900,
+          "device_scale_factor": 1
+        },
+        "theme": "light"
+      },
+      {
+        "set": "1640x900-light",
+        "pane": "debate",
+        "file": "docs/media/uiv2-v2/reference/1640x900-light/compare.png",
+        "sha256": "f7597f37b9b986941f72a05cf5c885d83d21050d22651a1ab03467c764776492",
+        "bytes": 57636,
+        "recorded_sha256": "f7597f37b9b986941f72a05cf5c885d83d21050d22651a1ab03467c764776492",
+        "viewport": {
+          "width": 1640,
+          "height": 900,
+          "device_scale_factor": 1
+        },
+        "theme": "light"
+      },
+      {
+        "set": "1640x900-light",
+        "pane": "chat",
+        "file": "docs/media/uiv2-v2/reference/1640x900-light/chat.png",
+        "sha256": "27bffcc4ba591e15361e5c3bfbdb4be803e125311c23fceebc04bc42618f8620",
+        "bytes": 54919,
+        "recorded_sha256": "27bffcc4ba591e15361e5c3bfbdb4be803e125311c23fceebc04bc42618f8620",
+        "viewport": {
+          "width": 1640,
+          "height": 900,
+          "device_scale_factor": 1
+        },
+        "theme": "light"
+      },
+      {
+        "set": "390x844-light",
+        "pane": "harness",
+        "file": "docs/media/uiv2-v2/reference/390x844-light/harness.png",
+        "sha256": "083f2957170028f934713cfc2692adf3f47ccae8d091114a5028af867b3a366b",
+        "bytes": 30644,
+        "recorded_sha256": "083f2957170028f934713cfc2692adf3f47ccae8d091114a5028af867b3a366b",
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "device_scale_factor": 1
+        },
+        "theme": "light"
+      },
+      {
+        "set": "390x844-light",
+        "pane": "start",
+        "file": "docs/media/uiv2-v2/reference/390x844-light/start.png",
+        "sha256": "e4f49e40b61d385719b9178998e6130b17fb035bc186e70497d54d07f93affbf",
+        "bytes": 21505,
+        "recorded_sha256": "e4f49e40b61d385719b9178998e6130b17fb035bc186e70497d54d07f93affbf",
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "device_scale_factor": 1
+        },
+        "theme": "light"
+      },
+      {
+        "set": "390x844-light",
+        "pane": "hall",
+        "file": "docs/media/uiv2-v2/reference/390x844-light/hall.png",
+        "sha256": "99d91a8320080b4055c757d096d629b664c8aac8d3063029e0ffb23ba2310f8a",
+        "bytes": 23159,
+        "recorded_sha256": "99d91a8320080b4055c757d096d629b664c8aac8d3063029e0ffb23ba2310f8a",
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "device_scale_factor": 1
+        },
+        "theme": "light"
+      },
+      {
+        "set": "390x844-light",
+        "pane": "council",
+        "file": "docs/media/uiv2-v2/reference/390x844-light/pipeline.png",
+        "sha256": "903543830eefa35720ed1070c425bc4506798c3ad04fece40a9bd710fecebf23",
+        "bytes": 18394,
+        "recorded_sha256": "903543830eefa35720ed1070c425bc4506798c3ad04fece40a9bd710fecebf23",
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "device_scale_factor": 1
+        },
+        "theme": "light"
+      },
+      {
+        "set": "390x844-light",
+        "pane": "debate",
+        "file": "docs/media/uiv2-v2/reference/390x844-light/compare.png",
+        "sha256": "a7f4d6ebc1c24581c850dacf36439b24c3c7538a746eaa68813c2211de959302",
+        "bytes": 21002,
+        "recorded_sha256": "a7f4d6ebc1c24581c850dacf36439b24c3c7538a746eaa68813c2211de959302",
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "device_scale_factor": 1
+        },
+        "theme": "light"
+      },
+      {
+        "set": "390x844-light",
+        "pane": "chat",
+        "file": "docs/media/uiv2-v2/reference/390x844-light/chat.png",
+        "sha256": "8624d69b65f4ac0aaaf2240f55555d79750f326f31757addbfb204a992b726cc",
+        "bytes": 18428,
+        "recorded_sha256": "8624d69b65f4ac0aaaf2240f55555d79750f326f31757addbfb204a992b726cc",
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "device_scale_factor": 1
+        },
+        "theme": "light"
+      },
+      {
+        "set": "1440x900-dark",
+        "pane": "harness",
+        "file": "docs/media/uiv2-v2/reference/1440x900-dark/harness.png",
+        "sha256": "bcaa303baaa167fd58ba0c9547e3ee2282ff00735baf9f4609495f7e996d3ec7",
+        "bytes": 67858,
+        "recorded_sha256": "bcaa303baaa167fd58ba0c9547e3ee2282ff00735baf9f4609495f7e996d3ec7",
+        "viewport": {
+          "width": 1440,
+          "height": 900,
+          "device_scale_factor": 1
+        },
+        "theme": "dark"
+      },
+      {
+        "set": "1440x900-dark",
+        "pane": "start",
+        "file": "docs/media/uiv2-v2/reference/1440x900-dark/start.png",
+        "sha256": "2d45dd5cd9d86ef47710e7f4db476bdb1e490fbe675022b5e26eb12a1f8cc687",
+        "bytes": 57422,
+        "recorded_sha256": "2d45dd5cd9d86ef47710e7f4db476bdb1e490fbe675022b5e26eb12a1f8cc687",
+        "viewport": {
+          "width": 1440,
+          "height": 900,
+          "device_scale_factor": 1
+        },
+        "theme": "dark"
+      },
+      {
+        "set": "1440x900-dark",
+        "pane": "hall",
+        "file": "docs/media/uiv2-v2/reference/1440x900-dark/hall.png",
+        "sha256": "aa82cee3cd923c1497f9d924945c58a62faf4b894ab718230569cec378a96fb8",
+        "bytes": 59006,
+        "recorded_sha256": "aa82cee3cd923c1497f9d924945c58a62faf4b894ab718230569cec378a96fb8",
+        "viewport": {
+          "width": 1440,
+          "height": 900,
+          "device_scale_factor": 1
+        },
+        "theme": "dark"
+      },
+      {
+        "set": "1440x900-dark",
+        "pane": "council",
+        "file": "docs/media/uiv2-v2/reference/1440x900-dark/pipeline.png",
+        "sha256": "0663ac699b859293636ce4eb662157897803267ad1aa1d20508fb1bd6a7d4748",
+        "bytes": 55005,
+        "recorded_sha256": "0663ac699b859293636ce4eb662157897803267ad1aa1d20508fb1bd6a7d4748",
+        "viewport": {
+          "width": 1440,
+          "height": 900,
+          "device_scale_factor": 1
+        },
+        "theme": "dark"
+      },
+      {
+        "set": "1440x900-dark",
+        "pane": "debate",
+        "file": "docs/media/uiv2-v2/reference/1440x900-dark/compare.png",
+        "sha256": "3438fe3d0eac41f6d19b64066c0fc622a7cd0a39dc57ac2f5115a6a8dd82c36d",
+        "bytes": 56911,
+        "recorded_sha256": "3438fe3d0eac41f6d19b64066c0fc622a7cd0a39dc57ac2f5115a6a8dd82c36d",
+        "viewport": {
+          "width": 1440,
+          "height": 900,
+          "device_scale_factor": 1
+        },
+        "theme": "dark"
+      },
+      {
+        "set": "1440x900-dark",
+        "pane": "chat",
+        "file": "docs/media/uiv2-v2/reference/1440x900-dark/chat.png",
+        "sha256": "a66975234c44b16a039ffaa73cd7a61d2d0087956736e0cd923d4dd556716e94",
+        "bytes": 54397,
+        "recorded_sha256": "a66975234c44b16a039ffaa73cd7a61d2d0087956736e0cd923d4dd556716e94",
+        "viewport": {
+          "width": 1440,
+          "height": 900,
+          "device_scale_factor": 1
+        },
+        "theme": "dark"
+      },
+      {
+        "set": "1640x900-dark",
+        "pane": "harness",
+        "file": "docs/media/uiv2-v2/reference/1640x900-dark/harness.png",
+        "sha256": "e0fe0cf795899c5787c806c08782b498710bb4d7d505565b2fa73894f86ca912",
+        "bytes": 68583,
+        "recorded_sha256": "e0fe0cf795899c5787c806c08782b498710bb4d7d505565b2fa73894f86ca912",
+        "viewport": {
+          "width": 1640,
+          "height": 900,
+          "device_scale_factor": 1
+        },
+        "theme": "dark"
+      },
+      {
+        "set": "1640x900-dark",
+        "pane": "start",
+        "file": "docs/media/uiv2-v2/reference/1640x900-dark/start.png",
+        "sha256": "a40efbac244b890a58583d21a5697556b73519274e41d6247147ead75b3f4638",
+        "bytes": 56960,
+        "recorded_sha256": "a40efbac244b890a58583d21a5697556b73519274e41d6247147ead75b3f4638",
+        "viewport": {
+          "width": 1640,
+          "height": 900,
+          "device_scale_factor": 1
+        },
+        "theme": "dark"
+      },
+      {
+        "set": "1640x900-dark",
+        "pane": "hall",
+        "file": "docs/media/uiv2-v2/reference/1640x900-dark/hall.png",
+        "sha256": "fe66a54da003486351ead05ec108cb674bfde21d51abbfbe535ab7116ab69cc0",
+        "bytes": 59684,
+        "recorded_sha256": "fe66a54da003486351ead05ec108cb674bfde21d51abbfbe535ab7116ab69cc0",
+        "viewport": {
+          "width": 1640,
+          "height": 900,
+          "device_scale_factor": 1
+        },
+        "theme": "dark"
+      },
+      {
+        "set": "1640x900-dark",
+        "pane": "council",
+        "file": "docs/media/uiv2-v2/reference/1640x900-dark/pipeline.png",
+        "sha256": "82f7ddcc53d7673b5ebd9c0f83455ecac9dddb46fa8fad92b693874e3807ed8c",
+        "bytes": 55443,
+        "recorded_sha256": "82f7ddcc53d7673b5ebd9c0f83455ecac9dddb46fa8fad92b693874e3807ed8c",
+        "viewport": {
+          "width": 1640,
+          "height": 900,
+          "device_scale_factor": 1
+        },
+        "theme": "dark"
+      },
+      {
+        "set": "1640x900-dark",
+        "pane": "debate",
+        "file": "docs/media/uiv2-v2/reference/1640x900-dark/compare.png",
+        "sha256": "4ae29cdf1689bbd9e7d0fd46db51829b75d63f0d261293614659ffdb56eea8e0",
+        "bytes": 57441,
+        "recorded_sha256": "4ae29cdf1689bbd9e7d0fd46db51829b75d63f0d261293614659ffdb56eea8e0",
+        "viewport": {
+          "width": 1640,
+          "height": 900,
+          "device_scale_factor": 1
+        },
+        "theme": "dark"
+      },
+      {
+        "set": "1640x900-dark",
+        "pane": "chat",
+        "file": "docs/media/uiv2-v2/reference/1640x900-dark/chat.png",
+        "sha256": "950fa01108a749b760bb946452d31d3e72cdfec33c81344542f5943bb40f6d31",
+        "bytes": 55015,
+        "recorded_sha256": "950fa01108a749b760bb946452d31d3e72cdfec33c81344542f5943bb40f6d31",
+        "viewport": {
+          "width": 1640,
+          "height": 900,
+          "device_scale_factor": 1
+        },
+        "theme": "dark"
+      }
+    ]
+  },
+  "matrix": {
+    "panes": [
+      "start",
+      "harness",
+      "hall",
+      "council",
+      "debate",
+      "chat"
+    ],
+    "viewports": [
+      "1640x900",
+      "1440x900",
+      "1280x800",
+      "390x844"
+    ],
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "keys": [
+      "light/1640x900/start",
+      "light/1640x900/harness",
+      "light/1640x900/hall",
+      "light/1640x900/council",
+      "light/1640x900/debate",
+      "light/1640x900/chat",
+      "light/1440x900/start",
+      "light/1440x900/harness",
+      "light/1440x900/hall",
+      "light/1440x900/council",
+      "light/1440x900/debate",
+      "light/1440x900/chat",
+      "light/1280x800/start",
+      "light/1280x800/harness",
+      "light/1280x800/hall",
+      "light/1280x800/council",
+      "light/1280x800/debate",
+      "light/1280x800/chat",
+      "light/390x844/start",
+      "light/390x844/harness",
+      "light/390x844/hall",
+      "light/390x844/council",
+      "light/390x844/debate",
+      "light/390x844/chat",
+      "dark/1640x900/start",
+      "dark/1640x900/harness",
+      "dark/1640x900/hall",
+      "dark/1640x900/council",
+      "dark/1640x900/debate",
+      "dark/1640x900/chat",
+      "dark/1440x900/start",
+      "dark/1440x900/harness",
+      "dark/1440x900/hall",
+      "dark/1440x900/council",
+      "dark/1440x900/debate",
+      "dark/1440x900/chat",
+      "dark/1280x800/start",
+      "dark/1280x800/harness",
+      "dark/1280x800/hall",
+      "dark/1280x800/council",
+      "dark/1280x800/debate",
+      "dark/1280x800/chat",
+      "dark/390x844/start",
+      "dark/390x844/harness",
+      "dark/390x844/hall",
+      "dark/390x844/council",
+      "dark/390x844/debate",
+      "dark/390x844/chat"
+    ],
+    "live_captures": 48,
+    "reference_captures": 48,
+    "annotated_comparisons": 48,
+    "total_pngs_per_run": 144,
+    "device_scale_factor": 1,
+    "pixel_policy": "measure and annotate; no pixel pass/fail tolerance"
+  },
+  "layout_contract": {
+    "header_max_height": 64,
+    "desktop_nav_width": [
+      192,
+      224
+    ],
+    "harness_shared_left_nav_width": [
+      192,
+      240
+    ],
+    "desktop_task_min_width": 640,
+    "desktop_breakpoint": 1440,
+    "narrow_breakpoint": 800,
+    "horizontal_overflow": "forbidden",
+    "telemetry": "closed header popover by default",
+    "integrations": "#studioTools closed by default; existing tools remain inside the disclosure",
+    "inspector": "closed by default at every width; #monitorToggleBtn exposes explicit open and Close action",
+    "harness_sessions": "share navigation column at >=1280px; dismissible Sessions panel below 1280px",
+    "harness_empty_state": "unified task controls visible; three stages retained in DOM but collapsed until a real active task"
+  },
+  "panes": [
+    {
+      "id": "start",
+      "tab": "start",
+      "title": "Start",
+      "file": "start.png",
+      "required": [
+        "#startLaunchCard",
+        "#startTaskBtn",
+        "#startDiagnostics"
+      ],
+      "order": [
+        "#startLaunchCard",
+        "#startNextBlocker",
+        "#startDiagnostics"
+      ],
+      "counts": {},
+      "state_walk": "scripts/start_command_center_walk.mjs",
+      "differences": [
+        {
+          "id": "D1",
+          "anchor": "integrations",
+          "title": "On-demand tools and integrations",
+          "reference": "The conceptual wireframe leaves the integrations row out.",
+          "live": "One closed-by-default Tools & integrations disclosure preserves Skills, MCP, provider, document and unload controls without a permanent band or horizontal overflow.",
+          "story": "UIV2-05 / owner-requested task-first layout"
+        },
+        {
+          "id": "D2",
+          "anchor": "header",
+          "title": "Preserved global actions and explicit Inspector",
+          "reference": "Telemetry, search and theme are the conceptual header actions; desktop Inspector is persistent.",
+          "live": "Density and model-unload controls remain reachable in the tools disclosure; telemetry is a closed popover and Inspector is closed initially at every width with an explicit toggle and Close action.",
+          "story": "UIV2-06 / existing feature preservation / owner-requested task-first layout"
+        },
+        {
+          "id": "D3",
+          "anchor": "pane",
+          "title": "Command-center evidence follows the action",
+          "reference": "One next action and one collapsed status line.",
+          "live": "The task and one blocker lead; recent work and measured diagnostics remain below them in native disclosures.",
+          "story": "UIV2-24"
+        }
+      ],
+      "state_support": {
+        "empty": "scripts/start_command_center_walk.mjs",
+        "populated": "scripts/start_command_center_walk.mjs",
+        "long-content": "scripts/start_command_center_walk.mjs",
+        "loading": "scripts/start_command_center_walk.mjs",
+        "error": "scripts/start_command_center_walk.mjs",
+        "recovery": "scripts/start_command_center_walk.mjs"
+      }
+    },
+    {
+      "id": "harness",
+      "tab": "harness",
+      "title": "Harness",
+      "file": "harness.png",
+      "required": [
+        "#harnessPromptInput",
+        "#harnessLeadModel",
+        "#harnessPolicy",
+        "#harnessWorkflowMode",
+        "#harnessProjectSummary",
+        "#harnessRunBtn"
+      ],
+      "order": [
+        "#harnessPromptInput",
+        "#harnessLeadModel",
+        "#harnessPolicy",
+        "#harnessRunBtn"
+      ],
+      "counts": {
+        "#harnessStages .harness-stage": 3
+      },
+      "state_walk": "scripts/harness_recovery_walk.mjs",
+      "differences": [
+        {
+          "id": "D1",
+          "anchor": "integrations",
+          "title": "On-demand tools and integrations",
+          "reference": "The conceptual wireframe leaves the integrations row out.",
+          "live": "One closed-by-default Tools & integrations disclosure preserves Skills, MCP, provider, document and unload controls without a permanent band or horizontal overflow.",
+          "story": "UIV2-05 / owner-requested task-first layout"
+        },
+        {
+          "id": "D2",
+          "anchor": "header",
+          "title": "Preserved global actions and explicit Inspector",
+          "reference": "Telemetry, search and theme are the conceptual header actions; desktop Inspector is persistent.",
+          "live": "Density and model-unload controls remain reachable in the tools disclosure; telemetry is a closed popover and Inspector is closed initially at every width with an explicit toggle and Close action.",
+          "story": "UIV2-06 / existing feature preservation / owner-requested task-first layout"
+        },
+        {
+          "id": "D3",
+          "anchor": "pane",
+          "title": "A unified task composer leads the empty state",
+          "reference": "A populated Plan → Execute → Verify cockpit with timeline and composer.",
+          "live": "A short greeting and one composer keep lead model, policy, workflow and Run visible. The three stages return for a real active task; settings and run details disclose on demand. Sessions share the desktop navigation column and use a dismissible narrow-screen panel.",
+          "story": "UIV2-08 / UIV2-09 / UIV2-10 / owner-requested task-first layout"
+        }
+      ],
+      "state_support": {
+        "empty": "scripts/harness_settings_walk.mjs",
+        "populated": "scripts/harness_timeline_walk.mjs",
+        "long-content": "scripts/harness_evidence_walk.mjs",
+        "loading": "scripts/harness_timeline_walk.mjs",
+        "error": "scripts/harness_recovery_walk.mjs",
+        "recovery": "scripts/harness_recovery_walk.mjs"
+      }
+    },
+    {
+      "id": "hall",
+      "tab": "hall",
+      "title": "Council",
+      "file": "hall.png",
+      "required": [
+        ".hall-sidebar",
+        "#hallStream",
+        "#hallClearSessionBtn"
+      ],
+      "order": [
+        "#hallStream",
+        "#hallVerdict",
+        "#hallHumanInput"
+      ],
+      "counts": {},
+      "state_walk": "scripts/council_state_walk.mjs",
+      "differences": [
+        {
+          "id": "D1",
+          "anchor": "integrations",
+          "title": "On-demand tools and integrations",
+          "reference": "The conceptual wireframe leaves the integrations row out.",
+          "live": "One closed-by-default Tools & integrations disclosure preserves Skills, MCP, provider, document and unload controls without a permanent band or horizontal overflow.",
+          "story": "UIV2-05 / owner-requested task-first layout"
+        },
+        {
+          "id": "D2",
+          "anchor": "header",
+          "title": "Preserved global actions and explicit Inspector",
+          "reference": "Telemetry, search and theme are the conceptual header actions; desktop Inspector is persistent.",
+          "live": "Density and model-unload controls remain reachable in the tools disclosure; telemetry is a closed popover and Inspector is closed initially at every width with an explicit toggle and Close action.",
+          "story": "UIV2-06 / existing feature preservation / owner-requested task-first layout"
+        },
+        {
+          "id": "D3",
+          "anchor": "pane",
+          "title": "Readiness precedes deliberation",
+          "reference": "Sessions, transcript, pinned conclusion and Clear session.",
+          "live": "The same session and transcript regions also retain role readiness and model evidence before the composer; no fabricated conclusion is shown.",
+          "story": "UIV2-12 / UIV2-13 / UIV2-14 / UIV2-15"
+        }
+      ],
+      "state_support": {
+        "empty": "scripts/council_state_walk.mjs",
+        "populated": "scripts/council_deliberation_walk.mjs",
+        "long-content": "scripts/council_deliberation_walk.mjs",
+        "loading": "scripts/council_state_walk.mjs",
+        "error": "scripts/council_state_walk.mjs",
+        "recovery": "scripts/council_state_walk.mjs"
+      }
+    },
+    {
+      "id": "council",
+      "tab": "council",
+      "title": "Pipeline",
+      "file": "pipeline.png",
+      "required": [
+        "#councilPrompt",
+        "#pipelineStageStrip",
+        "#pipelineWorkspace"
+      ],
+      "order": [
+        "#councilPrompt",
+        "#pipelineStageStrip",
+        "#pipelineWorkspace"
+      ],
+      "counts": {
+        "#pipelineStageStrip .step-card:not(.pipeline-overview-button)": 4,
+        "#pipelineStageStrip .pipeline-overview-button": 1
+      },
+      "state_walk": "scripts/pipeline_workspace_walk.mjs",
+      "differences": [
+        {
+          "id": "D1",
+          "anchor": "integrations",
+          "title": "On-demand tools and integrations",
+          "reference": "The conceptual wireframe leaves the integrations row out.",
+          "live": "One closed-by-default Tools & integrations disclosure preserves Skills, MCP, provider, document and unload controls without a permanent band or horizontal overflow.",
+          "story": "UIV2-05 / owner-requested task-first layout"
+        },
+        {
+          "id": "D2",
+          "anchor": "header",
+          "title": "Preserved global actions and explicit Inspector",
+          "reference": "Telemetry, search and theme are the conceptual header actions; desktop Inspector is persistent.",
+          "live": "Density and model-unload controls remain reachable in the tools disclosure; telemetry is a closed popover and Inspector is closed initially at every width with an explicit toggle and Close action.",
+          "story": "UIV2-06 / existing feature preservation / owner-requested task-first layout"
+        },
+        {
+          "id": "D3",
+          "anchor": "pane",
+          "title": "The real four-stage output replaces the placeholder",
+          "reference": "A stage-focused canvas with artifacts.",
+          "live": "Task, All stages plus exactly four stages, selected output, observed activity and factual artifacts fill the canvas; empty states stay empty.",
+          "story": "UIV2-25"
+        }
+      ],
+      "state_support": {
+        "empty": "scripts/pipeline_workspace_walk.mjs",
+        "populated": "scripts/pipeline_workspace_walk.mjs",
+        "long-content": "scripts/pipeline_workspace_walk.mjs",
+        "loading": "scripts/pipeline_workspace_walk.mjs",
+        "error": "scripts/pipeline_workspace_walk.mjs",
+        "recovery": "scripts/pipeline_workspace_walk.mjs"
+      }
+    },
+    {
+      "id": "debate",
+      "tab": "debate",
+      "title": "Compare",
+      "file": "compare.png",
+      "required": [
+        "#debatePrompt",
+        "#debateRunBtn",
+        "#debateCriteriaDetails"
+      ],
+      "order": [
+        "#debatePrompt",
+        "#debateCriteriaDetails",
+        "#debateGrid"
+      ],
+      "counts": {},
+      "state_walk": "scripts/compare_evidence_walk.mjs",
+      "differences": [
+        {
+          "id": "D1",
+          "anchor": "integrations",
+          "title": "On-demand tools and integrations",
+          "reference": "The conceptual wireframe leaves the integrations row out.",
+          "live": "One closed-by-default Tools & integrations disclosure preserves Skills, MCP, provider, document and unload controls without a permanent band or horizontal overflow.",
+          "story": "UIV2-05 / owner-requested task-first layout"
+        },
+        {
+          "id": "D2",
+          "anchor": "header",
+          "title": "Preserved global actions and explicit Inspector",
+          "reference": "Telemetry, search and theme are the conceptual header actions; desktop Inspector is persistent.",
+          "live": "Density and model-unload controls remain reachable in the tools disclosure; telemetry is a closed popover and Inspector is closed initially at every width with an explicit toggle and Close action.",
+          "story": "UIV2-06 / existing feature preservation / owner-requested task-first layout"
+        },
+        {
+          "id": "D3",
+          "anchor": "pane",
+          "title": "Model and criteria controls stay explicit",
+          "reference": "Question first, balanced results, evidence in the inspector.",
+          "live": "The question leads; model choices and a closed criteria disclosure follow before the result region, preserving the actual run contract.",
+          "story": "UIV2-16 / UIV2-17"
+        }
+      ],
+      "state_support": {
+        "empty": "scripts/compare_balanced_walk.mjs",
+        "populated": "scripts/compare_evidence_walk.mjs",
+        "long-content": "scripts/compare_provenance_walk.mjs",
+        "loading": "scripts/compare_evidence_walk.mjs",
+        "error": "scripts/compare_history_walk.mjs",
+        "recovery": "scripts/compare_continuity_walk.mjs"
+      }
+    },
+    {
+      "id": "chat",
+      "tab": "chat",
+      "title": "Chat",
+      "file": "chat.png",
+      "required": [
+        "#chatModel",
+        "#chatPersona",
+        "#chatReasoning",
+        "#chatToolProtocol",
+        "#chatToolsEnabled",
+        "#chatMessages",
+        "#chatInput",
+        "#chatSendBtn"
+      ],
+      "order": [
+        "#chatMessages",
+        "#chatInput",
+        "#chatSendBtn"
+      ],
+      "counts": {},
+      "state_walk": "scripts/chat_layout_walk.mjs",
+      "differences": [
+        {
+          "id": "D1",
+          "anchor": "integrations",
+          "title": "On-demand tools and integrations",
+          "reference": "The conceptual wireframe leaves the integrations row out.",
+          "live": "One closed-by-default Tools & integrations disclosure preserves Skills, MCP, provider, document and unload controls without a permanent band or horizontal overflow.",
+          "story": "UIV2-05 / owner-requested task-first layout"
+        },
+        {
+          "id": "D2",
+          "anchor": "header",
+          "title": "Preserved global actions and explicit Inspector",
+          "reference": "Telemetry, search and theme are the conceptual header actions; desktop Inspector is persistent.",
+          "live": "Density and model-unload controls remain reachable in the tools disclosure; telemetry is a closed popover and Inspector is closed initially at every width with an explicit toggle and Close action.",
+          "story": "UIV2-06 / existing feature preservation / owner-requested task-first layout"
+        },
+        {
+          "id": "D3",
+          "anchor": "pane",
+          "title": "Conversation controls remain above the focused column",
+          "reference": "A focused single conversation with every registered persona available.",
+          "live": "Model, registry-driven persona, reasoning, explicit tool protocol and read-only tool controls remain above the focused transcript and composer; the generic inspector stays collapsed for Chat, and the demo shows its real registry size.",
+          "story": "UIV2-18 / UIV2-19 / UIV2-20 / direct Chat tool protocol preservation"
+        }
+      ],
+      "state_support": {
+        "empty": "scripts/chat_layout_walk.mjs",
+        "populated": "scripts/chat_layout_walk.mjs",
+        "long-content": "scripts/chat_layout_walk.mjs",
+        "loading": "scripts/chat_layout_walk.mjs",
+        "error": "scripts/chat_layout_walk.mjs",
+        "recovery": "scripts/chat_layout_walk.mjs"
+      }
+    }
+  ],
+  "approval": {
+    "required": true,
+    "status": "approved",
+    "artifact": "product/M5_2_0_UIUX_V2_Cross_Tab_Approval.json",
+    "rule": "A human must approve the annotated candidate; the agent cannot infer or self-certify this decision.",
+    "human_approval": {
+      "decision": "approved",
+      "reference": "user:Arena ask_user uiv2-26-chat-protocol-approval=approve, 2026-11-07",
+      "recorded_at": "2026-11-07T15:01:40.830886+00:00",
+      "scope": "Structural fidelity of all 48 annotated live/reference comparisons; not a pixel-clone claim."
+    },
+    "candidate": {
+      "manifest": "docs/media/cross-tab-reference-uiv2-26/candidate/candidate-manifest.json",
+      "manifest_sha256": "66dde5fc52a8bf84f5dcbe17210f80ca1d57dd1c4fa025159027f4fdd9ecc130",
+      "git_head": "289a4fbc7348fd7410ee823b1dbd8322745d9d74"
+    },
+    "captures": 48,
+    "approval_sha256": "8532e51ec9dc68de6996d134336685b2533d099e512e1c68c3be483dc060f97f"
+  },
+  "totals": {
+    "panes": 6,
+    "viewports": 4,
+    "themes": 2,
+    "matrix_captures": 48,
+    "difference_annotations": 18,
+    "state_support_links": 36,
+    "approved_reference_fixtures": 36,
+    "findings": 0
+  },
+  "findings": []
+}

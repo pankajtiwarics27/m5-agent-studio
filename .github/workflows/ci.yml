@@ -159,3 +159,11 @@ jobs:
           fi
           tail -n 60 "${RUNNER_TEMP:-/tmp}/browser.log"
           exit "$status"
+      - name: Run approved cross-tab visual structure gate
+        run: |
+          node scripts/uiux_v2_cross_tab_reference_walk.mjs \
+            --check \
+            --out "${RUNNER_TEMP:-/tmp}/cross-tab-reference-uiv2-26" \
+            --timeout-ms 60000
+        env:
+          STUDIO_PYTHON: python

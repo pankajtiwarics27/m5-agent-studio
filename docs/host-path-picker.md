@@ -146,3 +146,25 @@ without weakening its accessibility checks, and fetched full Git ancestry (no
 baseline or acceptance record changed). All **94 tests** across those affected
 modules, including both nested documentation commands, now pass. The 37/37,
 7/7 generated release gate still passes. Final full-suite rerun remains pending.
+
+### Final verification and current-main integration
+
+Before the concurrent main update, the full suite with browser dependencies
+configured passed: **3287 passed, 1 skipped, 1 deprecation warning** in 1033.95s.
+The skip is `test_live_sandbox.py`, which requires explicit live-container opt-in.
+All four PR CI jobs at `0c53033` passed (Python 3.11/3.12/3.13 and browser).
+Both modular/standalone startup-auth smokes passed. Supply-chain build and verify
+passed secret/dependency scans and artifact provenance verification; the artifact
+remains unsigned and is **not** declared release-ready.
+
+While those ran, main advanced to `660b504` through PR #223. Integrated that main
+commit on the same picker branch, preserving its portable mobile Chat CSS, SQLite
+retry fix, robust transformation samples and approved cross-tab gate. All merge
+conflicts were generated artifacts and were resolved by their generators, not
+hand-editing. Regenerated the cross-tab **contract source digest only**; the
+human approval file is unchanged from main, and no new approval was recorded.
+Post-integration evidence: **185 focused tests**, **36 required browser tests**,
+and the existing approved cross-tab check: **48 captures, 2200/2200 checks**.
+Ruff, mypy62 and frontend syntax remain clean. The full pre-integration count is
+not represented as a post-integration run; updated multi-version CI is required
+on the integrated head before merge. No PR merge has been authorized/performed.

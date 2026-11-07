@@ -6,7 +6,7 @@ executed by [`scripts/preservation_suite.py`](../scripts/preservation_suite.py).
 
 * 21 of 21 matrix rows mapped, 55 provers, 0 findings
 * 40 walk checks, 4 pytest nodes, 9 route probes, 2 wired controls
-* 17 walks prove a row; 26 more are listed with the reason they do not
+* 17 walks prove a row; 27 more are listed with the reason they do not
 
 ## What this page is, and is not
 
@@ -103,6 +103,7 @@ than succeed. That is what "existing endpoint and permission semantics" means in
 | `stream_perf_walk.mjs` | the streaming bound (P5-04) is a cost property, not a capability |
 | `terminology_walk.mjs` | the vocabulary walk (P5-01) proves the same states say the same words |
 | `uiux_interaction_polish_walk.mjs` | the supplemental P5-05 evidence walk measures hover/focus parity and captures 72 screenshots; it proves presentation, not a capability the matrix enumerates |
+| `uiux_v2_cross_tab_reference_walk.mjs` | the cross-tab reference gate (UIV2-26) proves the shared visual contract over the existing six panes at four viewports in light and dark, with keyboard selection, live/reference DOM assertions, authored differences and a separately human-approved structural baseline; it adds no capability beyond the matrix's existing six-tab controls |
 
 ## The last recorded run
 
