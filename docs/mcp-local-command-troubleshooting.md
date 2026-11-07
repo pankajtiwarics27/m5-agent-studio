@@ -75,3 +75,62 @@ there before attempting a render. Never assume a working Terminal PATH proves it
 renders can exceed this. The catalog card is for discoverability/configuration,
 not a claim that long-running video generation is production-ready in Studio.
 See [the integration contract](moneyprinter-turbo-integration.md).
+
+## Local HTTP server: DNS-pinned address could not be reached
+
+`Could not connect to any DNS-pinned address for 127.0.0.1` means Studio tried
+the validated IP address but could not establish a TCP connection. It is not a
+request to disable DNS pinning or permit more private hosts. Common causes are a
+server that is not running, the wrong port, or a service running in a different
+container/network namespace. The error alone cannot distinguish those causes.
+
+The **Custom Remote / Docker HTTP MCP** preset's `http://127.0.0.1:8080/mcp` is
+an example endpoint, not an MCP service bundled with or started by Studio.
+Configure the actual MCP server's URL and start that trusted service separately.
+`127.0.0.1` means the environment running Studio, not necessarily the browser or
+the host outside a container. Do not switch to stdio unless that particular server
+supports it, and do not assume every local HTTP API implements MCP.
+
+Use the server's own documented listener/health check to verify its host and port
+in the Studio runtime. A reachable HTTP endpoint may still reject an ordinary
+GET, so a 400/405 is different from a failed TCP connection. A wrong `/mcp` versus
+`/sse` path typically produces an HTTP response, not this connection error.
+Do not share authorization headers, credentials or token-bearing URLs when
+requesting help; the server name and credential-free scheme/host/port/path suffice.
+
+## Python starts but cannot open a script whose path contains spaces
+
+If Python reports it cannot open `/Users/you/Documents/Test` when the intended
+path is under `Test Studio`, it received only part of the script path as its first
+argument. The executable was found; installing Python again will not fix this.
+
+The MCP editor sends its Arguments text to the backend's `shlex.split` parser.
+An unquoted path containing spaces becomes several arguments. Older Studio
+preset/edit flows flattened argument arrays with a plain space join, so this
+could happen even when the preset originally contained the correct complete path.
+
+The corrected preset/edit flows quote individual arguments, including spaces,
+apostrophes, backslashes and empty values. These quotes are parsed into an argument
+array; Studio still launches without a shell, so `$HOME`, `$(...)` and shell
+metacharacters are not expanded or executed. Do not put a command and all its
+arguments into the Executable Command field.
+
+For an existing broken MoneyPrinter entry, edit **Arguments** to one quoted path:
+
+```text
+'/Users/you/Documents/Test Studio/m5-agent-studio/moneyprinter_mcp.py'
+```
+
+Leave **Executable Command** as the actual, **unquoted** Python executable path:
+
+```text
+/Users/you/Documents/Test Studio/m5-agent-studio/.venv/bin/python
+```
+
+Replace the example paths with your own, review the launch command and consent,
+then save/test again. This needs no directory rename. Existing arguments already
+saved as multiple tokens cannot be safely repaired automatically: some servers
+legitimately need multiple positional arguments. Replace the broken script path
+manually, or reselect the corrected catalog preset and recheck any custom alias,
+environment and policy settings before saving. This path fix does not install the
+server's dependencies or remove MoneyPrinter's 45-second Studio tool-call limit.
