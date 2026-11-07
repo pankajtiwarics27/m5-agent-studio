@@ -57,18 +57,18 @@ through `setStatus()`, so the state, the tone and the label cannot disagree.
 | `#hallStatusBadge` | `info` | yes | 3474 |
 | `#councilReadinessCount` | `neutral` | no | 3488 |
 | `#pipelineWorkspaceState` | `info` | no | 3648 |
-| (unnamed) | `warn` | no | 7137 |
-| (unnamed) | `warn` | no | 7235 |
-| (unnamed) | `neutral` | no | 11095 |
-| (unnamed) | `busy` | no | 11096 |
-| (unnamed) | `ok` | no | 11097 |
-| (unnamed) | `warn` | no | 11098 |
-| (unnamed) | `warn` | no | 11099 |
-| (unnamed) | `warn` | no | 11100 |
-| (unnamed) | `danger` | no | 11101 |
-| (unnamed) | `warn` | no | 11102 |
-| (unnamed) | `warn` | no | 11103 |
-| (unnamed) | `neutral` | no | 11104 |
+| (unnamed) | `warn` | no | 7142 |
+| (unnamed) | `warn` | no | 7240 |
+| (unnamed) | `neutral` | no | 11105 |
+| (unnamed) | `busy` | no | 11106 |
+| (unnamed) | `ok` | no | 11107 |
+| (unnamed) | `warn` | no | 11108 |
+| (unnamed) | `warn` | no | 11109 |
+| (unnamed) | `warn` | no | 11110 |
+| (unnamed) | `danger` | no | 11111 |
+| (unnamed) | `warn` | no | 11112 |
+| (unnamed) | `warn` | no | 11113 |
+| (unnamed) | `neutral` | no | 11114 |
 
 ## Writers
 

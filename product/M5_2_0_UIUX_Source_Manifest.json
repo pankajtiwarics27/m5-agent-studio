@@ -12,9 +12,9 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "ece020737be575bfc58b22873a33421a1db360f9888fefc16747d7a08d82963b",
-      "bytes": 1019070,
-      "lines": 17534
+      "sha256": "d6ec0efecc0930de333cdc268e41befb70cfc9dd19964c35051e9fb53dab2255",
+      "bytes": 1019715,
+      "lines": 17544
     },
     {
       "path": "app.py",
@@ -26,9 +26,9 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "20f97e6010d1f276171598a99f5411546c1be3ad05b454cd794b9bf2bc632446",
-      "bytes": 3812130,
-      "lines": 81668
+      "sha256": "62509ced82f4491b51a38342748bcb1e170bae861a5b3691788ed9c26e69c9ab",
+      "bytes": 3812775,
+      "lines": 81678
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -376,9 +376,9 @@
     {
       "path": "scripts/uiux_preservation_e2e.py",
       "role": "maps each preservation-matrix row to the walk, test, route and control that proves it",
-      "sha256": "f832cd1ddeb1698bf2f2bf2e73b5b8a7214c50d148cd331b1c5133c7b411a17d",
-      "bytes": 44640,
-      "lines": 837
+      "sha256": "d336b89fdb1fe0d48e7cf10a9347efd5a17c7fc6941876a165c0959299a558ae",
+      "bytes": 46639,
+      "lines": 856
     },
     {
       "path": "tests/test_uiux_preservation_e2e.py",
@@ -460,8 +460,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "ece020737be575bfc58b22873a33421a1db360f9888fefc16747d7a08d82963b",
-    "lines": 17534,
+    "sha256": "d6ec0efecc0930de333cdc268e41befb70cfc9dd19964c35051e9fb53dab2255",
+    "lines": 17544,
     "tab_count": 6,
     "tabs": [
       {

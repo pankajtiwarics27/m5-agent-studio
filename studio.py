@@ -6099,7 +6099,7 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
 .task-composer-controls, .task-composer-actions, .composer-context-line { width: 100%; }
 
 /* Long trajectories scroll inside their own region; they cannot push Abort below the screen. */
-#pane-harness .harness-main:not(:has(.harness-welcome)) .harness-stream { flex: 1 1 0; min-height: 80px; }
+#pane-harness .harness-main:not(:has(.harness-welcome)) .harness-stream { flex: 1 1 0; min-height: 90px; }
 /* Configured integration picker: one searchable, paginated list, not an unbounded pill cloud. */
 .studio-tools > .skills-strip { display: grid; grid-template-rows: auto auto auto minmax(64px, 1fr) auto auto; align-items: stretch; gap: 10px; padding: 14px; width: min(540px, calc(100vw - 40px)); height: auto; }
 .skills-strip > .integration-totals { display: flex; flex-wrap: wrap; gap: 4px 14px; color: var(--text-dim); font-size: 11px; }
@@ -10534,7 +10534,10 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
       retry: () => deleteHallSession(id),
       reload: () => { clearPresentation("hallRefusalState"); refreshHallSessions(); },
     });
-    if (activeHallId === id) { activeHallId = null; activeHallData = null; }
+    // A refusal keeps both the server session and the pane that was reading it. Only a
+    // successful delete may clear the active id; otherwise the transcript would vanish
+    // locally while the refusal text claimed it was still available.
+    if (write && activeHallId === id) { activeHallId = null; activeHallData = null; }
     await refreshHallSessions();
     renderActiveHall();
     if (!write) return;
@@ -10551,8 +10554,10 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
       retry: () => clearAllHallSessions(),
       reload: () => { clearPresentation("hallRefusalState"); refreshHallSessions(); },
     });
-    activeHallId = null;
-    activeHallData = null;
+    if (write) {
+      activeHallId = null;
+      activeHallData = null;
+    }
     await refreshHallSessions();
     renderActiveHall();
     if (!write) return;
@@ -12654,6 +12659,11 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
     refreshTelemetry();
   }
 
+  // Terminal frames are route-level facts, not just the Chat route's literal `done`.
+  // A normal EOF after one of these frames is completion; without this distinction a
+  // successful Council summon fell into the dropped-stream path after it had been saved.
+  const SSE_TERMINAL_EVENTS = new Set(["done", "council_done", "debate_done", "summon_done", "error"]);
+
   async function consumeSSE(url, payload, handlers, onFinally) {
     stopActiveStream();
     const controller = new AbortController();
@@ -12684,7 +12694,7 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
             if (line.startsWith("event:")) ev = line.slice(6).trim();
             else if (line.startsWith("data:")) dataStr += line.slice(5).trim();
           }
-          if (ev === "done" || ev === "error") receivedTerminalEvent = true;
+          if (SSE_TERMINAL_EVENTS.has(ev)) receivedTerminalEvent = true;
           if (dataStr && handlers[ev]) await handlers[ev](JSON.parse(dataStr));
         }
       }

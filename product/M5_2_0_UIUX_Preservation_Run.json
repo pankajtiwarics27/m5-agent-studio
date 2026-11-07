@@ -1,20 +1,20 @@
 {
   "story": "UIUX-P6-01",
   "kind": "preservation-suite-run",
-  "commit": "10459c26079d00edd4338474d36b1ea1cb942ff0",
+  "commit": "660b504c1e769928ab9702ce9790a3bb2f7c7747",
   "environment": {
     "python": "3.11.2",
-    "chrome": "/tmp/browser/tmp/chromium",
-    "tmpdir": "/tmp/browser/tmp"
+    "chrome": "/tmp/m5-browser/tmp/chromium",
+    "tmpdir": "/tmp/m5-browser/tmp"
   },
   "only": "",
-  "seconds": 393.2,
+  "seconds": 430.7,
   "totals": {
     "rows": 21,
     "passed_rows": 21,
     "failed_rows": 0,
     "not_run_rows": 0,
-    "steps": 27,
+    "steps": 32,
     "failed_steps": 0,
     "known_failures": 0,
     "stale_known_failures": []
@@ -82,14 +82,52 @@
       "authenticated": 400,
       "passed": true,
       "detail": "without a token 401, with one 400"
+    },
+    {
+      "step": "POST /api/hall/sessions/{session_id}/close",
+      "anonymous": 401,
+      "authenticated": 400,
+      "passed": true,
+      "detail": "without a token 401, with one 400"
+    },
+    {
+      "step": "POST /api/hall/sessions/{session_id}/message",
+      "anonymous": 401,
+      "authenticated": 400,
+      "passed": true,
+      "detail": "without a token 401, with one 400"
+    },
+    {
+      "step": "DELETE /api/hall/sessions/{session_id}",
+      "anonymous": 401,
+      "authenticated": 404,
+      "passed": true,
+      "detail": "without a token 401, with one 404"
+    },
+    {
+      "step": "DELETE /api/hall/sessions",
+      "anonymous": 401,
+      "authenticated": 200,
+      "passed": true,
+      "detail": "without a token 401, with one 200"
     }
   ],
   "pytest": {
-    "step": "pytest tests/test_harness_evidence.py::test_apply_still_refuses_and_reports tests/test_security_and_quality.py::test_abort_resolves_pending_approvals_and_tombstones_replay tests/test_security_and_quality.py::test_sdlc_pass_requires_successful_verification_and_explicit_first_line_pass tests/test_workspace_snapshots.py::test_worktree_apply_refuses_clobbering_uncommitted_user_changes",
+    "step": "pytest tests/test_council_clear_session.py::test_a_refused_delete_cannot_clear_the_active_pane tests/test_council_clear_session.py::test_delete_one_session_keeps_the_others tests/test_council_clear_session.py::test_delete_persists_across_a_restart tests/test_council_clear_session.py::test_delete_requires_the_bearer_token tests/test_council_clear_session.py::test_hall_tables_are_the_only_ones_the_delete_touches tests/test_council_clear_session.py::test_running_session_is_guarded_409_and_clear_all_skips_it tests/test_council_state_consistency.py::test_a_closed_session_refuses_a_summon_and_names_the_way_back tests/test_council_state_consistency.py::test_a_human_message_reopens_a_closed_session_and_keeps_the_conclusion tests/test_council_state_consistency.py::test_successful_terminal_frames_do_not_enter_the_dropped_stream_path tests/test_council_verdict.py::test_uiv2_12_conclusion_panel_gates_hold tests/test_harness_evidence.py::test_apply_still_refuses_and_reports tests/test_security_and_quality.py::test_abort_resolves_pending_approvals_and_tombstones_replay tests/test_security_and_quality.py::test_sdlc_pass_requires_successful_verification_and_explicit_first_line_pass tests/test_workspace_snapshots.py::test_worktree_apply_refuses_clobbering_uncommitted_user_changes",
     "passed": true,
-    "detail": "4 passed, 1 warning in 1.99s",
-    "seconds": 2.3,
+    "detail": "14 passed, 1 warning in 3.61s",
+    "seconds": 4.0,
     "nodes": [
+      "tests/test_council_clear_session.py::test_a_refused_delete_cannot_clear_the_active_pane",
+      "tests/test_council_clear_session.py::test_delete_one_session_keeps_the_others",
+      "tests/test_council_clear_session.py::test_delete_persists_across_a_restart",
+      "tests/test_council_clear_session.py::test_delete_requires_the_bearer_token",
+      "tests/test_council_clear_session.py::test_hall_tables_are_the_only_ones_the_delete_touches",
+      "tests/test_council_clear_session.py::test_running_session_is_guarded_409_and_clear_all_skips_it",
+      "tests/test_council_state_consistency.py::test_a_closed_session_refuses_a_summon_and_names_the_way_back",
+      "tests/test_council_state_consistency.py::test_a_human_message_reopens_a_closed_session_and_keeps_the_conclusion",
+      "tests/test_council_state_consistency.py::test_successful_terminal_frames_do_not_enter_the_dropped_stream_path",
+      "tests/test_council_verdict.py::test_uiv2_12_conclusion_panel_gates_hold",
       "tests/test_harness_evidence.py::test_apply_still_refuses_and_reports",
       "tests/test_security_and_quality.py::test_abort_resolves_pending_approvals_and_tombstones_replay",
       "tests/test_security_and_quality.py::test_sdlc_pass_requires_successful_verification_and_explicit_first_line_pass",
@@ -108,21 +146,21 @@
       "walk": "chat_context_walk.mjs",
       "passed": true,
       "known": null,
-      "seconds": 11.0,
+      "seconds": 11.1,
       "detail": "19 of 19 checks passed"
     },
     {
       "walk": "chat_walk.mjs",
       "passed": true,
       "known": null,
-      "seconds": 15.6,
+      "seconds": 15.7,
       "detail": "21 of 21 checks passed"
     },
     {
       "walk": "compare_criteria_walk.mjs",
       "passed": true,
       "known": null,
-      "seconds": 26.8,
+      "seconds": 29.8,
       "detail": "15/15 checks passed"
     },
     {
@@ -136,71 +174,78 @@
       "walk": "compare_provenance_walk.mjs",
       "passed": true,
       "known": null,
-      "seconds": 28.3,
+      "seconds": 31.6,
       "detail": "12/12 checks passed"
     },
     {
       "walk": "council_deliberation_walk.mjs",
       "passed": true,
       "known": null,
-      "seconds": 19.3,
+      "seconds": 20.0,
       "detail": "14/14 checks passed"
     },
     {
       "walk": "council_readiness_walk.mjs",
       "passed": true,
       "known": null,
-      "seconds": 34.1,
+      "seconds": 34.2,
       "detail": "31/31 checks passed"
+    },
+    {
+      "walk": "council_state_walk.mjs",
+      "passed": true,
+      "known": null,
+      "seconds": 20.1,
+      "detail": "23/23 checks passed \u00b7 0 screenshots"
     },
     {
       "walk": "council_verdict_walk.mjs",
       "passed": true,
       "known": null,
-      "seconds": 98.5,
-      "detail": "17/17 checks passed"
+      "seconds": 102.2,
+      "detail": "22/22 checks passed"
     },
     {
       "walk": "harness_evidence_walk.mjs",
       "passed": true,
       "known": null,
-      "seconds": 43.4,
+      "seconds": 43.3,
       "detail": "29/29 checks passed"
     },
     {
       "walk": "harness_permissions_walk.mjs",
       "passed": true,
       "known": null,
-      "seconds": 26.1,
+      "seconds": 26.2,
       "detail": "24/24 checks passed"
     },
     {
       "walk": "harness_settings_walk.mjs",
       "passed": true,
       "known": null,
-      "seconds": 5.8,
-      "detail": "24 of 24 checks passed"
+      "seconds": 6.5,
+      "detail": "25 of 25 checks passed"
     },
     {
       "walk": "harness_timeline_walk.mjs",
       "passed": true,
       "known": null,
-      "seconds": 9.9,
+      "seconds": 10.0,
       "detail": "21/21 checks passed"
     },
     {
       "walk": "pipeline_artifacts_walk.mjs",
       "passed": true,
       "known": null,
-      "seconds": 12.3,
+      "seconds": 12.7,
       "detail": "22/22 checks passed"
     },
     {
       "walk": "start_health_walk.mjs",
       "passed": true,
       "known": null,
-      "seconds": 22.7,
-      "detail": "21 of 21 checks passed"
+      "seconds": 23.2,
+      "detail": "22 of 22 checks passed"
     },
     {
       "walk": "start_recent_walk.mjs",
@@ -213,8 +258,8 @@
       "walk": "start_walk.mjs",
       "passed": true,
       "known": null,
-      "seconds": 8.8,
-      "detail": "18 of 18 checks passed"
+      "seconds": 9.9,
+      "detail": "31 of 31 checks passed"
     }
   ],
   "rows": [
@@ -301,7 +346,7 @@
     {
       "row": "Council / Council Hall session spawning and chronicle browsing",
       "status": "pass",
-      "proofs": 3
+      "proofs": 21
     },
     {
       "row": "Pipeline / Four-stage orchestrator with architect/coder role selection",

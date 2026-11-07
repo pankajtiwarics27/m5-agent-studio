@@ -368,9 +368,89 @@
           "kind": "walk",
           "script": "scripts/council_readiness_walk.mjs",
           "check": "Post note only remains enabled and saves the note without summoning"
+        },
+        {
+          "kind": "walk",
+          "script": "scripts/council_verdict_walk.mjs",
+          "check": "a long pinned conclusion scrolls independently from the keyboard without moving the transcript"
+        },
+        {
+          "kind": "walk",
+          "script": "scripts/council_state_walk.mjs",
+          "check": "a refused delete keeps the active session, its transcript and its row, with Retry available"
+        },
+        {
+          "kind": "pytest",
+          "node": "tests/test_council_state_consistency.py::test_successful_terminal_frames_do_not_enter_the_dropped_stream_path"
+        },
+        {
+          "kind": "pytest",
+          "node": "tests/test_council_state_consistency.py::test_a_closed_session_refuses_a_summon_and_names_the_way_back"
+        },
+        {
+          "kind": "pytest",
+          "node": "tests/test_council_state_consistency.py::test_a_human_message_reopens_a_closed_session_and_keeps_the_conclusion"
+        },
+        {
+          "kind": "pytest",
+          "node": "tests/test_council_clear_session.py::test_delete_requires_the_bearer_token"
+        },
+        {
+          "kind": "pytest",
+          "node": "tests/test_council_clear_session.py::test_delete_one_session_keeps_the_others"
+        },
+        {
+          "kind": "pytest",
+          "node": "tests/test_council_clear_session.py::test_running_session_is_guarded_409_and_clear_all_skips_it"
+        },
+        {
+          "kind": "pytest",
+          "node": "tests/test_council_clear_session.py::test_delete_persists_across_a_restart"
+        },
+        {
+          "kind": "pytest",
+          "node": "tests/test_council_clear_session.py::test_hall_tables_are_the_only_ones_the_delete_touches"
+        },
+        {
+          "kind": "pytest",
+          "node": "tests/test_council_clear_session.py::test_a_refused_delete_cannot_clear_the_active_pane"
+        },
+        {
+          "kind": "pytest",
+          "node": "tests/test_council_verdict.py::test_uiv2_12_conclusion_panel_gates_hold"
+        },
+        {
+          "kind": "control",
+          "element": "hallClearSessionBtn",
+          "detail": "<button id=\"hallClearSessionBtn\"> is present and wired"
+        },
+        {
+          "kind": "control",
+          "element": "hallClearAllBtn",
+          "detail": "<button id=\"hallClearAllBtn\"> is present and wired"
+        },
+        {
+          "kind": "route",
+          "method": "POST",
+          "path": "/api/hall/sessions/{session_id}/close"
+        },
+        {
+          "kind": "route",
+          "method": "POST",
+          "path": "/api/hall/sessions/{session_id}/message"
+        },
+        {
+          "kind": "route",
+          "method": "DELETE",
+          "path": "/api/hall/sessions/{session_id}"
+        },
+        {
+          "kind": "route",
+          "method": "DELETE",
+          "path": "/api/hall/sessions"
         }
       ],
-      "proof_count": 3
+      "proof_count": 21
     },
     {
       "tab": "Pipeline",
@@ -458,12 +538,12 @@
   "totals": {
     "matrix_rows": 21,
     "mapped_rows": 21,
-    "provers": 55,
-    "walk_provers": 40,
-    "pytest_provers": 4,
-    "route_provers": 9,
-    "control_provers": 2,
-    "walks": 17,
+    "provers": 73,
+    "walk_provers": 42,
+    "pytest_provers": 14,
+    "route_provers": 13,
+    "control_provers": 4,
+    "walks": 18,
     "support_walks": 27,
     "findings": 0
   },
@@ -476,6 +556,7 @@
     "compare_provenance_walk.mjs",
     "council_deliberation_walk.mjs",
     "council_readiness_walk.mjs",
+    "council_state_walk.mjs",
     "council_verdict_walk.mjs",
     "harness_evidence_walk.mjs",
     "harness_permissions_walk.mjs",
@@ -491,6 +572,7 @@
     "chat_context_walk.mjs",
     "chat_walk.mjs",
     "compare_history_walk.mjs",
+    "council_state_walk.mjs",
     "harness_settings_walk.mjs",
     "harness_timeline_walk.mjs",
     "start_health_walk.mjs",
@@ -507,7 +589,6 @@
     "compare_balanced_walk.mjs": "the Compare composition walk (UIV2-16) proves how the question, the folded criteria and the answer columns are drawn; the capability it belongs to is the comparison itself, which the matrix already enumerates from the pane's own controls",
     "compare_continuity_walk.mjs": "Compare continuity (P4-06) keeps a comparison; the capability it belongs to is the comparison itself",
     "compare_evidence_walk.mjs": "the Compare evidence walk (UIV2-17) proves what the results table, the verdict card and the inspector's evidence lines say about a reply; the capability it belongs to is the comparison itself, which the matrix already enumerates from the pane's own controls",
-    "council_state_walk.mjs": "the Council state walk (UIV2-15) proves how a refused, reopened, dropped or deleted turn is drawn; the capability it belongs to is the Council session itself, which the matrix already enumerates from the pane's own controls",
     "harness_recovery_walk.mjs": "Harness pause/resume/abort recovery (P3-05) extends the abort surface rather than preserving it",
     "keyboard_walk.mjs": "the rail's tab semantics (P1-02) are shell behaviour",
     "mcp_hub_walk.mjs": "the MCP hub walk (UIV2-21) proves that the dialog is three tabs rather than one configuration scroll, that every preset card states its transport, trust, key requirement and approval policy before anything is connected, that search and the filter chips narrow the catalog, that a server which cannot be reached keeps the sync note it really got in both the Connected list and Activity, that a live stdio server syncs its real tools and a test call is recorded with its outcome and latency, and that a stored token never reaches the document; the capability it belongs to is the MCP surface, which the matrix already enumerates from the tool strip and the dialog's own controls",
@@ -524,9 +605,20 @@
     "stream_perf_walk.mjs": "the streaming bound (P5-04) is a cost property, not a capability",
     "terminology_walk.mjs": "the vocabulary walk (P5-01) proves the same states say the same words",
     "uiux_interaction_polish_walk.mjs": "the supplemental P5-05 evidence walk measures hover/focus parity and captures 72 screenshots; it proves presentation, not a capability the matrix enumerates",
-    "uiux_v2_cross_tab_reference_walk.mjs": "the cross-tab reference gate (UIV2-26) proves the shared visual contract over the existing six panes at four viewports in light and dark, with keyboard selection, live/reference DOM assertions, authored differences and a separately human-approved structural baseline; it adds no capability beyond the matrix's existing six-tab controls"
+    "uiux_v2_cross_tab_reference_walk.mjs": "the cross-tab reference gate (UIV2-26) proves the shared visual contract over the existing six panes at four viewports in light and dark, with keyboard selection, live/reference DOM assertions, authored differences and a separately human-approved structural baseline; it adds no capability beyond the matrix's existing six-tab controls",
+    "uiv2_preservation_visual_walk.mjs": "the UIV2-27 long-conclusion visual walk proves real route-created content at four viewports in light and dark: independent body scrolling, keyboard disclosure and resize, sticky geometry, shared-overlay focus, narrow composer reachability, and page overflow; these are state/layout proofs for the Council capability already enumerated by the matrix"
   },
   "pytest_nodes": [
+    "tests/test_council_clear_session.py::test_a_refused_delete_cannot_clear_the_active_pane",
+    "tests/test_council_clear_session.py::test_delete_one_session_keeps_the_others",
+    "tests/test_council_clear_session.py::test_delete_persists_across_a_restart",
+    "tests/test_council_clear_session.py::test_delete_requires_the_bearer_token",
+    "tests/test_council_clear_session.py::test_hall_tables_are_the_only_ones_the_delete_touches",
+    "tests/test_council_clear_session.py::test_running_session_is_guarded_409_and_clear_all_skips_it",
+    "tests/test_council_state_consistency.py::test_a_closed_session_refuses_a_summon_and_names_the_way_back",
+    "tests/test_council_state_consistency.py::test_a_human_message_reopens_a_closed_session_and_keeps_the_conclusion",
+    "tests/test_council_state_consistency.py::test_successful_terminal_frames_do_not_enter_the_dropped_stream_path",
+    "tests/test_council_verdict.py::test_uiv2_12_conclusion_panel_gates_hold",
     "tests/test_harness_evidence.py::test_apply_still_refuses_and_reports",
     "tests/test_security_and_quality.py::test_abort_resolves_pending_approvals_and_tombstones_replay",
     "tests/test_security_and_quality.py::test_sdlc_pass_requires_successful_verification_and_explicit_first_line_pass",
@@ -534,14 +626,14 @@
   ],
   "last_run": {
     "recorded": true,
-    "commit": "10459c2",
-    "seconds": 393.2,
+    "commit": "660b504",
+    "seconds": 430.7,
     "totals": {
       "rows": 21,
       "passed_rows": 21,
       "failed_rows": 0,
       "not_run_rows": 0,
-      "steps": 27,
+      "steps": 32,
       "failed_steps": 0,
       "known_failures": 0,
       "stale_known_failures": []
@@ -550,8 +642,8 @@
     "failed": [],
     "environment": {
       "python": "3.11.2",
-      "chrome": "/tmp/browser/tmp/chromium",
-      "tmpdir": "/tmp/browser/tmp"
+      "chrome": "/tmp/m5-browser/tmp/chromium",
+      "tmpdir": "/tmp/m5-browser/tmp"
     }
   },
   "route_probes": [
@@ -599,6 +691,26 @@
       "method": "POST",
       "path": "/api/harness/sdlc/run",
       "row": "Harness / GSD and SDLC"
+    },
+    {
+      "method": "POST",
+      "path": "/api/hall/sessions/{session_id}/close",
+      "row": "Council / Council Hall session spawning and chronicle browsing"
+    },
+    {
+      "method": "POST",
+      "path": "/api/hall/sessions/{session_id}/message",
+      "row": "Council / Council Hall session spawning and chronicle browsing"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/hall/sessions/{session_id}",
+      "row": "Council / Council Hall session spawning and chronicle browsing"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/hall/sessions",
+      "row": "Council / Council Hall session spawning and chronicle browsing"
     }
   ],
   "findings": []

@@ -22,7 +22,7 @@
  *   3. the launcher carries the text into the Harness composer and stops - the pane
  *      switches, the composer holds the text, no session is created and no stream
  *      starts, which is the difference between a handoff and a launch;
- *   4. the note under the composer quotes the preflight's verdict, so a task is not
+ *   4. the handoff note and the command center's preflight verdict both survive, so a task is not
  *      carried into a Run that will refuse;
  *   5. with nothing to show, Start presents the empty state and its action;
  *   6. with the session list refused, Start presents the error with a working Retry
@@ -279,6 +279,8 @@ async function run(args) {
       sessions: harnessSessions.length,
       stream: (document.getElementById("harnessStream") || {}).textContent.trim().length,
       hint: (document.getElementById("startTaskHint") || {}).textContent || "",
+      readinessLine: (document.getElementById("startReadinessLine") || {}).textContent || "",
+      blocker: (document.getElementById("startNextBlocker") || {}).textContent || "",
     }));
     record(
       "the launcher carries the task into the Harness composer",
@@ -296,9 +298,12 @@ async function run(args) {
       return payload.preflight || {};
     });
     record(
-      "the handoff's note quotes the preflight's verdict",
-      preflight.ready ? /ready/i.test(after.hint) : Boolean(preflight.next_step) && after.hint.includes(preflight.next_step.title),
-      after.hint.slice(0, 140),
+      "the handoff keeps the task note and the command center's preflight verdict",
+      after.hint.includes(task) && /Nothing runs from this pane/.test(after.hint)
+        && (preflight.ready
+          ? /ready/i.test(after.readinessLine)
+          : Boolean(preflight.next_step) && after.blocker.includes(preflight.next_step.title)),
+      `${after.readinessLine.slice(0, 90)} | ${after.blocker.slice(0, 90)} | ${after.hint.slice(0, 90)}`,
     );
     await shoot(page, "handoff");
 

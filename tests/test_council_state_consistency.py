@@ -156,6 +156,20 @@ def test_a_human_message_reopens_a_closed_session_and_keeps_the_conclusion(tmp_p
 # ── the two turn facts ──────────────────────────────────────────────────────
 
 
+def test_successful_terminal_frames_do_not_enter_the_dropped_stream_path():
+    """A saved Council reply ends with summon_done; its normal EOF is not a lost turn."""
+    source = FRONTEND.read_text(encoding="utf-8")
+    start = source.index("const SSE_TERMINAL_EVENTS")
+    end = source.index("async function consumeSSE", start)
+    terminal = source[start:end]
+    for event in ("done", "council_done", "debate_done", "summon_done", "error"):
+        assert f'"{event}"' in terminal
+    consume_end = source.index("// ================= AUTO 4-STAGE", end)
+    consume = source[end:consume_end]
+    assert "if (SSE_TERMINAL_EVENTS.has(ev)) receivedTerminalEvent = true;" in consume
+    assert consume.index("receivedTerminalEvent = true") < consume.index("await handlers[ev]")
+
+
 def test_a_session_read_carries_the_turn_facts_and_they_are_null_when_idle(tmp_path, monkeypatch):
     client = _client(tmp_path, monkeypatch)
     with client:

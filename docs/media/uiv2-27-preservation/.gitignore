@@ -1,0 +1,4 @@
+# Local UIV2-27 visual evidence is reviewed and hash-recorded, never committed as PNG binaries.
+*.png
+*manifest.json
+index.json
