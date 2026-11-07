@@ -42,19 +42,20 @@ default path. The walk cleans up its demo process and temporary workspace.
 The approved UIV2-03 reference is a structural contract, not a pixel-clone target. Authored D1–D3
 annotations explain the on-demand integrations, explicit Inspector, and each pane's intentional
 feature-preserving difference. The candidate incorporates the owner-requested task-first layout
-integrated from `origin/main` `1b940bc`.
+integrated from `origin/main` `1b940bc`, plus the direct Chat tool-protocol controls from `0058160`.
 
-The final portable candidate is bound to clean HEAD `fd8b8560597de8eb7a91b9ba8014ff9cc4e92aa3`, candidate
-manifest SHA-256 `a81c6a5c71fc1cb088163dc649718581f4df09e3ab29c84b0af3010c182d9798`, and explicit
-human approval `user:Arena ask_user uiv2-26-latest-main-approval=approve, 2026-11-07`. It has 48/48
-captures and **2064/2064 checks**. A second independent candidate matched all 48 live and all 48
-reference structural signatures exactly. The subsequent approved `--check` exited 0 with
-**2160/2160 checks**. Exact signatures, image digests, and the approval reference are committed in
+The final portable candidate is bound to clean HEAD `289a4fbc7348fd7410ee823b1dbd8322745d9d74`, candidate
+manifest SHA-256 `66dde5fc52a8bf84f5dcbe17210f80ca1d57dd1c4fa025159027f4fdd9ecc130`, and explicit
+human approval `user:Arena ask_user uiv2-26-chat-protocol-approval=approve, 2026-11-07`. It has 48/48
+captures and **2104/2104 checks**. The independent approved `--check` matched all 48 live and all 48
+reference structural signatures exactly and exited 0 with
+**2200/2200 checks**. Exact signatures, image digests, and the approval reference are committed in
 `product/M5_2_0_UIUX_V2_Cross_Tab_Approval.json`; the candidate PNGs/manifests stay local.
 
 The `21198cd2…` task-first approval was superseded when CI exposed Debian/Ubuntu system-font
 geometry drift. The subsequent `d1065e21…` pinned-font approval was superseded when the latest
-main refined the task composer and integrations disclosure. The walk now restricts both browser pages to the exact Open Sans regular/bold/italic
+main refined the task composer and integrations disclosure. The `a81c6a5c…` approval was then
+superseded by the direct Chat tool-protocol merge and its new required controls. The walk now restricts both browser pages to the exact Open Sans regular/bold/italic
 files shipped by the pinned Chromium package and records their SHA-256 digests; no geometry tolerance
 was added. Diagnostic CI values matched the pinned-font local candidate before the later task-control merge. The earlier
 `efbe1c23…` approval at `cafdd08` was likewise superseded after the task-first merge, not reused.
@@ -78,7 +79,7 @@ Agent-opened comparisons (not a substitute for the human decision):
 - `candidate/dark/1280x800/council/comparison.png`: task, All stages plus four real stages, and
   factual empty output.
 - `candidate/light/1640x900/debate/comparison.png`: question first, explicit models, folded criteria.
-- `candidate/dark/390x844/chat/comparison.png`: Persona and Reasoning share one usable second row.
+- `candidate/dark/390x844/chat/comparison.png`: Persona and Reasoning share one usable second row; Tool protocol and Read-only tools remain explicit and usable.
 
 The earlier mobile review exposed a real 20px Chat select/label overlap; the final CSS correction is
 covered by non-overlap and >=44px select-width assertions in both themes. A previous approved check

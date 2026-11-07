@@ -952,9 +952,22 @@
   ],
   "approval": {
     "required": true,
-    "status": "pending",
+    "status": "approved",
     "artifact": "product/M5_2_0_UIUX_V2_Cross_Tab_Approval.json",
-    "rule": "A human must approve the annotated candidate; the agent cannot infer or self-certify this decision."
+    "rule": "A human must approve the annotated candidate; the agent cannot infer or self-certify this decision.",
+    "human_approval": {
+      "decision": "approved",
+      "reference": "user:Arena ask_user uiv2-26-chat-protocol-approval=approve, 2026-11-07",
+      "recorded_at": "2026-11-07T15:01:40.830886+00:00",
+      "scope": "Structural fidelity of all 48 annotated live/reference comparisons; not a pixel-clone claim."
+    },
+    "candidate": {
+      "manifest": "docs/media/cross-tab-reference-uiv2-26/candidate/candidate-manifest.json",
+      "manifest_sha256": "66dde5fc52a8bf84f5dcbe17210f80ca1d57dd1c4fa025159027f4fdd9ecc130",
+      "git_head": "289a4fbc7348fd7410ee823b1dbd8322745d9d74"
+    },
+    "captures": 48,
+    "approval_sha256": "8532e51ec9dc68de6996d134336685b2533d099e512e1c68c3be483dc060f97f"
   },
   "totals": {
     "panes": 6,

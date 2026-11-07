@@ -626,7 +626,7 @@ REVIEWS: dict[str, dict[str, object]] = {
             "The integrated task-first cross-tab candidate: 48 actual running-app frames, the approved "
             "wireframe rendered at the same variant, and 48 annotated side-by-side comparisons (144 "
             "PNGs) over six tabs, four viewports and light/dark. The authenticated keyboard-driven walk "
-            "completed 2064/2064 independent checks; the separately approved check completed 2160/2160. "
+            "completed 2104/2104 independent checks; the separately approved check completed 2200/2200. "
             "Pixel RGB delta and changed-pixel ratio remain informational, never a blanket pass threshold. "
             "Opened and read by the agent: dark 1640x900 Start (task/blocker first), light 390x844 Harness "
             "(one usable unified composer, closed Sessions/Tools/Inspector and no sideways overflow), dark "
@@ -634,12 +634,12 @@ REVIEWS: dict[str, dict[str, object]] = {
             "stages plus four real stages and factual empty output), light 1640x900 Compare (question, "
             "explicit models and folded criteria), and dark 390x844 Chat. The earlier Chat review found a "
             "real 20px select/label overlap; the final frame retains the corrected two-control second row "
-            "with non-overlap and >=44px select widths asserted in both themes. D1 outlines the visible "
+            "with non-overlap and >=44px select widths asserted in both themes. Explicit Tool protocol and Read-only tools controls are also required, measured and overlap-checked. D1 outlines the visible "
             "Tools disclosure rather than its closed content; D2/D3 mark explicit Inspector and pane deltas. "
             "Pinned Chromium Open Sans files keep the raw geometry portable across Debian and Ubuntu; "
             "there is no cross-host geometry tolerance. The agent review is distinct from the explicit "
-            "human decision: candidate a81c6a5c71fc1cb088163dc649718581f4df09e3ab29c84b0af3010c182d9798 "
-            "was approved through Arena ask_user uiv2-26-latest-main-approval=approve on 2026-11-07."
+            "human decision: candidate 66dde5fc52a8bf84f5dcbe17210f80ca1d57dd1c4fa025159027f4fdd9ecc130 "
+            "was approved through Arena ask_user uiv2-26-chat-protocol-approval=approve on 2026-11-07."
         ),
         "eye": [
             "candidate/dark/1640x900/start/comparison.png",
