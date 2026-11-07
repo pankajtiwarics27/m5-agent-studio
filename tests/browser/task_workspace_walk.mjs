@@ -15,12 +15,24 @@ const checks = [];
 function check(name, pass, detail) { assert(pass, `${name}: ${JSON.stringify(detail)}`); checks.push(name); }
 try {
   const page = await browser.newPage();
-  const errors = [], external = [];
+  const errors = [], external = [], mcpWrites = [];
+  const mcpFixture = { alias: 'ui-proof-server', name: 'Synthetic UI proof', category: 'local',
+    transport: 'stdio', command: 'synthetic-not-executed', args: [], enabled: true,
+    active_tool_count: 7, tools: [], approval_policy: 'always_ask' };
+  let fixtureMcpActive = false, refuseMcp = false;
   page.on('pageerror', error => errors.push(error.message));
   await page.setRequestInterception(true);
   page.on('request', request => {
     if (new URL(request.url()).origin !== base.origin) { external.push(request.url()); return request.abort(); }
-    if (new URL(request.url()).pathname === '/api/harness/run') return; // Hold before the server; Abort is exercised without a model call.
+    const path = new URL(request.url()).pathname;
+    if (fixtureMcpActive && path === '/api/mcp/servers/ui-proof-server' && request.method() === 'PATCH') {
+      const payload = JSON.parse(request.postData()); mcpWrites.push(payload);
+      if (refuseMcp) return request.respond({status: 403, contentType: 'application/json', body: JSON.stringify({detail: 'Synthetic permission refusal: server state kept'})});
+      mcpFixture.enabled = payload.enabled;
+      return request.respond({status: 200, contentType: 'application/json', body: JSON.stringify({servers: [mcpFixture]})});
+    }
+    if (fixtureMcpActive && path === '/api/mcp/servers') return request.respond({status: 200, contentType: 'application/json', body: JSON.stringify({servers: [mcpFixture], presets: {}})});
+    if (path === '/api/harness/run') return; // Hold before the server; Abort is exercised without a model call.
     return request.continue();
   });
   await page.evaluateOnNewDocument(token => sessionStorage.setItem('m5_api_token', token), token);
@@ -43,11 +55,17 @@ try {
             tools: document.getElementById('studioTools').open,
             settings: document.getElementById('harnessTaskSettings').open,
             disabled: document.getElementById('harnessRunBtn').disabled,
+            controls: ['harnessLeadModel', 'harnessPolicy', 'harnessAttachBtn', 'harnessWorkflowMode', 'harnessRunBtn'].map(id => ({id, ...rect(document.getElementById(id))})),
+            actionRow: rect(document.querySelector('.task-composer-actions')),
+            settingsControl: rect(document.querySelector('#harnessTaskSettings > summary')),
             side: rect(document.getElementById('harnessSessionsPanel')),
             nav: rect(document.querySelector('.mode-tabs')) };
         });
         check(`composer ${theme}/${compact}/${width}`, layout.boxes.every(b => b.width > 0 && b.left >= -1 && b.right <= width + 1 && b.top >= 0 && b.bottom <= height), layout);
         check(`secondary chrome ${theme}/${compact}/${width}`, layout.inspector === 'none' && !layout.tools && !layout.settings && layout.disabled && layout.pageOverflow <= 1, layout);
+        check(`uniform controls ${theme}/${compact}/${width}`, [...layout.controls, layout.settingsControl].every(b => Math.abs(b.height - (compact ? 32 : 44)) < 1), layout);
+        check(`readable workflow ${theme}/${compact}/${width}`, layout.controls.find(b => b.id === 'harnessWorkflowMode').width >= 80, layout);
+        check(`single action row ${theme}/${compact}/${width}`, layout.controls.filter(b => ['harnessAttachBtn','harnessWorkflowMode','harnessRunBtn'].includes(b.id)).every(b => Math.abs(b.top - layout.actionRow.top) < 1) && Math.abs(layout.settingsControl.top - layout.actionRow.top) < 1, layout);
         if (width >= 1280) check(`one left surface ${width}`, Math.abs(layout.side.left - layout.nav.left) < 1 && Math.abs(layout.side.width - layout.nav.width) < 1 && layout.side.top >= layout.nav.bottom - 1, layout);
       }
     }
@@ -72,7 +90,20 @@ try {
   await page.click('[aria-label="Close inspector"]');
   check('inspector close restores toggle state', await page.$eval('#monitorToggleBtn', el => el.getAttribute('aria-expanded') === 'false'));
   await page.click('#studioTools > summary');
+  await page.click('#integrationSkillsTab');
   check('integrations are reachable', await page.$eval('#activeSkillsPills', el => el.getBoundingClientRect().width > 0));
+  // Exercise the actual guarded PATCH handler; intercept it before any server write.
+  fixtureMcpActive = true;
+  await page.evaluate(server => { mcpServers = [server]; setIntegrationKind('mcp'); renderMcpUI(); }, mcpFixture);
+  await page.focus('.integration-row'); await page.keyboard.press('Enter');
+  await page.waitForFunction(() => document.querySelector('.integration-row').getAttribute('aria-pressed') === 'false');
+  check('real MCP toggle sends only enabled state', mcpWrites.length === 1 && Object.keys(mcpWrites[0]).join() === 'enabled' && mcpWrites[0].enabled === false, mcpWrites);
+  check('disabled MCP does not contribute tools', await page.$eval('#mcpToolsCountBadge', el => el.textContent === '0'));
+  refuseMcp = true;
+  await page.focus('.integration-row'); await page.keyboard.press('Space');
+  await page.waitForFunction(() => document.getElementById('toastStack').textContent.includes('Synthetic permission refusal'));
+  await page.waitForFunction(() => document.querySelector('.integration-row').getAttribute('aria-pressed') === 'false');
+  check('refused toggle retains state and policy', await page.evaluate(() => !mcpServers[0].enabled && mcpServers[0].approval_policy === 'always_ask'));
   await page.click('#studioTools > summary');
   await page.setViewport({ width: 390, height: 844 });
   await page.click('#harnessSessionsToggle');
@@ -95,10 +126,22 @@ try {
   await page.evaluate(() => startFreshHarnessDraft());
   if (process.env.STUDIO_TASK_SCREENSHOT_DIR) {
     await page.select('#harnessPolicy', 'standard');
+    await page.$eval('#toastStack', el => el.replaceChildren());
     mkdirSync(process.env.STUDIO_TASK_SCREENSHOT_DIR, { recursive: true });
     for (const [name, width] of [['desktop', 1568], ['mobile', 390]]) {
       await page.setViewport({ width, height: 900 });
       await page.screenshot({ path: resolve(process.env.STUDIO_TASK_SCREENSHOT_DIR, `${name}.png`) });
+    }
+    await page.evaluate(() => {
+      mcpServers = Array.from({length: 130}, (_, i) => ({alias: `configured-server-${i}`, name: `Synthetic server ${i}`, category: 'local', transport: 'stdio', args: [], tools: [], enabled: i < 3, active_tool_count: i === 0 ? 45 : 5, approval_policy: 'always_ask'}));
+      installedSkills = Array.from({length: 130}, (_, i) => ({id: `skill-${i}`, name: `Synthetic skill ${i}`, description: 'Synthetic preview'}));
+      selectedSkills = new Set(['skill-0', 'skill-1']); renderSkillsUI(); renderMcpUI();
+      document.getElementById('studioTools').open = true;
+    });
+    for (const [name, width, theme] of [['integrations-light',1568,'light'], ['integrations-dark',1568,'dark'], ['integrations-mobile',390,'light']]) {
+      await page.setViewport({width, height: 900});
+      await page.evaluate(async theme => { applyTheme(theme); await new Promise(resolve => setTimeout(resolve, 250)); }, theme);
+      await page.screenshot({path: resolve(process.env.STUDIO_TASK_SCREENSHOT_DIR, `${name}.png`)});
     }
   }
   check('no browser boot failures', errors.length === 0, errors);

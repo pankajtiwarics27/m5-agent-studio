@@ -155,7 +155,7 @@ def test_the_count_of_non_native_controls_is_pinned(sources):
         ) + '<span class="chip" role="button" tabindex="0" data-key-activate onclick="noop()">x</span>'
 
     report = sources(html_transform=add_one)
-    assert "the non-native controls are the nine that are still mouse-only: starter cards, provider chips, skill pills and session rows" in failing(report)
+    assert "the remaining seven non-native controls retain delegated keyboard activation" in failing(report)
 
 
 # ── 2. one delegated handler ───────────────────────────────────────────────
@@ -418,3 +418,11 @@ def test_the_ledger_records_this_story_as_done():
     assert tracking.get("status") == "done", f"status is {tracking.get('status')!r}"
     assert tracking.get("evidence"), "a done story carries evidence"
     assert tracking.get("test_results"), "a done story carries the commands that ran"
+
+
+def test_configured_integration_toggles_cannot_revert_to_non_native_pills(sources):
+    report = sources(html_transform=lambda html: html.replace(
+        '<button type="button" class="skill-pill integration-row',
+        '<span class="skill-pill integration-row', 1,
+    ))
+    assert "configured integration toggles are native pressed-state buttons" in failing(report)

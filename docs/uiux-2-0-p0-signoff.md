@@ -8,7 +8,7 @@ and what a revert does and does not touch.
 * Status: **historical-approval-unbound** — Signed in the ledger; this page reports the historical owner record, not a new approval.
 * Approval binding: **unbound** — The historical record has no approved input snapshot and does not establish approval of current inputs.
 * Pinned baseline source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (input artifacts are hashed separately).
-* 6 panes · 21 preserved capabilities · 237 markup controls (130 chrome, 107 panes) · 71 rendered by script.
+* 6 panes · 21 preserved capabilities · 242 markup controls (135 chrome, 107 panes) · 72 rendered by script.
 * 118 routes exist, 71 with a resolved or possible caller, 47 with none observed and 0 unknown due to unresolved edges; 48 state-changing candidates traced.
 * 0 fetch site(s) have 0 unresolved URL or method edge(s) (0 method).
 * Baseline screenshots recorded in the index: 6 of 6 (not provenance-verified).
@@ -28,7 +28,7 @@ separates the historical signature from any explicit binding to current input di
 | # | Ask | Evidence in this package |
 |---|---|---|
 | 1 | Accept the preservation matrix as the baseline P1 must preserve | 21 capability rows across 6 panes, carried row for row from product/M5_2_0_UIUX_Autonomous_Roadmap.json |
-| 2 | Accept the control inventory as the list of controls that must stay reachable | 237 markup controls (130 chrome, 107 panes) plus 71 rendered by script |
+| 2 | Accept the control inventory as the list of controls that must stay reachable | 242 markup controls (135 chrome, 107 panes) plus 72 rendered by script |
 | 3 | Review route candidates and preserve confirmed browser-reachable routes and their gates | 118 routes exist; 71 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 48 state-changing candidates; the lexical scan is not exhaustive |
 | 4 | Accept that P1 may not weaken the shared boundary | host allowlist (400), cross-origin rejection (403), bearer token (401, 503 when unconfigured), rate limit (429) and body-size limit (413), read from the middleware itself |
 | 5 | Review the rollback path and the state effects of each story | this package adds no migration or privilege; review each story's actual merge, revert and recovery effects, then regenerate artifacts and re-run the checks below |
@@ -121,9 +121,9 @@ An agent session over a workspace, with the diff, approval, and abort controls.
 | button | harnessTimelineReplay | Replay log | replayHarnessLog() |
 | button | harnessTimelineResync | Resync | harnessResyncFromSnapshot('operator') |
 | textarea | harnessPromptInput | — | — |
-| button | harnessAttachBtn | Attach context | openContextModal() |
 | select | harnessLeadModel | — | — |
 | select | harnessPolicy | Standard (Ask before Bash) Autonomous (Auto Build & Test) Plan & Audit (Read-Only) | — |
+| button | harnessAttachBtn | Attach context | openContextModal() |
 | select | harnessWorkflowMode | Autonomous Turn (Step Loop) Plan, Build, Verify (GSD 3-Wave) Agile SDLC Factory (Full Build) Agile SDLC Board & Backlog… | — |
 | summary | — | Task settings | — |
 | button | — | Close | document.getElementById('harnessTaskSettings').open = false |
@@ -322,7 +322,7 @@ A single streaming conversation with the selected model.
 
 ## Shared chrome
 
-130 controls: button 75, input 31, select 12, summary 6, textarea 6.
+135 controls: button 79, input 32, select 12, summary 6, textarea 6.
 
 Tabs, command palette, modals and the shared toolbar. A pane story may restyle chrome, but every control here stays reachable: the inventory test fails if one disappears.
 
@@ -385,11 +385,11 @@ provenance; a matching snapshot cannot clear separate review holds.
 | Input | Current digest | Owner-recorded digest |
 |---|---|---|
 | `ledger_content_sha256` | `d4137cf1e214931953734cc97943732ea5204b5884c6aa26339cc7c27ed5908b` | `not recorded` |
-| `source_manifest_sha256` | `c93d284c32bdfa163749555f24745ab2100778a77893a1048a199ce32ab63715` | `not recorded` |
-| `control_inventory_sha256` | `3d74229e3d4ef423f80c43644ba20ce84e0051d7c50fda0ec73142c576fea243` | `not recorded` |
-| `route_map_sha256` | `19a3b972224fe25b2b5d8da0d06751ebb79e983b1f20b46dba59bfe7087bc685` | `not recorded` |
-| `authorization_trace_sha256` | `7e4da04df8c1bccc3a248dc94384cb4876b124ab98fc489a58283f460505bff1` | `not recorded` |
-| `frontend_sha256` | `9a83b69e49691f36bef19c98c04dce7cccaa25b60f67ea3bb49aec68af1176ef` | `not recorded` |
+| `source_manifest_sha256` | `ae4f567c2ac442f3f13b507b368132244655877973dfcf39ce9aadb955931961` | `not recorded` |
+| `control_inventory_sha256` | `f86e3b7f82133a761881406ae870c930f434f6aee91be92c91519fa02a8e9d37` | `not recorded` |
+| `route_map_sha256` | `bba6c50beb997ce64e9f6d2ab01f147baac9f6520749529e4d4027ba45a21e62` | `not recorded` |
+| `authorization_trace_sha256` | `da8a096a0c68edcc96a8274ae5fd3d1cb3ca88c9a83e14a84d1481746e9bbbd7` | `not recorded` |
+| `frontend_sha256` | `e934c6b7369f15ae5cd1899b8a8906b65a3bc6fa579384c3647d4033d86de89a` | `not recorded` |
 | `screenshot_manifest_sha256` | `b488bf453ae260b6564ae592f0455e3d70cff3121dca1e7c823c7abb270b44d3` | `not recorded` |
 | `screenshot_index_sha256` | `16b0620ca1d02a1b181ad15b3a2b0c6aae9e7aa539654d27ed80d9147189634e` | `not recorded` |
 | `generator_sha256` | `6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65` | `not recorded` |
