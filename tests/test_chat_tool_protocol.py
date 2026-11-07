@@ -289,8 +289,12 @@ def test_native_stream_must_explicitly_finish_before_any_call_frame(monkeypatch,
     asyncio.run(run())
 
 
-def test_native_ollama_wire_reaches_real_chat_inventory_and_followup(configured, monkeypatch):
+@pytest.mark.parametrize("large", [False, True])
+def test_native_ollama_wire_reaches_real_chat_inventory_and_followup(configured, monkeypatch, large):
     insert_server()
+    if large:
+        for i in range(8):
+            insert_server(alias=f"server-{i}", tools=[{"name": "tool_" + "x" * 100}])
     seen = []
     async def validate(*args, **kwargs):
         pass
@@ -299,12 +303,20 @@ def test_native_ollama_wire_reaches_real_chat_inventory_and_followup(configured,
         body = json.loads(request.content)
         seen.append(body)
         assert request.url.path == "/v1/chat/completions"
-        assert "mcp_list_servers" in {s["function"]["name"] for s in body["tools"]}
+        assert {"mcp_list_servers", "ctx_search"} <= {s["function"]["name"] for s in body["tools"]}
         if len(seen) == 1:
             choice = {"delta": {"tool_calls": [{"index": 0, "id": "inventory", "type": "function", "function": {"name": "mcp_list_servers", "arguments": "{}"}}]}, "finish_reason": "tool_calls"}
+        elif large and len(seen) == 2:
+            import re
+            context = body["messages"][-1]["content"]
+            assert "Caveman" in context
+            doc_id = re.search(r"ctx-[0-9a-f]{8}", context).group()
+            choice = {"delta": {"tool_calls": [{"index": 0, "function": {"name": "ctx_search", "arguments": json.dumps({"doc_id": doc_id})}}]}, "finish_reason": "tool_calls"}
         else:
-            assert "Fixture Server" in json.dumps(body["messages"])
+            assert "Fixture Server" in body["messages"][-1]["content"]
             assert "UNTRUSTED_DATA_JSON" in json.dumps(body["messages"])
+            if large:
+                assert "server-7" in body["messages"][-1]["content"]
             choice = {"delta": {"content": "Inventory verified."}, "finish_reason": "stop"}
         return httpx.Response(200, text='data: ' + json.dumps({"choices": [choice]}) + '\n\ndata: [DONE]\n\n')
     async def run():
@@ -313,7 +325,7 @@ def test_native_ollama_wire_reaches_real_chat_inventory_and_followup(configured,
             async with httpx.AsyncClient(transport=httpx.ASGITransport(app=studio.app), base_url="http://testserver") as client:
                 return await client.post("/api/chat/stream", headers={"Authorization": "Bearer fixture-token-not-a-secret-0123456789"}, json={"model": "ollama::fixture-model", "messages": [{"role": "user", "content": "Inventory MCP servers"}]})
     trace = events(asyncio.run(run()).text)
-    assert len(seen) == 2
+    assert len(seen) == (3 if large else 2)
     assert any(kind == "chat_tool" and data["ok"] for kind, data in trace)
     assert trace[-1][0] == "done"
 
@@ -335,3 +347,102 @@ def test_tool_schemas_are_request_scoped_under_concurrent_streams():
 def test_native_call_collection_must_be_a_list():
     with pytest.raises(ValueError, match="collection"):
         studio._native_call_delta({}, {"function": {"name": "mcp_list_servers"}})
+
+
+@pytest.mark.parametrize("protocol", ["native", "tagged"])
+@pytest.mark.parametrize("query", ["", "Fixture"])
+def test_large_inventory_can_be_retrieved_from_context_vault(configured, monkeypatch, protocol, query):
+    """Eight servers cross the real compression threshold, not a mocked tiny result."""
+    import re
+    for i in range(8):
+        insert_server(alias=f"server-{i}", enabled=i != 1,
+                      tools=[] if i == 2 else [{"name": f"cached_tool_{j}_" + "x" * 40} for j in range(12)])
+    def forbidden(*args, **kwargs):
+        pytest.fail("Cached retrieval must not resolve credentials, search files, or connect to MCP")
+    monkeypatch.setattr(studio, "_keyring_read", forbidden)
+    monkeypatch.setattr(studio, "_resolve_mapping", forbidden)
+    monkeypatch.setattr(studio, "list_mcp_servers", forbidden)
+    monkeypatch.setattr(studio, "_execute_mcp_tool_call_inner", forbidden)
+    rounds = []
+    async def stream(_client, _model, messages, *_args):
+        rounds.append([dict(m) for m in messages])
+        if protocol == "native":
+            names = {s["function"]["name"] for s in studio._CHAT_NATIVE_TOOLS.get()}
+            assert "ctx_search" in names
+        else:
+            assert studio._CHAT_NATIVE_TOOLS.get() is None
+        if len(rounds) == 1:
+            assert "ctx_search" in messages[0]["content"]
+            yield {"type": "content", "text": GEMMA}
+        elif len(rounds) == 2:
+            content = messages[-1]["content"]
+            assert "Caveman" in content and "list len=8" in content
+            assert "not oc_read" in messages[0]["content"]
+            doc_id = re.search(r"ctx-[0-9a-f]{8}", content).group()
+            yield {"type": "content", "text": '<tool_call>' + json.dumps({"name": "ctx_search", "arguments": {"doc_id": doc_id, "query": query}}) + '</tool_call>'}
+        else:
+            content = messages[-1]["content"]
+            for i in range(8):
+                assert f"server-{i}" in content
+            assert "UNTRUSTED_DATA_JSON" in content
+            assert "SECRET" not in content
+            yield {"type": "content", "text": "Cached inventory retrieved: server-1 disabled; server-2 unsynced. No connections tested."}
+    monkeypatch.setattr(studio, "stream_any_model", stream)
+    result = events(post_chat(tool_protocol=protocol).text)
+    tools = [data for kind, data in result if kind == "chat_tool"]
+    assert [t["tool"] for t in tools] == ["mcp_list_servers", "ctx_search"]
+    assert all(t["ok"] for t in tools)
+    assert len(rounds) == 3 and result[-1][0] == "done"
+    assert studio._CHAT_NATIVE_TOOLS.get() is None
+
+
+@pytest.mark.parametrize("query", ["", "privatepayload"])
+def test_context_vault_doc_id_never_bypasses_session_scope(configured, query):
+    _, meta = studio.sandbox_tool_output_if_large("session-owner", "fixture", "privatepayload\n" * 400)
+    doc_id = meta["doc_id"]
+    assert "privatepayload" in studio.search_ctx_vault("session-owner", query, doc_id)
+    assert "No FTS5 chunks matched" in studio.search_ctx_vault("session-other", query, doc_id)
+
+
+def test_context_vault_retrieval_limit_is_bounded(configured):
+    _, meta = studio.sandbox_tool_output_if_large("session-owner", "fixture", "needle " * 200 + "\n" * 1 + ("needle " * 200 + "\n") * 20)
+    for limit in (-1, 10000):
+        result = studio.search_ctx_vault("session-owner", "needle", meta["doc_id"], limit=limit)
+        assert result.count("--- Hit #") <= 6
+
+
+def test_chat_cannot_retrieve_another_sessions_vault_document(configured, monkeypatch):
+    _, meta = studio.sandbox_tool_output_if_large("another-session", "fixture", "needle PRIVATE_OTHER_SESSION_PAYLOAD\n" * 200)
+    calls = 0
+    async def stream(*args):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            yield {"type": "content", "text": '<tool_call>' + json.dumps({"name": "ctx_search", "arguments": {"doc_id": meta["doc_id"]}}) + '</tool_call>'}
+        else:
+            assert "PRIVATE_OTHER_SESSION_PAYLOAD" not in args[2][-1]["content"]
+            assert "No FTS5 chunks matched" in args[2][-1]["content"]
+            yield {"type": "content", "text": "That document is not available in this request."}
+    monkeypatch.setattr(studio, "stream_any_model", stream)
+    trace = events(post_chat().text)
+    assert trace[-1][0] == "done" and calls == 2
+
+
+def test_standalone_large_inventory_retrieval_without_sibling_sources(tmp_path):
+    import os
+    from pathlib import Path
+    import shutil
+    import subprocess
+    import sys
+    root = Path(__file__).resolve().parents[1]
+    isolated = tmp_path / "standalone"
+    isolated.mkdir()
+    shutil.copy2(root / "studio.py", isolated / "app.py")
+    shutil.copy2(Path(__file__), isolated / "test_protocol.py")
+    env = os.environ.copy()
+    env.pop("PYTHONPATH", None)
+    env.update(HOME=str(tmp_path / "home"), STUDIO_DB_PATH=str(tmp_path / "standalone.db"))
+    code = "import app, pytest; assert app.runtime_persistence is app; raise SystemExit(pytest.main(['-q','test_protocol.py','-k','(large_inventory or session_scope or retrieval_limit or native_ollama_wire or another_sessions) and not standalone','--tb=short']))"
+    result = subprocess.run([sys.executable, "-c", code], cwd=isolated, env=env, capture_output=True, text=True, timeout=60)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "10 passed" in result.stdout
