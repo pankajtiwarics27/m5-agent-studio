@@ -294,9 +294,13 @@ def build_inventory() -> dict[str, object]:
         stream_calls == 1 and stream_mentions == 1,
         f"{stream_calls} call site(s), {stream_mentions} mention(s)",
     ))
+    # Scope this to tab activation: another collapse (for example on resize) cannot
+    # prove that entering Chat closes an already-open inspector.
+    switch_tab = re.search(r"function switchTab\([^\n]*\{([\s\S]*?)\n  \}", code)
+    tab_code = switch_tab.group(1) if switch_tab else ""
     checks.append(check(
         "Chat still opens without a telemetry rail",
-        'layout.classList.add("rail-collapsed")' in code and 'if (tab === "chat")' in code,
+        'layout.classList.add("rail-collapsed")' in tab_code and 'if (tab === "chat")' in tab_code,
         "the rail follows the pane; Chat has no inspector context",
     ))
     checks.append(check(

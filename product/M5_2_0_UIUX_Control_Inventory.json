@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "b09835677705d4413d619b5d60361f4c92caf75679511369d2bdcf93c97850bb",
+  "frontend_sha256": "9a83b69e49691f36bef19c98c04dce7cccaa25b60f67ea3bb49aec68af1176ef",
   "panes": [
     {
       "dom_id": "start",
@@ -128,15 +128,15 @@
     {
       "dom_id": "harness",
       "section_id": "pane-harness",
-      "control_count": 30,
+      "control_count": 34,
       "counts": {
-        "button": 16,
+        "button": 18,
         "input": 3,
         "select": 9,
-        "summary": 1,
+        "summary": 3,
         "textarea": 1
       },
-      "controls_without_id": 9,
+      "controls_without_id": 12,
       "controls_without_label": 0,
       "controls": [
         {
@@ -159,103 +159,6 @@
           "aria-label": "Filter harness sessions by title, id, status or policy",
           "placeholder": "Filter sessions…",
           "oninput": "renderHarnessSidebar()"
-        },
-        {
-          "tag": "button",
-          "type": "button",
-          "class": "btn btn-xs",
-          "title": "Save as default project directory (creates folder if missing)",
-          "onclick": "saveWorkspaceDirectory()",
-          "text": "Set / Create"
-        },
-        {
-          "tag": "input",
-          "id": "harnessWorkspaceInput",
-          "type": "text",
-          "placeholder": "~/Projects/my-app",
-          "onchange": "syncProjectDirInputs(this.value)"
-        },
-        {
-          "tag": "select",
-          "id": "harnessRecentDirsSelect",
-          "aria-label": "Recent project directories",
-          "onchange": "if(this.value)saveWorkspaceDirectory(this.value)"
-        },
-        {
-          "tag": "input",
-          "id": "harnessUseWorktree",
-          "type": "checkbox"
-        },
-        {
-          "tag": "select",
-          "id": "harnessLeadModel",
-          "onchange": "handleModelSelectChange(this, patchActiveHarnessSettings)"
-        },
-        {
-          "tag": "select",
-          "id": "harnessCriticModel",
-          "onchange": "handleModelSelectChange(this, patchActiveHarnessSettings)"
-        },
-        {
-          "tag": "select",
-          "id": "harnessPolicy",
-          "onchange": "patchActiveHarnessSettings()",
-          "text": "Standard (Ask before Bash) Autonomous (Auto Build & Test) Plan & Audit (Read-Only)"
-        },
-        {
-          "tag": "summary",
-          "text": "Run settings"
-        },
-        {
-          "tag": "select",
-          "id": "harnessEfficiencyMode",
-          "title": "Ponytail v5 Senior Dev Ladder (-53% code, 98% test rate) + Caveman ASD-STE100 Concise Mode",
-          "data": {
-            "data-default": "ponytail+concise"
-          },
-          "text": "Ponytail + Concise Ponytail Senior Concise (STE100) Standard Verbose"
-        },
-        {
-          "tag": "select",
-          "id": "harnessReasoning",
-          "data": {
-            "data-default": "low"
-          },
-          "text": "Off (Fastest) Low Medium xHigh"
-        },
-        {
-          "tag": "select",
-          "id": "harnessMaxSteps",
-          "data": {
-            "data-default": "10"
-          },
-          "text": "6 steps 10 steps 16 steps 24 steps"
-        },
-        {
-          "tag": "select",
-          "id": "harnessSessionActionSelect",
-          "aria-label": "Session actions",
-          "onchange": "runHarnessSessionAction(this)",
-          "text": "Session Actions… Inspect Git Status & Diff Permissions & Revocations Compact Session Context (≤2 KB) Open Agile SDLC Product Board Verification & Artifacts"
-        },
-        {
-          "tag": "button",
-          "id": "harnessAbortBtn",
-          "class": "btn btn-danger",
-          "onclick": "abortHarnessRun()",
-          "text": "Abort"
-        },
-        {
-          "tag": "button",
-          "id": "harnessPermissionBadge",
-          "type": "button",
-          "class": "harness-perm-badge",
-          "title": "Permissions this session holds, and the way to take them back",
-          "onclick": "openHarnessGrants()",
-          "data": {
-            "data-count": "0"
-          },
-          "text": "No permissions"
         },
         {
           "tag": "button",
@@ -352,8 +255,28 @@
           "id": "harnessPromptInput",
           "aria-label": "Your task for the Harness",
           "aria-describedby": "harnessRunHint",
-          "placeholder": "Describe an engineering task, 3-Wave Spec, or full product build for your Project Directory...",
+          "placeholder": "What would you like to build or change?",
           "rows": "2"
+        },
+        {
+          "tag": "button",
+          "id": "harnessAttachBtn",
+          "type": "button",
+          "class": "btn",
+          "title": "Pin knowledge documents or explore the code graph — pinned documents are included in this run's context",
+          "onclick": "openContextModal()",
+          "text": "Attach context"
+        },
+        {
+          "tag": "select",
+          "id": "harnessLeadModel",
+          "onchange": "handleModelSelectChange(this, patchActiveHarnessSettings)"
+        },
+        {
+          "tag": "select",
+          "id": "harnessPolicy",
+          "onchange": "patchActiveHarnessSettings()",
+          "text": "Standard (Ask before Bash) Autonomous (Auto Build & Test) Plan & Audit (Read-Only)"
         },
         {
           "tag": "select",
@@ -361,6 +284,91 @@
           "aria-label": "Harness workflow mode",
           "onchange": "syncHarnessWorkflowModeUI()",
           "text": "Autonomous Turn (Step Loop) Plan, Build, Verify (GSD 3-Wave) Agile SDLC Factory (Full Build) Agile SDLC Board & Backlog…"
+        },
+        {
+          "tag": "summary",
+          "text": "Task settings"
+        },
+        {
+          "tag": "button",
+          "type": "button",
+          "class": "btn btn-xs",
+          "onclick": "document.getElementById('harnessTaskSettings').open = false",
+          "text": "Close"
+        },
+        {
+          "tag": "button",
+          "type": "button",
+          "class": "btn btn-xs",
+          "title": "Save as default project directory (creates folder if missing)",
+          "onclick": "saveWorkspaceDirectory()",
+          "text": "Set / Create"
+        },
+        {
+          "tag": "input",
+          "id": "harnessWorkspaceInput",
+          "type": "text",
+          "placeholder": "~/Projects/my-app",
+          "onchange": "syncProjectDirInputs(this.value)"
+        },
+        {
+          "tag": "select",
+          "id": "harnessRecentDirsSelect",
+          "aria-label": "Recent project directories",
+          "onchange": "if(this.value)saveWorkspaceDirectory(this.value)"
+        },
+        {
+          "tag": "input",
+          "id": "harnessUseWorktree",
+          "type": "checkbox"
+        },
+        {
+          "tag": "select",
+          "id": "harnessCriticModel",
+          "onchange": "handleModelSelectChange(this, patchActiveHarnessSettings)"
+        },
+        {
+          "tag": "summary",
+          "text": "Run settings"
+        },
+        {
+          "tag": "select",
+          "id": "harnessEfficiencyMode",
+          "title": "Ponytail v5 Senior Dev Ladder (-53% code, 98% test rate) + Caveman ASD-STE100 Concise Mode",
+          "data": {
+            "data-default": "ponytail+concise"
+          },
+          "text": "Ponytail + Concise Ponytail Senior Concise (STE100) Standard Verbose"
+        },
+        {
+          "tag": "select",
+          "id": "harnessReasoning",
+          "data": {
+            "data-default": "low"
+          },
+          "text": "Off (Fastest) Low Medium xHigh"
+        },
+        {
+          "tag": "select",
+          "id": "harnessMaxSteps",
+          "data": {
+            "data-default": "10"
+          },
+          "text": "6 steps 10 steps 16 steps 24 steps"
+        },
+        {
+          "tag": "select",
+          "id": "harnessSessionActionSelect",
+          "aria-label": "Session actions",
+          "onchange": "runHarnessSessionAction(this)",
+          "text": "Session Actions… Inspect Git Status & Diff Permissions & Revocations Compact Session Context (≤2 KB) Open Agile SDLC Product Board Verification & Artifacts"
+        },
+        {
+          "tag": "button",
+          "id": "harnessAbortBtn",
+          "class": "btn btn-danger",
+          "onclick": "abortHarnessRun()",
+          "text": "Abort"
         },
         {
           "tag": "button",
@@ -371,12 +379,27 @@
         },
         {
           "tag": "button",
-          "id": "harnessAttachBtn",
+          "id": "harnessPermissionBadge",
           "type": "button",
-          "class": "btn",
-          "title": "Pin knowledge documents or explore the code graph — pinned documents are included in this run's context",
-          "onclick": "openContextModal()",
-          "text": "Attach context"
+          "class": "harness-perm-badge",
+          "title": "Permissions this session holds, and the way to take them back",
+          "onclick": "openHarnessGrants()",
+          "data": {
+            "data-count": "0"
+          },
+          "text": "No permissions"
+        },
+        {
+          "tag": "button",
+          "id": "harnessProjectSummary",
+          "type": "button",
+          "class": "project-summary",
+          "onclick": "document.getElementById('harnessTaskSettings').open = true; document.getElementById('harnessWorkspaceInput').focus()",
+          "text": "Choose a project"
+        },
+        {
+          "tag": "summary",
+          "text": "Review run details"
         }
       ]
     },
@@ -830,12 +853,12 @@
     }
   ],
   "chrome": {
-    "control_count": 127,
+    "control_count": 130,
     "counts": {
-      "button": 73,
+      "button": 75,
       "input": 31,
       "select": 12,
-      "summary": 5,
+      "summary": 6,
       "textarea": 6
     },
     "controls": [
@@ -1685,20 +1708,23 @@
         "text": "Spawn & Convene 4-LLM Council"
       },
       {
+        "tag": "button",
+        "id": "harnessSessionsToggle",
+        "type": "button",
+        "class": "btn btn-xs sessions-toggle",
+        "onclick": "toggleHarnessSessions()",
+        "text": "Sessions"
+      },
+      {
+        "tag": "summary",
+        "text": "Tools & integrations"
+      },
+      {
         "tag": "select",
         "id": "integrationsQuickMenu",
         "aria-label": "Open studio tools and integrations",
         "onchange": "openIntegrationFromMenu(this)",
         "text": "Tools & Integrations… Cloud & Local Providers MCP Tools Hub Agent Skills (SKILL.md) Knowledge & CodeGraph External Harness CLI Bridge"
-      },
-      {
-        "tag": "button",
-        "id": "monitorToggleBtn",
-        "class": "btn btn-xs",
-        "aria-label": "Toggle the contextual inspector",
-        "title": "Hide the contextual inspector",
-        "onclick": "toggleMonitorRail()",
-        "text": "Inspector"
       },
       {
         "tag": "button",
@@ -1709,16 +1735,33 @@
         "text": "Unload models"
       },
       {
+        "tag": "button",
+        "id": "monitorToggleBtn",
+        "class": "btn btn-xs",
+        "aria-label": "Toggle the contextual inspector",
+        "title": "Show the contextual inspector",
+        "onclick": "toggleMonitorRail()",
+        "text": "Inspector"
+      },
+      {
         "tag": "summary",
         "text": "Run evidenceContracts, handoffs and measured verdicts"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn btn-xs",
+        "aria-label": "Close inspector",
+        "onclick": "toggleMonitorRail(true)",
+        "text": "Close"
       }
     ]
   },
   "totals": {
     "panes": 6,
-    "markup_controls": 230,
-    "pane_controls": 103,
-    "chrome_controls": 127,
+    "markup_controls": 237,
+    "pane_controls": 107,
+    "chrome_controls": 130,
     "script_rendered_controls": 71,
     "script_rendered_by_function": {
       "ensureStageCardMounted": 1,

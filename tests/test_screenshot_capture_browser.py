@@ -675,3 +675,15 @@ def test_integrations_strip_wraps_without_horizontal_scroll(browser_env: dict[st
     )
     assert result.returncode == 0, f"{result.stdout}\n{result.stderr}"
     assert json.loads(result.stdout)["passed"] == 21
+
+
+def test_task_first_workspace_preserves_visible_controls(browser_env: dict[str, str]) -> None:
+    """Both themes/densities, responsive composer and real settings/drawer handlers."""
+    with isolated_demo(browser_env) as instance:
+        result = subprocess.run(
+            ["node", str(ROOT / "tests" / "browser" / "task_workspace_walk.mjs"),
+             "--base-url", instance["url"], "--token", instance["token"]],
+            cwd=ROOT, env=browser_env, capture_output=True, text=True, timeout=120, check=False,
+        )
+    assert result.returncode == 0, f"{result.stdout}\n{result.stderr}"
+    assert json.loads(result.stdout)["passed"] >= 45

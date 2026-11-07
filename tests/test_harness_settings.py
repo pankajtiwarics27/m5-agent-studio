@@ -437,8 +437,8 @@ def test_a_control_that_lost_its_handler_is_caught(sources):
 def test_an_unnamed_control_is_caught(sources):
     payload = sources(
         html_transform=lambda text: text.replace(
-            '<label class="field-lbl" style="margin-bottom:2px;" for="harnessLeadModel">Lead Agent Model</label>',
-            '<label class="field-lbl" style="margin-bottom:2px;">Lead Agent Model</label>',
+            '<label class="field-lbl" style="margin-bottom:2px;" for="harnessLeadModel">Model</label>',
+            '<label class="field-lbl" style="margin-bottom:2px;">Model</label>',
             1,
         )
     )

@@ -2120,9 +2120,106 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     #pane-council .pipeline-evidence-details > summary { align-items: flex-start; flex-direction: column; gap: 3px; }
     #pane-council .pipeline-recovery[data-state="recorded"] .presentation > div { align-items: flex-start; }
   }
+/* Owner-requested task-first desktop layout. Existing controls remain the source of truth. */
+.workspace-toolbar { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 4px 24px; border-bottom: 1px solid var(--border); flex: 0 0 auto; position: relative; z-index: 23; }
+.workspace-caption { color: var(--text-dim); font-size: 12px; margin-right: auto; }
+.studio-tools > summary, .harness-task-settings > summary, .harness-run-review > summary, .harness-examples > summary { cursor: pointer; color: var(--text-dim); font-size: 12px; padding: 7px 9px; border-radius: var(--radius-sm); }
+.studio-tools > summary:hover, .harness-task-settings > summary:hover, .harness-run-review > summary:hover { background: var(--bg-hover); color: var(--text); }
+.studio-tools > .skills-strip { position: absolute; right: 16px; top: calc(100% + 4px); width: min(720px, calc(100vw - 40px)); max-height: 60dvh; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px; box-shadow: 0 12px 36px rgba(0,0,0,.14); }
+.sessions-toggle { display: none; }
+.inspector-title-row { display: flex; align-items: center; justify-content: space-between; }
+#pane-harness > .pane-title { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); }
+body[data-active-pane="harness"] #mainLayout { padding-left: 240px; }
+body[data-active-pane="harness"] .mode-tabs { width: 240px; height: 320px; bottom: auto; padding: 12px; gap: 4px; }
+body[data-active-pane="harness"] .mode-tab { justify-content: flex-start; }
+body[data-active-pane="harness"] .mode-tab span { display: inline; }
+#pane-harness .harness-shell { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); min-height: 0; }
+#pane-harness .harness-sidebar { position: fixed; display: flex; left: 0; top: calc(var(--header-height) + 320px); bottom: 0; width: 240px; z-index: 20; border-right: 1px solid var(--border); border-top: 1px solid var(--border); background: var(--bg-elev); }
+#pane-harness .harness-sidebar > div:first-child { padding: 14px !important; flex-direction: column !important; align-items: stretch; }
+#pane-harness .harness-sidebar .hall-chronicles { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: auto; }
+#pane-harness .harness-sidebar .chronicle-item { flex: 0 0 auto; }
+#harnessGitBadge { max-width: 84px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#pane-harness .harness-main { min-width: 0; min-height: 0; overflow-y: auto; position: relative; }
+#pane-harness .harness-stream { width: 100%; max-width: 900px; margin: 0 auto; padding: 24px; min-height: 120px; }
+#pane-harness .harness-main:has(.harness-welcome) .harness-stages,
+#pane-harness .harness-main:has(.harness-welcome) #harnessInfoBanner { display: none !important; }
+#pane-harness .harness-main:has(.harness-welcome) .harness-stream { flex: 0 0 auto; margin-top: auto; overflow: visible; }
+#pane-harness .harness-main:has(.harness-welcome) .task-composer { margin-bottom: auto; }
+.harness-welcome { text-align: center; padding: 16px 0 4px; }
+.welcome-mark { color: var(--accent); margin-bottom: 12px; }
+.welcome-mark svg { width: 36px; height: 36px; }
+.harness-welcome h3 { font-family: Georgia, 'Times New Roman', serif; font-size: clamp(26px, 3vw, 40px); font-weight: 400; letter-spacing: -.03em; line-height: 1.2; margin: 0 0 12px; }
+.harness-welcome > p { color: var(--text-dim); font-size: 14px; margin: 0; }
+.harness-examples { margin-top: 14px; }
+.harness-examples > summary { display: inline-list-item; }
+.harness-examples .starter-grid { text-align: left; }
+#pane-harness .task-composer { position: relative; flex: 0 0 auto; width: calc(100% - 48px); max-width: 850px; margin: 12px auto 28px; padding: 18px; border: 1px solid var(--border-hi); border-radius: var(--radius-xl); background: var(--bg-card); box-shadow: 0 6px 24px rgba(0,0,0,.035); display: flex; flex-direction: column; gap: 10px; }
+#pane-harness #harnessPromptInput { width: 100%; flex: none !important; min-height: 88px; max-height: 200px; border: 0; background: transparent; padding: 4px 2px; font-size: 16px; line-height: 1.6; }
+#pane-harness #harnessPromptInput:focus { box-shadow: none; }
+.task-composer:focus-within { border-color: var(--accent); }
+.task-composer-controls { display: flex; align-items: end; gap: 10px; min-width: 0; flex-wrap: wrap; }
+.composer-field { display: flex; flex-direction: column; min-width: 0; flex: 1 1 170px; }
+.composer-field .field-lbl { font-size: 11px !important; }
+.composer-field select { width: 100%; }
+#pane-harness #harnessAttachBtn { font-size: 12px; }
+.task-composer-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+#harnessWorkflowMode { max-width: 230px; flex: 0 1 auto; min-width: 0; }
+.composer-spacer { flex: 1; }
+#harnessRunBtn { min-width: 72px; }
+.composer-context-line { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; border-top: 1px solid var(--border); padding-top: 8px; min-width: 0; }
+.project-summary { cursor: pointer; color: var(--text-dim); background: transparent; border: 0; text-align: left; font: inherit; font-size: 12px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.harness-run-review { flex: 0 0 auto; }
+.harness-run-review[open] { position: static; }
+.harness-run-review .harness-plan { position: absolute; bottom: calc(100% + 8px); left: 0; right: 0; max-height: 45dvh; overflow: auto; box-shadow: 0 8px 30px rgba(0,0,0,.12); background: var(--bg-card); padding: 16px; border-radius: var(--radius-lg); z-index: 25; }
+.harness-task-settings .harness-settings-body { position: absolute; bottom: calc(100% + 8px); left: 0; right: 0; max-height: 55dvh; overflow: auto; background: var(--bg-card); border: 1px solid var(--border-hi); border-radius: var(--radius-lg); box-shadow: 0 8px 30px rgba(0,0,0,.12); padding: 20px; display: flex; flex-direction: column; gap: 16px; z-index: 26; }
+.harness-settings-body > div { min-width: 0 !important; }
+.harness-settings-body input, .harness-settings-body select { max-width: 100%; }
+.harness-settings-body .harness-advanced { width: 100%; }
+.harness-run-hint { font-size: 11px; line-height: 1.5; width: 100%; }
+@media (max-width: 1279px) {
+  body[data-active-pane="harness"] #mainLayout { padding-left: 64px; }
+  body[data-active-pane="harness"] .mode-tabs { width: 64px; height: auto; bottom: 0; padding: 12px 8px; }
+  body[data-active-pane="harness"] .mode-tab { justify-content: center; }
+  body[data-active-pane="harness"] .mode-tab span { display: none; }
+  #pane-harness .harness-sidebar { display: none; }
+  body[data-active-pane="harness"] .sessions-toggle { display: inline-flex; }
+  body.sessions-open #pane-harness .harness-sidebar { display: flex; width: min(280px, 85vw); top: calc(var(--header-height) + 48px); left: 64px; box-shadow: 10px 0 36px rgba(0,0,0,.18); z-index: 30; }
+}
+@media (max-width: 799px) {
+  body[data-active-pane="harness"] #mainLayout { padding-left: 0; }
+  body[data-active-pane="harness"] .mode-tabs { position: static; width: 100%; height: 44px; padding: 0 12px; flex-direction: row; }
+  body[data-active-pane="harness"] .mode-tab { width: auto; flex: 0 0 auto; }
+  body[data-active-pane="harness"] .mode-tab span { display: inline; }
+  body.sessions-open #pane-harness .harness-sidebar { left: 0; top: calc(var(--header-height) + 92px); }
+  .workspace-toolbar { padding: 4px 12px; gap: 6px; }
+  .workspace-caption { display: none; }
+  .studio-tools { margin-left: auto; }
+  .studio-tools > .skills-strip { right: 8px; width: calc(100vw - 16px); }
+  #pane-harness .task-composer { width: calc(100% - 24px); margin-bottom: 12px; padding: 14px; gap: 8px; }
+  #pane-harness .harness-stream { padding: 16px 12px; }
+  .harness-welcome { padding-top: 4px; }
+  .harness-welcome > p { font-size: 12px; }
+  .task-composer-controls { gap: 8px; }
+  .composer-field { flex: 1 1 130px; }
+  #harnessAttachBtn { order: 3; }
+  #harnessWorkflowMode { max-width: 180px; font-size: 11px !important; }
+  .harness-task-settings > summary { padding: 6px; }
+  .composer-context-line { gap: 4px; }
+}
+
+/* Settings and the review are bounded disclosures, never off-screen popovers. */
+.harness-task-settings .harness-settings-body,
+.harness-run-review .harness-plan { position: fixed; top: calc(var(--header-height) + 64px); bottom: auto; left: auto; right: 24px; width: min(480px, calc(100vw - 48px)); max-height: calc(100dvh - var(--header-height) - 100px); z-index: 34; border: 1px solid var(--border-hi); }
+
+#pane-harness .task-composer { align-items: stretch; flex-wrap: nowrap; }
+#pane-harness .task-composer > .harness-run-hint { flex: 0 0 auto; }
+.task-composer-controls, .task-composer-actions, .composer-context-line { width: 100%; }
+
+/* Long trajectories scroll inside their own region; they cannot push Abort below the screen. */
+#pane-harness .harness-main:not(:has(.harness-welcome)) .harness-stream { flex: 1 1 0; min-height: 80px; }
 </style>
 </head>
-<body>
+<body data-active-pane="harness">
 
 <header class="topbar">
   <div class="brand">
@@ -2932,8 +3029,13 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   </div>
 </div>
 
-<div id="mainLayout" class="layout">
+<div id="mainLayout" class="layout rail-collapsed">
   <main class="workspace">
+    <div class="workspace-toolbar">
+      <button class="btn btn-xs sessions-toggle" type="button" id="harnessSessionsToggle" aria-expanded="false" aria-controls="harnessSessionsPanel" onclick="toggleHarnessSessions()">Sessions</button>
+      <span class="workspace-caption">Workspace</span>
+      <details class="studio-tools" id="studioTools">
+        <summary>Tools &amp; integrations</summary>
     <!-- UNIFIED INTEGRATIONS & TELEMETRY BAND ("Ponytail Band" Pattern) -->
     <div class="skills-strip" tabindex="0" aria-label="Integrations and telemetry controls">
       <div class="integration-group">
@@ -2956,13 +3058,17 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           <option value="context">Knowledge &amp; CodeGraph</option>
           <option value="external">External Harness CLI Bridge</option>
         </select>
-        <button id="monitorToggleBtn" class="btn btn-xs" onclick="toggleMonitorRail()" aria-controls="monitorRail" aria-expanded="true" title="Hide the contextual inspector" aria-label="Toggle the contextual inspector">
-          <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span>Inspector</span>
-        </button>
+
         <button class="btn btn-xs btn-danger" onclick="unloadAllModels()" title="Unload local models to free memory" aria-label="Unload every local model to free memory">
           <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg><span>Unload models</span>
         </button>
       </div>
+    </div>
+
+      </details>
+        <button id="monitorToggleBtn" class="btn btn-xs" onclick="toggleMonitorRail()" aria-controls="monitorRail" aria-expanded="false" title="Show the contextual inspector" aria-label="Toggle the contextual inspector">
+          <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span>Inspector</span>
+        </button>
     </div>
 
     <!-- ================= TAB 0: AUTONOMOUS AGENTIC HARNESS (v5.0) ================= -->
@@ -3118,24 +3224,12 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         <button type="button" disabled aria-label="Inventory-only approval route anchor" onclick="resolveHarnessApproval('__inventory_probe__','approve','__inventory_probe__')">Approve</button>
       </template>
       <div class="harness-shell">
-        <aside class="harness-sidebar">
+        <aside class="harness-sidebar" id="harnessSessionsPanel" aria-label="Harness sessions">
           <div style="padding:11px; border-bottom:1px solid var(--border); display:flex; flex-direction:column; gap:8px;">
             <button class="btn" style="width:100%; justify-content:center;" onclick="startFreshHarnessDraft()">+ New session</button>
             <input type="search" id="harnessSessionFilter" aria-label="Filter harness sessions by title, id, status or policy" placeholder="Filter sessions…" oninput="renderHarnessSidebar()" style="width:100%; font-size:11.2px;" />
-            <div>
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
-                <label class="field-lbl" style="margin:0;" for="harnessWorkspaceInput">Project Directory</label>
-                <button type="button" class="btn btn-xs" style="padding:3px 6px;" onclick="saveWorkspaceDirectory()" title="Save as default project directory (creates folder if missing)">Set / Create</button>
-              </div>
-              <input type="text" id="harnessWorkspaceInput" style="width:100%; font-family:var(--mono); font-size:11.2px;" placeholder="~/Projects/my-app" onchange="syncProjectDirInputs(this.value)" />
-              <select id="harnessRecentDirsSelect" aria-label="Recent project directories" style="width:100%; margin-top:4px; font-size:11px; padding:3px 6px; display:none;" onchange="if(this.value)saveWorkspaceDirectory(this.value)"></select>
-            </div>
-            <label class="chk-lbl" title="When unchecked (default), projects are saved directly inside your Project Directory above. Check only to isolate in a temporary .harnesses/wt-<id> git worktree.">
-              <input type="checkbox" id="harnessUseWorktree" />
-              <span>Isolate in <code>git worktree</code> (optional)</span>
-            </label>
             <div style="display:flex; justify-content:space-between; font-size:10.8px; color:var(--text-faint);">
-              <span>HARNESS RUNS (<span id="harnessRunsCount">0</span>)</span>
+              <span>TASKS (<span id="harnessRunsCount">0</span>)</span>
               <span id="harnessGitBadge" class="mono"></span>
             </div>
           </div>
@@ -3143,69 +3237,6 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         </aside>
 
         <div class="harness-main">
-          <!-- Harness Top Control Bar -->
-          <div class="harness-bar">
-            <div style="display:flex; flex-direction:column; min-width:170px; flex:1;">
-              <label class="field-lbl" style="margin-bottom:2px;" for="harnessLeadModel">Lead Agent Model</label>
-              <select id="harnessLeadModel" onchange="handleModelSelectChange(this, patchActiveHarnessSettings)"></select>
-            </div>
-            <div style="display:flex; flex-direction:column; min-width:155px; flex:1;">
-              <label class="field-lbl" style="margin-bottom:2px;" for="harnessCriticModel">Sub-Agent Critic</label>
-              <select id="harnessCriticModel" onchange="handleModelSelectChange(this, patchActiveHarnessSettings)"></select>
-            </div>
-            <div style="display:flex; flex-direction:column;">
-              <label class="field-lbl" style="margin-bottom:2px;" for="harnessPolicy">Execution Policy</label>
-              <select id="harnessPolicy" onchange="patchActiveHarnessSettings()">
-                <option value="standard">Standard (Ask before Bash)</option>
-                <option value="autonomous">Autonomous (Auto Build &amp; Test)</option>
-                <option value="plan">Plan &amp; Audit (Read-Only)</option>
-              </select>
-            </div>
-            <details class="harness-advanced" id="harnessAdvanced">
-              <summary><span>Run settings</span><span id="harnessAdvancedSummary" class="harness-advanced-summary"></span></summary>
-              <div class="harness-advanced-fields">
-            <div style="display:flex; flex-direction:column;">
-              <label class="field-lbl" style="margin-bottom:2px;" for="harnessEfficiencyMode">Discipline</label>
-              <select id="harnessEfficiencyMode" data-default="ponytail+concise" title="Ponytail v5 Senior Dev Ladder (-53% code, 98% test rate) + Caveman ASD-STE100 Concise Mode">
-                <option value="ponytail+concise" selected>Ponytail + Concise</option>
-                <option value="ponytail">Ponytail Senior</option>
-                <option value="concise">Concise (STE100)</option>
-                <option value="off">Standard Verbose</option>
-              </select>
-            </div>
-            <div style="display:flex; flex-direction:column;">
-              <label class="field-lbl" style="margin-bottom:2px;" for="harnessReasoning">Think</label>
-              <select id="harnessReasoning" data-default="low">
-                <option value="off">Off (Fastest)</option>
-                <option value="low" selected>Low</option>
-                <option value="medium">Medium</option>
-                <option value="xhigh">xHigh</option>
-              </select>
-            </div>
-            <div style="display:flex; flex-direction:column;">
-              <label class="field-lbl" style="margin-bottom:2px;" for="harnessMaxSteps">Max Steps</label>
-              <select id="harnessMaxSteps" data-default="10">
-                <option value="6">6 steps</option>
-                <option value="10" selected>10 steps</option>
-                <option value="16">16 steps</option>
-                <option value="24">24 steps</option>
-              </select>
-            </div>
-              </div>
-            </details>
-            <div style="display:flex; gap:6px; align-self:flex-end; align-items:center;">
-              <select id="harnessSessionActionSelect" aria-label="Session actions" style="font-size:11.6px; padding:5px 9px;" onchange="runHarnessSessionAction(this)">
-                <option value="">Session Actions…</option>
-                <option value="diff">Inspect Git Status &amp; Diff</option>
-                <option value="permissions">Permissions &amp; Revocations</option>
-                <option value="compact">Compact Session Context (&le;2 KB)</option>
-                <option value="sdlc">Open Agile SDLC Product Board</option>
-                <option value="evidence">Verification &amp; Artifacts</option>
-              </select>
-              <button id="harnessAbortBtn" class="btn btn-danger" style="display:none;" onclick="abortHarnessRun()">Abort</button>
-            </div>
-          </div>
-
           <!-- Harness Active Worktree / Session Strip -->
           <div class="harness-stages" id="harnessStages" role="group" aria-label="Task stages: plan, execute, verify">
             <div class="harness-stage" data-stage="plan" data-state="pending"><span class="harness-stage-dot" aria-hidden="true"></span><span class="harness-stage-name">Plan</span></div>
@@ -3216,7 +3247,6 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
             <span id="harnessActiveLabel">New session — choose a project directory and model, then describe the task.</span>
             <div style="display:flex; gap:6px; align-items:center;">
               <span id="harnessCtxSavingsBadge" class="badge green" style="display:none;" title="Context-Mode SQLite FTS5 KV-Cache Compression Savings">Ctx Saved 0%</span>
-              <button id="harnessPermissionBadge" class="harness-perm-badge" type="button" data-count="0" hidden onclick="openHarnessGrants()" title="Permissions this session holds, and the way to take them back">No permissions</button>
               <span id="harnessActiveStatusBadge" class="status" data-tone="info" role="status">ready</span>
             </div>
           </div>
@@ -3257,28 +3287,112 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
           <div id="harnessStreamState"></div>
           <div id="harnessStream" class="harness-stream"></div>
 
-          <!-- Multi-Turn Autonomous Task Composer (Unified Mode Dropdown + Primary Run Action) -->
-          <div class="hall-composer">
+          <!-- One task composer; existing payload controls and run guards are unchanged. -->
+          <div class="hall-composer task-composer">
             <div id="harnessIncomingBrief" class="harness-brief" data-match="unknown" role="status" aria-live="polite" hidden>
               <span class="harness-brief-tag">From Chat</span>
               <span id="harnessIncomingBriefText"></span>
             </div>
-            <textarea id="harnessPromptInput" rows="2" style="flex:1; resize:none;" placeholder="Describe an engineering task, 3-Wave Spec, or full product build for your Project Directory..." aria-label="Your task for the Harness" aria-describedby="harnessRunHint"></textarea>
-            <div id="harnessRunPlan" class="harness-plan" role="group" aria-label="What Run will do">
-              <span class="harness-plan-title">Run will</span>
-              <span id="harnessRunPlanBody" class="harness-plan-body"></span>
+            <textarea id="harnessPromptInput" rows="2" style="flex:1; resize:none;" placeholder="What would you like to build or change?" aria-label="Your task for the Harness" aria-describedby="harnessRunHint"></textarea>
+            <div class="task-composer-controls">
+              <button id="harnessAttachBtn" class="btn" type="button" style="height:38px;" onclick="openContextModal()" title="Pin knowledge documents or explore the code graph — pinned documents are included in this run's context">Attach context</button>            <div class="composer-field">
+              <label class="field-lbl" style="margin-bottom:2px;" for="harnessLeadModel">Model</label>
+              <select id="harnessLeadModel" onchange="handleModelSelectChange(this, patchActiveHarnessSettings)"></select>
+            </div>            <div class="composer-field">
+              <label class="field-lbl" style="margin-bottom:2px;" for="harnessPolicy">Permissions</label>
+              <select id="harnessPolicy" onchange="patchActiveHarnessSettings()">
+                <option value="standard">Standard (Ask before Bash)</option>
+                <option value="autonomous">Autonomous (Auto Build &amp; Test)</option>
+                <option value="plan">Plan &amp; Audit (Read-Only)</option>
+              </select>
             </div>
-            <div class="harness-composer-row" style="display:flex; gap:6px; align-items:center; flex-wrap:wrap; flex:1 1 100%;">
+            </div>
+            <div class="harness-composer-row task-composer-actions">
               <select id="harnessWorkflowMode" aria-label="Harness workflow mode" style="height:38px; font-size:12.2px; padding:0 10px;" onchange="syncHarnessWorkflowModeUI()">
                 <option value="turn" selected>Autonomous Turn (Step Loop)</option>
                 <option value="gsd">Plan, Build, Verify (GSD 3-Wave)</option>
                 <option value="sdlc_full">Agile SDLC Factory (Full Build)</option>
                 <option value="sdlc_modal">Agile SDLC Board &amp; Backlog…</option>
               </select>
-              <button id="harnessRunBtn" class="btn btn-primary" style="height:38px;" onclick="executeHarnessSelectedWorkflow()">Run</button>
-              <button id="harnessAttachBtn" class="btn" type="button" style="height:38px;" onclick="openContextModal()" title="Pin knowledge documents or explore the code graph — pinned documents are included in this run's context">Attach context</button>
-              <span id="harnessRunHint" class="harness-run-hint" data-reason="no-task" role="status" aria-live="polite"></span>
+              <details id="harnessTaskSettings" class="harness-task-settings">
+                <summary>Task settings</summary>
+                <div class="harness-settings-body">
+                  <div class="inspector-title-row"><strong>Project &amp; task settings</strong><button type="button" class="btn btn-xs" onclick="document.getElementById('harnessTaskSettings').open = false">Close</button></div>
+            <div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+                <label class="field-lbl" style="margin:0;" for="harnessWorkspaceInput">Project Directory</label>
+                <button type="button" class="btn btn-xs" style="padding:3px 6px;" onclick="saveWorkspaceDirectory()" title="Save as default project directory (creates folder if missing)">Set / Create</button>
+              </div>
+              <input type="text" id="harnessWorkspaceInput" style="width:100%; font-family:var(--mono); font-size:11.2px;" placeholder="~/Projects/my-app" onchange="syncProjectDirInputs(this.value)" />
+              <select id="harnessRecentDirsSelect" aria-label="Recent project directories" style="width:100%; margin-top:4px; font-size:11px; padding:3px 6px; display:none;" onchange="if(this.value)saveWorkspaceDirectory(this.value)"></select>
             </div>
+            <label class="chk-lbl" title="When unchecked (default), projects are saved directly inside your Project Directory above. Check only to isolate in a temporary .harnesses/wt-<id> git worktree.">
+              <input type="checkbox" id="harnessUseWorktree" />
+              <span>Isolate in <code>git worktree</code> (optional)</span>
+            </label>
+            <div style="display:flex; flex-direction:column; min-width:155px; flex:1;">
+              <label class="field-lbl" style="margin-bottom:2px;" for="harnessCriticModel">Sub-Agent Critic</label>
+              <select id="harnessCriticModel" onchange="handleModelSelectChange(this, patchActiveHarnessSettings)"></select>
+            </div>            <details class="harness-advanced" id="harnessAdvanced">
+              <summary><span>Run settings</span><span id="harnessAdvancedSummary" class="harness-advanced-summary"></span></summary>
+              <div class="harness-advanced-fields">
+            <div style="display:flex; flex-direction:column;">
+              <label class="field-lbl" style="margin-bottom:2px;" for="harnessEfficiencyMode">Discipline</label>
+              <select id="harnessEfficiencyMode" data-default="ponytail+concise" title="Ponytail v5 Senior Dev Ladder (-53% code, 98% test rate) + Caveman ASD-STE100 Concise Mode">
+                <option value="ponytail+concise" selected>Ponytail + Concise</option>
+                <option value="ponytail">Ponytail Senior</option>
+                <option value="concise">Concise (STE100)</option>
+                <option value="off">Standard Verbose</option>
+              </select>
+            </div>
+            <div style="display:flex; flex-direction:column;">
+              <label class="field-lbl" style="margin-bottom:2px;" for="harnessReasoning">Think</label>
+              <select id="harnessReasoning" data-default="low">
+                <option value="off">Off (Fastest)</option>
+                <option value="low" selected>Low</option>
+                <option value="medium">Medium</option>
+                <option value="xhigh">xHigh</option>
+              </select>
+            </div>
+            <div style="display:flex; flex-direction:column;">
+              <label class="field-lbl" style="margin-bottom:2px;" for="harnessMaxSteps">Max Steps</label>
+              <select id="harnessMaxSteps" data-default="10">
+                <option value="6">6 steps</option>
+                <option value="10" selected>10 steps</option>
+                <option value="16">16 steps</option>
+                <option value="24">24 steps</option>
+              </select>
+            </div>
+              </div>
+            </details>
+              <select id="harnessSessionActionSelect" aria-label="Session actions" style="font-size:11.6px; padding:5px 9px;" onchange="runHarnessSessionAction(this)">
+                <option value="">Session Actions…</option>
+                <option value="diff">Inspect Git Status &amp; Diff</option>
+                <option value="permissions">Permissions &amp; Revocations</option>
+                <option value="compact">Compact Session Context (&le;2 KB)</option>
+                <option value="sdlc">Open Agile SDLC Product Board</option>
+                <option value="evidence">Verification &amp; Artifacts</option>
+              </select>
+
+                </div>
+              </details>
+              <span class="composer-spacer"></span>
+<button id="harnessAbortBtn" class="btn btn-danger" style="display:none;" onclick="abortHarnessRun()">Abort</button>
+              <button id="harnessRunBtn" class="btn btn-primary" style="height:38px;" onclick="executeHarnessSelectedWorkflow()">Run</button>
+            </div>
+            <div class="composer-context-line">
+              <button id="harnessPermissionBadge" class="harness-perm-badge" type="button" data-count="0" hidden onclick="openHarnessGrants()" title="Permissions this session holds, and the way to take them back">No permissions</button>
+              <button id="harnessProjectSummary" class="project-summary" type="button" onclick="document.getElementById('harnessTaskSettings').open = true; document.getElementById('harnessWorkspaceInput').focus()">Choose a project</button>
+              <details class="harness-run-review">
+                <summary>Review run details</summary>
+            <div id="harnessRunPlan" class="harness-plan" role="group" aria-label="What Run will do">
+              <span class="harness-plan-title">Run will</span>
+              <span id="harnessRunPlanBody" class="harness-plan-body"></span>
+            </div>
+
+              </details>
+            </div>
+              <span id="harnessRunHint" class="harness-run-hint" data-reason="no-task" role="status" aria-live="polite"></span>
           </div>
         </div>
       </div>
@@ -3641,7 +3755,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   <!-- ================= CONTEXTUAL INSPECTOR RAIL ================= -->
   <aside id="monitorRail" class="monitor-rail" role="complementary" aria-label="Contextual inspector">
     <div class="inspector-head">
-      <span class="field-lbl" style="margin:0;">Inspector</span>
+      <div class="inspector-title-row"><span class="field-lbl" style="margin:0;">Inspector</span><button class="btn btn-xs" type="button" onclick="toggleMonitorRail(true)" aria-label="Close inspector">Close</button></div>
       <div id="inspectorTabs" class="inspector-tabs" role="tablist" aria-label="Inspector views"></div>
     </div>
     <div id="inspectorPanels" class="inspector-panels"></div>
@@ -5106,7 +5220,48 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   // The rail is a tablist: exactly one tab is selected and exactly one tab is in the
   // tab order. Both facts are written here and nowhere else, so a keyboard user and a
   // screen reader see the same state the .active class paints.
+  function closeHarnessSessions() {
+    document.body.classList.remove("sessions-open");
+    const button = document.getElementById("harnessSessionsToggle");
+    if (button) button.setAttribute("aria-expanded", "false");
+  }
+
+  function toggleHarnessSessions() {
+    const open = document.body.classList.toggle("sessions-open");
+    const button = document.getElementById("harnessSessionsToggle");
+    if (button) button.setAttribute("aria-expanded", String(open));
+    if (open) document.getElementById("harnessSessionFilter").focus();
+  }
+
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && document.body.classList.contains("sessions-open")) {
+      closeHarnessSessions();
+      document.getElementById("harnessSessionsToggle").focus();
+    }
+  });
+
+  document.addEventListener("pointerdown", event => {
+    for (const selector of ["#studioTools", "#harnessTaskSettings", ".harness-run-review"]) {
+      const details = document.querySelector(selector);
+      if (details && details.open && !details.contains(event.target)) details.open = false;
+    }
+  });
+  document.addEventListener("keydown", event => {
+    if (event.key !== "Escape") return;
+    for (const selector of [".harness-run-review", "#harnessTaskSettings", "#studioTools"]) {
+      const details = document.querySelector(selector);
+      if (details && details.open) {
+        const returnFocus = details.contains(document.activeElement);
+        details.open = false;
+        if (returnFocus) details.querySelector("summary").focus();
+        break;
+      }
+    }
+  });
+
   function switchTab(tab, options = {}) {
+    document.body.dataset.activePane = tab;
+    closeHarnessSessions();
     const tabs = [...document.querySelectorAll(".mode-tab")];
     let selected = null;
     tabs.forEach(b => {
@@ -8060,6 +8215,15 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
         )
         .join("");
     }
+    const project = document.getElementById("harnessProjectSummary");
+    if (project) {
+      const path = plan.dir || "";
+      const name = path.replace(/[\\/]+$/, "").split(/[\\/]/).pop();
+      project.textContent = name ? `Project: ${name}` : "Choose a project";
+      project.title = path || "Open task settings to choose the project directory";
+    }
+    const model = document.getElementById("harnessLeadModel");
+    if (model) model.title = harnessSelectedText("harnessLeadModel") || "Choose a model";
     // The collapsed group says what it holds and whether it was changed, in words: a
     // reader who never opens it is not missing a decision.
     const summary = document.getElementById("harnessAdvancedSummary");
@@ -12313,12 +12477,11 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 
   function renderHarnessStarter() {
     document.getElementById("harnessStream").innerHTML = `
-      <div style="max-width:820px; margin:20px auto; text-align:center;">
-        <div style="font-size:16px; font-weight:700; margin-bottom:5px;">Start an engineering task</div>
-        <div style="font-size:12.4px; color:var(--text-dim);">
-          Unifies <code>deepseek-harness</code> + <code>openharness</code> worktrees + <code>open-gsd/gsd-core</code> 3-Wave Spec Loop +
-          <code>0xranx/OpenContext</code> FTS5 Memory + <code>codegraph-rust</code> Zero-RAM AST Graph + <code>mksglu/context-mode</code> 98% KV-Cache Sandbox!
-        </div>
+      <div class="harness-welcome">
+        <div class="welcome-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M16 2v28M2 16h28M6 6l20 20M6 26L26 6"/><circle cx="16" cy="16" r="6"/></svg></div>
+        <h3>What would you like to build?</h3>
+        <p>One task. A clear plan. Room to focus.</p>
+        <details class="harness-examples"><summary>Try an example</summary>
         <div class="starter-grid">
           <div class="starter-card" role="button" tabindex="0" data-key-activate onclick="fillHarnessStarter('Run codegraph_architecture and codegraph_quality on this workspace, then run codegraph_impact on stream_any_model and save key architectural findings to OpenContext via oc_save_doc.')">
             <strong style="font-size:12.6px; color:#67e8f9;">1. AST CodeGraph + OpenContext Audit</strong>
@@ -12333,6 +12496,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
             <div style="font-size:11.6px; color:var(--text-dim); margin-top:4px;">Lead model inspects code + delegates adversarial review to Sub-Agent Critic.</div>
           </div>
         </div>
+        </details>
       </div>`;
   }
 
@@ -17181,25 +17345,22 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     });
   }
 
-  const initialNarrow = window.matchMedia("(max-width: 1439px)").matches;
-  if (initialNarrow) {
+  {
     const monitorButton = document.getElementById("monitorToggleBtn");
     if (monitorButton) monitorButton.setAttribute("aria-expanded", "false");
   }
   window.addEventListener("resize", () => {
-    const narrow = window.matchMedia("(max-width: 1439px)").matches;
     const layout = document.getElementById("mainLayout");
     const monitorButton = document.getElementById("monitorToggleBtn");
     if (!layout || !monitorButton) return;
-    // A resize returns the inspector to its layout default: a drawer has no state
-    // to preserve once the panel fits beside the work again, and a drawer left
-    // marked aria-modal after it became a column would lie about covering the page.
+    // Resizing closes secondary chrome instead of unexpectedly opening a column.
+    // Clear the modal marker when a narrow drawer becomes a desktop panel.
     const rail = document.getElementById("monitorRail");
     layout.classList.remove("rail-mobile-open");
-    layout.classList.remove("rail-collapsed");
+    layout.classList.add("rail-collapsed");
     if (rail) rail.removeAttribute("aria-modal");
-    monitorButton.setAttribute("aria-expanded", narrow ? "false" : "true");
-    monitorButton.title = narrow ? "Show the contextual inspector" : "Hide the contextual inspector";
+    monitorButton.setAttribute("aria-expanded", "false");
+    monitorButton.title = "Show the contextual inspector";
   });
   try {
     const themePreference = window.matchMedia("(prefers-color-scheme: light)");
