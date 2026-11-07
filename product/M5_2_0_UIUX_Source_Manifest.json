@@ -12,9 +12,9 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "b09835677705d4413d619b5d60361f4c92caf75679511369d2bdcf93c97850bb",
-      "bytes": 997611,
-      "lines": 17235
+      "sha256": "9a83b69e49691f36bef19c98c04dce7cccaa25b60f67ea3bb49aec68af1176ef",
+      "bytes": 1009660,
+      "lines": 17396
     },
     {
       "path": "app.py",
@@ -26,9 +26,9 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "da207ef351e20a1713e7e231288af78a3acd8ac2395064310638c4137804710a",
-      "bytes": 3779382,
-      "lines": 81190
+      "sha256": "9bb3d5689c9f06cb8d1a55adcdabbed267b1f523b0adbd14952280472bb8a8e4",
+      "bytes": 3791431,
+      "lines": 81351
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -299,9 +299,9 @@
     {
       "path": "tests/browser/accessibility_walk.mjs",
       "role": "browser accessibility walk with the current-main Chat handoff checks",
-      "sha256": "92a6a8717113dcad8a74a3975ecbab4edc20e096e77749e3e0e0da20db133ad6",
-      "bytes": 24194,
-      "lines": 442
+      "sha256": "0aca85bd587fb40bc07011dcb0e69cbb3bc9e1e593c01a132a6eeda54dd85f5e",
+      "bytes": 24872,
+      "lines": 452
     },
     {
       "path": "tests/test_presentations.py",
@@ -327,9 +327,9 @@
     {
       "path": "tests/test_screenshot_capture_browser.py",
       "role": "runs browser-backed UI and screenshot safety regressions",
-      "sha256": "6cc07891be822b5bba947523343f0907ed33d39694b26cea534519629d58dd05",
-      "bytes": 26684,
-      "lines": 677
+      "sha256": "2ecb0637ef80323912644233fe67543831bc1238e7a9ad207b9a3e79051c7adf",
+      "bytes": 27339,
+      "lines": 689
     },
     {
       "path": "tests/test_uiux_source_manifest.py",
@@ -460,8 +460,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "b09835677705d4413d619b5d60361f4c92caf75679511369d2bdcf93c97850bb",
-    "lines": 17235,
+    "sha256": "9a83b69e49691f36bef19c98c04dce7cccaa25b60f67ea3bb49aec68af1176ef",
+    "lines": 17396,
     "tab_count": 6,
     "tabs": [
       {

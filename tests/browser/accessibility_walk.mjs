@@ -140,6 +140,13 @@ async function main() {
 
     await page.focus("#harnessPolicy");
     await page.keyboard.press("Tab");
+    const workflowFocused = await page.$eval("#harnessWorkflowMode", el => el === document.activeElement);
+    await page.keyboard.press("Tab");
+    const taskSettingsFocused = await page.$eval("#harnessTaskSettings > summary", el => el === document.activeElement);
+    await page.keyboard.press("Space");
+    await page.waitForFunction(() => document.getElementById("harnessTaskSettings").open);
+    await page.focus("#harnessCriticModel");
+    await page.keyboard.press("Tab");
     const runSettingsFocus = await page.evaluate(() => {
       const summary = document.querySelector("#harnessAdvanced > summary");
       return {
@@ -148,8 +155,8 @@ async function main() {
           Number.parseFloat(getComputedStyle(summary).outlineWidth) >= 2 : false,
       };
     });
-    results.push(check("Tab moves from policy to Run settings with a visible focus ring",
-      runSettingsFocus.focused && runSettingsFocus.visibleRing, JSON.stringify(runSettingsFocus)));
+    results.push(check("Tab reaches Run settings through workflow and task settings with a visible focus ring",
+      workflowFocused && taskSettingsFocused && runSettingsFocus.focused && runSettingsFocus.visibleRing, JSON.stringify(runSettingsFocus)));
 
     await page.keyboard.press("Space");
     const openedRunSettings = await page.evaluate(() => ({
@@ -188,6 +195,9 @@ async function main() {
     results.push(check("Space closes Run settings and retains its existing disclosure preference",
       closedRunSettings.collapsed && closedRunSettings.focus && closedRunSettings.preference === "closed",
       JSON.stringify(closedRunSettings)));
+
+    await page.keyboard.press("Escape");
+    await page.waitForFunction(() => !document.getElementById("harnessTaskSettings").open);
 
     // Command palette: shortcut, combobox semantics, active option and focus loop.
     await page.focus("#themeToggleBtn");

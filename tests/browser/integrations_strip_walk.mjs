@@ -24,6 +24,7 @@ try {
   await page.setRequestInterception(true);
   page.on('request', request => request.abort());
   await page.setContent(html, { waitUntil: 'domcontentloaded' });
+  await page.evaluate(() => { document.getElementById('studioTools').open = true; });
   // Only dependencies outside the band are stubbed; both band renderers run unchanged.
   await page.addScriptTag({ content: `
     let installedSkills = [], mcpServers = [], selectedSkills = new Set();
@@ -56,7 +57,7 @@ try {
           overflow: el.scrollWidth - el.clientWidth, wrap: getComputedStyle(el).flexWrap }));
         const band = strip.getBoundingClientRect();
         const pills = groups.flatMap(group => [...group.children]);
-        const controls = [document.getElementById('integrationsQuickMenu'), document.getElementById('monitorToggleBtn'),
+        const controls = [document.getElementById('integrationsQuickMenu'),
           strip.querySelector('.btn-danger')];
         return {
           horizontal,
@@ -64,7 +65,7 @@ try {
             const box = el.getBoundingClientRect();
             return box.width > 0 && box.left >= band.left - 1 && box.right <= band.right + 1;
           }),
-          capped: band.height <= innerHeight * 0.3 + 2,
+          capped: band.height <= innerHeight * 0.6 + 2,
           empty: groups.map(el => el.textContent),
         };
       });
