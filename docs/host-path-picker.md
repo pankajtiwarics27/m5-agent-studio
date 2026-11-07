@@ -324,3 +324,37 @@ all37 UI/UX sources plus separate Pipeline/Start/V2 preservation/cross-tab contr
 and preservation second pass:37/37 checks,7/7 gates,0findings. Broader source and
 cross-tab visual checks are running separately; full CI and owner test6 remain
 pending. No independent approval record or backend behavior changed.
+
+
+### PR #241 CI timing regression
+
+The Python3.12 PR run42410229249 failed in the checkout-isolation child for
+`test_http_endpoints_and_standalone_studio_bundle_parity`. The expanded traceback
+showed a legitimate negative A/B outcome: the CI-report scenario measured
+40.608ms baseline,100.5828ms qualified latency, and50.6023ms transformation
+overhead against its50.0ms allowance. The runtime correctly kept the gate shut;
+the HTTP success-path test incorrectly assumed real runner timing always qualified.
+Three trials had not removed that assumption, so retries are not the remedy.
+
+The test-only correction separates responsibilities:
+
+- The HTTP success-path test substitutes explicitly synthetic measurements at
+  `run_builtin_transformation_ab_suite`, computed through the real comparison
+  policy. Real HTTP handlers, report recording/gating, execution, model-authority
+  rejection, operator promotion, redaction and revocation remain under test.
+  These fixture measurements are not performance evidence or release acceptance.
+- The existing real-clock built-in suite still executes all three scenarios and
+  all three paired trials. It checks completion lift, token savings, zero
+  unauthorized relaxations, per-scenario overhead enforcement and the actual
+  persisted gate decision, rather than demanding that every runner qualify.
+- Additional modular and standalone HTTP tests check49.9999ms, exactly50.0ms,
+  and the observed50.6023ms cost. A non-persisting preview leaves the prior gate
+  and report unchanged. Persisting the over-budget report closes an already-open
+  gate, survives a fresh registry read and rejects execution with
+  `ab_benefit_gate_closed`.
+
+No production source, threshold, ratio, trial count, authority check or approval
+record changes in this CI correction; no retry loop or skip is added. Local
+verification:15 trusted-transformation tests plus the exact checkout-isolation
+case pass (16 total); Ruff, mypy62 and frontend syntax pass. Full multi-version
+CI remains required before merge; manual owner test6 is still pending.
