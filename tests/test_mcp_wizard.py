@@ -340,3 +340,85 @@ def test_the_ledger_still_holds_the_story_this_one_depends_on():
     ledger = json.loads(LEDGER.read_text(encoding="utf-8"))
     story = next(entry for entry in ledger["stories"] if entry["id"] == "UIV2-21")
     assert story["tracking"]["status"] == "done"
+
+
+def _mcp_argument_forms(args, command):
+    """Run the actual formatter and both preset/edit entry points in offline Node."""
+    import re
+    import shutil
+    import subprocess
+
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node.js is required for frontend argument round-trip tests")
+    source = FRONTEND.read_text(encoding="utf-8")
+    functions = []
+    for name in ("formatMcpArgs", "selectMcpPreset", "editMcpServer"):
+        found = re.search(rf"  function {name}\([^\n]*\) \{{[\s\S]*?\n  \}}", source)
+        assert found is not None, name
+        functions.append(found.group(0))
+    runner = r'''
+      const fs = require('node:fs'), vm = require('node:vm');
+      const input = JSON.parse(fs.readFileSync(0, 'utf8'));
+      const fields = {}, document = {getElementById: id => fields[id] ||= {value: '', textContent: ''}};
+      const server = {alias: 'quoted-fixture', name: 'Offline fixture', transport: 'stdio',
+        category: 'custom', command: input.command, args: input.args, env: {},
+        approval_policy: 'always_ask', masked_token: ''};
+      const ctx = {document, mcpPresets: {'quoted-fixture': server}, mcpServers: [server],
+        toggleMcpTransportFields() {}, openMcpEditor() {}, syncMcpEditorState() {}};
+      vm.createContext(ctx); vm.runInContext(input.functions.join('\n'), ctx);
+      ctx.selectMcpPreset('quoted-fixture');
+      const preset = {command: fields.mcpCommand.value, args: fields.mcpArgs.value};
+      ctx.editMcpServer('quoted-fixture');
+      const edit = {command: fields.mcpCommand.value, args: fields.mcpArgs.value};
+      console.log(JSON.stringify({preset, edit}));
+    '''
+    result = subprocess.run(
+        [node, "-e", runner], input=json.dumps({"args": args, "command": command, "functions": functions}),
+        capture_output=True, text=True, timeout=10, check=True,
+    )
+    return json.loads(result.stdout)
+
+
+@pytest.mark.parametrize("args", [
+    [],
+    ["-y", "@playwright/mcp@latest", "--headless"],
+    ["/Users/synthetic/Documents/Test Studio/moneyprinter_mcp.py"],
+    ["--db-path", "/Users/synthetic/Test Studio/studio.db"],
+    ["", "with spaces", "O'Reilly", 'double"quote', r"C:\Test Studio\server.py"],
+    ["tab\there", "$HOME", "$(must-not-run)", "a;b", "a\\b", "a'b\"c"],
+])
+def test_preset_and_edit_arguments_round_trip_through_backend_shlex(args):
+    import shlex
+
+    command = "/Users/synthetic/Documents/Test Studio/.venv/bin/python"
+    forms = _mcp_argument_forms(args, command)
+    for form in forms.values():
+        assert form["command"] == command  # command is a path, not shell-quoted text
+        assert shlex.split(form["args"]) == args
+
+
+def test_quoted_form_launches_a_real_stdio_server_from_a_directory_with_spaces(tmp_path):
+    import shlex
+    import subprocess
+    import sys
+
+    directory = tmp_path / "Test Studio's MCP"
+    directory.mkdir()
+    script = directory / "fixture server.py"
+    script.write_bytes((PROJECT_ROOT / "scripts/mcp_hub_fixture_server.py").read_bytes())
+    messages = [
+        {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}},
+        {"jsonrpc": "2.0", "method": "notifications/initialized"},
+        {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
+    ]
+    for form in _mcp_argument_forms([str(script)], sys.executable).values():
+        child = subprocess.run(
+            [form["command"], *shlex.split(form["args"])],
+            input="\n".join(json.dumps(message) for message in messages) + "\n",
+            capture_output=True, text=True, timeout=10, check=True,
+        )
+        replies = {reply["id"]: reply for line in child.stdout.splitlines() if (reply := json.loads(line)).get("id")}
+        assert replies[1]["result"]["serverInfo"]
+        assert "echo_note" in {tool["name"] for tool in replies[2]["result"]["tools"]}
+        assert "can't open file" not in child.stderr

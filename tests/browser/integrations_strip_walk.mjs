@@ -11,6 +11,7 @@ const html = source.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
 const skills = source.slice(source.indexOf('  function toggleSkill(id)'), source.indexOf('  function openSkillsModal()'));
 const mcp = source.slice(source.indexOf('  function renderMcpUI()'), source.indexOf('  function populateMcpPlayTools()'));
 const escapeHtml = source.match(/  function escapeHtml\(s\) [^\n]+/)[0];
+const argumentFormatter = source.slice(source.indexOf('  function formatMcpArgs(args)'), source.indexOf('  function selectMcpPreset(alias)'));
 const browser = await (module.default || module).launch({ executablePath: process.env.STUDIO_SCREENSHOT_CHROME,
   headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu'] });
 let checks = 0;
@@ -29,7 +30,7 @@ try {
     const renderMcpHub = () => {}, populateMcpPlayTools = () => {};
     window.storageWrites = []; window.serverWrites = [];
     Object.defineProperty(window, 'localStorage', {value: {setItem: (key, value) => storageWrites.push({key, value})}});
-    ${escapeHtml}\n${skills}\n${mcp}
+    ${escapeHtml}\n${argumentFormatter}\n${skills}\n${mcp}
     async function toggleMcpServerEnabled(alias, enabled) {
       serverWrites.push({alias, enabled});
       if (!window.refuseMcp) mcpServers.find(s => s.alias === alias).enabled = enabled;

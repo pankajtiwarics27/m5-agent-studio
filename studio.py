@@ -19654,7 +19654,7 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
     const configured = !!mcpServerByAlias(alias);
     const target = remote
       ? (preset.url || "")
-      : `${preset.command || ""} ${(preset.args || []).join(" ")}`.trim();
+      : `${preset.command || ""} ${formatMcpArgs(preset.args)}`.trim();
     const auth = preset.requires_token ? `Key: ${preset.env_key || "API token"}` : "No key needed";
     const haystack = [alias, preset.name, preset.notes, target, auth, trust.label, mcpPolicyLabel(preset.approval_policy)]
       .join(" ").toLowerCase();
@@ -19699,7 +19699,7 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
     healthBox.innerHTML = mcpServers.map(s => {
       const tools = s.tools || [];
       const on = new Set((s.enabled_tools && s.enabled_tools.length) ? s.enabled_tools : tools.map(t => t.name));
-      const target = s.transport === "http" ? (s.url || "") : `${s.command || ""} ${(s.args || []).join(" ")}`.trim();
+      const target = s.transport === "http" ? (s.url || "") : `${s.command || ""} ${formatMcpArgs(s.args)}`.trim();
       const meta = [
         s.transport === "http" ? "Remote · HTTP" : "Local · stdio",
         `Policy · ${mcpPolicyLabel(s.approval_policy)}`,
@@ -20105,6 +20105,16 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
     } catch (e) {}
   }
 
+  // Match the backend's shlex.split syntax without executing a shell. In particular,
+  // an absolute script/database path containing spaces must remain one argument.
+  function formatMcpArgs(args) {
+    return (args || []).map(arg => {
+      const value = String(arg);
+      return /^[A-Za-z0-9_@%+=:,./-]+$/.test(value)
+        ? value : "'" + value.replace(/'/g, "'\"'\"'") + "'";
+    }).join(" ");
+  }
+
   function selectMcpPreset(alias) {
     const p = mcpPresets[alias];
     if (!p) return;
@@ -20121,7 +20131,7 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
       document.getElementById("mcpHeadersJson").value = "";
     } else {
       document.getElementById("mcpCommand").value = p.command || "";
-      document.getElementById("mcpArgs").value = (p.args || []).join(" ");
+      document.getElementById("mcpArgs").value = formatMcpArgs(p.args);
       document.getElementById("mcpEnvJson").value = Object.keys(p.env || {}).length ? JSON.stringify(p.env) : "";
     }
     document.getElementById("mcpPresetNote").textContent = p.notes || "";
@@ -20145,7 +20155,7 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
       document.getElementById("mcpHeadersJson").value = Object.keys(s.headers || {}).length ? JSON.stringify(s.headers) : "";
     } else {
       document.getElementById("mcpCommand").value = s.command || "";
-      document.getElementById("mcpArgs").value = (s.args || []).join(" ");
+      document.getElementById("mcpArgs").value = formatMcpArgs(s.args);
       document.getElementById("mcpEnvJson").value = Object.keys(s.env || {}).length ? JSON.stringify(s.env) : "";
     }
     document.getElementById("mcpPresetNote").textContent = `Editing '${s.alias}' (${s.masked_token || 'no token'}). Leave token blank to preserve existing secret.`;
@@ -20500,7 +20510,7 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
         const riskLine = tools.length
           ? `<div class="mcp-tool-consequence" style="margin-top:4px;"><strong>${tools.length} tool${tools.length === 1 ? "" : "s"}</strong> · ${riskCounts.read} read-only · ${riskCounts.write + riskCounts.write_idempotent} write · ${riskCounts.destructive} destructive · ${escapeHtml(mcpPolicyPromise(s))}</div>`
           : `<div class="mcp-tool-consequence" style="margin-top:4px;">${escapeHtml(mcpPolicyPromise(s))}</div>`;
-        const targetInfo = s.transport === "http" ? s.url : `${s.command} ${(s.args || []).join(" ")}`;
+        const targetInfo = s.transport === "http" ? s.url : `${s.command} ${formatMcpArgs(s.args)}`;
         const toolsDrawer = tools.length ? `
           <details style="margin-top:7px;">
             <summary style="cursor:pointer; font-size:11.4px; color:#67e8f9;">Discovered Tools (${s.active_tool_count} / ${tools.length} active in Harness)</summary>
