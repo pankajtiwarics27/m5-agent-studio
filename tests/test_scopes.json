@@ -54,6 +54,7 @@
       "test_context_*.py"
     ],
     "ui.shared": [
+      "test_frontend_boot_order.py",
       "test_keyboard_a11y.py",
       "test_navigation_shell.py",
       "test_overlays.py",

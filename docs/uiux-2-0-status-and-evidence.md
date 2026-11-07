@@ -58,16 +58,16 @@ through `setStatus()`, so the state, the tone and the label cannot disagree.
 | `#councilReadinessCount` | `neutral` | no | 3184 |
 | (unnamed) | `warn` | no | 6675 |
 | (unnamed) | `warn` | no | 6773 |
-| (unnamed) | `neutral` | no | 10174 |
-| (unnamed) | `busy` | no | 10175 |
-| (unnamed) | `ok` | no | 10176 |
-| (unnamed) | `warn` | no | 10177 |
-| (unnamed) | `warn` | no | 10178 |
-| (unnamed) | `warn` | no | 10179 |
-| (unnamed) | `danger` | no | 10180 |
-| (unnamed) | `warn` | no | 10181 |
-| (unnamed) | `warn` | no | 10182 |
-| (unnamed) | `neutral` | no | 10183 |
+| (unnamed) | `neutral` | no | 10347 |
+| (unnamed) | `busy` | no | 10348 |
+| (unnamed) | `ok` | no | 10349 |
+| (unnamed) | `warn` | no | 10350 |
+| (unnamed) | `warn` | no | 10351 |
+| (unnamed) | `warn` | no | 10352 |
+| (unnamed) | `danger` | no | 10353 |
+| (unnamed) | `warn` | no | 10354 |
+| (unnamed) | `warn` | no | 10355 |
+| (unnamed) | `neutral` | no | 10356 |
 
 ## Writers
 
