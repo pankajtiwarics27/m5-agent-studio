@@ -37,43 +37,45 @@ Set `STUDIO_SCREENSHOT_CHROME`, `STUDIO_PUPPETEER_CORE`, `STUDIO_SCREENSHOT_CHRO
 `LD_LIBRARY_PATH`, and `STUDIO_PYTHON` when the pinned browser or Python environment is not on the
 default path. The walk cleans up its demo process and temporary workspace.
 
-## Integration recapture required
-
-The candidate and human decision below are **historical**, bound to clean HEAD `cafdd08`. After that
-review, `origin/main` `1b940bc` added the owner-requested task-first Harness/shared-shell layout.
-The old approval has therefore been removed from the current contract rather than reused. A fresh
-48-capture candidate and explicit human approval are required on the clean integration HEAD.
-
-## Superseded pre-integration candidate and what was opened
+## Approved integrated candidate and what was opened
 
 The approved UIV2-03 reference is a structural contract, not a pixel-clone target. Authored D1–D3
-annotations explain the wrapping integrations band, preserved global controls, and each pane's
-intentional feature-preserving difference.
+annotations explain the on-demand integrations, explicit Inspector, and each pane's intentional
+feature-preserving difference. The candidate incorporates the owner-requested task-first layout
+integrated from `origin/main` `1b940bc`.
 
-The final candidate is bound to clean HEAD `cafdd08242f095c546a8e5546f80cbfc4791c343`, candidate
-manifest SHA-256 `efbe1c23dcba32ceec6618db271e605eaf2532f76b13d1c4d3aa099a7c38191b`, and explicit
-human approval `user:Arena ask_user uiv2-26-settled-approval=approve, 2026-11-07`. It has 48/48
-captures and 1904/1904 checks. A second independent candidate matched all 48 live and all 48
+The final candidate is bound to clean HEAD `5fd9196a902f0d8c6c072a5f0fce78940b248000`, candidate
+manifest SHA-256 `21198cd2cc318d30fdfc1391096a8ce3f7946ccd13cfc44549e43e0a2ae76ced`, and explicit
+human approval `user:Arena ask_user uiv2-26-task-first-approval=approve, 2026-11-07`. It has 48/48
+captures and **2064/2064 checks**. A second independent candidate matched all 48 live and all 48
 reference structural signatures exactly. The subsequent approved `--check` exited 0 with
-**2000/2000 checks**. Exact signatures, image digests, and the approval reference are committed in
+**2160/2160 checks**. Exact signatures, image digests, and the approval reference are committed in
 `product/M5_2_0_UIUX_V2_Cross_Tab_Approval.json`; the candidate PNGs/manifests stay local.
+
+The earlier `efbe1c23…` approval at `cafdd08` was explicitly superseded after the task-first merge,
+not reused. The first integrated candidate exposed the old persistent-Inspector/integrations and
+Harness-sidebar assumptions; the contract now positively asserts closed secondary chrome, visible
+unified task controls, retained but collapsed empty stages, shared desktop navigation/sessions, and
+a closed narrow-screen Sessions panel. Screenshot review also caught D1 outlining closed integrations
+content, so the final annotation outlines the visible Tools disclosure instead.
 
 Agent-opened comparisons (not a substitute for the human decision):
 
-- `candidate/light/1440x900/start/comparison.png`: task and one blocker first; recent work and
+- `candidate/light/1440x900/harness/comparison.png`: one left navigation/session surface, a short
+  greeting, and one unified composer with model, policy, workflow and Run; secondary chrome is closed.
+- `candidate/light/390x844/harness/comparison.png`: usable narrow composer, closed Sessions/Tools/
+  Inspector, disabled empty Run, retained stage DOM, and no horizontal overflow.
+- `candidate/dark/1640x900/start/comparison.png`: task and one blocker first; recent work and
   diagnostics remain below the primary action.
-- `candidate/light/390x844/harness/comparison.png`: wrapping integrations, real empty session/model
-  controls, and no horizontal overflow.
 - `candidate/dark/1440x900/hall/comparison.png`: session/transcript hierarchy with readiness evidence
   and no invented conclusion.
 - `candidate/dark/1280x800/council/comparison.png`: task, All stages plus four real stages, and
   factual empty output.
 - `candidate/light/1640x900/debate/comparison.png`: question first, explicit models, folded criteria.
 - `candidate/dark/390x844/chat/comparison.png`: Persona and Reasoning share one usable second row.
-  An earlier frame exposed a real 20px select/label overlap; the final CSS correction is covered by
-  non-overlap and >=44px select-width assertions in both themes.
 
-The first approved check also exposed a 51px Council transcript shift caused by capturing two
-readiness states. The final walk waits for the seeded demo's settled readiness verdict and uses the
-canonical 1200ms settle interval. The superseding candidate received its own explicit approval;
-the earlier hash was not silently reused.
+The earlier mobile review exposed a real 20px Chat select/label overlap; the final CSS correction is
+covered by non-overlap and >=44px select-width assertions in both themes. A previous approved check
+also exposed a 51px Council transcript shift caused by capturing two readiness states. The walk waits
+for the seeded demo's settled readiness verdict and uses the canonical 1200ms settle interval; the
+assertion was not weakened or retried until green.

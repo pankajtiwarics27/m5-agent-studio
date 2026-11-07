@@ -623,27 +623,24 @@ REVIEWS: dict[str, dict[str, object]] = {
     "cross-tab-reference-uiv2-26": {
         "story": "UIV2-26",
         "note": (
-            "The cross-tab structural-fidelity candidate: 48 actual running-app frames, the approved "
+            "The integrated task-first cross-tab candidate: 48 actual running-app frames, the approved "
             "wireframe rendered at the same variant, and 48 annotated side-by-side comparisons (144 "
-            "PNGs) over six tabs, four viewports and light/dark. `scripts/uiux_v2_cross_tab_reference_walk.mjs` "
-            "starts its own authenticated demo, activates each tab with keyboard Enter, and completed "
-            "1904/1904 independent live/reference DOM, responsive, palette, overflow and browser-safety "
-            "checks. Pixel RGB delta and changed-pixel ratio are printed for review, never used as a blanket "
-            "pass threshold. Opened and read by the agent: the 1440x900-light Start comparison (task and "
-            "one blocker first, recent work and diagnostics below), the 390x844-light Harness comparison "
-            "(the integrations band wraps without sideways overflow and the empty session/model controls "
-            "stay real), the 1440x900-dark Council comparison (session/transcript hierarchy with readiness "
-            "evidence rather than an invented conclusion), the 1280x800-dark Pipeline comparison (task, All "
-            "stages plus four real stages, factual empty output), the 1640x900-light Compare comparison "
-            "(question first, explicit model choices and folded criteria), and the 390x844-dark Chat "
-            "comparison. That Chat review found a real 20px select/label overlap; the final frame shows "
-            "the corrected two-control second row, with non-overlap and >=44px select widths asserted in "
-            "both themes. D1-D3 mark the wrapping integrations band, preserved global controls and each "
-            "pane's feature-preserving delta. This agent review is not human structural-fidelity approval: "
-            "that decision remains pending until an explicit user response is bound to the exact candidate."
+            "PNGs) over six tabs, four viewports and light/dark. The authenticated keyboard-driven walk "
+            "completed 2064/2064 independent checks; the separately approved check completed 2160/2160. "
+            "Pixel RGB delta and changed-pixel ratio remain informational, never a blanket pass threshold. "
+            "Opened and read by the agent: dark 1640x900 Start (task/blocker first), light 390x844 Harness "
+            "(one usable unified composer, closed Sessions/Tools/Inspector and no sideways overflow), dark "
+            "1440x900 Council (readiness evidence, no invented conclusion), dark 1280x800 Pipeline (All "
+            "stages plus four real stages and factual empty output), light 1640x900 Compare (question, "
+            "explicit models and folded criteria), and dark 390x844 Chat. The earlier Chat review found a "
+            "real 20px select/label overlap; the final frame retains the corrected two-control second row "
+            "with non-overlap and >=44px select widths asserted in both themes. D1 outlines the visible "
+            "Tools disclosure rather than its closed content; D2/D3 mark explicit Inspector and pane deltas. "
+            "The agent review is distinct from the explicit human decision: candidate 21198cd2cc318d30fdfc1391096a8ce3f7946ccd13cfc44549e43e0a2ae76ced "
+            "was approved through Arena ask_user uiv2-26-task-first-approval=approve on 2026-11-07."
         ),
         "eye": [
-            "candidate/light/1440x900/start/comparison.png",
+            "candidate/dark/1640x900/start/comparison.png",
             "candidate/light/390x844/harness/comparison.png",
             "candidate/dark/1440x900/hall/comparison.png",
             "candidate/dark/1280x800/council/comparison.png",

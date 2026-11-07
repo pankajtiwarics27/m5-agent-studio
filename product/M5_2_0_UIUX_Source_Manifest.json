@@ -418,9 +418,9 @@
     {
       "path": "scripts/uiux_screenshot_review.py",
       "role": "traces every committed capture to the script that made it and checks that the theme in its name is the theme in its pixels",
-      "sha256": "b830c97b7a7ddd672ef4f1f0c78274e0935ca1aab2f8019c2d415a2dbe419cd4",
-      "bytes": 82633,
-      "lines": 1520
+      "sha256": "15b40a8458fa36e34931ea39eff7d85a3c384fce3406b40e079608d6024b733b",
+      "bytes": 82350,
+      "lines": 1517
     },
     {
       "path": "tests/test_uiux_screenshot_review.py",
