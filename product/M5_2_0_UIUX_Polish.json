@@ -5,7 +5,7 @@
     "frontend": "static/index.html",
     "walk": "scripts/polish_walk.mjs",
     "style_blocks": 2,
-    "rules": 1312
+    "rules": 1337
   },
   "tokens": {
     "radius": [
@@ -140,7 +140,7 @@
     ]
   },
   "totals": {
-    "radius_rules": 139,
+    "radius_rules": 141,
     "motion_rules": 18,
     "press_rules": 2,
     "hover_rules": 35,

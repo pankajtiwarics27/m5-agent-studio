@@ -6,9 +6,9 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 re-derived from the markup on every run.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
-* Frontend digest: `6576b48dd802161eda5187f1714eb5007af23aacc84f8105cb504075e26cd79b`.
+* Frontend digest: `46e447699cfffec4573957206a5a553ee81b7535240732a1b5aa7721b6c99189`.
 * Panes: 6 · controls in panes: 107 · controls in the
-  shared chrome: 130 · script-rendered: 71.
+  shared chrome: 135 · script-rendered: 72.
 
 ## What this page is, and is not
 
@@ -27,12 +27,12 @@ the end, attributed to the function that renders them — a heuristic, not a cal
 | council | `pane-council` | 17 | 2 | 0 | button 9, input 1, select 5, summary 1, textarea 1 |
 | debate | `pane-debate` | 10 | 1 | 0 | button 5, input 1, select 2, summary 1, textarea 1 |
 | chat | `pane-chat` | 12 | 0 | 0 | button 5, input 3, select 3, textarea 1 |
-| (chrome) | outside the panes | 130 | 50 | 0 | button 75, input 31, select 12, summary 6, textarea 6 |
+| (chrome) | outside the panes | 135 | 50 | 0 | button 79, input 32, select 12, summary 6, textarea 6 |
 
 ## What the numbers already say
 
-* 237 controls are in the markup and 71 more are built by script — a checklist written from the markup alone would miss 23% of the interactive surface.
-* The shared chrome carries 130 controls; all six panes together carry 107. Most of the clicking happens in the shell, not inside a tab.
+* 242 controls are in the markup and 72 more are built by script — a checklist written from the markup alone would miss 23% of the interactive surface.
+* The shared chrome carries 135 controls; all six panes together carry 107. Most of the clicking happens in the shell, not inside a tab.
 * 76 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
 
 ## Pane `start`
@@ -75,9 +75,9 @@ Section `pane-harness`, 34 interactive elements.
 | 11 | button | harnessTimelineReplay | button | Replay log | replayHarnessLog() |
 | 12 | button | harnessTimelineResync | button | Resync | harnessResyncFromSnapshot('operator') |
 | 13 | textarea | harnessPromptInput | — | Your task for the Harness | — |
-| 14 | button | harnessAttachBtn | button | Attach context | openContextModal() |
-| 15 | select | harnessLeadModel | — | — | handleModelSelectChange(this, patchActiveHarnessSettings) |
-| 16 | select | harnessPolicy | — | Standard (Ask before Bash) Autonomous (Auto Build & Test) Plan & Audit (Read-Only) | patchActiveHarnessSettings() |
+| 14 | select | harnessLeadModel | — | — | handleModelSelectChange(this, patchActiveHarnessSettings) |
+| 15 | select | harnessPolicy | — | Standard (Ask before Bash) Autonomous (Auto Build & Test) Plan & Audit (Read-Only) | patchActiveHarnessSettings() |
+| 16 | button | harnessAttachBtn | button | Attach context | openContextModal() |
 | 17 | select | harnessWorkflowMode | — | Harness workflow mode | syncHarnessWorkflowModeUI() |
 | 18 | summary | — | — | Task settings | — |
 | 19 | button | — | button | Close | document.getElementById('harnessTaskSettings').open = false |
@@ -186,7 +186,7 @@ Section `pane-chat`, 12 interactive elements.
 
 ## Shared chrome
 
-130 interactive elements outside every pane (tab bar,
+135 interactive elements outside every pane (tab bar,
 top bar and monitor rail). These are reachable from all six tabs, which is why they are not
 attributed to one.
 
@@ -317,15 +317,20 @@ attributed to one.
 | 123 | button | spawnConveneBtn | — | Spawn & Convene 4-LLM Council | confirmSpawnSession(true) |
 | 124 | button | harnessSessionsToggle | button | Sessions | toggleHarnessSessions() |
 | 125 | summary | — | — | Tools & integrations | — |
-| 126 | select | integrationsQuickMenu | — | Open studio tools and integrations | openIntegrationFromMenu(this) |
-| 127 | button | — | — | Unload every local model to free memory | unloadAllModels() |
-| 128 | button | monitorToggleBtn | — | Toggle the contextual inspector | toggleMonitorRail() |
-| 129 | summary | — | — | Run evidenceContracts, handoffs and measured verdicts | — |
-| 130 | button | — | button | Close inspector | toggleMonitorRail(true) |
+| 126 | button | integrationMcpTab | button | MCP servers | setIntegrationKind('mcp') |
+| 127 | button | integrationSkillsTab | button | Skills | setIntegrationKind('skills') |
+| 128 | input | integrationSearch | search | Filter by name… | renderIntegrationPicker(true) |
+| 129 | button | integrationPrev | button | Previous integrations page | changeIntegrationPage(-1) |
+| 130 | button | integrationNext | button | Next integrations page | changeIntegrationPage(1) |
+| 131 | select | integrationsQuickMenu | — | Open studio tools and integrations | openIntegrationFromMenu(this) |
+| 132 | button | — | — | Unload every local model to free memory | unloadAllModels() |
+| 133 | button | monitorToggleBtn | — | Toggle the contextual inspector | toggleMonitorRail() |
+| 134 | summary | — | — | Run evidenceContracts, handoffs and measured verdicts | — |
+| 135 | button | — | button | Close inspector | toggleMonitorRail(true) |
 
 ## Controls built by script
 
-71 interactive tags appear as template strings inside the
+72 interactive tags appear as template strings inside the
 inline script rather than in the markup. They are attributed to the nearest preceding function
 and are **not** in the tables above:
 
@@ -351,6 +356,7 @@ and are **not** in the tables above:
 | `renderHarnessSidebar` | 4 |
 | `renderHarnessTimeline` | 1 |
 | `renderHarnessVerdictCardHtml` | 2 |
+| `renderIntegrationPicker` | 1 |
 | `renderMarkdown` | 1 |
 | `renderMcpHub` | 2 |
 | `renderMcpTools` | 2 |

@@ -241,10 +241,20 @@ def build_inventory() -> dict:
     )
     activatable = [entry for entry in targets if "data-key-activate" in entry["attrs"]]
     check(
-        "the non-native controls are the nine that are still mouse-only: starter cards, provider chips, skill pills and session rows",
-        len(activatable) == 9,
+        "the remaining seven non-native controls retain delegated keyboard activation",
+        # The two configured skill/MCP pill templates became one native button
+        # template in the owner-requested integration picker. Keep the remaining
+        # delegated-control count pinned; do not silently accept new custom controls.
+        len(activatable) == 7,
         f"{len(activatable)} activatable click targets: "
         + "; ".join(f"{entry['tag']}.{entry['class']}" for entry in activatable),
+    )
+    check(
+        "configured integration toggles are native pressed-state buttons",
+        '<button type="button" class="skill-pill integration-row' in html
+        and 'aria-pressed="${on}"' in html
+        and 'onclick="toggleIntegrationRow(this)"' in html,
+        "native buttons supply Enter/Space; aria-pressed exposes the enabled state",
     )
     native_chips = re.findall(r'<button type="button" class="chip"', html)
     check(

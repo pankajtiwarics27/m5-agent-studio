@@ -51,10 +51,10 @@
           "artifact": "product/M5_2_0_UIUX_Control_Inventory.json",
           "totals": {
             "panes": 6,
-            "markup_controls": 237,
+            "markup_controls": 242,
             "pane_controls": 107,
-            "chrome_controls": 130,
-            "script_rendered_controls": 71,
+            "chrome_controls": 135,
+            "script_rendered_controls": 72,
             "script_rendered_by_function": {
               "ensureStageCardMounted": 1,
               "hallClearScopeNoteHtml": 2,
@@ -76,6 +76,7 @@
               "renderHarnessSidebar": 4,
               "renderHarnessTimeline": 1,
               "renderHarnessVerdictCardHtml": 2,
+              "renderIntegrationPicker": 1,
               "renderMarkdown": 1,
               "renderMcpHub": 2,
               "renderMcpTools": 2,
@@ -213,10 +214,10 @@
           "totals": {
             "panes": 6,
             "preserved_capabilities": 21,
-            "markup_controls": 237,
-            "chrome_controls": 130,
+            "markup_controls": 242,
+            "chrome_controls": 135,
             "pane_controls": 107,
-            "script_rendered_controls": 71,
+            "script_rendered_controls": 72,
             "routes": 118,
             "routes_with_resolved_or_possible_caller": 71,
             "routes_no_caller_observed": 47,
@@ -250,7 +251,7 @@
           "totals": {
             "tokens": 56,
             "groups": 8,
-            "references": 1592,
+            "references": 1608,
             "theme_overrides": 20,
             "density_overrides": 5,
             "contrast_pairs": 28,
@@ -820,7 +821,7 @@
         {
           "artifact": "product/M5_2_0_UIUX_Polish.json",
           "totals": {
-            "radius_rules": 139,
+            "radius_rules": 141,
             "motion_rules": 18,
             "press_rules": 2,
             "hover_rules": 35,
@@ -1146,9 +1147,9 @@
   "inventory": {
     "tabs": 6,
     "routes": 118,
-    "markup_controls": 237,
-    "chrome_controls": 130,
-    "script_rendered_controls": 71,
+    "markup_controls": 242,
+    "chrome_controls": 135,
+    "script_rendered_controls": 72,
     "capabilities": 21,
     "e2e_rows": 21,
     "e2e_findings": 0,

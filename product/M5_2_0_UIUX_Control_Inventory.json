@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "6576b48dd802161eda5187f1714eb5007af23aacc84f8105cb504075e26cd79b",
+  "frontend_sha256": "46e447699cfffec4573957206a5a553ee81b7535240732a1b5aa7721b6c99189",
   "panes": [
     {
       "dom_id": "start",
@@ -259,15 +259,6 @@
           "rows": "2"
         },
         {
-          "tag": "button",
-          "id": "harnessAttachBtn",
-          "type": "button",
-          "class": "btn",
-          "title": "Pin knowledge documents or explore the code graph — pinned documents are included in this run's context",
-          "onclick": "openContextModal()",
-          "text": "Attach context"
-        },
-        {
           "tag": "select",
           "id": "harnessLeadModel",
           "onchange": "handleModelSelectChange(this, patchActiveHarnessSettings)"
@@ -279,6 +270,16 @@
           "text": "Standard (Ask before Bash) Autonomous (Auto Build & Test) Plan & Audit (Read-Only)"
         },
         {
+          "tag": "button",
+          "id": "harnessAttachBtn",
+          "type": "button",
+          "class": "btn",
+          "aria-label": "Attach context",
+          "title": "Pin knowledge documents or explore the code graph — pinned documents are included in this run's context",
+          "onclick": "openContextModal()",
+          "text": "Attach context"
+        },
+        {
           "tag": "select",
           "id": "harnessWorkflowMode",
           "aria-label": "Harness workflow mode",
@@ -287,6 +288,8 @@
         },
         {
           "tag": "summary",
+          "aria-label": "Task settings",
+          "title": "Project and task settings",
           "text": "Task settings"
         },
         {
@@ -853,10 +856,10 @@
     }
   ],
   "chrome": {
-    "control_count": 130,
+    "control_count": 135,
     "counts": {
-      "button": 75,
-      "input": 31,
+      "button": 79,
+      "input": 32,
       "select": 12,
       "summary": 6,
       "textarea": 6
@@ -1720,11 +1723,52 @@
         "text": "Tools & integrations"
       },
       {
+        "tag": "button",
+        "id": "integrationMcpTab",
+        "type": "button",
+        "class": "btn btn-xs",
+        "onclick": "setIntegrationKind('mcp')",
+        "text": "MCP servers"
+      },
+      {
+        "tag": "button",
+        "id": "integrationSkillsTab",
+        "type": "button",
+        "class": "btn btn-xs",
+        "onclick": "setIntegrationKind('skills')",
+        "text": "Skills"
+      },
+      {
+        "tag": "input",
+        "id": "integrationSearch",
+        "type": "search",
+        "placeholder": "Filter by name…",
+        "oninput": "renderIntegrationPicker(true)"
+      },
+      {
+        "tag": "button",
+        "id": "integrationPrev",
+        "type": "button",
+        "class": "btn btn-xs",
+        "aria-label": "Previous integrations page",
+        "onclick": "changeIntegrationPage(-1)",
+        "text": "Previous"
+      },
+      {
+        "tag": "button",
+        "id": "integrationNext",
+        "type": "button",
+        "class": "btn btn-xs",
+        "aria-label": "Next integrations page",
+        "onclick": "changeIntegrationPage(1)",
+        "text": "Next"
+      },
+      {
         "tag": "select",
         "id": "integrationsQuickMenu",
         "aria-label": "Open studio tools and integrations",
         "onchange": "openIntegrationFromMenu(this)",
-        "text": "Tools & Integrations… Cloud & Local Providers MCP Tools Hub Agent Skills (SKILL.md) Knowledge & CodeGraph External Harness CLI Bridge"
+        "text": "Manage integrations… Cloud & Local Providers MCP Tools Hub Agent Skills (SKILL.md) Knowledge & CodeGraph External Harness CLI Bridge"
       },
       {
         "tag": "button",
@@ -1759,10 +1803,10 @@
   },
   "totals": {
     "panes": 6,
-    "markup_controls": 237,
+    "markup_controls": 242,
     "pane_controls": 107,
-    "chrome_controls": 130,
-    "script_rendered_controls": 71,
+    "chrome_controls": 135,
+    "script_rendered_controls": 72,
     "script_rendered_by_function": {
       "ensureStageCardMounted": 1,
       "hallClearScopeNoteHtml": 2,
@@ -1784,6 +1828,7 @@
       "renderHarnessSidebar": 4,
       "renderHarnessTimeline": 1,
       "renderHarnessVerdictCardHtml": 2,
+      "renderIntegrationPicker": 1,
       "renderMarkdown": 1,
       "renderMcpHub": 2,
       "renderMcpTools": 2,

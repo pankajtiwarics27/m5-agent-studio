@@ -27,10 +27,6 @@
         "class": "chip"
       },
       {
-        "tag": "span",
-        "class": "skill-pill"
-      },
-      {
         "tag": "div",
         "class": "model-row"
       },
@@ -53,10 +49,6 @@
       {
         "tag": "div",
         "class": "chronicle-item"
-      },
-      {
-        "tag": "span",
-        "class": "skill-pill"
       }
     ]
   },
@@ -77,9 +69,9 @@
     "positive_tabindex": 0
   },
   "names": {
-    "controls": 97,
+    "controls": 98,
     "unnamed": 0,
-    "live_regions": 25
+    "live_regions": 26
   },
   "walk": {
     "script": "scripts/a11y_walk.mjs",
@@ -126,7 +118,12 @@
       "detail": ""
     },
     {
-      "check": "the non-native controls are the nine that are still mouse-only: starter cards, provider chips, skill pills and session rows",
+      "check": "the remaining seven non-native controls retain delegated keyboard activation",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "configured integration toggles are native pressed-state buttons",
       "ok": true,
       "detail": ""
     },
@@ -266,7 +263,7 @@
       "detail": ""
     }
   ],
-  "check_count": 31,
+  "check_count": 32,
   "findings": [],
   "status": "clean"
 }

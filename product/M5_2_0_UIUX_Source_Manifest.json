@@ -12,9 +12,9 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "6576b48dd802161eda5187f1714eb5007af23aacc84f8105cb504075e26cd79b",
-      "bytes": 1010066,
-      "lines": 17401
+      "sha256": "46e447699cfffec4573957206a5a553ee81b7535240732a1b5aa7721b6c99189",
+      "bytes": 1018278,
+      "lines": 17525
     },
     {
       "path": "app.py",
@@ -26,9 +26,9 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "7d3c9b34564863e558f19d14d04fcbac1e0f1b01a7b263c60eefbd187f37b781",
-      "bytes": 3793330,
-      "lines": 81376
+      "sha256": "e0d61fa9f78f796ebb06f4af2a7efaa167616c3e07f3fb803435c6e205b55825",
+      "bytes": 3801542,
+      "lines": 81500
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -299,9 +299,9 @@
     {
       "path": "tests/browser/accessibility_walk.mjs",
       "role": "browser accessibility walk with the current-main Chat handoff checks",
-      "sha256": "0aca85bd587fb40bc07011dcb0e69cbb3bc9e1e593c01a132a6eeda54dd85f5e",
-      "bytes": 24872,
-      "lines": 452
+      "sha256": "104897886b6dd7b3260b6e4a5b89372c1b9b2480f4683422867b176a6d4d3392",
+      "bytes": 25038,
+      "lines": 454
     },
     {
       "path": "tests/test_presentations.py",
@@ -327,8 +327,8 @@
     {
       "path": "tests/test_screenshot_capture_browser.py",
       "role": "runs browser-backed UI and screenshot safety regressions",
-      "sha256": "2ecb0637ef80323912644233fe67543831bc1238e7a9ad207b9a3e79051c7adf",
-      "bytes": 27339,
+      "sha256": "8381d919d10d5550c26bae59a06f4c763155ba0d5ee477a56d95e33f0455ed19",
+      "bytes": 27350,
       "lines": 689
     },
     {
@@ -460,8 +460,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "6576b48dd802161eda5187f1714eb5007af23aacc84f8105cb504075e26cd79b",
-    "lines": 17401,
+    "sha256": "46e447699cfffec4573957206a5a553ee81b7535240732a1b5aa7721b6c99189",
+    "lines": 17525,
     "tab_count": 6,
     "tabs": [
       {

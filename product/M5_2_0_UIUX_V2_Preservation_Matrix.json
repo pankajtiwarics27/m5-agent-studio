@@ -8,10 +8,10 @@
   "check_with": "python3 scripts/uiux_v2_preservation_matrix.py --check",
   "statement": "Control -> DOM handler -> API route -> test coverage for every interactive control in static/index.html, plus the three UIV2-02 contract investigations. api_status is existing when every call the handler makes resolves to a mounted @app route, absent-route when a call matches no mounted route, unknown when the resolver left an edge open, no-api for handlers that never fetch, and no-handler for controls without an inline handler. The contracts distinguish existing / partial / absent / unknown and cite file evidence; the generator hard-fails if the sources drift from the classification, so --check is a gate.",
   "pinned_source_commit": "9a584a36f1fbe29ba467562dd12a705626769f00",
-  "frontend_sha256": "6576b48dd802161eda5187f1714eb5007af23aacc84f8105cb504075e26cd79b",
+  "frontend_sha256": "46e447699cfffec4573957206a5a553ee81b7535240732a1b5aa7721b6c99189",
   "app_sha256": "c6148474111133f7b5a7d0932614f7049ad922a61b7463613ebdfd743ac8b5ab",
   "totals": {
-    "controls": 237,
+    "controls": 242,
     "by_pane": {
       "start": 14,
       "harness": 34,
@@ -20,10 +20,10 @@
       "debate": 10,
       "chat": 12
     },
-    "chrome_controls": 130,
+    "chrome_controls": 135,
     "api_status_counts": {
       "existing": 32,
-      "no-api": 121,
+      "no-api": 126,
       "no-handler": 84
     },
     "mounted_routes": 118,
@@ -379,16 +379,6 @@
     },
     {
       "pane": "harness",
-      "id": "harnessAttachBtn",
-      "tag": "button",
-      "text": "Attach context",
-      "handler": "openContextModal",
-      "calls": [],
-      "api_status": "no-api",
-      "tests": []
-    },
-    {
-      "pane": "harness",
       "id": "harnessLeadModel",
       "tag": "select",
       "text": null,
@@ -433,6 +423,16 @@
         "test_uiux_adversarial.py",
         "test_workspace_snapshots.py"
       ]
+    },
+    {
+      "pane": "harness",
+      "id": "harnessAttachBtn",
+      "tag": "button",
+      "text": "Attach context",
+      "handler": "openContextModal",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
     },
     {
       "pane": "harness",
@@ -2794,9 +2794,59 @@
     },
     {
       "pane": "chrome",
+      "id": "integrationMcpTab",
+      "tag": "button",
+      "text": "MCP servers",
+      "handler": "setIntegrationKind",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "integrationSkillsTab",
+      "tag": "button",
+      "text": "Skills",
+      "handler": "setIntegrationKind",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "integrationSearch",
+      "tag": "input",
+      "text": null,
+      "handler": "renderIntegrationPicker",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "integrationPrev",
+      "tag": "button",
+      "text": "Previous",
+      "handler": "changeIntegrationPage",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "integrationNext",
+      "tag": "button",
+      "text": "Next",
+      "handler": "changeIntegrationPage",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
       "id": "integrationsQuickMenu",
       "tag": "select",
-      "text": "Tools & Integrations\u2026 Cloud & Local Providers MCP Tools Hub Agent Skills (SKILL.md) Knowledge & CodeGraph External Harness CLI Bridge",
+      "text": "Manage integrations\u2026 Cloud & Local Providers MCP Tools Hub Agent Skills (SKILL.md) Knowledge & CodeGraph External Harness CLI Bridge",
       "handler": "openIntegrationFromMenu",
       "calls": [],
       "api_status": "no-api",
@@ -2855,7 +2905,7 @@
       "classification": "present_registry__picker_rendered_from_it",
       "picker": {
         "status": "rendered_from_registry",
-        "evidence": "select#chatPersona at static/index.html:3714 ships no <option>; renderChatPersonaPicker() fills it from CHAT_PERSONAS on load and on every filter",
+        "evidence": "select#chatPersona at static/index.html:3759 ships no <option>; renderChatPersonaPicker() fills it from CHAT_PERSONAS on load and on every filter",
         "option_source": "CHAT_PERSONAS"
       },
       "registry": {
