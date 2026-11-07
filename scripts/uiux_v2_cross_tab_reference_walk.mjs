@@ -412,8 +412,11 @@ async function renderComparison(page, actualBytes, referenceBytes, width, height
     context.fillRect(0, 0, canvas.width, canvas.height);
     context.fillStyle = "#172033";
     context.font = "600 15px sans-serif";
-    context.fillText(`APPROVED REFERENCE · ${row.pane} · ${row.theme} · ${row.viewport}`, 12, 29);
-    context.fillText(`ACTUAL APP · independent structure checks + measured delta (no pixel tolerance)`, w + gap + 12, 29);
+    const wideLabels = w >= 700;
+    context.fillText(`${wideLabels ? "APPROVED REFERENCE" : "REFERENCE"} · ${row.pane} · ${row.theme} · ${row.viewport}`, 12, 29);
+    context.fillText(wideLabels
+      ? "ACTUAL APP · independent structure checks + measured delta (no pixel tolerance)"
+      : "ACTUAL · live DOM + measured Δ", w + gap + 12, 29);
     context.drawImage(referenceCanvas, 0, top);
     context.drawImage(actualCanvas, w + gap, top);
     const colors = ["#d13c8f", "#8a4bd1", "#d06a16"];

@@ -122,7 +122,7 @@ COMMON_DIFFERENCES = (
     {
         "id": "D1", "anchor": "integrations", "title": "Compact integrations band",
         "reference": "The conceptual wireframe leaves this row out.",
-        "live": "One compact row preserves Skills, MCP, provider, document and Inspector controls without becoming a second navigation rail.",
+        "live": "A compact wrapping band preserves Skills, MCP, provider, document and Inspector controls without horizontal overflow or a second navigation rail.",
         "story": "UIV2-05",
     },
     {
