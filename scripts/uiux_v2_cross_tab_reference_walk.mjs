@@ -91,6 +91,34 @@ async function loadPuppeteer() {
   return import(pathToFileURL(modulePath).href);
 }
 
+async function pinFonts() {
+  // @sparticuz/chromium ships these exact files on every host. Its default fonts.conf does not
+  // restrict resolution to them, so Debian/Ubuntu host fonts otherwise change raw text geometry.
+  const fontRoot = join(tmpdir(), "fonts", "fonts", "Open_Sans");
+  const names = ["OpenSans-Regular.ttf", "OpenSans-Bold.ttf", "OpenSans-Italic.ttf"];
+  const files = {};
+  for (const name of names) {
+    const path = join(fontRoot, name);
+    if (!existsSync(path)) throw new Error(`pinned Chromium font is missing: ${path}`);
+    files[name] = digest(await readFile(path));
+  }
+  const configRoot = mkdtempSync(join(tmpdir(), "m5-uiv2-26-fonts-"));
+  const cache = join(configRoot, "cache");
+  await mkdir(cache, { recursive: true });
+  const xml = (value) => value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+  const families = [
+    "sans-serif", "serif", "monospace", "system-ui", "-apple-system", "BlinkMacSystemFont",
+    "IBM Plex Sans", "Inter", "Segoe UI", "SF Pro Text", "JetBrains Mono", "SF Mono",
+    "SFMono-Regular", "ui-monospace", "Menlo", "Consolas", "Liberation Mono", "Arial", "Helvetica",
+  ];
+  const aliases = families.map((family) => `<alias binding="strong"><family>${xml(family)}</family><prefer><family>Open Sans</family></prefer></alias>`).join("\n");
+  const configPath = join(configRoot, "fonts.conf");
+  await writeFile(configPath, `<?xml version="1.0"?>\n<fontconfig>\n<dir>${xml(fontRoot)}</dir>\n<cachedir>${xml(cache)}</cachedir>\n${aliases}\n</fontconfig>\n`);
+  process.env.FONTCONFIG_FILE = configPath;
+  process.env.FONTCONFIG_PATH = configRoot;
+  return { family: "Open Sans", files, config: configPath };
+}
+
 function gitState() {
   const options = { cwd: ROOT, encoding: "utf8" };
   return {
@@ -548,6 +576,7 @@ async function main() {
     });
     if (authorization.status !== 200) throw new Error(`Bearer API authentication failed: ${authorization.status}`);
     const extraArgs = (process.env.STUDIO_SCREENSHOT_CHROME_ARGS || "").split(/\s+/).filter(Boolean);
+    const fonts = await pinFonts();
     browser = await puppeteer.launch({
       executablePath: chrome, headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", ...extraArgs],
@@ -654,7 +683,7 @@ async function main() {
     const manifest = {
       schema_version: 1, document_type: "m5_uiv2_cross_tab_candidate", story: "UIV2-26", mode: args.mode,
       complete: selection.complete, generated_at: new Date().toISOString(), contract_sha256: contractSha,
-      wireframe_sha256: wireframeSha, browser: { requested_build: "153.0.8010.0", executable: chrome, version: await browser.version() },
+      wireframe_sha256: wireframeSha, browser: { requested_build: "153.0.8010.0", executable: chrome, version: await browser.version(), fonts },
       demo: { script: "scripts/demo_tour.py --serve", isolated: true, base_path: "/", authentication: "session token + Bearer API", external_provider_calls: false },
       matrix: { ...contract.matrix, keys: captures.map((row) => row.key) },
       git: gitState(), approval: args.mode === "candidate" ? { status: "pending", inferred: false } : { status: "approved-check", reference: approval.human_approval.reference, candidate: approval.candidate },

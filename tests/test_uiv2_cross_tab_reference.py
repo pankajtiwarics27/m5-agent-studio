@@ -287,6 +287,9 @@ def test_browser_gate_measures_pixels_without_a_tolerance_verdict() -> None:
     assert "approved.live-structural-signature" in source
     assert "approved.reference-structural-signature" in source
     assert 'console.error(`DETAIL ${key} ${check.id}: ${check.detail}`)' in source
+    assert "process.env.FONTCONFIG_FILE" in source
+    assert 'join(tmpdir(), "fonts", "fonts", "Open_Sans")' in source
+    assert "pinned Chromium font is missing" in source
     assert "candidate" in source and "inferred: false" in source
     assert 'detached: process.platform !== "win32"' in source
     assert 'process.kill(-child.pid, name)' in source
