@@ -51,9 +51,9 @@
           "artifact": "product/M5_2_0_UIUX_Control_Inventory.json",
           "totals": {
             "panes": 6,
-            "markup_controls": 243,
-            "pane_controls": 108,
-            "chrome_controls": 135,
+            "markup_controls": 272,
+            "pane_controls": 110,
+            "chrome_controls": 162,
             "script_rendered_controls": 72,
             "script_rendered_by_function": {
               "ensureStageCardMounted": 1,
@@ -106,9 +106,9 @@
         {
           "artifact": "product/M5_2_0_UIUX_Route_Map.json",
           "totals": {
-            "fetch_call_sites": 68,
-            "resolved_urls": 76,
-            "exact_matches": 74,
+            "fetch_call_sites": 71,
+            "resolved_urls": 79,
+            "exact_matches": 77,
             "dynamic_matches": 2,
             "dynamic_method_matches": 0,
             "forwarded_call_sites": 1,
@@ -116,16 +116,16 @@
             "unresolved_caller_edges": 0,
             "unresolved_method_edges": 0,
             "findings": 0,
-            "routes": 118,
-            "routes_with_resolved_or_possible_caller": 71,
-            "routes_with_certain_caller": 62,
+            "routes": 121,
+            "routes_with_resolved_or_possible_caller": 74,
+            "routes_with_certain_caller": 65,
             "routes_only_possible_caller": 9,
             "routes_no_caller_observed": 47,
             "routes_unknown_frontend_caller": 0,
             "resolved_from": {
               "assignment": 1,
               "forwarded": 1,
-              "literal": 66
+              "literal": 69
             }
           }
         }
@@ -145,51 +145,51 @@
         {
           "artifact": "product/M5_2_0_UIUX_Authorization_Trace.json",
           "totals": {
-            "routes_in_app": 118,
-            "state_changing_routes_in_app": 79,
-            "traced_routes": 48,
+            "routes_in_app": 121,
+            "state_changing_routes_in_app": 81,
+            "traced_routes": 50,
             "route_map_unresolved_call_sites": 0,
             "route_map_unresolved_caller_edges": 0,
             "route_map_unresolved_method_edges": 0,
             "traced_by_method": {
               "DELETE": 7,
               "PATCH": 3,
-              "POST": 38
+              "POST": 40
             },
-            "routes_with_authority_subsystem": 20,
-            "routes_with_authority_directly": 13,
-            "routes_with_state_subsystem": 41,
+            "routes_with_authority_subsystem": 22,
+            "routes_with_authority_directly": 15,
+            "routes_with_state_subsystem": 43,
             "routes_with_state_directly": 16,
             "routes_with_durable_writes": 3,
             "routes_that_can_leave_the_machine": 23,
             "distinct_handler_refusals": 9,
             "refusals_by_status": {
-              "400": 89,
-              "401": 48,
-              "403": 54,
+              "400": 96,
+              "401": 50,
+              "403": 56,
               "404": 21,
               "409": 19,
-              "413": 48,
-              "429": 6,
+              "413": 50,
+              "429": 8,
               "500": 1,
-              "502": 1,
+              "502": 2,
               "503": 9,
               "507": 3
             },
             "shared_refusals_by_status": {
-              "400": 48,
-              "401": 48,
-              "403": 48,
-              "413": 48,
-              "429": 6
+              "400": 50,
+              "401": 50,
+              "403": 50,
+              "413": 50,
+              "429": 8
             },
             "handler_refusals_by_status": {
-              "400": 41,
+              "400": 46,
               "403": 6,
               "404": 21,
               "409": 19,
               "500": 1,
-              "502": 1,
+              "502": 2,
               "503": 9,
               "507": 3,
               "dynamic": 1
@@ -214,19 +214,19 @@
           "totals": {
             "panes": 6,
             "preserved_capabilities": 21,
-            "markup_controls": 243,
-            "chrome_controls": 135,
-            "pane_controls": 108,
+            "markup_controls": 272,
+            "chrome_controls": 162,
+            "pane_controls": 110,
             "script_rendered_controls": 72,
-            "routes": 118,
-            "routes_with_resolved_or_possible_caller": 71,
+            "routes": 121,
+            "routes_with_resolved_or_possible_caller": 74,
             "routes_no_caller_observed": 47,
             "routes_unknown_frontend_caller": 0,
             "route_map_unresolved_call_sites": 0,
             "route_map_unresolved_caller_edges": 0,
             "route_map_unresolved_method_edges": 0,
-            "state_changing_routes_traced": 48,
-            "pane_routes_reached": 40,
+            "state_changing_routes_traced": 50,
+            "pane_routes_reached": 42,
             "pane_routes_excluded": 34,
             "route_walk_depth": 2,
             "screenshots_captured": 6,
@@ -251,7 +251,7 @@
           "totals": {
             "tokens": 56,
             "groups": 8,
-            "references": 1608,
+            "references": 1620,
             "theme_overrides": 20,
             "density_overrides": 5,
             "contrast_pairs": 28,
@@ -299,8 +299,8 @@
         {
           "artifact": "product/M5_2_0_UIUX_Overlays.json",
           "totals": {
-            "dialogs": 12,
-            "dialogs_via_controller": 12,
+            "dialogs": 13,
+            "dialogs_via_controller": 13,
             "registry_entries": 4,
             "rail_shortcuts": 6,
             "advertised_controls": 1,
@@ -547,7 +547,7 @@
             "surface_lists": 5,
             "capability_map_tools": 18,
             "routes": 4,
-            "routes_called": 54,
+            "routes_called": 57,
             "routes_unmounted": 0,
             "findings": 0
           }
@@ -572,7 +572,7 @@
             "functions": 25,
             "record_sections": 6,
             "routes": 3,
-            "routes_called": 54,
+            "routes_called": 57,
             "routes_unmounted": 0,
             "styles": 15,
             "findings": 0
@@ -821,10 +821,10 @@
         {
           "artifact": "product/M5_2_0_UIUX_Polish.json",
           "totals": {
-            "radius_rules": 141,
+            "radius_rules": 142,
             "motion_rules": 18,
             "press_rules": 2,
-            "hover_rules": 35,
+            "hover_rules": 36,
             "captures": 8,
             "findings": 0
           }
@@ -878,9 +878,9 @@
             "real": 5,
             "injected": 4,
             "server_only": 3,
-            "mutating_writes": 37,
+            "mutating_writes": 39,
             "guarded_writes": 23,
-            "reporting_writes": 14,
+            "reporting_writes": 16,
             "presentation_hosts": 5
           }
         }
@@ -928,7 +928,7 @@
           "artifact": "product/M5_2_0_UIUX_Readme_Onboarding.json",
           "totals": {
             "pages": 5,
-            "links": 23,
+            "links": 24,
             "commands": 47,
             "claims": 7,
             "claims_verified": 7,
@@ -1146,9 +1146,9 @@
   ],
   "inventory": {
     "tabs": 6,
-    "routes": 118,
-    "markup_controls": 243,
-    "chrome_controls": 135,
+    "routes": 121,
+    "markup_controls": 272,
+    "chrome_controls": 162,
     "script_rendered_controls": 72,
     "capabilities": 21,
     "e2e_rows": 21,

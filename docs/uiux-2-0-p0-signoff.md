@@ -8,8 +8,8 @@ and what a revert does and does not touch.
 * Status: **historical-approval-unbound** — Signed in the ledger; this page reports the historical owner record, not a new approval.
 * Approval binding: **unbound** — The historical record has no approved input snapshot and does not establish approval of current inputs.
 * Pinned baseline source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (input artifacts are hashed separately).
-* 6 panes · 21 preserved capabilities · 243 markup controls (135 chrome, 108 panes) · 72 rendered by script.
-* 118 routes exist, 71 with a resolved or possible caller, 47 with none observed and 0 unknown due to unresolved edges; 48 state-changing candidates traced.
+* 6 panes · 21 preserved capabilities · 272 markup controls (162 chrome, 110 panes) · 72 rendered by script.
+* 121 routes exist, 74 with a resolved or possible caller, 47 with none observed and 0 unknown due to unresolved edges; 50 state-changing candidates traced.
 * 0 fetch site(s) have 0 unresolved URL or method edge(s) (0 method).
 * Baseline screenshots recorded in the index: 6 of 6 (not provenance-verified).
 
@@ -28,8 +28,8 @@ separates the historical signature from any explicit binding to current input di
 | # | Ask | Evidence in this package |
 |---|---|---|
 | 1 | Accept the preservation matrix as the baseline P1 must preserve | 21 capability rows across 6 panes, carried row for row from product/M5_2_0_UIUX_Autonomous_Roadmap.json |
-| 2 | Accept the control inventory as the list of controls that must stay reachable | 243 markup controls (135 chrome, 108 panes) plus 72 rendered by script |
-| 3 | Review route candidates and preserve confirmed browser-reachable routes and their gates | 118 routes exist; 71 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 48 state-changing candidates; the lexical scan is not exhaustive |
+| 2 | Accept the control inventory as the list of controls that must stay reachable | 272 markup controls (162 chrome, 110 panes) plus 72 rendered by script |
+| 3 | Review route candidates and preserve confirmed browser-reachable routes and their gates | 121 routes exist; 74 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 50 state-changing candidates; the lexical scan is not exhaustive |
 | 4 | Accept that P1 may not weaken the shared boundary | host allowlist (400), cross-origin rejection (403), bearer token (401, 503 when unconfigured), rate limit (429) and body-size limit (413), read from the middleware itself |
 | 5 | Review the rollback path and the state effects of each story | this package adds no migration or privilege; review each story's actual merge, revert and recovery effects, then regenerate artifacts and re-run the checks below |
 
@@ -52,7 +52,7 @@ The preflight checklist a new user sees first: what is ready, what still needs t
 | recheck | Start primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
 | provider settings | Start primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
 
-**Controls — 14 in the markup:**
+**Controls — 15 in the markup:**
 
 | Tag | Id | Label | Handler |
 |---|---|---|---|
@@ -68,10 +68,11 @@ The preflight checklist a new user sees first: what is ready, what still needs t
 | button | — | Inspector | toggleMonitorRail() |
 | summary | — | Project workspace loading | — |
 | input | startWorkspaceInput | — | — |
+| button | — | Browse… | openPathPicker('startWorkspaceInput', {workspace:true}) |
 | select | startWorkspaceRecent | Recent folders… | — |
 | button | startWorkspaceBtn | Set / Create | saveStartWorkspace() |
 
-**Routes reached from this pane's controls — 8, walking at most 2 calls; 0 route(s) reached through the same shared helper were excluded because this pane's walk never passes the function that supplied their URL:**
+**Routes reached from this pane's controls — 9, walking at most 2 calls; 0 route(s) reached through the same shared helper were excluded because this pane's walk never passes the function that supplied their URL:**
 
 | Method | Route | Certainty | State-changing | Walk | Gates that can refuse it |
 |---|---|---|---|---|---|
@@ -80,6 +81,7 @@ The preflight checklist a new user sees first: what is ready, what still needs t
 | GET | `/api/providers` | certain | no | `openProvidersModal` → `loadProviders` | — |
 | GET | `/api/start/command-center` | certain | no | `refreshOnboarding` → `refreshStartCommand` | — |
 | GET | `/api/telemetry` | certain | no | `refreshTelemetry` | — |
+| GET | `/api/workspace/picker` | certain | no | `openPathPicker` → `loadPathPicker` | — |
 | POST | `/api/models/{model_id:path}/load` | possible | yes | `refreshTelemetry` → `renderTelemetry` → `modelAction` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
 | POST | `/api/models/{model_id:path}/unload` | possible | yes | `refreshTelemetry` → `renderTelemetry` → `modelAction` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
 | POST | `/api/workspace/directory` | certain | yes | `saveStartWorkspace` → `saveWorkspaceDirectory` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
@@ -104,7 +106,7 @@ An agent session over a workspace, with the diff, approval, and abort controls.
 | compaction | Harness primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
 | GSD and SDLC | Harness primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
 
-**Controls — 34 in the markup:**
+**Controls — 35 in the markup:**
 
 | Tag | Id | Label | Handler |
 |---|---|---|---|
@@ -129,6 +131,7 @@ An agent session over a workspace, with the diff, approval, and abort controls.
 | button | — | Close | document.getElementById('harnessTaskSettings').open = false |
 | button | — | Set / Create | saveWorkspaceDirectory() |
 | input | harnessWorkspaceInput | — | — |
+| button | — | Browse… | openPathPicker('harnessWorkspaceInput', {workspace:true}) |
 | select | harnessRecentDirsSelect | — | — |
 | input | harnessUseWorktree | — | — |
 | select | harnessCriticModel | — | — |
@@ -143,7 +146,7 @@ An agent session over a workspace, with the diff, approval, and abort controls.
 | button | harnessProjectSummary | Choose a project | document.getElementById('harnessTaskSettings').open = true; document.getElementById('harnessWorkspaceInput').focus() |
 | summary | — | Review run details | — |
 
-**Routes reached from this pane's controls — 15, walking at most 2 calls; 6 route(s) reached through the same shared helper were excluded because this pane's walk never passes the function that supplied their URL:**
+**Routes reached from this pane's controls — 16, walking at most 2 calls; 6 route(s) reached through the same shared helper were excluded because this pane's walk never passes the function that supplied their URL:**
 
 | Method | Route | Certainty | State-changing | Walk | Gates that can refuse it |
 |---|---|---|---|---|---|
@@ -157,6 +160,7 @@ An agent session over a workspace, with the diff, approval, and abort controls.
 | GET | `/api/harness/sessions/{session_id}/state` | certain | no | `harnessResyncFromSnapshot` | — |
 | GET | `/api/harness/sessions/{session_id}/task` | certain | no | `abortHarnessRun` → `refreshHarnessRecovery` | — |
 | GET | `/api/opencontext/docs` | certain | no | `openContextModal` → `loadOpenContextDocs` | — |
+| GET | `/api/workspace/picker` | certain | no | `openPathPicker` → `loadPathPicker` | — |
 | POST | `/api/harness/abort/{session_id}` | certain | yes | `abortHarnessRun` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
 | POST | `/api/harness/approve` | certain | yes | `resolveHarnessApproval` | `host_allowlist`, `origin_check`, `bearer_token`, `body_size_limit` |
 | POST | `/api/harness/gsd-wave` | certain | yes | `executeHarnessSelectedWorkflow` → `runGsdWaveTurn` → `consumeSSE` | `host_allowlist`, `origin_check`, `bearer_token`, `rate_limit`, `body_size_limit` |
@@ -323,7 +327,7 @@ A single streaming conversation with the selected model.
 
 ## Shared chrome
 
-135 controls: button 79, input 32, select 12, summary 6, textarea 6.
+162 controls: button 96, input 37, select 14, summary 8, textarea 7.
 
 Tabs, command palette, modals and the shared toolbar. A pane story may restyle chrome, but every control here stays reachable: the inventory test fails if one disappears.
 
@@ -386,11 +390,11 @@ provenance; a matching snapshot cannot clear separate review holds.
 | Input | Current digest | Owner-recorded digest |
 |---|---|---|
 | `ledger_content_sha256` | `d4137cf1e214931953734cc97943732ea5204b5884c6aa26339cc7c27ed5908b` | `not recorded` |
-| `source_manifest_sha256` | `bfe06da7a29de77a26364f1285a83981bb3c8c4b625255475ccc9fea86fd99f9` | `not recorded` |
-| `control_inventory_sha256` | `0014ac5d02d9b290ec4210e6a2f0df268ecd6c2293bd510cbe0539a5028b3409` | `not recorded` |
-| `route_map_sha256` | `afb0a77eaf936271c6454c3c66d7983095d89b0eea3e94e4e3117e99bcb802b1` | `not recorded` |
-| `authorization_trace_sha256` | `3d27d5c09b0dae084d2bb39907175f7a998c5cade888000ac8b16948ce2dd25d` | `not recorded` |
-| `frontend_sha256` | `ece020737be575bfc58b22873a33421a1db360f9888fefc16747d7a08d82963b` | `not recorded` |
+| `source_manifest_sha256` | `bdad207ed14ab57be061c678e59d430eff01d5d32018f4d632b56bf2ef138185` | `not recorded` |
+| `control_inventory_sha256` | `ce94c7f058caadac97ee025b4690023e7a37b4fd2f30e6e64b691de53613b458` | `not recorded` |
+| `route_map_sha256` | `aa8034f7c62d80f3d3b7eb7f4f89fc22db35675fd7f426b2ebcbd2b49b6498d0` | `not recorded` |
+| `authorization_trace_sha256` | `8a549a706ce264d05c3ab28197982a67645b5e44032d5903d5d599af0e1cb53d` | `not recorded` |
+| `frontend_sha256` | `f1cec8f38634dbb4615f02dceb25d86535fbb19e7cb9cf358f0badfef7ea7382` | `not recorded` |
 | `screenshot_manifest_sha256` | `b488bf453ae260b6564ae592f0455e3d70cff3121dca1e7c823c7abb270b44d3` | `not recorded` |
 | `screenshot_index_sha256` | `16b0620ca1d02a1b181ad15b3a2b0c6aae9e7aa539654d27ed80d9147189634e` | `not recorded` |
 | `generator_sha256` | `6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65` | `not recorded` |

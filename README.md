@@ -90,6 +90,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full verification workflow, and
   guidance
 - [Privacy](docs/privacy.md) — local data, external requests, secrets, and
   retention
+- [Host path picker](docs/host-path-picker.md) — workspace/system paths, confirmed
+  folder creation and explicitly requested, editable model name suggestions
 - [Chat tool calls](docs/chat-tool-calls.md) — native/tagged protocols, local MCP
   inventory, read-only limits, and troubleshooting
 - [MoneyPrinterTurbo integration](docs/moneyprinter-turbo-integration.md) — the

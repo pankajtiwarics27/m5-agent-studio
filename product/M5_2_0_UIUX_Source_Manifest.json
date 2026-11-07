@@ -12,23 +12,23 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "ece020737be575bfc58b22873a33421a1db360f9888fefc16747d7a08d82963b",
-      "bytes": 1019070,
-      "lines": 17534
+      "sha256": "f1cec8f38634dbb4615f02dceb25d86535fbb19e7cb9cf358f0badfef7ea7382",
+      "bytes": 1039321,
+      "lines": 17790
     },
     {
       "path": "app.py",
       "role": "the FastAPI server the UI talks to; source of the route table",
-      "sha256": "fbbb2642ecab90992b545a9db8e2bfb15404609b3ae50758f27c79d572c3b0d3",
-      "bytes": 1045269,
-      "lines": 22456
+      "sha256": "3a3cd5601a575f6301c060cff90920774d7ee227b2335e99381887d9cc81287d",
+      "bytes": 1051955,
+      "lines": 22578
     },
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "20f97e6010d1f276171598a99f5411546c1be3ad05b454cd794b9bf2bc632446",
-      "bytes": 3812130,
-      "lines": 81668
+      "sha256": "abb3c614c38493021cf6ecdbd754171d07568b5683082da468e3157bf6222dfa",
+      "bytes": 3845453,
+      "lines": 82187
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -68,9 +68,9 @@
     {
       "path": "scripts/build_studio.py",
       "role": "regenerates studio.py from app.py and the inlined modules",
-      "sha256": "1d963e27647df299ffa4eeecf92f4175120091c73ee8aa630f6126be7a57f81d",
-      "bytes": 7017,
-      "lines": 131
+      "sha256": "72cd009cb059cf9b2dcbfb298bc689236be4b91ef644c513a37c56ba68bfb268",
+      "bytes": 7040,
+      "lines": 132
     },
     {
       "path": "scripts/check_frontend_syntax.py",
@@ -96,9 +96,9 @@
     {
       "path": "scripts/uiux_authorization_trace.py",
       "role": "traces the authorization and state behind each state-changing call",
-      "sha256": "2af507728d284c4c9bd271b838b14f68e131718217118004a4a5069202f5e83c",
-      "bytes": 37016,
-      "lines": 764
+      "sha256": "e217410b556e7e921b3faa2e2cbbdec71729b63aa46096952e048795bff688c2",
+      "bytes": 37169,
+      "lines": 765
     },
     {
       "path": "scripts/uiux_preservation_signoff.py",
@@ -327,9 +327,9 @@
     {
       "path": "tests/test_screenshot_capture_browser.py",
       "role": "runs browser-backed UI and screenshot safety regressions",
-      "sha256": "c4b4bac8e16e783838ce0df978697831a58635287f59a2001a75736c73ef8a62",
-      "bytes": 27947,
-      "lines": 700
+      "sha256": "e377b67f2a8159d4df104f844189d261d58d4c705fc2f91f0ca163c317b665f3",
+      "bytes": 28532,
+      "lines": 711
     },
     {
       "path": "tests/test_uiux_source_manifest.py",
@@ -390,9 +390,9 @@
     {
       "path": "scripts/uiux_adversarial_inventory.py",
       "role": "maps every refusal a write can meet to the words the pane uses and the proof that both halves hold",
-      "sha256": "44e2f8c88dd9b1b28e20b831f9fe482724598334095fb932119161495941b6d7",
-      "bytes": 33403,
-      "lines": 621
+      "sha256": "1e85313746e5ea85c99837dc804cc4944beba3b0c112cb3f2f4bde50facd10d8",
+      "bytes": 33682,
+      "lines": 623
     },
     {
       "path": "scripts/adversarial_walk.mjs",
@@ -460,8 +460,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "ece020737be575bfc58b22873a33421a1db360f9888fefc16747d7a08d82963b",
-    "lines": 17534,
+    "sha256": "f1cec8f38634dbb4615f02dceb25d86535fbb19e7cb9cf358f0badfef7ea7382",
+    "lines": 17790,
     "tab_count": 6,
     "tabs": [
       {
@@ -507,8 +507,8 @@
         "onclick_target": "chat"
       }
     ],
-    "fetch_call_count": 68,
-    "api_literal_count": 54,
+    "fetch_call_count": 71,
+    "api_literal_count": 57,
     "api_literals": [
       "/api/cache/clear-ssd",
       "/api/chat/stream",
@@ -563,18 +563,21 @@
       "/api/start/command-center?{param}",
       "/api/telemetry",
       "/api/workspace/directory",
-      "/api/workspace/files"
+      "/api/workspace/files",
+      "/api/workspace/picker/folders",
+      "/api/workspace/picker/suggest",
+      "/api/workspace/picker?path={param}&kind={param}&query={param}"
     ]
   },
   "api": {
     "path": "app.py",
-    "sha256": "fbbb2642ecab90992b545a9db8e2bfb15404609b3ae50758f27c79d572c3b0d3",
-    "route_count": 118,
+    "sha256": "3a3cd5601a575f6301c060cff90920774d7ee227b2335e99381887d9cc81287d",
+    "route_count": 121,
     "by_method": {
       "DELETE": 7,
-      "GET": 39,
+      "GET": 40,
       "PATCH": 3,
-      "POST": 69
+      "POST": 71
     },
     "routes": [
       {
@@ -644,6 +647,18 @@
       {
         "method": "POST",
         "path": "/api/workspace/directory"
+      },
+      {
+        "method": "GET",
+        "path": "/api/workspace/picker"
+      },
+      {
+        "method": "POST",
+        "path": "/api/workspace/picker/folders"
+      },
+      {
+        "method": "POST",
+        "path": "/api/workspace/picker/suggest"
       },
       {
         "method": "GET",

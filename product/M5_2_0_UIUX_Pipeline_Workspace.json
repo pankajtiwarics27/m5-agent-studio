@@ -6,11 +6,11 @@
   "source": {
     "frontend": {
       "path": "static/index.html",
-      "sha256": "ece020737be575bfc58b22873a33421a1db360f9888fefc16747d7a08d82963b"
+      "sha256": "f1cec8f38634dbb4615f02dceb25d86535fbb19e7cb9cf358f0badfef7ea7382"
     },
     "backend": {
       "path": "app.py",
-      "sha256": "fbbb2642ecab90992b545a9db8e2bfb15404609b3ae50758f27c79d572c3b0d3"
+      "sha256": "3a3cd5601a575f6301c060cff90920774d7ee227b2335e99381887d9cc81287d"
     },
     "walk": {
       "path": "scripts/pipeline_workspace_walk.mjs",
@@ -22,13 +22,13 @@
     }
   },
   "anchors": {
-    "pane": 3574,
-    "workspace": 3645,
-    "stage_selection": 10065,
-    "state_model": 9393,
-    "activity": 9344,
-    "stream_handlers": 10186,
-    "recovery": 9968
+    "pane": 3596,
+    "workspace": 3667,
+    "stage_selection": 10117,
+    "state_model": 9445,
+    "activity": 9396,
+    "stream_handlers": 10238,
+    "recovery": 10020
   },
   "stage_model": {
     "overview": 0,

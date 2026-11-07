@@ -19,6 +19,7 @@ There is no implicit `.env`, YAML, or JSON configuration file. For process setti
 | `OLLAMA_BASE_URL` | Absolute HTTP(S) URL with a hostname and valid port; credentials, query, and fragment are rejected. Unlike `OMLX_BASE_URL` it is **not** loopback-restricted (an Ollama host may live anywhere on the operator's network), and it is only ever read with read-only `GET /api/tags` discovery plus dispatch of the operator's own requests; no credentials are sent and no writes are issued. Default `http://127.0.0.1:11434`. |
 | `STUDIO_ALLOWED_ORIGINS` | Comma-separated HTTP(S) origins, with no credentials, non-root path, query, or fragment; an optional trailing slash is normalized away. |
 | `STUDIO_ALLOWED_HOSTS` | Non-empty comma-separated Host values without whitespace. |
+| `STUDIO_PATH_PICKER_ROOTS` | Strict JSON array of at most 32 absolute host-directory strings; missing defaults to `[]`, explicit empty/invalid JSON is rejected. Existing configuration `~` expansion is supported; no directories are created at load. Adds roots to home/workspace/recent navigation, not an execution sandbox. See [host path picker](host-path-picker.md). |
 | `STUDIO_DB_PATH`, `STUDIO_API_TOKEN_FILE` | Non-empty paths when explicitly set; `~` expansion is supported. |
 
 Other optional safety flags use the same strict boolean parsing. Path and collection values remain environment-driven; the loader does not infer a model, provider, chip, memory size, or platform.

@@ -243,7 +243,7 @@ async function run(args) {
     record("the controller is exported for the walk", initial.hook === true, "window.M5Overlays");
 
     const dialogs = inventory.dialogs || [];
-    record("the inventory lists every dialog", dialogs.length === 12, `${dialogs.length} dialogs`);
+    record("the inventory lists every dialog", dialogs.length === 13, `${dialogs.length} dialogs`);
 
     for (const dialog of dialogs) {
       const id = dialog.id;
@@ -307,6 +307,16 @@ async function run(args) {
         if (!visible && chosen.paneTab) {
           await page.evaluate((tab) => switchTab(tab), chosen.paneTab);
           await sleep(args.settleMs);
+        }
+        // The workspace picker lives in Start's progressively disclosed workspace
+        // section. Reveal it with the same key path a user takes, not a synthetic click.
+        if (id === "pathPickerModal") {
+          await page.evaluate(() => switchTab("start"));
+          const folded = await page.evaluate(() => !document.getElementById("startWorkspaceDetails").open);
+          if (folded) {
+            await page.focus("#startWorkspaceDetails > summary");
+            await pressKey(page, "Enter");
+          }
         }
         const focused = await page.evaluate((fn) => {
           const trigger = [...document.querySelectorAll(`[onclick^="${fn}("]`)].find((node) => node.offsetParent !== null);
