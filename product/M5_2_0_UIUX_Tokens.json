@@ -5,7 +5,7 @@
   "source": {
     "frontend": "static/index.html",
     "style_block": "#m5-redesign-system",
-    "style_block_sha256": "4addb3b025ac160c983510515ceb2693bb2b9d65e58d3f7ceb6091634b3ab8a6",
+    "style_block_sha256": "57c3ff330fb058023c5c9087b91314c1f3e6133bacf2909fda1fe86908ef5f81",
     "superseded_blocks": [
       "the first <style> block declares an older palette that this one overrides; it is kept only so a stale rule cannot resolve to an undefined name"
     ]
@@ -42,7 +42,7 @@
   "totals": {
     "tokens": 56,
     "groups": 8,
-    "references": 1620,
+    "references": 1622,
     "theme_overrides": 20,
     "density_overrides": 5,
     "contrast_pairs": 28,
@@ -261,7 +261,7 @@
         "light": "#ffffff"
       },
       "density_override": null,
-      "references": 1
+      "references": 2
     },
     {
       "name": "--cyan",
@@ -537,7 +537,7 @@
       "value": "24px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 13
+      "references": 14
     },
     {
       "name": "--ease-out",

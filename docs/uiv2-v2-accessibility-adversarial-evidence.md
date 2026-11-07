@@ -16,7 +16,8 @@ Base: `adbce75385e5e5ce359aaace65501ed6b27fa0ef` (the merged UIV2-27 head).
 | Existing responsive walk | 16/27 | **27/27**, six captures |
 | Computed contrast probe | Six dark brand-chip readings at **2.41:1** | All rendered contrast assertions in the adversarial gate pass |
 | New accessibility adversarial walk | Product defects reproduced during 85/116 → 87/116 → 102/116 → 112/116 → 114/116 diagnostic runs | **120/120 checks, 62 captures**, including four stronger nested-scroll/modal-end checks |
-| Approved-target independent candidate | Not applicable | **48/48 variants, 2104/2104 checks, 144 PNGs** |
+| Approved-target independent candidate | Not applicable | **48/48 variants, 2104/2104 checks, 144 PNGs** at clean HEAD `c674c3b` |
+| Human-approved structural check | Previous signature rejected the intentional 18→24px target change | **48/48 variants, 2200/2200 checks**, explicitly approved clean-HEAD baseline |
 | Council state matrix | Existing UIV2-27 gate | **184/184 checks, 40 captures**, eight viewport/theme variants |
 | Long-conclusion visual matrix | Existing UIV2-27 gate | **72/72 checks, 16 captures**, eight variants |
 | Complete control/API preservation suite | UIV2-27 was 21/21 | **21/21 rows, 32/32 steps, 0 failures in 446.0s** |
@@ -62,7 +63,10 @@ when they are not rendered or tabbable.
 - Final adversarial manifest: `after/capture-manifest.json` — 120/120, 62 captures, SHA-256
   `ea0169fc323f20eb0994bbd4ec03b91b31ee1c875f8e278bdf2efb1afe494a4d` at the time copied.
 - Full actual/reference/annotated candidate: `cross-tab-candidate/` — 48 of each image kind;
-  `candidate-manifest.json` passed candidate validation with 2104/2104 checks.
+  clean-HEAD `candidate-manifest.json` passed candidate validation with 2104/2104 checks and has
+  SHA-256 `a1dd3b8767b8903a907561a07f6844c5523f1dd1bcbae3fee13f25906bd790d3`.
+- Final approved check: `approved-check/check-manifest.json` — 2200/2200 checks, SHA-256
+  `5182b4a85a241465b87e0d7f7cdad1a5557d03216ea2980d08d2a1bd86ff2212`.
 - Loading/error/recovery states: `council-state/` and `council-state/matrix.log` — 184/184.
 - Long content and nested scrolling: `council-long/capture-manifest.json` — 72/72.
 - Complete preservation output: `preservation.log` and the committed
@@ -72,8 +76,10 @@ when they are not rendered or tabbable.
 The candidate preserves the approved normal-phone Hall and Chat geometry. The intentional old-
 signature difference is `#harnessProjectSummary`: its target changes from 18px to 24px high, with
 the corresponding three-pixel y adjustment. Brand foreground contrast changes pixels but not
-geometry. The previous approval cannot be silently reused for those changed signatures; a fresh
-explicit human decision is required before UIV2-28 can be marked done.
+geometry. The previous approval was not silently reused: the user explicitly approved the reviewed
+structure and then approved the exact clean-HEAD manifest through `ask_user`
+(`uiv2-28-visual-approval` and `uiv2-28-clean-head-approval`, 2026-11-08). The binding and complete
+approval record are in `product/M5_2_0_UIUX_V2_Cross_Tab_Approval.json`.
 
 ## Preservation and regeneration
 
