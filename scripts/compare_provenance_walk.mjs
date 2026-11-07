@@ -334,11 +334,12 @@ async function runCompare(page, args, { stopAfterMs = 0 } = {}) {
   for (let attempt = 0; attempt < 400; attempt += 1) {
     await sleep(args.settleMs);
     const state = await readProvenance(page);
-    const busy = await page.evaluate(() => {
-      const button = document.getElementById("debateRunBtn");
-      return Boolean(button && button.disabled && document.getElementById("debateStopBtn").style.display !== "none");
-    });
-    if (!busy && state.cards.length && state.cards.every((card) => card.status !== "running")) return state;
+    // The controls are updated in separate statements at finalization, so their intermediate
+    // combination can look idle for one poll. The run's own busy flag changes only in the
+    // finalizer, after the terminal frame and every panel update have been consumed.
+    const busy = await page.evaluate(() => typeof debateBusy === "undefined" || debateBusy);
+    if (!busy && state.cards.length
+      && state.cards.every((card) => card.status !== "running" && card.status !== "queued")) return state;
   }
   return readProvenance(page);
 }
@@ -568,16 +569,20 @@ async function run(args) {
     const offlineModels = await offlinePage.evaluate(() => [...document.querySelectorAll(".debate-m-chk")].map((box) => box.value));
     await selectModels(offlinePage, offlineModels);
     await writePrompt(offlinePage, TASK);
+    const includeDemoSynthesis = await offlinePage.evaluate(() => document.getElementById("d-synth").checked);
     const demo = await runCompare(offlinePage, args);
     const demoFrames = await frames(offlinePage);
     const demoRows = demo.rows.filter((row) => row.spans === 6);
+    const demoArbiterRows = demoRows.filter((row) => /· arbiter$/.test(row.cells[0]));
+    const expectedDemoRows = offlineModels.length + (includeDemoSynthesis ? 1 : 0);
     record(
       "a demo reply is given no figure at all, and never the demo path's 29.5 or 42.1 tok/s",
       offlineModels.length > 0
         && demo.cards.some((card) => card.status === "demo")
-        && demoRows.length === offlineModels.length
+        && demoRows.length === expectedDemoRows
+        && demoArbiterRows.length === (includeDemoSynthesis ? 1 : 0)
         && demoRows.every((row) => row.cells.slice(1, 6).every((cell) => cell === "—"))
-        && demo.rows.some((row) => /demo text: the reply is the server's, so it carries no measured figure/.test(row.note))
+        && demo.rows.filter((row) => /demo text: the reply is the server's, so it carries no measured figure/.test(row.note)).length === expectedDemoRows
         && !/tok\/s/.test(demo.text)
         && !/29\.5|42\.1/.test(demo.text)
         && framesOf(demoFrames, "panel_done").every((frame) => frame.data.usage && frame.data.usage.demo === true),

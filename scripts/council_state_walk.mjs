@@ -486,6 +486,109 @@ async function run(args) {
     record("the poll it starts can be stopped, and is stopped when the reader says so", runningState.watching && runningState.stopped, `scheduled=${runningState.watching} stopped=${runningState.stopped}`);
     await shoot(page, `still-answering-${args.viewport}-${args.theme}`);
 
+    // ── 11: Clear session is armed, refusal-safe, and a true delete on success ──
+    // The first confirmation is refused once by this walk. The pane must keep the same session
+    // and offer Retry; only the successful retry may remove the active id and transcript.
+    const clearArmed = await page.evaluate(async (id) => {
+      await selectHallSession(id);
+      const realFetch = window.fetch;
+      window.__councilRealFetch = realFetch;
+      window.__councilDeleteAttempts = 0;
+      window.__councilRefuseDelete = true;
+      window.fetch = async (url, init) => {
+        const method = String(init && init.method || "GET").toUpperCase();
+        if (method === "DELETE" && String(url).endsWith(`/api/hall/sessions/${encodeURIComponent(id)}`)) {
+          window.__councilDeleteAttempts += 1;
+          if (window.__councilRefuseDelete) {
+            window.__councilRefuseDelete = false;
+            return new Response(JSON.stringify({ detail: "UIV2-27 refused this delete once" }), {
+              status: 503, headers: { "Content-Type": "application/json" },
+            });
+          }
+        }
+        return realFetch(url, init);
+      };
+      const workspace = await fetch("/api/harness/sessions").then((response) => response.json());
+      window.__councilWorkspaceBefore = workspace.default_workspace || "";
+      document.getElementById("hallClearSessionBtn").click();
+      const stillThere = await fetch(`/api/hall/sessions/${encodeURIComponent(id)}`);
+      const button = document.getElementById("hallClearSessionBtn");
+      return {
+        armed: hallClearSessionArmed,
+        label: button.textContent.trim(),
+        scope: button.title,
+        attempts: window.__councilDeleteAttempts,
+        status: stillThere.status,
+      };
+    }, runningId);
+    record(
+      "Clear session arms without deleting and states the irreversible session-only scope",
+      clearArmed.armed && clearArmed.label === "Confirm clear" && clearArmed.attempts === 0
+        && clearArmed.status === 200 && /Irreversible/.test(clearArmed.scope)
+        && /no archive/.test(clearArmed.scope) && /workspace are never touched/.test(clearArmed.scope),
+      `${clearArmed.label}; DELETE requests=${clearArmed.attempts}; session=${clearArmed.status}`,
+    );
+    await page.evaluate(() => document.getElementById("hallClearSessionBtn").focus());
+    await page.keyboard.press("Enter");
+    await sleep(args.settleMs * 10);
+    const clearRefused = await page.evaluate(async (id) => {
+      const response = await fetch(`/api/hall/sessions/${encodeURIComponent(id)}`);
+      const notice = document.querySelector("#hallRefusalState .presentation");
+      return {
+        active: activeHallId,
+        data: activeHallData && activeHallData.id,
+        status: response.status,
+        listed: hallSessions.some((session) => session.id === id),
+        attempts: window.__councilDeleteAttempts,
+        kind: notice && notice.dataset.kind,
+        title: notice && notice.querySelector(".presentation-title")
+          ? notice.querySelector(".presentation-title").textContent.trim() : "",
+        actions: notice ? [...notice.querySelectorAll(".presentation-actions button")].map((button) => button.textContent.trim()) : [],
+      };
+    }, runningId);
+    record(
+      "a refused delete keeps the active session, its transcript and its row, with Retry available",
+      clearRefused.active === runningId && clearRefused.data === runningId
+        && clearRefused.status === 200 && clearRefused.listed && clearRefused.attempts === 1
+        && Boolean(clearRefused.kind) && clearRefused.actions.includes("Retry"),
+      `active=${clearRefused.active}; server=${clearRefused.status}; notice=${clearRefused.title}`,
+    );
+    await page.evaluate(() => {
+      const retry = [...document.querySelectorAll("#hallRefusalState .presentation-actions button")]
+        .find((button) => button.textContent.trim() === "Retry");
+      if (retry) retry.focus();
+    });
+    await page.keyboard.press("Enter");
+    await sleep(args.settleMs * 12);
+    const cleared = await page.evaluate(async ({ id, survivors }) => {
+      const response = await fetch(`/api/hall/sessions/${encodeURIComponent(id)}`);
+      const remaining = await fetch("/api/hall/sessions").then((result) => result.json());
+      const workspace = await fetch("/api/harness/sessions").then((result) => result.json());
+      const ids = (remaining.sessions || []).map((session) => session.id);
+      const result = {
+        status: response.status,
+        attempts: window.__councilDeleteAttempts,
+        activeChanged: activeHallId !== id,
+        removed: !ids.includes(id),
+        survivors: survivors.every((survivor) => ids.includes(survivor)),
+        workspaceKept: (workspace.default_workspace || "") === window.__councilWorkspaceBefore,
+        notice: Boolean(document.querySelector("#hallRefusalState .presentation")),
+      };
+      window.fetch = window.__councilRealFetch;
+      return result;
+    }, { id: runningId, survivors: [closedId, lostId] });
+    record(
+      "Retry performs the confirmed delete once the route answers",
+      cleared.status === 404 && cleared.attempts === 2 && cleared.activeChanged
+        && cleared.removed && !cleared.notice,
+      `server=${cleared.status}; DELETE requests=${cleared.attempts}; activeChanged=${cleared.activeChanged}`,
+    );
+    record(
+      "deleting one Council session keeps the other sessions and the configured workspace",
+      cleared.survivors && cleared.workspaceKept,
+      `survivors=${cleared.survivors}; workspaceKept=${cleared.workspaceKept}`,
+    );
+
     // The deleted-session step asks for a session that is gone, so a 404 in the console is this
     // walk's own doing. An uncaught exception is not.
     const unexpected = pageErrors.filter((text) => !/status of 404/.test(text));

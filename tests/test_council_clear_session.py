@@ -139,6 +139,19 @@ def test_delete_persists_across_a_restart(tmp_path, monkeypatch):
         assert again.get(f"/api/hall/sessions/{ids[0]}").status_code == 404
 
 
+def test_a_refused_delete_cannot_clear_the_active_pane():
+    """Only a successful DELETE may discard the session the operator is reading."""
+    source = FRONTEND.read_text(encoding="utf-8")
+    delete_start = source.index("async function deleteHallSession")
+    delete_end = source.index("async function clearAllHallSessions", delete_start)
+    delete = source[delete_start:delete_end]
+    assert "if (write && activeHallId === id)" in delete
+    clear_end = source.index("/* ── UIV2-15", delete_end)
+    clear_all = source[delete_end:clear_end]
+    assert "if (write) {" in clear_all
+    assert clear_all.index("if (write) {") < clear_all.index("activeHallId = null")
+
+
 def test_hall_tables_are_the_only_ones_the_delete_touches(tmp_path, monkeypatch):
     """The delete SQL must name the hall tables only - workspace data lives elsewhere."""
     src = APP.read_text(encoding="utf-8")

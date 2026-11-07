@@ -33,16 +33,16 @@ is a bug in the caller, and the `error` kind is already how bugs are shown.
 | `#debateSynthesisArea` | Compare | `empty` | `Start Compare` | 5806 |
 | `#chatState` | Chat | `error` | `Dismiss` | 5855 |
 | `#harnessStreamState` | Harness | `recovery` | `Reconnect now`, `Reload from snapshot` | 5878 |
-| `#hallSummonState` | Council | `error` | `Start a new session`, `Reload the session list` | 6779 |
-| `#hallSummonState` | Council | `recovery` | `Read it again`, `Reload the session list` | 6792 |
-| `#hallSummonState` | Council | `recovery` | `Write a note to reopen`, `Read the conclusion`, `Start a new session` | 6806 |
-| `#hallSummonState` | Council | `recovery` | `Read it now`, `Stop watching` | 6822 |
-| `#hallSummonState` | Council | `error` | `Ask this seat again`, `Read the session`, `Check readiness` | 6838 |
-| `#hallSummonState` | Council | `recovery` | `Read the old conclusion`, `Convene the round` | 7432 |
-| `#hallSummonState` | Council | `error` | `Retry the round`, `Check readiness`, `Ask one model` | 8100 |
-| `#chatState` | Chat | `error` | `Retry`, `Dismiss` | 12257 |
-| `#chatState` | Chat | `recovery` | `Back to Chat`, `Open Harness` | 12283 |
-| `#chatState` | Chat | `recovery` | `Undo`, `Dismiss` | 12467 |
+| `#hallSummonState` | Council | `error` | `Start a new session`, `Reload the session list` | 6784 |
+| `#hallSummonState` | Council | `recovery` | `Read it again`, `Reload the session list` | 6797 |
+| `#hallSummonState` | Council | `recovery` | `Write a note to reopen`, `Read the conclusion`, `Start a new session` | 6811 |
+| `#hallSummonState` | Council | `recovery` | `Read it now`, `Stop watching` | 6827 |
+| `#hallSummonState` | Council | `error` | `Ask this seat again`, `Read the session`, `Check readiness` | 6843 |
+| `#hallSummonState` | Council | `recovery` | `Read the old conclusion`, `Convene the round` | 7437 |
+| `#hallSummonState` | Council | `error` | `Retry the round`, `Check readiness`, `Ask one model` | 8105 |
+| `#chatState` | Chat | `error` | `Retry`, `Dismiss` | 12267 |
+| `#chatState` | Chat | `recovery` | `Back to Chat`, `Open Harness` | 12293 |
+| `#chatState` | Chat | `recovery` | `Undo`, `Dismiss` | 12477 |
 
 19 call sites across 9 of 9 containers: 3 empty, 9 error, 7 recovery.
 
@@ -69,7 +69,7 @@ should not quietly become a pane rewrite:
 | Handler | Line |
 |---|---|
 | `installSkill()` | 6487 |
-| `openHarnessDiffModal()` | 14582 |
+| `openHarnessDiffModal()` | 14592 |
 
 ## Checks and limits
 
