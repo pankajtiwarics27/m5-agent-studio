@@ -133,3 +133,16 @@ claimed, and AS-031/signature/roadmap acceptance fields are not changed.
   7/7 phase gates, zero findings; historical approval remains unbound.
 - Full-suite and complete browser reruns are pending at this checkpoint; these
   counts do not assert completed multi-version CI or human/security acceptance.
+
+### Regression follow-up
+
+The complete browser job passed: **36 passed**, with the required-browser/no-skips
+plugin enabled. The first full offline run found **3249 passed, 33 skipped,
+6 failed**: two post-roadmap inventories had not been regenerated, another legacy
+modal assertion still expected 12 dialogs, two documentation-command tests repeated
+the stale Start inventory failure, and the shallow clone lacked the pinned Git
+baseline. Regenerated the Start/Pipeline inventories, updated the modal assertion
+without weakening its accessibility checks, and fetched full Git ancestry (no
+baseline or acceptance record changed). All **94 tests** across those affected
+modules, including both nested documentation commands, now pass. The 37/37,
+7/7 generated release gate still passes. Final full-suite rerun remains pending.
