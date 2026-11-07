@@ -78,6 +78,7 @@
       "test_local_*.py",
       "test_macos_hardware_profiler.py",
       "test_model_*.py",
+      "test_ollama_discovery.py",
       "test_pinned_transport.py",
       "test_portable_handoff_and_switching.py",
       "test_provider_*.py",
