@@ -839,7 +839,7 @@
        persona and reasoning share the next one; the two toggles sit beside Clear. */
     .chat-header-bar { gap: 8px; padding-block: 10px; }
     .chat-header-bar > div:first-child { flex: 1 1 100%; }
-    .chat-header-bar > div:not(:first-child) { flex: 1 1 0; min-width: 0; }
+    .chat-header-bar > div:not(:first-child) { flex: 1 1 120px; min-width: 0; }
     /* A zero flex-basis let the following toggles onto this row and shrunk both pickers to
        20px at 390px, overlapping their labels. Give persona + reasoning the whole second row;
        the toggles and Clear then wrap onto the third row as this layout always intended. */
@@ -3769,8 +3769,14 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
             <option value="low">Low</option>
             <option value="medium">Medium</option>
           </select>
+          <label class="field-lbl" for="chatToolProtocol" style="margin-top:6px;">Tool protocol</label>
+          <select id="chatToolProtocol" aria-describedby="chatToolProtocolHint">
+            <option value="native" selected>Native (OpenAI-compatible)</option>
+            <option value="tagged">Tagged text (compatibility)</option>
+          </select>
+          <span id="chatToolProtocolHint" class="sr-only">Server rejects tools? Choose tagged text. Reasoning is never executed.</span>
         </div>
-        <label class="chk-lbl" style="margin-top:14px;" title="Automatically execute Read-Only Workspace, CodeGraph, OpenContext & MCP tools when Qwen/Claude/models emit <tool_call>"><input type="checkbox" id="chatToolsEnabled" checked /> Workspace + MCP Tools</label>
+        <label class="chk-lbl" style="margin-top:14px;" title="Read workspace files, CodeGraph and notes, or inventory configured MCP servers locally. External MCP execution requires the Harness."><input type="checkbox" id="chatToolsEnabled" checked /> Read-only tools</label>
         <label class="chk-lbl" style="margin-top:14px;"><input type="checkbox" id="chatUnload" /> Unload M5 after reply</label>
         <button class="btn btn-xs" id="chatClearBtn" type="button" style="margin-top:14px; margin-left:auto;" onclick="clearChat()" title="Clear the transcript on this pane (undoable)">Clear</button>
       </div>
@@ -11933,7 +11939,7 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
       return {
         reason: "tools-readonly",
         tone: "info",
-        hint: `Workspace + MCP tools are on and read-only in Chat: they will read ${dir || "the configured default project directory"} and cannot write to it. Turn the tools off above for a plain reply.`,
+        hint: `Workspace reads + local MCP inventory are on and read-only in Chat (external MCP execution requires the Harness): they will read ${dir || "the configured default project directory"} and cannot write to it. Turn the tools off above for a plain reply.`,
       };
     }
     return { reason: "ready", tone: "ok", hint: `Ready: Enter sends, Shift+Enter adds a line. ${model} will answer with the persona above.` };
@@ -12021,6 +12027,7 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
       persona: chatPersonaLabel(),
       reasoning: (document.getElementById("chatReasoning") || {}).value || "off",
       tools: chatToolsOn(),
+      tool_protocol: (document.getElementById("chatToolProtocol") || {}).value || "native",
       // What was literally sent (possibly nothing) and what the server will read when
       // nothing was sent. Two fields, because they are two different facts.
       workspace: workspaceSent || "",
@@ -12035,6 +12042,7 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
     // The request's model first: the header names the model that answered, which is not
     // necessarily the one that was asked, and a copied line has to stand on its own.
     const bits = [`model ${ctx.model}`, ctx.persona, `reasoning ${ctx.reasoning}`, ctx.tools ? "tools on (read-only)" : "tools off"];
+    if (ctx.tools && ctx.tool_protocol) bits.push(`tool protocol ${ctx.tool_protocol}`);
     if (ctx.skills) bits.push(`${ctx.skills} skill${ctx.skills === 1 ? "" : "s"}`);
     bits.push(`${ctx.messages} message${ctx.messages === 1 ? "" : "s"} sent`);
     bits.push(ctx.workspace_effective);
@@ -12492,6 +12500,7 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
       reasoning_mode: context.reasoning,
       auto_unload: document.getElementById("chatUnload").checked,
       tools_enabled: toolsEnabled,
+      tool_protocol: context.tool_protocol,
       workspace_dir: workspaceDir,
       skills: [...selectedSkills]
     }, {

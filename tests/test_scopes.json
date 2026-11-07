@@ -75,6 +75,7 @@
       "test_uiux_tokens.py"
     ],
     "models.providers": [
+      "test_chat_tool_protocol.py",
       "test_api_provider_contracts.py",
       "test_benchmark_*.py",
       "test_capability_negotiation.py",

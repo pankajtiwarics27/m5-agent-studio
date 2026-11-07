@@ -37,7 +37,7 @@ The actual app and the explicitly approved UIV2-03 wireframe are captured at the
 | Compare | D3 | Model and criteria controls stay explicit | Question first, balanced results, evidence in the inspector. | The question leads; model choices and a closed criteria disclosure follow before the result region, preserving the actual run contract. |
 | Chat | D1 | On-demand tools and integrations | The conceptual wireframe leaves the integrations row out. | One closed-by-default Tools & integrations disclosure preserves Skills, MCP, provider, document and unload controls without a permanent band or horizontal overflow. |
 | Chat | D2 | Preserved global actions and explicit Inspector | Telemetry, search and theme are the conceptual header actions; desktop Inspector is persistent. | Density and model-unload controls remain reachable in the tools disclosure; telemetry is a closed popover and Inspector is closed initially at every width with an explicit toggle and Close action. |
-| Chat | D3 | Conversation controls remain above the focused column | A focused single conversation with every registered persona available. | Model, registry-driven persona and reasoning controls remain above the focused transcript and composer; the generic inspector stays collapsed for Chat, and the demo shows its real registry size. |
+| Chat | D3 | Conversation controls remain above the focused column | A focused single conversation with every registered persona available. | Model, registry-driven persona, reasoning, explicit tool protocol and read-only tool controls remain above the focused transcript and composer; the generic inspector stays collapsed for Chat, and the demo shows its real registry size. |
 
 ## Existing state and interaction support
 
@@ -84,13 +84,15 @@ The cross-tab matrix is the common empty/seeded state. Populated, long-content, 
 
 ## Human structural-fidelity approval
 
-**Approved.** `user:Arena ask_user uiv2-26-latest-main-approval=approve, 2026-11-07` at `2026-11-07T13:40:26.714858+00:00`.
+**Pending. No live structural-fidelity approval is recorded.** The candidate is not an approved baseline and `--check` fails closed.
 
-- Candidate: `docs/media/cross-tab-reference-uiv2-26/candidate/candidate-manifest.json`
-- Candidate SHA-256: `a81c6a5c71fc1cb088163dc649718581f4df09e3ab29c84b0af3010c182d9798`
-- HEAD: `fd8b8560597de8eb7a91b9ba8014ff9cc4e92aa3`
+Review the 48 annotated comparisons. Only after an explicit user decision, bind that exact candidate with:
 
-Future `--check` runs compare all 48 live structural signatures with this approval and still rerun every independent reference/layout assertion.
+```bash
+python3 scripts/uiux_v2_cross_tab_reference.py \
+  --approve-candidate docs/media/cross-tab-reference-uiv2-26/candidate/candidate-manifest.json \
+  --approval-reference 'user:<conversation and date of the explicit approval>'
+```
 
 ## Reproduce
 

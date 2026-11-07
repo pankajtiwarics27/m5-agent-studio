@@ -178,7 +178,7 @@ def test_a_private_control_height_is_a_finding(sources):
 
 def test_five_rows_on_a_phone_is_a_finding(sources):
     findings = sources.findings(
-        (FRONTEND, ".chat-header-bar > div:not(:first-child) { flex: 1 1 0; min-width: 0; }",
+        (FRONTEND, ".chat-header-bar > div:not(:first-child) { flex: 1 1 120px; min-width: 0; }",
          ".chat-header-bar > div:not(:first-child) { flex: 1 1 100%; min-width: 0; }"),
     )
     assert "on a phone the controls are three rows, not five" in findings

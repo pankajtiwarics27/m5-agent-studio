@@ -42,6 +42,7 @@ CONSEQUENTIAL_ACTION_CLASSES: frozenset[str] = frozenset({"managed_edit", "conse
 
 MANAGED_READ_TOOLS: frozenset[str] = frozenset(
     {
+        "mcp_list_servers",
         "list_files",
         "grep_search",
         "read_file",

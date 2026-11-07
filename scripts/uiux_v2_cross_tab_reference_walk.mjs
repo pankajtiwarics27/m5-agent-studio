@@ -331,6 +331,7 @@ async function collectLive(page, pane, theme, viewport) {
       const selectors = [
         'label[for="chatModel"]', "#chatModel", 'label[for="chatPersona"]', "#chatPersona",
         "#chatPersonaSearch", "#chatPersonaDescription", 'label[for="chatReasoning"]', "#chatReasoning",
+        'label[for="chatToolProtocol"]', "#chatToolProtocol", 'label:has(#chatToolsEnabled)',
       ];
       chatControls = Object.fromEntries(selectors.map((selector) => [selector, rect(selector)]));
       const overlaps = [];
@@ -347,6 +348,7 @@ async function collectLive(page, pane, theme, viewport) {
       check("chat-controls-no-overlap", overlaps.length === 0, overlaps.join(", ") || "labels, selects, filter and description do not intersect");
       check("chat-persona-select-usable", chatControls["#chatPersona"].width >= 44, chatControls["#chatPersona"].width);
       check("chat-reasoning-select-usable", chatControls["#chatReasoning"].width >= 44, chatControls["#chatReasoning"].width);
+      check("chat-tool-protocol-usable", chatControls["#chatToolProtocol"].width >= 44, chatControls["#chatToolProtocol"].width);
     }
     if (paneContract.tab === "debate") {
       check("compare-two-models", document.querySelectorAll("#debateModelChecks input[type=checkbox]:checked").length >= 2, document.querySelectorAll("#debateModelChecks input[type=checkbox]:checked").length);

@@ -32,6 +32,7 @@ contain placeholder text, and every relative link must resolve.
 | [`release-provenance.md`](release-provenance.md) | SBOM, provenance, scans, and the signing hook (unprovisioned) |
 | [`migration-guide.md`](migration-guide.md) | Upgrading releases, schema migrations, credentials, restore |
 | [`storage-migrations.md`](storage-migrations.md) | Storage seam and schema-migration invariants |
+| [`chat-tool-calls.md`](chat-tool-calls.md) | Chat tool protocols, MCP inventory, read-only policy, and troubleshooting |
 | [`configuration-contracts.md`](configuration-contracts.md) | Every setting, precedence, and validation rule |
 | [`privacy.md`](privacy.md) | What stays local, what leaves the machine, retention, deletion |
 | [`history-privacy.md`](history-privacy.md) | Export, retention, and redaction specifics |

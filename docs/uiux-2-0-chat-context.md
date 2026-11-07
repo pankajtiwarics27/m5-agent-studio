@@ -12,6 +12,7 @@ Every Chat answer records the context it was sent - persona, reasoning mode, too
 | `persona` | the selected persona's label, not its prompt |
 | `reasoning` | the reasoning mode the request carried |
 | `tools` | tools on or off |
+| `tool_protocol` | the selected native or tagged-content tool protocol |
 | `workspace` | the directory the pane literally sent - possibly nothing |
 | `workspace_effective` | what the server will read instead when nothing was sent |
 | `skills` | how many active skills went with it, printed only when there were any |

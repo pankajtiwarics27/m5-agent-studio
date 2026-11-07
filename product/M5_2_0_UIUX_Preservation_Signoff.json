@@ -26,11 +26,11 @@
     "approved_inputs": null,
     "current_inputs": {
       "ledger_content_sha256": "d4137cf1e214931953734cc97943732ea5204b5884c6aa26339cc7c27ed5908b",
-      "source_manifest_sha256": "600e8636b695c14fe560ef9296c083039f82b4e39c081e3fb01c5a262d127d4b",
-      "control_inventory_sha256": "08a32091d74335bc453a78683826da6846d5cfd2aacb6e7365a2176201951155",
-      "route_map_sha256": "ced0cfc55c78b70df998fde338d91958be6e585d9364f828000e4d5c063135d1",
-      "authorization_trace_sha256": "d974d5fed2e3872f7a8cc294995ba0b35bc71f0ac086c4c5725b69892b1f2f1b",
-      "frontend_sha256": "46e447699cfffec4573957206a5a553ee81b7535240732a1b5aa7721b6c99189",
+      "source_manifest_sha256": "f6c6d6564b1fdd8e967a72cfad487dd48780ab5ab6aa6a49fe9ce3e5a69bfa3f",
+      "control_inventory_sha256": "0014ac5d02d9b290ec4210e6a2f0df268ecd6c2293bd510cbe0539a5028b3409",
+      "route_map_sha256": "afb0a77eaf936271c6454c3c66d7983095d89b0eea3e94e4e3117e99bcb802b1",
+      "authorization_trace_sha256": "3d27d5c09b0dae084d2bb39907175f7a998c5cade888000ac8b16948ce2dd25d",
+      "frontend_sha256": "ece020737be575bfc58b22873a33421a1db360f9888fefc16747d7a08d82963b",
       "screenshot_manifest_sha256": "b488bf453ae260b6564ae592f0455e3d70cff3121dca1e7c823c7abb270b44d3",
       "screenshot_index_sha256": "16b0620ca1d02a1b181ad15b3a2b0c6aae9e7aa539654d27ed80d9147189634e",
       "generator_sha256": "6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65",
@@ -40,11 +40,11 @@
   },
   "inputs": {
     "ledger_sha256": "1adcb5f5fe82d14855291246cfe4ed08aafb57ab7143703a1ce5e3c5fc0ea43c",
-    "source_manifest_sha256": "600e8636b695c14fe560ef9296c083039f82b4e39c081e3fb01c5a262d127d4b",
-    "control_inventory_sha256": "08a32091d74335bc453a78683826da6846d5cfd2aacb6e7365a2176201951155",
-    "route_map_sha256": "ced0cfc55c78b70df998fde338d91958be6e585d9364f828000e4d5c063135d1",
-    "authorization_trace_sha256": "d974d5fed2e3872f7a8cc294995ba0b35bc71f0ac086c4c5725b69892b1f2f1b",
-    "frontend_sha256": "46e447699cfffec4573957206a5a553ee81b7535240732a1b5aa7721b6c99189"
+    "source_manifest_sha256": "f6c6d6564b1fdd8e967a72cfad487dd48780ab5ab6aa6a49fe9ce3e5a69bfa3f",
+    "control_inventory_sha256": "0014ac5d02d9b290ec4210e6a2f0df268ecd6c2293bd510cbe0539a5028b3409",
+    "route_map_sha256": "afb0a77eaf936271c6454c3c66d7983095d89b0eea3e94e4e3117e99bcb802b1",
+    "authorization_trace_sha256": "3d27d5c09b0dae084d2bb39907175f7a998c5cade888000ac8b16948ce2dd25d",
+    "frontend_sha256": "ece020737be575bfc58b22873a33421a1db360f9888fefc16747d7a08d82963b"
   },
   "approval_request": [
     {
@@ -55,7 +55,7 @@
     {
       "id": 2,
       "ask": "Accept the control inventory as the list of controls that must stay reachable",
-      "evidence": "242 markup controls (135 chrome, 107 panes) plus 72 rendered by script"
+      "evidence": "243 markup controls (135 chrome, 108 panes) plus 72 rendered by script"
     },
     {
       "id": 3,
@@ -76,9 +76,9 @@
   "totals": {
     "panes": 6,
     "preserved_capabilities": 21,
-    "markup_controls": 242,
+    "markup_controls": 243,
     "chrome_controls": 135,
-    "pane_controls": 107,
+    "pane_controls": 108,
     "script_rendered_controls": 72,
     "routes": 118,
     "routes_with_resolved_or_possible_caller": 71,
@@ -1565,11 +1565,11 @@
           "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
         }
       ],
-      "control_count": 12,
+      "control_count": 13,
       "counts": {
         "button": 5,
         "input": 3,
-        "select": 3,
+        "select": 4,
         "textarea": 1
       },
       "controls": [
@@ -1598,6 +1598,13 @@
           "tag": "select",
           "id": "chatReasoning",
           "text": "Off Low Medium",
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "select",
+          "id": "chatToolProtocol",
+          "text": "Native (OpenAI-compatible) Tagged text (compatibility)",
           "onclick": null,
           "handler": null
         },

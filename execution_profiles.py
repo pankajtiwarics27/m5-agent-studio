@@ -585,6 +585,7 @@ _EP_VAULT_READ_TOOLS: frozenset[str] = frozenset(
 _EP_VAULT_WRITE_TOOLS: frozenset[str] = frozenset({"oc_save_doc", "mcp_bridge__oc_save_doc"})
 _EP_SESSION_READ_TOOLS: frozenset[str] = frozenset(
     {
+        "mcp_list_servers",
         "ctx_search",
         "list_edit_batches",
         "reconcile_task_actions",

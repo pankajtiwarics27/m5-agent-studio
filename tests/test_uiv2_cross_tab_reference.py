@@ -118,6 +118,10 @@ def test_mobile_chat_overlap_regression_is_pinned_in_source_and_browser_rules() 
     assert 'check("chat-controls-no-overlap"' in walk
     assert 'check("chat-persona-select-usable"' in walk
     assert 'check("chat-reasoning-select-usable"' in walk
+    assert 'check("chat-tool-protocol-usable"' in walk
+    assert {
+        "#chatModel", "#chatReasoning", "#chatToolProtocol", "#chatToolsEnabled",
+    } <= set(gate.PANES["chat"]["required"])
 
 
 def test_contract_fingerprint_is_stable_across_approval_and_app_revision() -> None:

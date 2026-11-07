@@ -28,6 +28,7 @@
     "persona",
     "reasoning",
     "skills",
+    "tool_protocol",
     "tools",
     "workspace",
     "workspace_effective"
@@ -61,6 +62,7 @@
         "persona",
         "reasoning",
         "skills",
+        "tool_protocol",
         "tools",
         "workspace",
         "workspace_effective"
@@ -135,7 +137,7 @@
     }
   },
   "totals": {
-    "context_fields": 8,
+    "context_fields": 9,
     "tool_event_fields": 6,
     "tool_status_tone": 2,
     "findings": 0

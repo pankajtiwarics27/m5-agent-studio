@@ -108,15 +108,18 @@ PANES: dict[str, dict[str, Any]] = {
     },
     "chat": {
         "tab": "chat", "title": "Chat", "file": "chat.png",
-        "required": ("#chatPersona", "#chatMessages", "#chatInput", "#chatSendBtn"),
+        "required": (
+            "#chatModel", "#chatPersona", "#chatReasoning", "#chatToolProtocol",
+            "#chatToolsEnabled", "#chatMessages", "#chatInput", "#chatSendBtn",
+        ),
         "order": ("#chatMessages", "#chatInput", "#chatSendBtn"),
         "counts": {},
         "state_walk": "scripts/chat_layout_walk.mjs",
         "difference": {
             "id": "D3", "anchor": "pane", "title": "Conversation controls remain above the focused column",
             "reference": "A focused single conversation with every registered persona available.",
-            "live": "Model, registry-driven persona and reasoning controls remain above the focused transcript and composer; the generic inspector stays collapsed for Chat, and the demo shows its real registry size.",
-            "story": "UIV2-18 / UIV2-19 / UIV2-20",
+            "live": "Model, registry-driven persona, reasoning, explicit tool protocol and read-only tool controls remain above the focused transcript and composer; the generic inspector stays collapsed for Chat, and the demo shows its real registry size.",
+            "story": "UIV2-18 / UIV2-19 / UIV2-20 / direct Chat tool protocol preservation",
         },
     },
 }

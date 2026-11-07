@@ -8,23 +8,23 @@
   "check_with": "python3 scripts/uiux_v2_preservation_matrix.py --check",
   "statement": "Control -> DOM handler -> API route -> test coverage for every interactive control in static/index.html, plus the three UIV2-02 contract investigations. api_status is existing when every call the handler makes resolves to a mounted @app route, absent-route when a call matches no mounted route, unknown when the resolver left an edge open, no-api for handlers that never fetch, and no-handler for controls without an inline handler. The contracts distinguish existing / partial / absent / unknown and cite file evidence; the generator hard-fails if the sources drift from the classification, so --check is a gate.",
   "pinned_source_commit": "9a584a36f1fbe29ba467562dd12a705626769f00",
-  "frontend_sha256": "46e447699cfffec4573957206a5a553ee81b7535240732a1b5aa7721b6c99189",
-  "app_sha256": "c6148474111133f7b5a7d0932614f7049ad922a61b7463613ebdfd743ac8b5ab",
+  "frontend_sha256": "ece020737be575bfc58b22873a33421a1db360f9888fefc16747d7a08d82963b",
+  "app_sha256": "fbbb2642ecab90992b545a9db8e2bfb15404609b3ae50758f27c79d572c3b0d3",
   "totals": {
-    "controls": 242,
+    "controls": 243,
     "by_pane": {
       "start": 14,
       "harness": 34,
       "hall": 20,
       "council": 17,
       "debate": 10,
-      "chat": 12
+      "chat": 13
     },
     "chrome_controls": 135,
     "api_status_counts": {
       "existing": 32,
       "no-api": 126,
-      "no-handler": 84
+      "no-handler": 85
     },
     "mounted_routes": 118,
     "fetch_call_sites": 68
@@ -1147,6 +1147,16 @@
       "id": "chatReasoning",
       "tag": "select",
       "text": "Off Low Medium",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chat",
+      "id": "chatToolProtocol",
+      "tag": "select",
+      "text": "Native (OpenAI-compatible) Tagged text (compatibility)",
       "handler": null,
       "calls": [],
       "api_status": "no-handler",

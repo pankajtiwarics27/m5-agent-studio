@@ -140,6 +140,7 @@ def read_frontend(html: str) -> dict:
                         "persona",
                         "reasoning",
                         "tools",
+                        "tool_protocol",
                         "workspace",
                         "workspace_effective",
                         "skills",
@@ -299,6 +300,7 @@ def build_inventory() -> dict:
         "persona",
         "reasoning",
         "tools",
+        "tool_protocol",
         "workspace",
         "workspace_effective",
         "skills",
@@ -470,6 +472,7 @@ def render_doc(payload: dict) -> str:
             ("persona", "the selected persona's label, not its prompt"),
             ("reasoning", "the reasoning mode the request carried"),
             ("tools", "tools on or off"),
+            ("tool_protocol", "the selected native or tagged-content tool protocol"),
             ("workspace", "the directory the pane literally sent - possibly nothing"),
             (
                 "workspace_effective",

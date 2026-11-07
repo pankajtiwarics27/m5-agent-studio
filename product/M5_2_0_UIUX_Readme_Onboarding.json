@@ -17,7 +17,7 @@
   ],
   "totals": {
     "pages": 5,
-    "links": 22,
+    "links": 23,
     "commands": 47,
     "claims": 7,
     "claims_verified": 7,
@@ -64,6 +64,12 @@
       "page": "README.md",
       "target": "docs/architecture.md",
       "resolved": "docs/architecture.md",
+      "resolves": true
+    },
+    {
+      "page": "README.md",
+      "target": "docs/chat-tool-calls.md",
+      "resolved": "docs/chat-tool-calls.md",
       "resolves": true
     },
     {

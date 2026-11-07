@@ -90,6 +90,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full verification workflow, and
   guidance
 - [Privacy](docs/privacy.md) — local data, external requests, secrets, and
   retention
+- [Chat tool calls](docs/chat-tool-calls.md) — native/tagged protocols, local MCP
+  inventory, read-only limits, and troubleshooting
 - [MoneyPrinterTurbo integration](docs/moneyprinter-turbo-integration.md) — the
   local AI video-generation tool contract and the `MoneyPrinterAPI` provider profile
 - [Documentation index](docs/README.md) — user guides, subsystem contracts, and

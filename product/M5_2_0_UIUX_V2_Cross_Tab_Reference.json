@@ -9,9 +9,9 @@
   "statement": "The actual app and the explicitly approved UIV2-03 wireframe are captured at the same six-tab viewport/theme matrix. Pixel differences are measured and annotated, never hidden by a blanket tolerance. Independent structural rules must pass, and future --check runs also require a live structural baseline approved by a human. New PNGs are local evidence, not Git inputs.",
   "source": {
     "static": "static/index.html",
-    "static_sha256": "46e447699cfffec4573957206a5a553ee81b7535240732a1b5aa7721b6c99189",
+    "static_sha256": "ece020737be575bfc58b22873a33421a1db360f9888fefc16747d7a08d82963b",
     "walk": "scripts/uiux_v2_cross_tab_reference_walk.mjs",
-    "walk_sha256": "3034cba18e05ad7d285faba8da92e1b08b3ea02b48b240bb1634dcaa478c8e1a"
+    "walk_sha256": "f84f40cbd9007909f272f851dcee94d45d9e2ef5b7e1eb0d9e5da3c26e5cb81a"
   },
   "approved_reference": {
     "wireframe": "docs/media/uiv2-v2/reference/wireframe.html",
@@ -898,7 +898,11 @@
       "title": "Chat",
       "file": "chat.png",
       "required": [
+        "#chatModel",
         "#chatPersona",
+        "#chatReasoning",
+        "#chatToolProtocol",
+        "#chatToolsEnabled",
         "#chatMessages",
         "#chatInput",
         "#chatSendBtn"
@@ -932,8 +936,8 @@
           "anchor": "pane",
           "title": "Conversation controls remain above the focused column",
           "reference": "A focused single conversation with every registered persona available.",
-          "live": "Model, registry-driven persona and reasoning controls remain above the focused transcript and composer; the generic inspector stays collapsed for Chat, and the demo shows its real registry size.",
-          "story": "UIV2-18 / UIV2-19 / UIV2-20"
+          "live": "Model, registry-driven persona, reasoning, explicit tool protocol and read-only tool controls remain above the focused transcript and composer; the generic inspector stays collapsed for Chat, and the demo shows its real registry size.",
+          "story": "UIV2-18 / UIV2-19 / UIV2-20 / direct Chat tool protocol preservation"
         }
       ],
       "state_support": {
@@ -948,22 +952,9 @@
   ],
   "approval": {
     "required": true,
-    "status": "approved",
+    "status": "pending",
     "artifact": "product/M5_2_0_UIUX_V2_Cross_Tab_Approval.json",
-    "rule": "A human must approve the annotated candidate; the agent cannot infer or self-certify this decision.",
-    "human_approval": {
-      "decision": "approved",
-      "reference": "user:Arena ask_user uiv2-26-latest-main-approval=approve, 2026-11-07",
-      "recorded_at": "2026-11-07T13:40:26.714858+00:00",
-      "scope": "Structural fidelity of all 48 annotated live/reference comparisons; not a pixel-clone claim."
-    },
-    "candidate": {
-      "manifest": "docs/media/cross-tab-reference-uiv2-26/candidate/candidate-manifest.json",
-      "manifest_sha256": "a81c6a5c71fc1cb088163dc649718581f4df09e3ab29c84b0af3010c182d9798",
-      "git_head": "fd8b8560597de8eb7a91b9ba8014ff9cc4e92aa3"
-    },
-    "captures": 48,
-    "approval_sha256": "70988825abc607a8eabf0223dc3cde1355a3ec3ab0172b24d5aa2de3228516ed"
+    "rule": "A human must approve the annotated candidate; the agent cannot infer or self-certify this decision."
   },
   "totals": {
     "panes": 6,
