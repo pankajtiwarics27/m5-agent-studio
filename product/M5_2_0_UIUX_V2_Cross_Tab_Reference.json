@@ -9,9 +9,9 @@
   "statement": "The actual app and the explicitly approved UIV2-03 wireframe are captured at the same six-tab viewport/theme matrix. Pixel differences are measured and annotated, never hidden by a blanket tolerance. Independent structural rules must pass, and future --check runs also require a live structural baseline approved by a human. New PNGs are local evidence, not Git inputs.",
   "source": {
     "static": "static/index.html",
-    "static_sha256": "b09835677705d4413d619b5d60361f4c92caf75679511369d2bdcf93c97850bb",
+    "static_sha256": "749cad6760d294f62fe7b0821469bdeeac56f50f6eaa65dabf1f084f293c9941",
     "walk": "scripts/uiux_v2_cross_tab_reference_walk.mjs",
-    "walk_sha256": "3e43315ce623ae3fab7e5f79a8b6c8c5df0156b96387d8b0b8e33d965268dab2"
+    "walk_sha256": "15b55a2c89563bdfad8219931bacf3412e7d6ef842cfe34c4a0efe79aa68326b"
   },
   "approved_reference": {
     "wireframe": "docs/media/uiv2-v2/reference/wireframe.html",

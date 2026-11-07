@@ -110,6 +110,16 @@ def test_contract_is_complete_clean_and_reproducible() -> None:
     assert result.returncode == 0, result.stdout + result.stderr
 
 
+def test_mobile_chat_overlap_regression_is_pinned_in_source_and_browser_rules() -> None:
+    html = gate.STATIC_PATH.read_text(encoding="utf-8")
+    assert ".chat-header-bar > div:nth-child(2)," in html
+    assert ".chat-header-bar > div:nth-child(3) { flex: 1 1 calc(50% - 8px); min-width: 0; }" in html
+    walk = WALK.read_text(encoding="utf-8")
+    assert 'check("chat-controls-no-overlap"' in walk
+    assert 'check("chat-persona-select-usable"' in walk
+    assert 'check("chat-reasoning-select-usable"' in walk
+
+
 def test_contract_fingerprint_is_stable_across_approval_and_app_revision() -> None:
     payload = gate.build()
     original = gate.contract_fingerprint(payload)

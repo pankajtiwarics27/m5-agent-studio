@@ -280,12 +280,32 @@ async function collectLive(page, pane, theme, viewport) {
       check(`count:${selector}`, counts[selector] === expectedCount, `${counts[selector]} != ${expectedCount}`);
     }
     let personaValues = null;
+    let chatControls = null;
     if (paneContract.tab === "chat") {
       const values = [...document.querySelectorAll("#chatPersona option")].map((option) => option.value);
       const registry = [...CHAT_PERSONAS].map((persona) => persona.id);
       personaValues = values;
       check("chat-persona-registry", JSON.stringify(values) === JSON.stringify(registry) && values.length > 0, `${values.length} options / ${registry.length} registry`);
       check("chat-persona-count", document.querySelector("#chatPersonaCount").textContent.includes(String(registry.length)), document.querySelector("#chatPersonaCount").textContent);
+      const selectors = [
+        'label[for="chatModel"]', "#chatModel", 'label[for="chatPersona"]', "#chatPersona",
+        "#chatPersonaSearch", "#chatPersonaDescription", 'label[for="chatReasoning"]', "#chatReasoning",
+      ];
+      chatControls = Object.fromEntries(selectors.map((selector) => [selector, rect(selector)]));
+      const overlaps = [];
+      for (let left = 0; left < selectors.length; left += 1) {
+        for (let right = left + 1; right < selectors.length; right += 1) {
+          const a = chatControls[selectors[left]];
+          const b = chatControls[selectors[right]];
+          if (!a || !b || a.display === "none" || b.display === "none") continue;
+          const overlapWidth = Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x);
+          const overlapHeight = Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y);
+          if (overlapWidth > 0.5 && overlapHeight > 0.5) overlaps.push(`${selectors[left]} × ${selectors[right]}`);
+        }
+      }
+      check("chat-controls-no-overlap", overlaps.length === 0, overlaps.join(", ") || "labels, selects, filter and description do not intersect");
+      check("chat-persona-select-usable", chatControls["#chatPersona"].width >= 44, chatControls["#chatPersona"].width);
+      check("chat-reasoning-select-usable", chatControls["#chatReasoning"].width >= 44, chatControls["#chatReasoning"].width);
     }
     if (paneContract.tab === "debate") {
       check("compare-two-models", document.querySelectorAll("#debateModelChecks input[type=checkbox]:checked").length >= 2, document.querySelectorAll("#debateModelChecks input[type=checkbox]:checked").length);
@@ -305,7 +325,7 @@ async function collectLive(page, pane, theme, viewport) {
         header, nav, integrations: rect(".skills-strip"), workspace: rect(".workspace"),
         pane: activePane, inspector, session,
       },
-      tabs, required, counts, order, persona_values: personaValues,
+      tabs, required, counts, order, persona_values: personaValues, chat_controls: chatControls,
     };
     return { checks, signature };
   }, pane, theme, viewport);
