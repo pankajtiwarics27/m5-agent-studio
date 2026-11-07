@@ -40,9 +40,9 @@ is a bug in the caller, and the `error` kind is already how bugs are shown.
 | `#hallSummonState` | Council | `error` | `Ask this seat again`, `Read the session`, `Check readiness` | 6863 |
 | `#hallSummonState` | Council | `recovery` | `Read the old conclusion`, `Convene the round` | 7457 |
 | `#hallSummonState` | Council | `error` | `Retry the round`, `Check readiness`, `Ask one model` | 8125 |
-| `#chatState` | Chat | `error` | `Retry`, `Dismiss` | 12287 |
-| `#chatState` | Chat | `recovery` | `Back to Chat`, `Open Harness` | 12313 |
-| `#chatState` | Chat | `recovery` | `Undo`, `Dismiss` | 12497 |
+| `#chatState` | Chat | `error` | `Retry`, `Dismiss` | 12294 |
+| `#chatState` | Chat | `recovery` | `Back to Chat`, `Open Harness` | 12320 |
+| `#chatState` | Chat | `recovery` | `Undo`, `Dismiss` | 12504 |
 
 19 call sites across 9 of 9 containers: 3 empty, 9 error, 7 recovery.
 
@@ -69,7 +69,7 @@ should not quietly become a pane rewrite:
 | Handler | Line |
 |---|---|
 | `installSkill()` | 6507 |
-| `openHarnessDiffModal()` | 14620 |
+| `openHarnessDiffModal()` | 14627 |
 
 ## Checks and limits
 

@@ -287,3 +287,40 @@ release-gate sources plus the separate Pipeline/Start/V2 preservation/cross-tab
 contracts and preservation second pass:37/37 checks,7/7 gates,0findings. Ruff,
 mypy62, docs and frontend syntax pass. Synthetic light desktop/dark mobile picker
 previews are author evidence only, outside Git, not new signed visual approval.
+
+
+## Shared workspace header — issue #240
+
+Owner manual test6 showed the selected folder in settings and the composer, but
+the shared toolbar still printed the literal “Workspace”. That span was static;
+the screenshot alone did not establish a saved-workspace or reload failure.
+
+The desktop header now displays **Workspace: full host path**, with the same
+`plan.dir` that the existing composer/run plan reads. It is a display of the
+current draft selection, not another saved preference, a persistence guarantee,
+or a statement that an active task's execution directory has changed. Existing
+workspace validation/save/reload and authority boundaries are unchanged. Empty
+selection says **Workspace: not selected** rather than retaining a stale path.
+Long paths ellipsize inside the available toolbar width, while full text remains
+in the DOM and `title`. Paths are inserted only with `textContent`/`title`, not
+HTML. Existing sub800px header-caption hiding remains; the project summary and
+settings still provide directory access on compact screens.
+
+The actual task-workspace browser walk failed before patch because its loaded
+caption was only “Workspace”. The added checks cover default hydration, draft
+changes with duplicate leaf names, root/empty values, long hostile path text,
+reload back to the server's saved default, and all theme/density/viewport
+combinations without toolbar overflow. Display updates make no write/inference
+POST; the test does not save fake paths or claim draft edits persist. Manual
+test6 remains pending the installed header fix and owner reload verification.
+Full multi-version/browser CI and independent approval gates remain separate.
+
+Header author checkpoint:66 task-layout/workspace-path regressions and36 mandatory
+browser tests pass, no browser skips. The added header checks exercise the real
+page/controller, including startup/reload and safe draft changes; the pre-patch
+failure reported exactly the static “Workspace” caption. Ruff/mypy62/frontend/
+docs and both modular/standalone startup-auth smokes pass. Rebuilt standalone and
+all37 UI/UX sources plus separate Pipeline/Start/V2 preservation/cross-tab contracts
+and preservation second pass:37/37 checks,7/7 gates,0findings. Broader source and
+cross-tab visual checks are running separately; full CI and owner test6 remain
+pending. No independent approval record or backend behavior changed.

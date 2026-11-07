@@ -6028,7 +6028,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   }
 /* Owner-requested task-first desktop layout. Existing controls remain the source of truth. */
 .workspace-toolbar { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 4px 24px; border-bottom: 1px solid var(--border); flex: 0 0 auto; position: relative; z-index: 23; }
-.workspace-caption { color: var(--text-dim); font-size: 12px; margin-right: auto; }
+.workspace-caption { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-dim); font-size: 12px; margin-right: auto; }
 .studio-tools > summary, .harness-task-settings > summary, .harness-run-review > summary, .harness-examples > summary { cursor: pointer; color: var(--text-dim); font-size: 12px; padding: 7px 9px; border-radius: var(--radius-sm); }
 .studio-tools > summary:hover, .harness-task-settings > summary:hover, .harness-run-review > summary:hover { background: var(--bg-hover); color: var(--text); }
 .studio-tools > .skills-strip { position: absolute; right: 16px; top: calc(100% + 4px); width: min(720px, calc(100vw - 40px)); max-height: 60dvh; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px; box-shadow: 0 12px 36px rgba(0,0,0,.14); }
@@ -7007,7 +7007,7 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
   <main class="workspace">
     <div class="workspace-toolbar">
       <button class="btn btn-xs sessions-toggle" type="button" id="harnessSessionsToggle" aria-expanded="false" aria-controls="harnessSessionsPanel" onclick="toggleHarnessSessions()">Sessions</button>
-      <span class="workspace-caption">Workspace</span>
+      <span id="workspaceCaption" class="workspace-caption">Workspace: not selected</span>
       <details class="studio-tools" id="studioTools">
         <summary>Tools &amp; integrations</summary>
         <div class="skills-strip" tabindex="0" aria-label="Configured tools and integrations">
@@ -12325,6 +12325,13 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
             )}</span></span>`,
         )
         .join("");
+    }
+    // The shared header describes the same draft directory as the composer, not
+    // a second saved-workspace cache. Text-only output also keeps host paths inert.
+    const caption = document.getElementById("workspaceCaption");
+    if (caption) {
+      caption.textContent = plan.dir ? `Workspace: ${plan.dir}` : "Workspace: not selected";
+      caption.title = plan.dir || "No project directory selected for the current draft";
     }
     const project = document.getElementById("harnessProjectSummary");
     if (project) {
