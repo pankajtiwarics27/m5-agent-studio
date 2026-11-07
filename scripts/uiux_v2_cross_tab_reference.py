@@ -53,15 +53,18 @@ PANES: dict[str, dict[str, Any]] = {
     },
     "harness": {
         "tab": "harness", "title": "Harness", "file": "harness.png",
-        "required": (".harness-sidebar", "#harnessStages", "#harnessPromptInput", "#harnessRunBtn"),
-        "order": ("#harnessStages", "#harnessPromptInput", "#harnessRunBtn"),
+        "required": (
+            "#harnessPromptInput", "#harnessLeadModel", "#harnessPolicy",
+            "#harnessWorkflowMode", "#harnessProjectSummary", "#harnessRunBtn",
+        ),
+        "order": ("#harnessPromptInput", "#harnessLeadModel", "#harnessPolicy", "#harnessRunBtn"),
         "counts": {"#harnessStages .harness-stage": 3},
         "state_walk": "scripts/harness_recovery_walk.mjs",
         "difference": {
-            "id": "D3", "anchor": "pane", "title": "Run configuration remains with the task",
+            "id": "D3", "anchor": "pane", "title": "A unified task composer leads the empty state",
             "reference": "A populated Plan → Execute → Verify cockpit with timeline and composer.",
-            "live": "The empty demo keeps model, policy and run settings visible before the same three stages and composer; no trajectory is invented.",
-            "story": "UIV2-08 / UIV2-09 / UIV2-10",
+            "live": "A short greeting and one composer keep lead model, policy, workflow and Run visible. The three stages return for a real active task; settings and run details disclose on demand. Sessions share the desktop navigation column and use a dismissible narrow-screen panel.",
+            "story": "UIV2-08 / UIV2-09 / UIV2-10 / owner-requested task-first layout",
         },
     },
     "hall": {
@@ -120,16 +123,16 @@ PANES: dict[str, dict[str, Any]] = {
 
 COMMON_DIFFERENCES = (
     {
-        "id": "D1", "anchor": "integrations", "title": "Compact integrations band",
-        "reference": "The conceptual wireframe leaves this row out.",
-        "live": "A compact wrapping band preserves Skills, MCP, provider, document and Inspector controls without horizontal overflow or a second navigation rail.",
-        "story": "UIV2-05",
+        "id": "D1", "anchor": "integrations", "title": "On-demand tools and integrations",
+        "reference": "The conceptual wireframe leaves the integrations row out.",
+        "live": "One closed-by-default Tools & integrations disclosure preserves Skills, MCP, provider, document and unload controls without a permanent band or horizontal overflow.",
+        "story": "UIV2-05 / owner-requested task-first layout",
     },
     {
-        "id": "D2", "anchor": "header", "title": "Preserved global actions",
-        "reference": "Telemetry, search and theme are the conceptual header actions.",
-        "live": "Density and model-unload controls remain reachable alongside them; telemetry still defaults to a closed popover.",
-        "story": "UIV2-06 / existing feature preservation",
+        "id": "D2", "anchor": "header", "title": "Preserved global actions and explicit Inspector",
+        "reference": "Telemetry, search and theme are the conceptual header actions; desktop Inspector is persistent.",
+        "live": "Density and model-unload controls remain reachable in the tools disclosure; telemetry is a closed popover and Inspector is closed initially at every width with an explicit toggle and Close action.",
+        "story": "UIV2-06 / existing feature preservation / owner-requested task-first layout",
     },
 )
 
@@ -296,9 +299,13 @@ def build() -> dict[str, Any]:
         },
         "layout_contract": {
             "header_max_height": 64, "desktop_nav_width": [192, 224],
-            "desktop_inspector_width": [272, 320], "desktop_task_min_width": 640,
-            "desktop_breakpoint": 1440, "narrow_breakpoint": 800,
+            "harness_shared_left_nav_width": [192, 240],
+            "desktop_task_min_width": 640, "desktop_breakpoint": 1440, "narrow_breakpoint": 800,
             "horizontal_overflow": "forbidden", "telemetry": "closed header popover by default",
+            "integrations": "#studioTools closed by default; existing tools remain inside the disclosure",
+            "inspector": "closed by default at every width; #monitorToggleBtn exposes explicit open and Close action",
+            "harness_sessions": "share navigation column at >=1280px; dismissible Sessions panel below 1280px",
+            "harness_empty_state": "unified task controls visible; three stages retained in DOM but collapsed until a real active task",
         },
         "panes": panes,
         "approval": approval,

@@ -151,7 +151,7 @@ def test_static_dom_has_the_six_panes_and_pane_specific_structure() -> None:
     assert len(dom.find_all(class_name="pipeline-overview-button")) == 1
     for ordered in (
         ("startLaunchCard", "startNextBlocker", "startDiagnostics"),
-        ("harnessStages", "harnessPromptInput", "harnessRunBtn"),
+        ("harnessPromptInput", "harnessLeadModel", "harnessPolicy", "harnessRunBtn"),
         ("hallStream", "hallVerdict", "hallHumanInput"),
         ("councilPrompt", "pipelineStageStrip", "pipelineWorkspace"),
         ("debatePrompt", "debateCriteriaDetails", "debateGrid"),
@@ -159,6 +159,29 @@ def test_static_dom_has_the_six_panes_and_pane_specific_structure() -> None:
     ):
         positions = [html.index(f'id="{element_id}"') for element_id in ordered]
         assert positions == sorted(positions), ordered
+
+
+def test_task_first_integration_has_positive_browser_contracts() -> None:
+    harness = gate.PANES["harness"]
+    assert set(harness["required"]) == {
+        "#harnessPromptInput", "#harnessLeadModel", "#harnessPolicy",
+        "#harnessWorkflowMode", "#harnessProjectSummary", "#harnessRunBtn",
+    }
+    assert harness["counts"] == {"#harnessStages .harness-stage": 3}
+    layout = gate.build()["layout_contract"]
+    assert layout["harness_shared_left_nav_width"] == [192, 240]
+    assert "closed by default at every width" in layout["inspector"]
+    source = WALK.read_text(encoding="utf-8")
+    for rule in (
+        'check("tools-closed-by-default"',
+        'check("inspector-closed-by-default"',
+        'check("harness-empty-stages-collapsed"',
+        'check("harness-settings-closed"',
+        'check("harness-empty-run-disabled"',
+        'check("harness-shared-left-surface"',
+        'check("harness-sessions-panel-closed"',
+    ):
+        assert rule in source
 
 
 def test_candidate_validation_checks_all_144_image_digests(tmp_path: Path) -> None:

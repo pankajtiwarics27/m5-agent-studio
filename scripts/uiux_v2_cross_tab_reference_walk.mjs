@@ -241,20 +241,20 @@ async function collectLive(page, pane, theme, viewport) {
     check("no-horizontal-overflow", document.documentElement.scrollWidth <= innerWidth, `${document.documentElement.scrollWidth} > ${innerWidth}`);
     check("header-max-64", header && header.height > 0 && header.height <= 64, JSON.stringify(header));
     check("telemetry-closed", getComputedStyle(document.querySelector("#telemetryPopover")).display === "none" && document.querySelector("#telemetryPopoverBtn").getAttribute("aria-expanded") === "false", "default closed popover");
+    const tools = document.querySelector("#studioTools");
+    const monitorToggle = document.querySelector("#monitorToggleBtn");
+    check("tools-closed-by-default", tools && !tools.open && tools.querySelector(":scope > summary"), "closed details with a keyboard-operable summary");
+    check("inspector-toggle-collapsed", monitorToggle?.getAttribute("aria-expanded") === "false", monitorToggle?.getAttribute("aria-expanded"));
+    check("inspector-closed-by-default", inspector && inspector.display === "none", JSON.stringify(inspector));
     if (width >= 1280) {
-      check("desktop-nav-width", nav && nav.width >= 192 && nav.width <= 224, JSON.stringify(nav));
+      const maxNavWidth = paneContract.tab === "harness" ? 240 : 224;
+      check("desktop-nav-width", nav && nav.width >= 192 && nav.width <= maxNavWidth, JSON.stringify(nav));
     } else {
       check("mobile-tab-row", nav && nav.height > 0 && nav.height <= 64 && nav.y <= 64, JSON.stringify(nav));
     }
     if (width >= 1440) {
-      if (paneContract.tab === "chat") {
-        check("chat-focused-inspector-collapsed", inspector && inspector.display === "none", JSON.stringify(inspector));
-      } else {
-        check("desktop-inspector", inspector && inspector.display !== "none" && inspector.width >= 272 && inspector.width <= 320, JSON.stringify(inspector));
-      }
       check("task-min-640", activePane && activePane.width >= 640, JSON.stringify(activePane));
     } else {
-      check("inspector-drawer-closed", inspector && inspector.display === "none", JSON.stringify(inspector));
       check("task-has-width", activePane && activePane.width > 0, JSON.stringify(activePane));
     }
     const required = {};
@@ -281,6 +281,19 @@ async function collectLive(page, pane, theme, viewport) {
     }
     let personaValues = null;
     let chatControls = null;
+    if (paneContract.tab === "harness") {
+      const stages = document.querySelector("#harnessStages");
+      const settings = document.querySelector("#harnessTaskSettings");
+      const sessionsToggle = document.querySelector("#harnessSessionsToggle");
+      check("harness-empty-stages-collapsed", stages && getComputedStyle(stages).display === "none" && stages.querySelectorAll(".harness-stage").length === 3, JSON.stringify(rect(stages)));
+      check("harness-settings-closed", settings && !settings.open, "advanced project and critic settings start closed");
+      check("harness-empty-run-disabled", document.querySelector("#harnessRunBtn").disabled, "empty task cannot start a run");
+      if (width >= 1280) {
+        check("harness-shared-left-surface", session && nav && session.display !== "none" && Math.abs(session.x - nav.x) < 1 && Math.abs(session.width - nav.width) < 1 && session.y >= nav.y + nav.height - 1, JSON.stringify({ nav, session }));
+      } else {
+        check("harness-sessions-panel-closed", session && session.display === "none" && sessionsToggle?.getAttribute("aria-expanded") === "false", JSON.stringify({ session, expanded: sessionsToggle?.getAttribute("aria-expanded") }));
+      }
+    }
     if (paneContract.tab === "chat") {
       const values = [...document.querySelectorAll("#chatPersona option")].map((option) => option.value);
       const registry = [...CHAT_PERSONAS].map((persona) => persona.id);
@@ -322,8 +335,13 @@ async function collectLive(page, pane, theme, viewport) {
       typography: { body: bodyStyle.fontFamily, size: bodyStyle.fontSize },
       document: { width: document.documentElement.scrollWidth, height: document.documentElement.scrollHeight },
       regions: {
-        header, nav, integrations: rect(".skills-strip"), workspace: rect(".workspace"),
+        header, nav, integrations: rect(".skills-strip"), tools: rect("#studioTools"), workspace: rect(".workspace"),
         pane: activePane, inspector, session,
+      },
+      secondary_state: {
+        tools_open: tools.open, inspector_expanded: monitorToggle.getAttribute("aria-expanded"),
+        harness_sessions_expanded: paneContract.tab === "harness" ? document.querySelector("#harnessSessionsToggle").getAttribute("aria-expanded") : null,
+        harness_settings_open: paneContract.tab === "harness" ? document.querySelector("#harnessTaskSettings").open : null,
       },
       tabs, required, counts, order, persona_values: personaValues, chat_controls: chatControls,
     };
