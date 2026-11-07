@@ -12,23 +12,23 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "d4c8f9799eff233cc8580dc363083ed72e75812f1081f0e90015d8360038412c",
-      "bytes": 1017872,
-      "lines": 17520
+      "sha256": "e26e60e03dbbba3ff943d51b164fd253c8ed4b9145364e30de06d9ea732ed78a",
+      "bytes": 1018664,
+      "lines": 17529
     },
     {
       "path": "app.py",
       "role": "the FastAPI server the UI talks to; source of the route table",
-      "sha256": "c6148474111133f7b5a7d0932614f7049ad922a61b7463613ebdfd743ac8b5ab",
-      "bytes": 1035744,
-      "lines": 22302
+      "sha256": "fbbb2642ecab90992b545a9db8e2bfb15404609b3ae50758f27c79d572c3b0d3",
+      "bytes": 1045269,
+      "lines": 22456
     },
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "827495d15757e61e7f5e49ab7c8d8df1b79ee59faf9852f3ab60c691e091f6b4",
-      "bytes": 3801136,
-      "lines": 81495
+      "sha256": "dedacde50349b04afed9030745248690071934607e8e348157aa04dd315e56bb",
+      "bytes": 3811509,
+      "lines": 81660
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -138,16 +138,16 @@
     {
       "path": "scripts/uiux_chat_context_inventory.py",
       "role": "builds and checks the P2-05 Chat context inventory",
-      "sha256": "f628cd44e67f79fec94cf13e6f4f7593744bc830331056d70687227df9254889",
-      "bytes": 29071,
-      "lines": 634
+      "sha256": "c3f1dc75734a57a29eb37c817d8a467688d57b8366b36eb36d7b191b91c7f0c5",
+      "bytes": 29223,
+      "lines": 637
     },
     {
       "path": "tests/test_chat_context.py",
       "role": "checks the P2-05 context, tool-event and streaming-time contracts",
-      "sha256": "cfd6dea7513d577ad7c2596533ece82bc593dd2091bbcf02ffe89f04ce3198f5",
-      "bytes": 17302,
-      "lines": 500
+      "sha256": "fb0776581e646db627a1f848f76e61d33217bc443896473dea1ce92e2c878545",
+      "bytes": 17327,
+      "lines": 501
     },
     {
       "path": "docs/uiux-2-0-chat.md",
@@ -236,9 +236,9 @@
     {
       "path": "docs/uiux-2-0-chat-context.md",
       "role": "mainline P2-05 context and tool evidence",
-      "sha256": "a9612e6d84ad6e2ac0464474b19eb468d1fe3bb936907781be483b26add11a2d",
-      "bytes": 6156,
-      "lines": 72
+      "sha256": "8a39d59abef00f2e6a4acbbaaf7575c931ebed6dd1d10e865e3eb94f4c0fd15d",
+      "bytes": 6230,
+      "lines": 73
     },
     {
       "path": "scripts/chat_handoff_walk.mjs",
@@ -327,9 +327,9 @@
     {
       "path": "tests/test_screenshot_capture_browser.py",
       "role": "runs browser-backed UI and screenshot safety regressions",
-      "sha256": "8381d919d10d5550c26bae59a06f4c763155ba0d5ee477a56d95e33f0455ed19",
-      "bytes": 27350,
-      "lines": 689
+      "sha256": "c4b4bac8e16e783838ce0df978697831a58635287f59a2001a75736c73ef8a62",
+      "bytes": 27947,
+      "lines": 700
     },
     {
       "path": "tests/test_uiux_source_manifest.py",
@@ -460,8 +460,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "d4c8f9799eff233cc8580dc363083ed72e75812f1081f0e90015d8360038412c",
-    "lines": 17520,
+    "sha256": "e26e60e03dbbba3ff943d51b164fd253c8ed4b9145364e30de06d9ea732ed78a",
+    "lines": 17529,
     "tab_count": 6,
     "tabs": [
       {
@@ -568,7 +568,7 @@
   },
   "api": {
     "path": "app.py",
-    "sha256": "c6148474111133f7b5a7d0932614f7049ad922a61b7463613ebdfd743ac8b5ab",
+    "sha256": "fbbb2642ecab90992b545a9db8e2bfb15404609b3ae50758f27c79d572c3b0d3",
     "route_count": 118,
     "by_method": {
       "DELETE": 7,

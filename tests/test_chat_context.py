@@ -125,6 +125,7 @@ def test_the_context_names_everything_that_went_out(payload):
         "persona",
         "reasoning",
         "tools",
+        "tool_protocol",
         "workspace",
         "workspace_effective",
         "skills",

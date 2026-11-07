@@ -16,7 +16,7 @@
       "simulated_demo"
     ],
     "workspace_route": "/api/workspace/directory",
-    "workspace_route_line": 5105,
+    "workspace_route_line": 5193,
     "telemetry_fields": [
       "docker",
       "memory",

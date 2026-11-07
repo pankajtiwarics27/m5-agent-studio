@@ -687,3 +687,14 @@ def test_task_first_workspace_preserves_visible_controls(browser_env: dict[str, 
         )
     assert result.returncode == 0, f"{result.stdout}\n{result.stderr}"
     assert json.loads(result.stdout)["passed"] >= 45
+
+
+def test_chat_tool_protocol_controls_and_frozen_context(browser_env: dict[str, str]) -> None:
+    """Actual markup/helpers: keyboard selection, responsive bounds, no implicit network."""
+    result = subprocess.run(
+        ["node", str(ROOT / "tests" / "browser" / "chat_tool_protocol_walk.mjs")],
+        cwd=ROOT, env=browser_env, capture_output=True, text=True, timeout=60, check=False,
+    )
+    assert result.returncode == 0, f"{result.stdout}\n{result.stderr}"
+    report = json.loads(result.stdout)
+    assert report["passed"] == 20 and report["network"] == 0 and report["errors"] == []

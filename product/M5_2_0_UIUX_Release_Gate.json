@@ -51,8 +51,8 @@
           "artifact": "product/M5_2_0_UIUX_Control_Inventory.json",
           "totals": {
             "panes": 6,
-            "markup_controls": 242,
-            "pane_controls": 107,
+            "markup_controls": 243,
+            "pane_controls": 108,
             "chrome_controls": 135,
             "script_rendered_controls": 72,
             "script_rendered_by_function": {
@@ -164,7 +164,7 @@
             "routes_that_can_leave_the_machine": 23,
             "distinct_handler_refusals": 9,
             "refusals_by_status": {
-              "400": 88,
+              "400": 89,
               "401": 48,
               "403": 54,
               "404": 21,
@@ -184,7 +184,7 @@
               "429": 6
             },
             "handler_refusals_by_status": {
-              "400": 40,
+              "400": 41,
               "403": 6,
               "404": 21,
               "409": 19,
@@ -214,9 +214,9 @@
           "totals": {
             "panes": 6,
             "preserved_capabilities": 21,
-            "markup_controls": 242,
+            "markup_controls": 243,
             "chrome_controls": 135,
-            "pane_controls": 107,
+            "pane_controls": 108,
             "script_rendered_controls": 72,
             "routes": 118,
             "routes_with_resolved_or_possible_caller": 71,
@@ -446,7 +446,7 @@
         {
           "artifact": "product/M5_2_0_UIUX_Chat_Context.json",
           "totals": {
-            "context_fields": 8,
+            "context_fields": 9,
             "tool_event_fields": 6,
             "tool_status_tone": 2,
             "findings": 0
@@ -928,7 +928,7 @@
           "artifact": "product/M5_2_0_UIUX_Readme_Onboarding.json",
           "totals": {
             "pages": 5,
-            "links": 22,
+            "links": 23,
             "commands": 47,
             "claims": 7,
             "claims_verified": 7,
@@ -1147,7 +1147,7 @@
   "inventory": {
     "tabs": 6,
     "routes": 118,
-    "markup_controls": 242,
+    "markup_controls": 243,
     "chrome_controls": 135,
     "script_rendered_controls": 72,
     "capabilities": 21,
