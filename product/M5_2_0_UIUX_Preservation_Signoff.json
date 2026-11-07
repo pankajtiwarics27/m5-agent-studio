@@ -26,11 +26,11 @@
     "approved_inputs": null,
     "current_inputs": {
       "ledger_content_sha256": "d4137cf1e214931953734cc97943732ea5204b5884c6aa26339cc7c27ed5908b",
-      "source_manifest_sha256": "b0f61cad2a6fa71afbfe7c0b3d689915620e63ebeb5166b3a44bf7ae306ce9e7",
-      "control_inventory_sha256": "f83db8e2251f8901946febcf060fce5d4c5829d748cc3861fe1955eba6a6cc19",
-      "route_map_sha256": "020881154e1e02371636b14d84fbaf548a1881e67dfe40df28d6e6bb4f26c9d2",
-      "authorization_trace_sha256": "5a1d82175e0880d6dbb3b231aecc61f2aa1ee67026e9b4758656c76016b468e1",
-      "frontend_sha256": "d6ec0efecc0930de333cdc268e41befb70cfc9dd19964c35051e9fb53dab2255",
+      "source_manifest_sha256": "9e806abc25771803d00842cfd6f4b33a9dda3d7756487396b0033ab2fa1591b7",
+      "control_inventory_sha256": "d63b1ac5627cb85f8745e39f6547773dea1941425cb84192491ebc8c7763a8c6",
+      "route_map_sha256": "a0b50924c6e8971c9d64d1fab8378c2656ad0433f15335961c99c7c6bca4d513",
+      "authorization_trace_sha256": "17c0df3ca8cc60b2a67e9314793e05141f8a4283cb30492d5efcbd9c7641f621",
+      "frontend_sha256": "5da94c0b031a1bcbab0fe94686f651e21a589d4424a5abcffa873004e735a281",
       "screenshot_manifest_sha256": "b488bf453ae260b6564ae592f0455e3d70cff3121dca1e7c823c7abb270b44d3",
       "screenshot_index_sha256": "16b0620ca1d02a1b181ad15b3a2b0c6aae9e7aa539654d27ed80d9147189634e",
       "generator_sha256": "6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65",
@@ -40,11 +40,11 @@
   },
   "inputs": {
     "ledger_sha256": "1adcb5f5fe82d14855291246cfe4ed08aafb57ab7143703a1ce5e3c5fc0ea43c",
-    "source_manifest_sha256": "b0f61cad2a6fa71afbfe7c0b3d689915620e63ebeb5166b3a44bf7ae306ce9e7",
-    "control_inventory_sha256": "f83db8e2251f8901946febcf060fce5d4c5829d748cc3861fe1955eba6a6cc19",
-    "route_map_sha256": "020881154e1e02371636b14d84fbaf548a1881e67dfe40df28d6e6bb4f26c9d2",
-    "authorization_trace_sha256": "5a1d82175e0880d6dbb3b231aecc61f2aa1ee67026e9b4758656c76016b468e1",
-    "frontend_sha256": "d6ec0efecc0930de333cdc268e41befb70cfc9dd19964c35051e9fb53dab2255"
+    "source_manifest_sha256": "9e806abc25771803d00842cfd6f4b33a9dda3d7756487396b0033ab2fa1591b7",
+    "control_inventory_sha256": "d63b1ac5627cb85f8745e39f6547773dea1941425cb84192491ebc8c7763a8c6",
+    "route_map_sha256": "a0b50924c6e8971c9d64d1fab8378c2656ad0433f15335961c99c7c6bca4d513",
+    "authorization_trace_sha256": "17c0df3ca8cc60b2a67e9314793e05141f8a4283cb30492d5efcbd9c7641f621",
+    "frontend_sha256": "5da94c0b031a1bcbab0fe94686f651e21a589d4424a5abcffa873004e735a281"
   },
   "approval_request": [
     {
@@ -55,12 +55,12 @@
     {
       "id": 2,
       "ask": "Accept the control inventory as the list of controls that must stay reachable",
-      "evidence": "243 markup controls (135 chrome, 108 panes) plus 72 rendered by script"
+      "evidence": "272 markup controls (162 chrome, 110 panes) plus 72 rendered by script"
     },
     {
       "id": 3,
       "ask": "Review route candidates and preserve confirmed browser-reachable routes and their gates",
-      "evidence": "118 routes exist; 71 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 48 state-changing candidates; the lexical scan is not exhaustive"
+      "evidence": "121 routes exist; 74 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 50 state-changing candidates; the lexical scan is not exhaustive"
     },
     {
       "id": 4,
@@ -76,19 +76,19 @@
   "totals": {
     "panes": 6,
     "preserved_capabilities": 21,
-    "markup_controls": 243,
-    "chrome_controls": 135,
-    "pane_controls": 108,
+    "markup_controls": 272,
+    "chrome_controls": 162,
+    "pane_controls": 110,
     "script_rendered_controls": 72,
-    "routes": 118,
-    "routes_with_resolved_or_possible_caller": 71,
+    "routes": 121,
+    "routes_with_resolved_or_possible_caller": 74,
     "routes_no_caller_observed": 47,
     "routes_unknown_frontend_caller": 0,
     "route_map_unresolved_call_sites": 0,
     "route_map_unresolved_caller_edges": 0,
     "route_map_unresolved_method_edges": 0,
-    "state_changing_routes_traced": 48,
-    "pane_routes_reached": 40,
+    "state_changing_routes_traced": 50,
+    "pane_routes_reached": 42,
     "pane_routes_excluded": 34,
     "route_walk_depth": 2,
     "screenshots_captured": 6,
@@ -128,9 +128,9 @@
           "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
         }
       ],
-      "control_count": 14,
+      "control_count": 15,
       "counts": {
-        "button": 8,
+        "button": 9,
         "input": 2,
         "select": 1,
         "summary": 3
@@ -221,6 +221,13 @@
           "handler": null
         },
         {
+          "tag": "button",
+          "id": null,
+          "text": "Browse…",
+          "onclick": "openPathPicker('startWorkspaceInput', {workspace:true})",
+          "handler": "openPathPicker"
+        },
+        {
           "tag": "select",
           "id": "startWorkspaceRecent",
           "text": "Recent folders…",
@@ -238,6 +245,7 @@
       "declared_handlers": [
         "launchTaskFromStart",
         "loadStartRecent",
+        "openPathPicker",
         "openProvidersModal",
         "refreshOnboarding",
         "refreshTelemetry",
@@ -303,6 +311,18 @@
           "handler": "refreshTelemetry",
           "via": [
             "refreshTelemetry"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/workspace/picker",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "loadPathPicker",
+          "via": [
+            "openPathPicker",
+            "loadPathPicker"
           ]
         },
         {
@@ -424,9 +444,9 @@
           "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
         }
       ],
-      "control_count": 34,
+      "control_count": 35,
       "counts": {
-        "button": 18,
+        "button": 19,
         "input": 3,
         "select": 9,
         "summary": 3,
@@ -581,6 +601,13 @@
           "handler": null
         },
         {
+          "tag": "button",
+          "id": null,
+          "text": "Browse…",
+          "onclick": "openPathPicker('harnessWorkspaceInput', {workspace:true})",
+          "handler": "openPathPicker"
+        },
+        {
           "tag": "select",
           "id": "harnessRecentDirsSelect",
           "text": null,
@@ -679,6 +706,7 @@
         "jumpToLatestHarnessEvent",
         "openContextModal",
         "openHarnessGrants",
+        "openPathPicker",
         "replayHarnessLog",
         "resolveHarnessApproval",
         "saveWorkspaceDirectory",
@@ -815,6 +843,18 @@
           "via": [
             "openContextModal",
             "loadOpenContextDocs"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/workspace/picker",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "loadPathPicker",
+          "via": [
+            "openPathPicker",
+            "loadPathPicker"
           ]
         },
         {
@@ -1723,13 +1763,13 @@
     }
   ],
   "chrome": {
-    "control_count": 135,
+    "control_count": 162,
     "counts": {
-      "button": 79,
-      "input": 32,
-      "select": 12,
-      "summary": 6,
-      "textarea": 6
+      "button": 96,
+      "input": 37,
+      "select": 14,
+      "summary": 8,
+      "textarea": 7
     },
     "note": "Tabs, command palette, modals and the shared toolbar. A pane story may restyle chrome, but every control here stays reachable: the inventory test fails if one disappears."
   },

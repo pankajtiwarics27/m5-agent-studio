@@ -8,19 +8,19 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "d6ec0efecc0930de333cdc268e41befb70cfc9dd19964c35051e9fb53dab2255",
+  "frontend_sha256": "5da94c0b031a1bcbab0fe94686f651e21a589d4424a5abcffa873004e735a281",
   "panes": [
     {
       "dom_id": "start",
       "section_id": "pane-start",
-      "control_count": 14,
+      "control_count": 15,
       "counts": {
-        "button": 8,
+        "button": 9,
         "input": 2,
         "select": 1,
         "summary": 3
       },
-      "controls_without_id": 8,
+      "controls_without_id": 9,
       "controls_without_label": 0,
       "controls": [
         {
@@ -108,6 +108,17 @@
           "placeholder": "~/Projects/my-app"
         },
         {
+          "tag": "button",
+          "type": "button",
+          "class": "btn btn-xs",
+          "aria-label": "Browse host workspace folders",
+          "onclick": "openPathPicker('startWorkspaceInput', {workspace:true})",
+          "data": {
+            "data-path-for": "startWorkspaceInput"
+          },
+          "text": "Browse…"
+        },
+        {
           "tag": "select",
           "id": "startWorkspaceRecent",
           "aria-label": "Recent project folders",
@@ -128,15 +139,15 @@
     {
       "dom_id": "harness",
       "section_id": "pane-harness",
-      "control_count": 34,
+      "control_count": 35,
       "counts": {
-        "button": 18,
+        "button": 19,
         "input": 3,
         "select": 9,
         "summary": 3,
         "textarea": 1
       },
-      "controls_without_id": 12,
+      "controls_without_id": 13,
       "controls_without_label": 0,
       "controls": [
         {
@@ -313,6 +324,17 @@
           "type": "text",
           "placeholder": "~/Projects/my-app",
           "onchange": "syncProjectDirInputs(this.value)"
+        },
+        {
+          "tag": "button",
+          "type": "button",
+          "class": "btn btn-xs",
+          "aria-label": "Browse host workspace folders",
+          "onclick": "openPathPicker('harnessWorkspaceInput', {workspace:true})",
+          "data": {
+            "data-path-for": "harnessWorkspaceInput"
+          },
+          "text": "Browse…"
         },
         {
           "tag": "select",
@@ -862,13 +884,13 @@
     }
   ],
   "chrome": {
-    "control_count": 135,
+    "control_count": 162,
     "counts": {
-      "button": 79,
-      "input": 32,
-      "select": 12,
-      "summary": 6,
-      "textarea": 6
+      "button": 96,
+      "input": 37,
+      "select": 14,
+      "summary": 8,
+      "textarea": 7
     },
     "controls": [
       {
@@ -1130,6 +1152,17 @@
         "type": "text"
       },
       {
+        "tag": "button",
+        "type": "button",
+        "class": "btn btn-xs",
+        "aria-label": "Browse host workspace folders",
+        "onclick": "openPathPicker('cgWorkspaceInput', {workspace:true})",
+        "data": {
+          "data-path-for": "cgWorkspaceInput"
+        },
+        "text": "Browse…"
+      },
+      {
         "tag": "select",
         "id": "cgModeSelect",
         "text": "codegraph_architecture (Hubs & God Nodes) codegraph_path (Graphify Shortest Path A -> B) codegraph_impact (Caller Blast-Radius) codegraph_context (Symbol Search) codegraph_quality (Complexity Hotspots) ponytail-debt (Shortcut & Rationale Ledger)"
@@ -1295,11 +1328,36 @@
         "oninput": "mcpWizardRefresh()"
       },
       {
+        "tag": "button",
+        "type": "button",
+        "class": "btn btn-xs",
+        "aria-label": "Browse host executable files",
+        "onclick": "openPathPicker('mcpCommand', {kind:'file'})",
+        "data": {
+          "data-path-for": "mcpCommand"
+        },
+        "text": "Browse…"
+      },
+      {
         "tag": "input",
         "id": "mcpArgs",
         "type": "text",
         "placeholder": "-y @playwright/mcp@latest --headless",
         "oninput": "mcpWizardRefresh()"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn btn-xs",
+        "onclick": "openPathPicker('mcpArgs', {kind:'file',append:true})",
+        "text": "Append file path…"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn btn-xs",
+        "onclick": "openPathPicker('mcpArgs', {append:true})",
+        "text": "Append folder path…"
       },
       {
         "tag": "summary",
@@ -1316,6 +1374,20 @@
         "id": "mcpEnvJson",
         "type": "text",
         "placeholder": "{\"API_KEY\": \"...\"}"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn btn-xs",
+        "onclick": "openPathPicker('mcpEnvJson', {env:true})",
+        "text": "Insert folder value…"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn btn-xs",
+        "onclick": "openPathPicker('mcpEnvJson', {kind:'file',env:true})",
+        "text": "Insert file value…"
       },
       {
         "tag": "select",
@@ -1611,6 +1683,17 @@
         "tag": "button",
         "type": "button",
         "class": "btn btn-xs",
+        "aria-label": "Browse host workspace folders",
+        "onclick": "openPathPicker('sdlcWorkspaceInput', {workspace:true})",
+        "data": {
+          "data-path-for": "sdlcWorkspaceInput"
+        },
+        "text": "Browse…"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn btn-xs",
         "onclick": "saveWorkspaceDirectory(document.getElementById('sdlcWorkspaceInput').value)",
         "text": "Set Directory"
       },
@@ -1804,14 +1887,141 @@
         "aria-label": "Close inspector",
         "onclick": "toggleMonitorRail(true)",
         "text": "Close"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn btn-xs",
+        "aria-label": "Close path picker",
+        "onclick": "closePathPicker()",
+        "text": "Close"
+      },
+      {
+        "tag": "select",
+        "id": "pathPickerRoots",
+        "onchange": "if(this.value)loadPathPicker(this.value)",
+        "text": "Approved locations…"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn btn-xs",
+        "onclick": "loadPathPicker('')",
+        "text": "Default location"
+      },
+      {
+        "tag": "button",
+        "id": "pathPickerUp",
+        "type": "button",
+        "class": "btn btn-xs",
+        "text": "Up"
+      },
+      {
+        "tag": "input",
+        "id": "pathPickerLocation",
+        "type": "text"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn btn-xs",
+        "onclick": "loadPathPicker(document.getElementById('pathPickerLocation').value)",
+        "text": "Go"
+      },
+      {
+        "tag": "input",
+        "id": "pathPickerSearch",
+        "type": "search"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn btn-xs",
+        "onclick": "loadPathPicker(pathPickerState.path)",
+        "text": "Filter"
+      },
+      {
+        "tag": "input",
+        "id": "pathPickerEnvKey",
+        "type": "text",
+        "placeholder": "PROJECT_DIRECTORY"
+      },
+      {
+        "tag": "summary",
+        "text": "New folder"
+      },
+      {
+        "tag": "input",
+        "id": "pathPickerNewName",
+        "type": "text",
+        "oninput": "pathPickerNameChanged()"
+      },
+      {
+        "tag": "input",
+        "id": "pathPickerCreateConfirm",
+        "type": "checkbox",
+        "onchange": "pathPickerCreateReady()"
+      },
+      {
+        "tag": "button",
+        "id": "pathPickerCreateBtn",
+        "type": "button",
+        "class": "btn btn-xs",
+        "onclick": "createPathPickerFolder()",
+        "text": "Create folder"
+      },
+      {
+        "tag": "summary",
+        "text": "Ask a model for a name (optional)"
+      },
+      {
+        "tag": "select",
+        "id": "pathPickerModel",
+        "text": "Choose a model…"
+      },
+      {
+        "tag": "textarea",
+        "id": "pathPickerDescription",
+        "rows": "2"
+      },
+      {
+        "tag": "button",
+        "id": "pathPickerAskModel",
+        "type": "button",
+        "class": "btn btn-xs",
+        "onclick": "askPathPickerModel()",
+        "text": "Ask model for a name"
+      },
+      {
+        "tag": "button",
+        "id": "pathPickerUseSuggestion",
+        "type": "button",
+        "class": "btn btn-xs",
+        "onclick": "usePathPickerSuggestion()",
+        "text": "Use suggested name"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn btn-xs",
+        "onclick": "closePathPicker()",
+        "text": "Cancel"
+      },
+      {
+        "tag": "button",
+        "id": "pathPickerApplyBtn",
+        "type": "button",
+        "class": "btn",
+        "onclick": "applyPathPicker()",
+        "text": "Use this folder"
       }
     ]
   },
   "totals": {
     "panes": 6,
-    "markup_controls": 243,
-    "pane_controls": 108,
-    "chrome_controls": 135,
+    "markup_controls": 272,
+    "pane_controls": 110,
+    "chrome_controls": 162,
     "script_rendered_controls": 72,
     "script_rendered_by_function": {
       "ensureStageCardMounted": 1,

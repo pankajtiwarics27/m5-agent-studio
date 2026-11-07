@@ -49,6 +49,57 @@ suppresses native schemas and prevents execution in either protocol. Other
 workflows and ordinary model requests do not inherit Chat's schemas. The
 selected protocol is captured with the turn's request context.
 
+## Tools-off replies and completion status
+
+With `tools_enabled:false`, Chat now adds explicit disabled-tool system guidance
+instead of merely omitting native schemas and the active read-tool guide. The
+model should explain that it cannot inspect current inventory/files/notes, not
+invent current results or emit a tool request. Prior quoted results are not
+current evidence or permission to execute.
+
+If the model nevertheless returns only bare tool-call-shaped text, or returns
+no user-facing text (including reasoning-only/whitespace replies), the stream
+clears partial/withheld answer text and emits an explanatory `error`, not `done`.
+The existing UI error handler therefore shows Failed rather than Complete and
+states that tools were disabled and no tool calls executed. This is not an
+HTTP error response or a new route; it is the existing SSE error contract.
+
+Bare supported and unsupported Gemma/JSON/function/fenced-tool shapes are
+recognized for this diagnostic only, never turned into executable calls.
+Normal text answers and explanatory prose containing quoted examples remain
+valid. A bare call-shaped literal with no explanatory prose is intentionally
+not accepted as a completed tools-off answer. Reasoning remains private planning,
+not authority. Native tool deltas received despite absent schemas remain ignored;
+if they produce no text answer, that is an empty-answer failure.
+
+No retry, provider switch, extra inference round, tool dispatch or permission is
+added. System guidance cannot guarantee any particular model/template will obey;
+the runtime's no-execution boundary and truthful terminal state do not depend on
+that obedience. See [ADR-0030](adr/0030-tools-off-chat-response-completion.md).
+
+## Large inventories and compressed tool output
+
+A successful inventory call can exceed the 2400-character Context-Mode threshold.
+Its model-visible response is then a compact JSON-shape digest plus a `ctx-…`
+vault reference, not the full list. Chat advertises the already-registered
+read-only `ctx_search` tool in native schemas and the tagged-text guide so the
+model can retrieve the actual cached metadata before summarizing it.
+
+Use `ctx_search` with the returned `doc_id`; omit `query` or use an empty string
+to retrieve the first chunks, or supply a specific search term. At most six
+chunks are returned. This is not a new byte limit per chunk. `ctx-…` IDs are
+**not** OpenContext `oc-…` note IDs: `oc_read`/`oc_search` cannot retrieve them.
+Do not guess config-file paths or use workspace searches to reconstruct inventory.
+The result remains untrusted data, and cached retrieval does not resolve
+credentials, connect/sync MCP servers or grant execution authority.
+
+All retrieval branches scope by the existing session ID, including doc-ID-only
+and doc-ID-plus-query reads. For Direct Chat this is the current request's
+pseudo-session, not a persistent conversation identity: a doc reference from a
+previous turn/request or another workflow does not grant access. Missing,
+expired/deleted or out-of-scope IDs return no matching chunks. The existing
+Chat step budget, tools-off behavior and external-MCP/shell denials are unchanged.
+
 ## When a reply contains a tool request but nothing runs
 
 Text in the **Reasoning** disclosure is private planning, not executable
@@ -88,3 +139,55 @@ particular GGUF, inference server or MCP installation. No test calls a live
 model, cloud provider or MCP service. A workspace folder picker and
 user-approved path suggestions are a separate follow-up, not implemented by
 this tool-call fix.
+
+
+### Local-test regression follow-up (2026-11-07)
+
+The owner's first local inventory test executed `mcp_list_servers`, but its
+large eight-server result became a shape-only context-vault reference. Chat
+omitted `ctx_search` from both native schemas and its tagged guide; the model
+instead attempted OpenContext/file searches and exhausted the turn without a
+summary. The small-inventory tests had not exercised this threshold.
+
+New regressions reproduce the actual compression path with eight configured
+servers and retrieve all aliases through `ctx_search` in native/tagged modes,
+including a mocked Ollama native SSE round trip and isolated generated-standalone
+parity. Positive/negative tests cover session scoping and bounded limits. No live
+model/MCP endpoint is used, and passing mocks do not certify the owner's GGUF.
+Retry the same first prompt only after the fix is available locally; do not
+advance to the next manual test yet. See ADR-0029 for the retrieval boundary.
+
+Author checkpoint for [issue231](https://github.com/pankajtiwarics27/m5-agent-studio/issues/231):
+seven new regressions failed before the patch; 93 focused protocol/privacy/
+execution/admission/session-trust tests now pass, including generated-standalone
+retrieval and mocked native SSE. Ruff, mypy62, ADR/docs checks pass; regenerated
+inventories show37/37 checks,7/7 phase gates,0findings. Complete multi-version
+and browser CI plus the owner's same-model manual retry remain required. No live
+endpoint validation or new human/security acceptance is asserted.
+
+CI follow-up: the first full matrix found one stale post-roadmap Pipeline
+inventory backend SHA-256 (not part of the main37-generator list). Regenerated
+it with `uiux_pipeline_workspace_inventory.py`; no runtime code or checks were
+weakened. Pipeline/Start/protocol rerun:105passed. Updated full CI is required
+before merging this fix.
+
+
+### Tools-off manual regression ([issue #234](https://github.com/pankajtiwarics27/m5-agent-studio/issues/234))
+
+The owner reproduced test2 in a fresh conversation: tools stayed off, but a bare
+namespaced Gemma-shaped request was marked Complete instead of explaining the
+limitation. Nineteen new negative/guidance cases failed before this patch. The
+focused protocol/privacy/execution/admission/session-trust run now passes119tests,
+including fragmented content/reasoning cases, native/tagged modes, mocked Ollama
+native-wire responses and standalone parity (37 replayed cases). Ordinary text
+and explanatory examples still complete; no-dispatch assertions remain strict.
+Full multi-version/browser CI and the owner's same-model test2 retry remain
+separate acceptance steps. No live provider/MCP or human/security review is claimed.
+
+
+Tools-off author checkpoint: Pipeline/Start/protocol/remote-boundary regression
+run141passed; Ruff, mypy62, frontend syntax, docs/ADR and both modular/standalone
+auth smoke checks pass. Regenerated all normal inventories plus the separate
+post-roadmap Pipeline/Start generators:37/37 artifact checks,7/7 phase gates,
+0findings. Required complete multi-version/browser CI is pending; no new visual
+or independent security approval is recorded.

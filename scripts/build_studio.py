@@ -16,6 +16,7 @@ OUT = ROOT / "studio.py"
 # standalone artifact only works from a checkout where the sibling is importable.
 # A smoke check that runs from the repo root cannot catch that.
 INLINED_MODULES = (
+    "workspace_paths",
     "runtime_persistence",
     "side_effect_ledger",
     "execution_budget",

@@ -35,7 +35,9 @@ jobs before merge.
   `adad9bcd876f6a43b52d60eb72ffc3f5f64490d56bd489270a6d42786ccca3de`.
 - **Integration note:** initial CI run `42396138225` passed Browser safety and found one stale
   UIV2-25 generated inventory in all three Python jobs. That artifact and its documentation are
-  regenerated in the final tracking commit; no test was relaxed.
+  regenerated in the final tracking commit; no test was relaxed. Current `origin/main` `22a07ee`
+  (host-path selection and Chat recovery/completion fixes) is integrated; all derived inventories
+  regenerate cleanly and the combined focused suite is **299 passed**.
 - **Rollback:** revert the story's merged PR with a merge-commit revert. Do not delete sessions,
   databases, workspaces, credentials, migrations, or user files. This story added no migration.
 

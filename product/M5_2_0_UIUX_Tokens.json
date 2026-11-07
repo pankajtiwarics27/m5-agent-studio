@@ -5,7 +5,7 @@
   "source": {
     "frontend": "static/index.html",
     "style_block": "#m5-redesign-system",
-    "style_block_sha256": "0fa09b861f2bb6db891de8ef53cf90dbcdb16d116cd44f84c45f83775883a803",
+    "style_block_sha256": "4addb3b025ac160c983510515ceb2693bb2b9d65e58d3f7ceb6091634b3ab8a6",
     "superseded_blocks": [
       "the first <style> block declares an older palette that this one overrides; it is kept only so a stale rule cannot resolve to an undefined name"
     ]
@@ -42,7 +42,7 @@
   "totals": {
     "tokens": 56,
     "groups": 8,
-    "references": 1608,
+    "references": 1620,
     "theme_overrides": 20,
     "density_overrides": 5,
     "contrast_pairs": 28,
@@ -151,7 +151,7 @@
         "light": "#FFFFFF"
       },
       "density_override": null,
-      "references": 72
+      "references": 73
     },
     {
       "name": "--bg-hover",
@@ -161,7 +161,7 @@
         "light": "#F1F3F5"
       },
       "density_override": null,
-      "references": 29
+      "references": 30
     },
     {
       "name": "--bg-press",
@@ -191,7 +191,7 @@
         "light": "#DDE2E8"
       },
       "density_override": null,
-      "references": 201
+      "references": 204
     },
     {
       "name": "--border-hi",
@@ -211,7 +211,7 @@
         "light": "#1B2430"
       },
       "density_override": null,
-      "references": 107
+      "references": 108
     },
     {
       "name": "--text-dim",
@@ -221,7 +221,7 @@
         "light": "#596579"
       },
       "density_override": null,
-      "references": 188
+      "references": 189
     },
     {
       "name": "--text-faint",
@@ -301,7 +301,7 @@
         "light": "#a4313a"
       },
       "density_override": null,
-      "references": 45
+      "references": 46
     },
     {
       "name": "--purple",
@@ -457,7 +457,7 @@
       "value": "6px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 54
+      "references": 55
     },
     {
       "name": "--radius-md",
@@ -497,7 +497,7 @@
       "value": "44px",
       "theme_overrides": {},
       "density_override": "32px",
-      "references": 5
+      "references": 6
     },
     {
       "name": "--control-min-h-sm",
@@ -537,7 +537,7 @@
       "value": "24px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 12
+      "references": 13
     },
     {
       "name": "--ease-out",
@@ -585,7 +585,7 @@
       "value": "\"JetBrains Mono\", \"SFMono-Regular\", Consolas, \"Liberation Mono\", monospace",
       "theme_overrides": {},
       "density_override": null,
-      "references": 98
+      "references": 99
     },
     {
       "name": "--header-height",

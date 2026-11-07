@@ -126,7 +126,7 @@ def test_tools_off_sends_no_schemas_and_executes_nothing(configured, monkeypatch
         yield {"type": "content", "text": GEMMA}
     monkeypatch.setattr(studio, "stream_any_model", stream)
     result = events(post_chat(tools_enabled=False).text)
-    assert result[-1][0] == "done"
+    assert result[-1][0] == "error"
     assert not any(name == "chat_tool" for name, _ in result)
 
 
@@ -289,8 +289,12 @@ def test_native_stream_must_explicitly_finish_before_any_call_frame(monkeypatch,
     asyncio.run(run())
 
 
-def test_native_ollama_wire_reaches_real_chat_inventory_and_followup(configured, monkeypatch):
+@pytest.mark.parametrize("large", [False, True])
+def test_native_ollama_wire_reaches_real_chat_inventory_and_followup(configured, monkeypatch, large):
     insert_server()
+    if large:
+        for i in range(8):
+            insert_server(alias=f"server-{i}", tools=[{"name": "tool_" + "x" * 100}])
     seen = []
     async def validate(*args, **kwargs):
         pass
@@ -299,12 +303,20 @@ def test_native_ollama_wire_reaches_real_chat_inventory_and_followup(configured,
         body = json.loads(request.content)
         seen.append(body)
         assert request.url.path == "/v1/chat/completions"
-        assert "mcp_list_servers" in {s["function"]["name"] for s in body["tools"]}
+        assert {"mcp_list_servers", "ctx_search"} <= {s["function"]["name"] for s in body["tools"]}
         if len(seen) == 1:
             choice = {"delta": {"tool_calls": [{"index": 0, "id": "inventory", "type": "function", "function": {"name": "mcp_list_servers", "arguments": "{}"}}]}, "finish_reason": "tool_calls"}
+        elif large and len(seen) == 2:
+            import re
+            context = body["messages"][-1]["content"]
+            assert "Caveman" in context
+            doc_id = re.search(r"ctx-[0-9a-f]{8}", context).group()
+            choice = {"delta": {"tool_calls": [{"index": 0, "function": {"name": "ctx_search", "arguments": json.dumps({"doc_id": doc_id})}}]}, "finish_reason": "tool_calls"}
         else:
-            assert "Fixture Server" in json.dumps(body["messages"])
+            assert "Fixture Server" in body["messages"][-1]["content"]
             assert "UNTRUSTED_DATA_JSON" in json.dumps(body["messages"])
+            if large:
+                assert "server-7" in body["messages"][-1]["content"]
             choice = {"delta": {"content": "Inventory verified."}, "finish_reason": "stop"}
         return httpx.Response(200, text='data: ' + json.dumps({"choices": [choice]}) + '\n\ndata: [DONE]\n\n')
     async def run():
@@ -313,7 +325,7 @@ def test_native_ollama_wire_reaches_real_chat_inventory_and_followup(configured,
             async with httpx.AsyncClient(transport=httpx.ASGITransport(app=studio.app), base_url="http://testserver") as client:
                 return await client.post("/api/chat/stream", headers={"Authorization": "Bearer fixture-token-not-a-secret-0123456789"}, json={"model": "ollama::fixture-model", "messages": [{"role": "user", "content": "Inventory MCP servers"}]})
     trace = events(asyncio.run(run()).text)
-    assert len(seen) == 2
+    assert len(seen) == (3 if large else 2)
     assert any(kind == "chat_tool" and data["ok"] for kind, data in trace)
     assert trace[-1][0] == "done"
 
@@ -335,3 +347,205 @@ def test_tool_schemas_are_request_scoped_under_concurrent_streams():
 def test_native_call_collection_must_be_a_list():
     with pytest.raises(ValueError, match="collection"):
         studio._native_call_delta({}, {"function": {"name": "mcp_list_servers"}})
+
+
+@pytest.mark.parametrize("protocol", ["native", "tagged"])
+@pytest.mark.parametrize("query", ["", "Fixture"])
+def test_large_inventory_can_be_retrieved_from_context_vault(configured, monkeypatch, protocol, query):
+    """Eight servers cross the real compression threshold, not a mocked tiny result."""
+    import re
+    for i in range(8):
+        insert_server(alias=f"server-{i}", enabled=i != 1,
+                      tools=[] if i == 2 else [{"name": f"cached_tool_{j}_" + "x" * 40} for j in range(12)])
+    def forbidden(*args, **kwargs):
+        pytest.fail("Cached retrieval must not resolve credentials, search files, or connect to MCP")
+    monkeypatch.setattr(studio, "_keyring_read", forbidden)
+    monkeypatch.setattr(studio, "_resolve_mapping", forbidden)
+    monkeypatch.setattr(studio, "list_mcp_servers", forbidden)
+    monkeypatch.setattr(studio, "_execute_mcp_tool_call_inner", forbidden)
+    rounds = []
+    async def stream(_client, _model, messages, *_args):
+        rounds.append([dict(m) for m in messages])
+        if protocol == "native":
+            names = {s["function"]["name"] for s in studio._CHAT_NATIVE_TOOLS.get()}
+            assert "ctx_search" in names
+        else:
+            assert studio._CHAT_NATIVE_TOOLS.get() is None
+        if len(rounds) == 1:
+            assert "ctx_search" in messages[0]["content"]
+            yield {"type": "content", "text": GEMMA}
+        elif len(rounds) == 2:
+            content = messages[-1]["content"]
+            assert "Caveman" in content and "list len=8" in content
+            assert "not oc_read" in messages[0]["content"]
+            doc_id = re.search(r"ctx-[0-9a-f]{8}", content).group()
+            yield {"type": "content", "text": '<tool_call>' + json.dumps({"name": "ctx_search", "arguments": {"doc_id": doc_id, "query": query}}) + '</tool_call>'}
+        else:
+            content = messages[-1]["content"]
+            for i in range(8):
+                assert f"server-{i}" in content
+            assert "UNTRUSTED_DATA_JSON" in content
+            assert "SECRET" not in content
+            yield {"type": "content", "text": "Cached inventory retrieved: server-1 disabled; server-2 unsynced. No connections tested."}
+    monkeypatch.setattr(studio, "stream_any_model", stream)
+    result = events(post_chat(tool_protocol=protocol).text)
+    tools = [data for kind, data in result if kind == "chat_tool"]
+    assert [t["tool"] for t in tools] == ["mcp_list_servers", "ctx_search"]
+    assert all(t["ok"] for t in tools)
+    assert len(rounds) == 3 and result[-1][0] == "done"
+    assert studio._CHAT_NATIVE_TOOLS.get() is None
+
+
+@pytest.mark.parametrize("query", ["", "privatepayload"])
+def test_context_vault_doc_id_never_bypasses_session_scope(configured, query):
+    _, meta = studio.sandbox_tool_output_if_large("session-owner", "fixture", "privatepayload\n" * 400)
+    doc_id = meta["doc_id"]
+    assert "privatepayload" in studio.search_ctx_vault("session-owner", query, doc_id)
+    assert "No FTS5 chunks matched" in studio.search_ctx_vault("session-other", query, doc_id)
+
+
+def test_context_vault_retrieval_limit_is_bounded(configured):
+    _, meta = studio.sandbox_tool_output_if_large("session-owner", "fixture", "needle " * 200 + "\n" * 1 + ("needle " * 200 + "\n") * 20)
+    for limit in (-1, 10000):
+        result = studio.search_ctx_vault("session-owner", "needle", meta["doc_id"], limit=limit)
+        assert result.count("--- Hit #") <= 6
+
+
+def test_chat_cannot_retrieve_another_sessions_vault_document(configured, monkeypatch):
+    _, meta = studio.sandbox_tool_output_if_large("another-session", "fixture", "needle PRIVATE_OTHER_SESSION_PAYLOAD\n" * 200)
+    calls = 0
+    async def stream(*args):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            yield {"type": "content", "text": '<tool_call>' + json.dumps({"name": "ctx_search", "arguments": {"doc_id": meta["doc_id"]}}) + '</tool_call>'}
+        else:
+            assert "PRIVATE_OTHER_SESSION_PAYLOAD" not in args[2][-1]["content"]
+            assert "No FTS5 chunks matched" in args[2][-1]["content"]
+            yield {"type": "content", "text": "That document is not available in this request."}
+    monkeypatch.setattr(studio, "stream_any_model", stream)
+    trace = events(post_chat().text)
+    assert trace[-1][0] == "done" and calls == 2
+
+
+def test_standalone_large_inventory_retrieval_without_sibling_sources(tmp_path):
+    import os
+    from pathlib import Path
+    import shutil
+    import subprocess
+    import sys
+    root = Path(__file__).resolve().parents[1]
+    isolated = tmp_path / "standalone"
+    isolated.mkdir()
+    shutil.copy2(root / "studio.py", isolated / "app.py")
+    shutil.copy2(Path(__file__), isolated / "test_protocol.py")
+    env = os.environ.copy()
+    env.pop("PYTHONPATH", None)
+    env.update(HOME=str(tmp_path / "home"), STUDIO_DB_PATH=str(tmp_path / "standalone.db"))
+    code = "import app, pytest; assert app.runtime_persistence is app; raise SystemExit(pytest.main(['-q','test_protocol.py','-k','(large_inventory or session_scope or retrieval_limit or native_ollama_wire or another_sessions or tools_off) and not standalone','--tb=short']))"
+    result = subprocess.run([sys.executable, "-c", code], cwd=isolated, env=env, capture_output=True, text=True, timeout=60)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "37 passed" in result.stdout
+
+
+@pytest.mark.parametrize("protocol", ["native", "tagged"])
+@pytest.mark.parametrize("channel", ["content", "reasoning"])
+@pytest.mark.parametrize("frame", [
+    GEMMA,
+    '<|tool_call>call:mcp_list_servers{}<tool_call|>',
+    '<|tool_call>call:mcp__server__mcp_list_servers{}<tool_call|>',
+    '<tool_call>{"name":"mcp_list_servers","arguments":{}}</tool_call>',
+])
+def test_tools_off_tool_only_response_is_not_complete(configured, monkeypatch, protocol, channel, frame):
+    calls = 0
+    def forbidden(*args, **kwargs):
+        pytest.fail("Tools-off response handling must never execute or fetch inventory")
+    monkeypatch.setattr(studio, "_execute_harness_tool", forbidden)
+    monkeypatch.setattr(studio, "_mcp_server_inventory", forbidden)
+    async def stream(*args):
+        nonlocal calls
+        calls += 1
+        assert studio._CHAT_NATIVE_TOOLS.get() is None
+        # Fragmented frames must not evade the completed-response check.
+        for offset in range(0, len(frame), 5):
+            yield {"type": channel, "text": frame[offset:offset + 5]}
+    monkeypatch.setattr(studio, "stream_any_model", stream)
+    trace = events(post_chat(tools_enabled=False, tool_protocol=protocol).text)
+    assert trace[-1][0] == "error"
+    assert "tools are disabled" in trace[-1][1]["message"].lower()
+    assert "no tool calls were executed" in trace[-1][1]["message"].lower()
+    assert not any(kind in {"done", "chat_tool"} for kind, _ in trace)
+    assert calls == 1 and studio._CHAT_NATIVE_TOOLS.get() is None
+    assert any(kind == "step_clean" and data["content"] == "" for kind, data in trace)
+
+
+@pytest.mark.parametrize("text", ["", "   \n"])
+def test_tools_off_empty_answer_is_not_complete(configured, monkeypatch, text):
+    async def stream(*args):
+        yield {"type": "reasoning", "text": "I should answer the request."}
+        yield {"type": "content", "text": text}
+    monkeypatch.setattr(studio, "stream_any_model", stream)
+    trace = events(post_chat(tools_enabled=False).text)
+    assert trace[-1][0] == "error" and "no user-facing answer" in trace[-1][1]["message"].lower()
+    assert not any(kind in {"done", "chat_tool"} for kind, _ in trace)
+
+
+def test_tools_off_system_guidance_is_explicit_without_active_tool_guide(configured, monkeypatch):
+    async def stream(*args):
+        system = args[2][0]["content"]
+        assert "Tools are disabled for this turn" in system
+        assert "Do not emit tool-call requests" in system
+        assert "Active in Direct Chat" not in system
+        assert studio._CHAT_NATIVE_TOOLS.get() is None
+        yield {"type": "content", "text": "I cannot inspect the current inventory with tools disabled."}
+    monkeypatch.setattr(studio, "stream_any_model", stream)
+    trace = events(post_chat(tools_enabled=False).text)
+    assert trace[-1][0] == "done" and not any(kind == "chat_tool" for kind, _ in trace)
+
+
+@pytest.mark.parametrize("protocol", ["native", "tagged"])
+@pytest.mark.parametrize("text", [
+    "I cannot inspect inventory because tools are disabled.",
+    'A literal example is `<|tool_call>call:mcp_list_servers{}<tool_call|>`; this is text, not execution.',
+])
+def test_tools_off_plain_answers_and_explanations_still_complete(configured, monkeypatch, protocol, text):
+    async def stream(*args):
+        # Private planning is not authority; a real text answer should still be accepted.
+        yield {"type": "reasoning", "text": GEMMA}
+        yield {"type": "content", "text": text}
+    monkeypatch.setattr(studio, "stream_any_model", stream)
+    trace = events(post_chat(tools_enabled=False, tool_protocol=protocol).text)
+    assert trace[-1][0] == "done"
+    assert not any(kind in {"error", "chat_tool"} for kind, _ in trace)
+
+
+@pytest.mark.parametrize("wire_kind", ["native", "content", "reasoning"])
+def test_tools_off_native_wire_responses_remain_non_executable(configured, monkeypatch, wire_kind):
+    seen = []
+    async def validate(*args, **kwargs):
+        pass
+    def forbidden(*args, **kwargs):
+        pytest.fail("Unsolicited model output cannot enable tool execution")
+    monkeypatch.setattr(studio, "_validate_outbound_url", validate)
+    monkeypatch.setattr(studio, "_execute_harness_tool", forbidden)
+    def respond(request):
+        body = json.loads(request.content)
+        seen.append(body)
+        assert "tools" not in body and "tool_choice" not in body
+        assert "Tools are disabled for this turn" in body["messages"][0]["content"]
+        frame = '<|tool_call>call:mcp__server__mcp_list_servers{}<tool_call|>'
+        if wire_kind == "native":
+            delta = {"tool_calls": [{"index": 0, "function": {"name": "mcp_list_servers", "arguments": "{}"}}]}
+        else:
+            delta = {"reasoning_content" if wire_kind == "reasoning" else "content": frame}
+        packet = {"choices": [{"delta": delta, "finish_reason": "tool_calls" if wire_kind == "native" else "stop"}]}
+        return httpx.Response(200, text='data: ' + json.dumps(packet) + '\n\ndata: [DONE]\n\n')
+    async def run():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as provider:
+            studio.app.state.http = provider
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=studio.app), base_url="http://testserver") as client:
+                return await client.post("/api/chat/stream", headers={"Authorization": "Bearer fixture-token-not-a-secret-0123456789"}, json={"model": "ollama::fixture-model", "messages": [{"role": "user", "content": "Inventory MCP servers"}], "tools_enabled": False})
+    trace = events(asyncio.run(run()).text)
+    assert trace[-1][0] == "error" and len(seen) == 1
+    assert not any(kind in {"done", "chat_tool"} for kind, _ in trace)
+    assert studio._CHAT_NATIVE_TOOLS.get() is None

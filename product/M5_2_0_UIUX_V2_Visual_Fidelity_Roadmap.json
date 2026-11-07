@@ -3233,6 +3233,7 @@
         ],
         "tests_executed": [
           "python scripts/preservation_suite.py --save product/M5_2_0_UIUX_Preservation_Run.json -> clean e11c902, 21/21 rows, 32/32 steps, 13 routes, 14 pytest nodes, 18/18 walks, 427.8s; run sha256 adad9bcd876f6a43b52d60eb72ffc3f5f64490d56bd489270a6d42786ccca3de",
+          "Integrated origin/main 22a07ee (host-path selection, compressed Chat recovery, tools-off completion) and regenerated every derived artifact -> 299 focused tests passed, 1 warning; all UIUX inventory --check commands and release gate 37/37, 7/7, 0 findings pass",
           "python -m pytest -q tests/test_council_state_consistency.py tests/test_council_clear_session.py tests/test_council_verdict.py tests/test_harness_evidence.py tests/test_frontend_boot_order.py tests/test_uiv2_cross_tab_reference.py tests/test_pipeline_workspace.py -> 151 passed, 1 warning",
           "python -m pytest -q tests/test_uiux_preservation_e2e.py tests/test_uiux_source_manifest.py tests/test_uiux_control_inventory.py tests/test_uiux_route_map.py tests/test_uiux_authorization_trace.py tests/test_uiux_preservation_signoff.py tests/test_uiv2_cross_tab_reference.py -> 142 passed, 1 environment-only historical-commit skip",
           "python -m pytest -q tests/test_pipeline_workspace.py::test_inventory_matches_generated_artifacts -> reproduced the sole initial-CI failure, regenerated the artifact, then 1 passed; inventory 28 checks, 0 findings",
@@ -3268,8 +3269,8 @@
           }
         ],
         "blockers": [],
-        "handoff_summary": "UIV2-27 closes the reproduced Compare, Council, Harness and Start preservation failures without changing backend contracts. Clean implementation e11c902 proves 21/21 rows and 32/32 steps; 151 focused tests and 142 inventory/contract tests pass. The approved six-tab gate, eight-variant recovery matrix, long-conclusion matrix and actual detached-before images are regenerated locally. PNGs/manifests stay ignored. Initial CI exposed one additional generated UIV2-25 inventory dependency, now regenerated and proved; PR #233 requires a fresh four-job green run before merge.",
-        "exact_next_action": "Push the tracking/generated-artifact commit, confirm all four PR #233 CI jobs pass on that final commit, review and merge; then start UIV2-28 accessibility, scroll and responsive adversarial coverage without weakening these gates.",
+        "handoff_summary": "UIV2-27 closes the reproduced Compare, Council, Harness and Start preservation failures without changing backend contracts. Clean implementation e11c902 proves 21/21 rows and 32/32 steps; 151 focused tests and 142 inventory/contract tests pass. The approved six-tab gate, eight-variant recovery matrix, long-conclusion matrix and actual detached-before images are regenerated locally. PNGs/manifests stay ignored. Initial CI exposed one additional generated UIV2-25 inventory dependency, now regenerated and proved; PR #233 requires a fresh four-job green run before merge. Current main 22a07ee is integrated; the combined focused suite is 299 passed. A clean integrated preservation run and fresh CI remain the merge gate.",
+        "exact_next_action": "Commit the verified integration of origin/main 22a07ee, run the clean integrated preservation/visual gates, then confirm all four PR #233 CI jobs on the final integrated head before merge; start UIV2-28 only afterward.",
         "updated_at": "2026-11-07T23:15:13+05:30",
         "completed_at": "2026-11-07T23:15:13+05:30"
       }
