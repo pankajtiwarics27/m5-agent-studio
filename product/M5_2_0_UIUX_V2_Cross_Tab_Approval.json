@@ -4,14 +4,14 @@
   "story": "UIV2-26",
   "human_approval": {
     "decision": "approved",
-    "reference": "user:Arena ask_user uiv2-26-pinned-font-approval=approve, 2026-11-07",
-    "recorded_at": "2026-11-07T13:12:29.528000+00:00",
+    "reference": "user:Arena ask_user uiv2-26-latest-main-approval=approve, 2026-11-07",
+    "recorded_at": "2026-11-07T13:40:26.714858+00:00",
     "scope": "Structural fidelity of all 48 annotated live/reference comparisons; not a pixel-clone claim."
   },
   "candidate": {
     "manifest": "docs/media/cross-tab-reference-uiv2-26/candidate/candidate-manifest.json",
-    "manifest_sha256": "d1065e2174248919da13307d4253eb6c3cb53aa9550e29f5ce5af762567b1126",
-    "git_head": "66eca66f06a6c08c95e5e3b93d24b4bef67854b2"
+    "manifest_sha256": "a81c6a5c71fc1cb088163dc649718581f4df09e3ab29c84b0af3010c182d9798",
+    "git_head": "fd8b8560597de8eb7a91b9ba8014ff9cc4e92aa3"
   },
   "contract_sha256": "eed7b0638557bce29d1a4e103d568b972d74ae6f8e54f4034898f585abd1f05f",
   "wireframe_sha256": "f1232a0ea81fccbfb343f6f16d8f8878edbcc20a478a96dbea8b45a44cba8a17",
@@ -72,11 +72,11 @@
             "visibility": "visible"
           },
           "integrations_content": {
-            "x": 776,
+            "x": 956,
             "y": 102,
-            "width": 720,
-            "height": 108,
-            "display": "flex",
+            "width": 540,
+            "height": 369.5,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -387,11 +387,11 @@
             "visibility": "visible"
           },
           "integrations_content": {
-            "x": 776,
+            "x": 956,
             "y": 102,
-            "width": 720,
-            "height": 108,
-            "display": "flex",
+            "width": 540,
+            "height": 369.5,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -511,25 +511,25 @@
             "visibility": "visible"
           },
           "#harnessLeadModel": {
-            "x": 648,
+            "x": 534,
             "y": 604.17,
-            "width": 344,
+            "width": 437.45,
             "height": 44,
             "display": "block",
             "visibility": "visible"
           },
           "#harnessPolicy": {
-            "x": 1002,
+            "x": 981.45,
             "y": 604.17,
-            "width": 344,
+            "width": 364.55,
             "height": 44,
             "display": "block",
             "visibility": "visible"
           },
           "#harnessWorkflowMode": {
-            "x": 534,
+            "x": 666,
             "y": 658.17,
-            "width": 219,
+            "width": 475,
             "height": 44,
             "display": "block",
             "visibility": "visible"
@@ -663,16 +663,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 7.3928,
-        "changed_pixel_ratio_0_1": 0.044255,
+        "mean_absolute_rgb_0_255": 7.4757,
+        "changed_pixel_ratio_0_1": 0.044994,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "light/1640x900/harness/actual.png",
-          "sha256": "764f72d3bebd8afd7f89250959a05245482be4dbe9fa08f6445b9c2e58cfbfce",
-          "bytes": 70018
+          "sha256": "91349101cc41b72031e9c86f6f3fd76f378cc7c2eaff46272dfb2efe4568d6a0",
+          "bytes": 70726
         },
         "reference": {
           "file": "light/1640x900/harness/reference.png",
@@ -681,8 +681,8 @@
         },
         "comparison": {
           "file": "light/1640x900/harness/comparison.png",
-          "sha256": "1e6657f3ea3af535d10d32439d18a7a2e3e93ff75d6525cff866c4a2e864ec7e",
-          "bytes": 275843
+          "sha256": "954e8ac841cb7a616f99787653060008e5eb3bfd4f449f5a48be02dc6be27bb6",
+          "bytes": 276569
         }
       }
     },
@@ -736,11 +736,11 @@
             "visibility": "visible"
           },
           "integrations_content": {
-            "x": 776,
+            "x": 956,
             "y": 102,
-            "width": 720,
-            "height": 108,
-            "display": "flex",
+            "width": 540,
+            "height": 369.5,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -985,16 +985,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 6.4611,
-        "changed_pixel_ratio_0_1": 0.062535,
+        "mean_absolute_rgb_0_255": 6.4626,
+        "changed_pixel_ratio_0_1": 0.062532,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "light/1640x900/hall/actual.png",
-          "sha256": "38ad90c1bcba8d5a261b91e7e6d5c2db1676c72c999a9940a56e2df796cb40a1",
-          "bytes": 99595
+          "sha256": "86118bfeae69d5e8c96f3665b583bfdee153f9529d2377ac89c6ad01e213fcf1",
+          "bytes": 99576
         },
         "reference": {
           "file": "light/1640x900/hall/reference.png",
@@ -1003,8 +1003,8 @@
         },
         "comparison": {
           "file": "light/1640x900/hall/comparison.png",
-          "sha256": "c47d0a01103886f8f72196b49c6b9978fdde94a8d964be5db985d914ffe079db",
-          "bytes": 303280
+          "sha256": "2613aaf35f7110a06cf3168582a4d2aafbbc69af501a5eb2e02685d75b98f868",
+          "bytes": 303441
         }
       }
     },
@@ -1058,11 +1058,11 @@
             "visibility": "visible"
           },
           "integrations_content": {
-            "x": 776,
+            "x": 956,
             "y": 102,
-            "width": 720,
-            "height": 108,
-            "display": "flex",
+            "width": 540,
+            "height": 369.5,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -1311,8 +1311,8 @@
       "images": {
         "actual": {
           "file": "light/1640x900/council/actual.png",
-          "sha256": "6bed3a9600aec4698f3681a1e2090d322a373114c0649399fbeb89a030012d04",
-          "bytes": 77679
+          "sha256": "887d2652a56ae4f0a7e41484b609cd2268542796bf620c51ccfb5869023636a1",
+          "bytes": 77685
         },
         "reference": {
           "file": "light/1640x900/council/reference.png",
@@ -1321,8 +1321,8 @@
         },
         "comparison": {
           "file": "light/1640x900/council/comparison.png",
-          "sha256": "670a0448c3f7cc5d300539b442728aa9bcbc8c27ebca1318d8174f6ec6859c01",
-          "bytes": 267449
+          "sha256": "e563174adbee24ef92dc03fb0a2c10691382be8faaa65869c2dc1ee7fd57d01d",
+          "bytes": 267451
         }
       }
     },
@@ -1376,11 +1376,11 @@
             "visibility": "visible"
           },
           "integrations_content": {
-            "x": 776,
+            "x": 956,
             "y": 102,
-            "width": 720,
-            "height": 108,
-            "display": "flex",
+            "width": 540,
+            "height": 369.5,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -1691,11 +1691,11 @@
             "visibility": "visible"
           },
           "integrations_content": {
-            "x": 776,
+            "x": 956,
             "y": 102,
-            "width": 720,
-            "height": 108,
-            "display": "flex",
+            "width": 540,
+            "height": 369.5,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -2018,8 +2018,8 @@
       "images": {
         "actual": {
           "file": "light/1640x900/chat/actual.png",
-          "sha256": "129190838314e623385838bd220daa44e318ac68ccc4a6fc64bdebc306cb4c6f",
-          "bytes": 68470
+          "sha256": "b07bcffea5cf3e9c370afee39ae633d050d5bec322d3025b4db15cf3c7f724a5",
+          "bytes": 68473
         },
         "reference": {
           "file": "light/1640x900/chat/reference.png",
@@ -2028,8 +2028,8 @@
         },
         "comparison": {
           "file": "light/1640x900/chat/comparison.png",
-          "sha256": "f84e0e3828cb20bf76bb0cd5215cee3890e4c01307d5a804d39eb8319b14e11e",
-          "bytes": 255232
+          "sha256": "c19f7df343e64a6f7fa564bd2de35b34ccfb6a0b02492ad8ac967b31f577036e",
+          "bytes": 255162
         }
       }
     },
@@ -2083,11 +2083,11 @@
             "visibility": "visible"
           },
           "integrations_content": {
-            "x": 576,
+            "x": 756,
             "y": 102,
-            "width": 720,
-            "height": 108,
-            "display": "flex",
+            "width": 540,
+            "height": 369.5,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -2398,11 +2398,11 @@
             "visibility": "visible"
           },
           "integrations_content": {
-            "x": 576,
+            "x": 756,
             "y": 102,
-            "width": 720,
-            "height": 108,
-            "display": "flex",
+            "width": 540,
+            "height": 369.5,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -2522,25 +2522,25 @@
             "visibility": "visible"
           },
           "#harnessLeadModel": {
-            "x": 548,
+            "x": 434,
             "y": 604.17,
-            "width": 344,
+            "width": 437.45,
             "height": 44,
             "display": "block",
             "visibility": "visible"
           },
           "#harnessPolicy": {
-            "x": 902,
+            "x": 881.45,
             "y": 604.17,
-            "width": 344,
+            "width": 364.55,
             "height": 44,
             "display": "block",
             "visibility": "visible"
           },
           "#harnessWorkflowMode": {
-            "x": 434,
+            "x": 566,
             "y": 658.17,
-            "width": 219,
+            "width": 475,
             "height": 44,
             "display": "block",
             "visibility": "visible"
@@ -2674,16 +2674,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 7.656,
-        "changed_pixel_ratio_0_1": 0.049518,
+        "mean_absolute_rgb_0_255": 7.7499,
+        "changed_pixel_ratio_0_1": 0.050346,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "light/1440x900/harness/actual.png",
-          "sha256": "2606ec6bf939eaf49e7293b5cc0aca431948e3f03768f949fe76a3824b799bad",
-          "bytes": 69198
+          "sha256": "c26a0705ff1553bbb712659fcdff78c5d43997330b33c7d61861d0615759090f",
+          "bytes": 69931
         },
         "reference": {
           "file": "light/1440x900/harness/reference.png",
@@ -2692,8 +2692,8 @@
         },
         "comparison": {
           "file": "light/1440x900/harness/comparison.png",
-          "sha256": "d5ecce867ad51a28e7c741001ef92a3ce2c0e80eaa077a8dc08bf2add16572a4",
-          "bytes": 265474
+          "sha256": "6e7db69a8ece86b6a31cd88ff6f683414f5f655d02425f536cc1cfb5f536372f",
+          "bytes": 266155
         }
       }
     },
@@ -2747,11 +2747,11 @@
             "visibility": "visible"
           },
           "integrations_content": {
-            "x": 576,
+            "x": 756,
             "y": 102,
-            "width": 720,
-            "height": 108,
-            "display": "flex",
+            "width": 540,
+            "height": 369.5,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -2996,16 +2996,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 6.7346,
-        "changed_pixel_ratio_0_1": 0.063961,
+        "mean_absolute_rgb_0_255": 6.7343,
+        "changed_pixel_ratio_0_1": 0.063955,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "light/1440x900/hall/actual.png",
-          "sha256": "7a169f725a6815ad845faae43cbca5546b2163e056501df2d31b01a6b1944dcb",
-          "bytes": 92929
+          "sha256": "dd051324955c3158d739636d72a0057184ae459e16f91219ac402cd08fea0ed6",
+          "bytes": 93078
         },
         "reference": {
           "file": "light/1440x900/hall/reference.png",
@@ -3014,8 +3014,8 @@
         },
         "comparison": {
           "file": "light/1440x900/hall/comparison.png",
-          "sha256": "bf0921061e3888b5fa173c0610d33032e25ab0238647ca61b0ceda72ee4fe091",
-          "bytes": 286377
+          "sha256": "5fe0a11e33868ad3b170151a235c5005df5afbff40d3afef8a34f95a76f81e84",
+          "bytes": 286634
         }
       }
     },
@@ -3069,11 +3069,11 @@
             "visibility": "visible"
           },
           "integrations_content": {
-            "x": 576,
+            "x": 756,
             "y": 102,
-            "width": 720,
-            "height": 108,
-            "display": "flex",
+            "width": 540,
+            "height": 369.5,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -3387,11 +3387,11 @@
             "visibility": "visible"
           },
           "integrations_content": {
-            "x": 576,
+            "x": 756,
             "y": 102,
-            "width": 720,
-            "height": 108,
-            "display": "flex",
+            "width": 540,
+            "height": 369.5,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -3702,11 +3702,11 @@
             "visibility": "visible"
           },
           "integrations_content": {
-            "x": 576,
+            "x": 756,
             "y": 102,
-            "width": 720,
-            "height": 108,
-            "display": "flex",
+            "width": 540,
+            "height": 369.5,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -4094,11 +4094,11 @@
             "visibility": "visible"
           },
           "integrations_content": {
-            "x": 416,
+            "x": 596,
             "y": 102,
-            "width": 720,
-            "height": 108,
-            "display": "flex",
+            "width": 540,
+            "height": 369.5,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -4344,8 +4344,8 @@
       "images": {
         "actual": {
           "file": "light/1280x800/start/actual.png",
-          "sha256": "6784dfa569b0cb06aa5e3ffd5b3ea0c60f759be079eb48bacc0d243d25e0167a",
-          "bytes": 67877
+          "sha256": "928443c0e54610e6628c1f143c37681a8a26c17dc940561487715d6b644733d9",
+          "bytes": 67879
         },
         "reference": {
           "file": "light/1280x800/start/reference.png",
@@ -4354,8 +4354,8 @@
         },
         "comparison": {
           "file": "light/1280x800/start/comparison.png",
-          "sha256": "03acc8b2e59a4f1272b0a14c6c73f402939635ea554403859ceb808cbbc5e482",
-          "bytes": 218125
+          "sha256": "a133ca7f58ac5ba8e461b3cc7048892b37170c2bde8381fd19d5867ea504e469",
+          "bytes": 218115
         }
       }
     },
@@ -4409,11 +4409,11 @@
             "visibility": "visible"
           },
           "integrations_content": {
-            "x": 416,
+            "x": 596,
             "y": 102,
-            "width": 720,
-            "height": 108,
-            "display": "flex",
+            "width": 540,
+            "height": 369.5,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -4533,25 +4533,25 @@
             "visibility": "visible"
           },
           "#harnessLeadModel": {
-            "x": 468,
+            "x": 354,
             "y": 553.22,
-            "width": 344,
+            "width": 437.45,
             "height": 44,
             "display": "block",
             "visibility": "visible"
           },
           "#harnessPolicy": {
-            "x": 822,
+            "x": 801.45,
             "y": 553.22,
-            "width": 344,
+            "width": 364.55,
             "height": 44,
             "display": "block",
             "visibility": "visible"
           },
           "#harnessWorkflowMode": {
-            "x": 354,
+            "x": 486,
             "y": 607.22,
-            "width": 219,
+            "width": 475,
             "height": 44,
             "display": "block",
             "visibility": "visible"
@@ -4685,16 +4685,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 7.963,
-        "changed_pixel_ratio_0_1": 0.055684,
+        "mean_absolute_rgb_0_255": 8.0825,
+        "changed_pixel_ratio_0_1": 0.056751,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "light/1280x800/harness/actual.png",
-          "sha256": "e61a517524e544613451f54b09c2230c5f46b668c88f1550f02079daf9d327df",
-          "bytes": 66879
+          "sha256": "55b4b00ba5db4735fea97608fb25bc4e3252e90b686cd024764987d8d5020147",
+          "bytes": 67626
         },
         "reference": {
           "file": "light/1280x800/harness/reference.png",
@@ -4703,8 +4703,8 @@
         },
         "comparison": {
           "file": "light/1280x800/harness/comparison.png",
-          "sha256": "35d1db95006511a3944f33a2b40f11c85c15a29646454b573529650411b42d76",
-          "bytes": 232397
+          "sha256": "f3025f85a1e8135dbc538dfee55b20536007ab1d5b057595f01b373ecb13bbb6",
+          "bytes": 233037
         }
       }
     },
@@ -4758,11 +4758,11 @@
             "visibility": "visible"
           },
           "integrations_content": {
-            "x": 416,
+            "x": 596,
             "y": 102,
-            "width": 720,
-            "height": 108,
-            "display": "flex",
+            "width": 540,
+            "height": 369.5,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -5007,16 +5007,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 6.795,
-        "changed_pixel_ratio_0_1": 0.064463,
+        "mean_absolute_rgb_0_255": 6.7954,
+        "changed_pixel_ratio_0_1": 0.06447,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "light/1280x800/hall/actual.png",
-          "sha256": "452ded74ee0a8516a4091aa46fda8e189b65667725d549f4b3326d8ca9f7ed8e",
-          "bytes": 88265
+          "sha256": "adfcd2914c531e879053c89a72256c7da22a673c0fe9c0750e8575c2080790e3",
+          "bytes": 88121
         },
         "reference": {
           "file": "light/1280x800/hall/reference.png",
@@ -5025,8 +5025,8 @@
         },
         "comparison": {
           "file": "light/1280x800/hall/comparison.png",
-          "sha256": "2eead1195d4f63150eead0da686eaad674b595052b057cfc56f43e44f913098d",
-          "bytes": 248249
+          "sha256": "248d258f1b7695f910df18b943e6c1aca879b90dc9afe46ead5327af882a228c",
+          "bytes": 248064
         }
       }
     },
@@ -5080,11 +5080,11 @@
             "visibility": "visible"
           },
           "integrations_content": {
-            "x": 416,
+            "x": 596,
             "y": 102,
-            "width": 720,
-            "height": 108,
-            "display": "flex",
+            "width": 540,
+            "height": 369.5,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -5398,11 +5398,11 @@
             "visibility": "visible"
           },
           "integrations_content": {
-            "x": 416,
+            "x": 596,
             "y": 102,
-            "width": 720,
-            "height": 108,
-            "display": "flex",
+            "width": 540,
+            "height": 369.5,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -5713,11 +5713,11 @@
             "visibility": "visible"
           },
           "integrations_content": {
-            "x": 416,
+            "x": 596,
             "y": 102,
-            "width": 720,
-            "height": 108,
-            "display": "flex",
+            "width": 540,
+            "height": 369.5,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -6108,8 +6108,8 @@
             "x": -104,
             "y": 146,
             "width": 374,
-            "height": 156.5,
-            "display": "flex",
+            "height": 390,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -6423,8 +6423,8 @@
             "x": -104,
             "y": 146,
             "width": 374,
-            "height": 156.5,
-            "display": "flex",
+            "height": 390,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -6537,7 +6537,7 @@
         "required": {
           "#harnessPromptInput": {
             "x": 27,
-            "y": 389.17,
+            "y": 441.17,
             "width": 336,
             "height": 88,
             "display": "block",
@@ -6545,39 +6545,39 @@
           },
           "#harnessLeadModel": {
             "x": 27,
-            "y": 502.02,
-            "width": 164,
+            "y": 554.02,
+            "width": 177.81,
             "height": 44,
             "display": "block",
             "visibility": "visible"
           },
           "#harnessPolicy": {
-            "x": 199,
-            "y": 502.02,
-            "width": 164,
+            "x": 214.81,
+            "y": 554.02,
+            "width": 148.17,
             "height": 44,
             "display": "block",
             "visibility": "visible"
           },
           "#harnessWorkflowMode": {
-            "x": 27,
+            "x": 71,
             "y": 606.02,
-            "width": 180,
+            "width": 170,
             "height": 44,
             "display": "block",
             "visibility": "visible"
           },
           "#harnessProjectSummary": {
             "x": 258,
-            "y": 722.02,
+            "y": 670.02,
             "width": 105,
             "height": 18,
             "display": "block",
             "visibility": "visible"
           },
           "#harnessRunBtn": {
-            "x": 27,
-            "y": 658.02,
+            "x": 291,
+            "y": 606.02,
             "width": 72,
             "height": 44,
             "display": "flex",
@@ -6696,16 +6696,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 13.0901,
-        "changed_pixel_ratio_0_1": 0.105326,
+        "mean_absolute_rgb_0_255": 12.6377,
+        "changed_pixel_ratio_0_1": 0.101422,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "light/390x844/harness/actual.png",
-          "sha256": "59e1c3bdc52695ea28db2b146333848ae1dd77aa9f54520d0748a303a266b2b1",
-          "bytes": 42382
+          "sha256": "a851492b74d03640954304f443f58681ae5bf42075b19e116fb01b6f16b43c2b",
+          "bytes": 40706
         },
         "reference": {
           "file": "light/390x844/harness/reference.png",
@@ -6714,8 +6714,8 @@
         },
         "comparison": {
           "file": "light/390x844/harness/comparison.png",
-          "sha256": "ab2cc94c8e142a396a975146e51ce2e17a86b083088501c85d55f35484352600",
-          "bytes": 142928
+          "sha256": "feab1d352428828262ea3de2e645c12fbd8598dd9943c4db4e28f8cb4e588c86",
+          "bytes": 140998
         }
       }
     },
@@ -6772,8 +6772,8 @@
             "x": -104,
             "y": 146,
             "width": 374,
-            "height": 156.5,
-            "display": "flex",
+            "height": 390,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -7018,16 +7018,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 13.6922,
-        "changed_pixel_ratio_0_1": 0.104669,
+        "mean_absolute_rgb_0_255": 13.6933,
+        "changed_pixel_ratio_0_1": 0.104691,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "light/390x844/hall/actual.png",
-          "sha256": "3585a12206f696e4e49f4bbf2ba2866302791a0de350aea724355bb84006019c",
-          "bytes": 46545
+          "sha256": "502fa90128fb6746b2472a114c5f77d8781aa2dddcd2f31867908f8ec77e840a",
+          "bytes": 46330
         },
         "reference": {
           "file": "light/390x844/hall/reference.png",
@@ -7036,8 +7036,8 @@
         },
         "comparison": {
           "file": "light/390x844/hall/comparison.png",
-          "sha256": "1e03adb55b3ccedcbf7829c5aab6b6865be78ca9e0f7bd1e5e2e6e39eb4f58d2",
-          "bytes": 142976
+          "sha256": "d9ab9569d94546f0ee832269d264494707f88eab907e23dfeb910f7c90944df4",
+          "bytes": 142986
         }
       }
     },
@@ -7094,8 +7094,8 @@
             "x": -104,
             "y": 146,
             "width": 374,
-            "height": 156.5,
-            "display": "flex",
+            "height": 390,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -7412,8 +7412,8 @@
             "x": -104,
             "y": 146,
             "width": 374,
-            "height": 156.5,
-            "display": "flex",
+            "height": 390,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -7727,8 +7727,8 @@
             "x": -104,
             "y": 146,
             "width": 374,
-            "height": 156.5,
-            "display": "flex",
+            "height": 390,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -8116,11 +8116,11 @@
             "visibility": "visible"
           },
           "integrations_content": {
-            "x": 776,
+            "x": 956,
             "y": 102,
-            "width": 720,
-            "height": 108,
-            "display": "flex",
+            "width": 540,
+            "height": 369.5,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -8366,8 +8366,8 @@
       "images": {
         "actual": {
           "file": "dark/1640x900/start/actual.png",
-          "sha256": "c6fae7fa1aac5d7e91e0225b08bf2453c3ef84fe4be5dac4dbdd8aca89162399",
-          "bytes": 74770
+          "sha256": "ef28d5f0e8971354bf9504aca1a108ac4f19c929eb48976e8a78fcabf55dcdf4",
+          "bytes": 74757
         },
         "reference": {
           "file": "dark/1640x900/start/reference.png",
@@ -8376,8 +8376,8 @@
         },
         "comparison": {
           "file": "dark/1640x900/start/comparison.png",
-          "sha256": "5291c6f56c69de876867025049381c91dadc3380f9e42e8e9400f67a85391948",
-          "bytes": 266302
+          "sha256": "c99a668ee6b2b4b6df1df0f2b5eee99d8e8719e4f48ae8405378fe2a18a74cdd",
+          "bytes": 266177
         }
       }
     },
@@ -8431,11 +8431,11 @@
             "visibility": "visible"
           },
           "integrations_content": {
-            "x": 776,
+            "x": 956,
             "y": 102,
-            "width": 720,
-            "height": 108,
-            "display": "flex",
+            "width": 540,
+            "height": 369.5,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -8555,25 +8555,25 @@
             "visibility": "visible"
           },
           "#harnessLeadModel": {
-            "x": 648,
+            "x": 534,
             "y": 604.17,
-            "width": 344,
+            "width": 437.45,
             "height": 44,
             "display": "block",
             "visibility": "visible"
           },
           "#harnessPolicy": {
-            "x": 1002,
+            "x": 981.45,
             "y": 604.17,
-            "width": 344,
+            "width": 364.55,
             "height": 44,
             "display": "block",
             "visibility": "visible"
           },
           "#harnessWorkflowMode": {
-            "x": 534,
+            "x": 666,
             "y": 658.17,
-            "width": 219,
+            "width": 475,
             "height": 44,
             "display": "block",
             "visibility": "visible"
@@ -8707,16 +8707,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 10.5082,
-        "changed_pixel_ratio_0_1": 0.045841,
+        "mean_absolute_rgb_0_255": 10.6422,
+        "changed_pixel_ratio_0_1": 0.046581,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "dark/1640x900/harness/actual.png",
-          "sha256": "6f64d9ec12bfa6612d04a2128085dd601bf1b0aa3fc070770ec09373f013ba74",
-          "bytes": 70153
+          "sha256": "61f34e1a0892cdcc0bb35f720568cc7c7bca533d6c320a7452acbb5ad34ed930",
+          "bytes": 70762
         },
         "reference": {
           "file": "dark/1640x900/harness/reference.png",
@@ -8725,8 +8725,8 @@
         },
         "comparison": {
           "file": "dark/1640x900/harness/comparison.png",
-          "sha256": "9cc683e10a8e6ec5da7426a598144183a0539732216c08b538c3877c860818b9",
-          "bytes": 276250
+          "sha256": "04e933943c63f7c864c92fe68c2955d7ba4c1002cd76da439ba07b05dfe778e4",
+          "bytes": 276963
         }
       }
     },
@@ -8780,11 +8780,11 @@
             "visibility": "visible"
           },
           "integrations_content": {
-            "x": 776,
+            "x": 956,
             "y": 102,
-            "width": 720,
-            "height": 108,
-            "display": "flex",
+            "width": 540,
+            "height": 369.5,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -9102,11 +9102,11 @@
             "visibility": "visible"
           },
           "integrations_content": {
-            "x": 776,
+            "x": 956,
             "y": 102,
-            "width": 720,
-            "height": 108,
-            "display": "flex",
+            "width": 540,
+            "height": 369.5,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -9355,8 +9355,8 @@
       "images": {
         "actual": {
           "file": "dark/1640x900/council/actual.png",
-          "sha256": "f39dc7b259b010a1d428104c0abbb170bac80daf4a1a71702cf21708f3e46fb5",
-          "bytes": 78817
+          "sha256": "935a40ce79cb745ae1caa5f8aba1147f7f858fdd73e46661c0177f786c9b6fc3",
+          "bytes": 78825
         },
         "reference": {
           "file": "dark/1640x900/council/reference.png",
@@ -9365,8 +9365,8 @@
         },
         "comparison": {
           "file": "dark/1640x900/council/comparison.png",
-          "sha256": "bab26cf1a5fb2bba77398ef3773c46a5532dc2a747cdba4ae816fb2a377014ce",
-          "bytes": 268978
+          "sha256": "965c3e1b917b6d989a642b53e2c58ce420b14a88c329bf3d692c15d8e464dcac",
+          "bytes": 268977
         }
       }
     },
@@ -9420,11 +9420,11 @@
             "visibility": "visible"
           },
           "integrations_content": {
-            "x": 776,
+            "x": 956,
             "y": 102,
-            "width": 720,
-            "height": 108,
-            "display": "flex",
+            "width": 540,
+            "height": 369.5,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -9670,8 +9670,8 @@
       "images": {
         "actual": {
           "file": "dark/1640x900/debate/actual.png",
-          "sha256": "efd6c5f1dde32c3d08047a450028f743811c97fdd49662a5457f05895a60157b",
-          "bytes": 91609
+          "sha256": "11236559e8bec4b20839dfe8b98b48aee8e9cbe12f4e6c2c12ac04297857406d",
+          "bytes": 91601
         },
         "reference": {
           "file": "dark/1640x900/debate/reference.png",
@@ -9680,8 +9680,8 @@
         },
         "comparison": {
           "file": "dark/1640x900/debate/comparison.png",
-          "sha256": "45101af4bd6e4fc8c5a224e0c0e94562b23c93308ef4e6821880dfebda13ee21",
-          "bytes": 288120
+          "sha256": "4be694eb3626c7d0f121349a3a6d554890ab7ceeb4c96ca914317acdecf0e9e0",
+          "bytes": 288134
         }
       }
     },
@@ -9735,11 +9735,11 @@
             "visibility": "visible"
           },
           "integrations_content": {
-            "x": 776,
+            "x": 956,
             "y": 102,
-            "width": 720,
-            "height": 108,
-            "display": "flex",
+            "width": 540,
+            "height": 369.5,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -10062,8 +10062,8 @@
       "images": {
         "actual": {
           "file": "dark/1640x900/chat/actual.png",
-          "sha256": "e8b6a93e682a9ad51d29d7fdf1625288f429d13e303a171408f2c4d7b525b209",
-          "bytes": 69194
+          "sha256": "2a59dfafe73e6289fc75d12072b37404ea1d3a7c0c8afc7e36c4f121f63454cb",
+          "bytes": 69195
         },
         "reference": {
           "file": "dark/1640x900/chat/reference.png",
@@ -10072,8 +10072,8 @@
         },
         "comparison": {
           "file": "dark/1640x900/chat/comparison.png",
-          "sha256": "135844a78488898868194da3e705715728df20d861eee055481ff3f81c75ed84",
-          "bytes": 256173
+          "sha256": "66c758c535eea9b40027c7ded54350b7500feb1ebedd0b0e7fb993db441d983c",
+          "bytes": 256301
         }
       }
     },
@@ -10127,11 +10127,11 @@
             "visibility": "visible"
           },
           "integrations_content": {
-            "x": 576,
+            "x": 756,
             "y": 102,
-            "width": 720,
-            "height": 108,
-            "display": "flex",
+            "width": 540,
+            "height": 369.5,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -10377,8 +10377,8 @@
       "images": {
         "actual": {
           "file": "dark/1440x900/start/actual.png",
-          "sha256": "3690ec48ca4ea23d6a85844b5583efa38b85d8cf5825d778828b468f7ed99926",
-          "bytes": 73927
+          "sha256": "aeea4796a8f352928c7fe92265aca5c3e3c2dbe7df051b8ad4b917d4d10c87f3",
+          "bytes": 73934
         },
         "reference": {
           "file": "dark/1440x900/start/reference.png",
@@ -10387,8 +10387,8 @@
         },
         "comparison": {
           "file": "dark/1440x900/start/comparison.png",
-          "sha256": "3d07d8203feda5e4242b3a87445b4efa612998dd9a38d9b07d6cc86633d4d1d9",
-          "bytes": 256898
+          "sha256": "2a39684c370bce6d362742ed1b8bc88082f5d9d6e558083a88d36581dea8ef11",
+          "bytes": 256878
         }
       }
     },
@@ -10442,11 +10442,11 @@
             "visibility": "visible"
           },
           "integrations_content": {
-            "x": 576,
+            "x": 756,
             "y": 102,
-            "width": 720,
-            "height": 108,
-            "display": "flex",
+            "width": 540,
+            "height": 369.5,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -10566,25 +10566,25 @@
             "visibility": "visible"
           },
           "#harnessLeadModel": {
-            "x": 548,
+            "x": 434,
             "y": 604.17,
-            "width": 344,
+            "width": 437.45,
             "height": 44,
             "display": "block",
             "visibility": "visible"
           },
           "#harnessPolicy": {
-            "x": 902,
+            "x": 881.45,
             "y": 604.17,
-            "width": 344,
+            "width": 364.55,
             "height": 44,
             "display": "block",
             "visibility": "visible"
           },
           "#harnessWorkflowMode": {
-            "x": 434,
+            "x": 566,
             "y": 658.17,
-            "width": 219,
+            "width": 475,
             "height": 44,
             "display": "block",
             "visibility": "visible"
@@ -10718,16 +10718,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 10.5852,
-        "changed_pixel_ratio_0_1": 0.051335,
+        "mean_absolute_rgb_0_255": 10.7372,
+        "changed_pixel_ratio_0_1": 0.052164,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "dark/1440x900/harness/actual.png",
-          "sha256": "1eb2e9013ca815dffc8dde5eef3c45f791ba0a644d1b2ffb9b582a9dca5c9b54",
-          "bytes": 69342
+          "sha256": "3bfef15f36dd8eac377b2f1b018e094a3c1107dd8a5e5816a66d8ef8fea21ff5",
+          "bytes": 70029
         },
         "reference": {
           "file": "dark/1440x900/harness/reference.png",
@@ -10736,8 +10736,8 @@
         },
         "comparison": {
           "file": "dark/1440x900/harness/comparison.png",
-          "sha256": "2de3187faec63e68c8e35b95e799c3fa9373df9f3f747068885946d51856082a",
-          "bytes": 265985
+          "sha256": "599891ee440b92831daf424fa75d5dcd5649dc5371bc9fc3b432377e7f621deb",
+          "bytes": 266811
         }
       }
     },
@@ -10791,11 +10791,11 @@
             "visibility": "visible"
           },
           "integrations_content": {
-            "x": 576,
+            "x": 756,
             "y": 102,
-            "width": 720,
-            "height": 108,
-            "display": "flex",
+            "width": 540,
+            "height": 369.5,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -11048,8 +11048,8 @@
       "images": {
         "actual": {
           "file": "dark/1440x900/hall/actual.png",
-          "sha256": "ba0cfc0be950f7d070bae77cdaf2e0e83ccff3db49f9c49ba16afc004b6835a0",
-          "bytes": 93705
+          "sha256": "84eece806138f3917c51d8c35940d0ad4b0f5d37bf4961e06e0414c8a9e15ffd",
+          "bytes": 93706
         },
         "reference": {
           "file": "dark/1440x900/hall/reference.png",
@@ -11058,8 +11058,8 @@
         },
         "comparison": {
           "file": "dark/1440x900/hall/comparison.png",
-          "sha256": "a9b7bc88b6da0608ec82a4b30b56233087cc26fb3668a5b19023ee16bc8e744c",
-          "bytes": 288165
+          "sha256": "18a3e3dcf23e239944840d3c5750f52eca9788483f9dc745277ff2b11448e37c",
+          "bytes": 288164
         }
       }
     },
@@ -11113,11 +11113,11 @@
             "visibility": "visible"
           },
           "integrations_content": {
-            "x": 576,
+            "x": 756,
             "y": 102,
-            "width": 720,
-            "height": 108,
-            "display": "flex",
+            "width": 540,
+            "height": 369.5,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -11431,11 +11431,11 @@
             "visibility": "visible"
           },
           "integrations_content": {
-            "x": 576,
+            "x": 756,
             "y": 102,
-            "width": 720,
-            "height": 108,
-            "display": "flex",
+            "width": 540,
+            "height": 369.5,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -11681,7 +11681,7 @@
       "images": {
         "actual": {
           "file": "dark/1440x900/debate/actual.png",
-          "sha256": "46043670868af2d3a66f55d1227921fcf397e667a7dfe0ce85b0f48477170a16",
+          "sha256": "1a026f486de92293eff79ed859f3b9eb6d3d274f3a32b8b98aef7a8dca1d33f1",
           "bytes": 91234
         },
         "reference": {
@@ -11691,8 +11691,8 @@
         },
         "comparison": {
           "file": "dark/1440x900/debate/comparison.png",
-          "sha256": "eb9fcf8236f228ce5a8ed19661caef972976112797bcc29d4e4b022f29b9826b",
-          "bytes": 278717
+          "sha256": "db1ef932f254aff7f40b1ea2bfbd2dd8fb9f2e6d0a8409a1ce120b15a08464fe",
+          "bytes": 278716
         }
       }
     },
@@ -11746,11 +11746,11 @@
             "visibility": "visible"
           },
           "integrations_content": {
-            "x": 576,
+            "x": 756,
             "y": 102,
-            "width": 720,
-            "height": 108,
-            "display": "flex",
+            "width": 540,
+            "height": 369.5,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -12073,8 +12073,8 @@
       "images": {
         "actual": {
           "file": "dark/1440x900/chat/actual.png",
-          "sha256": "a497484e63569b75ff1fff69127c05e6d38797b4ae10ae10bca39d49e5305314",
-          "bytes": 66347
+          "sha256": "8b2d1fd5ff4a8f11d2039875678892511d611f87748dc5e1de53dfb3450ce30a",
+          "bytes": 66346
         },
         "reference": {
           "file": "dark/1440x900/chat/reference.png",
@@ -12083,8 +12083,8 @@
         },
         "comparison": {
           "file": "dark/1440x900/chat/comparison.png",
-          "sha256": "52fa175ef654df337f7963ac5094c50a702747a16223d91cfe25c0c36b7f1c07",
-          "bytes": 244842
+          "sha256": "d893762b92b4076420fee630fe04a38c19642f20251714f9c271ae76cc19df59",
+          "bytes": 244841
         }
       }
     },
@@ -12138,11 +12138,11 @@
             "visibility": "visible"
           },
           "integrations_content": {
-            "x": 416,
+            "x": 596,
             "y": 102,
-            "width": 720,
-            "height": 108,
-            "display": "flex",
+            "width": 540,
+            "height": 369.5,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -12388,8 +12388,8 @@
       "images": {
         "actual": {
           "file": "dark/1280x800/start/actual.png",
-          "sha256": "6bf819b3b8f1ac7f3b419f6f87bdc09c25bdc65b7582f2a717aa9fe658b6fc8c",
-          "bytes": 68574
+          "sha256": "e82b7e236e508b337a2b28fca2d8a13058a9474d9194af00b2fcf19808f4ba12",
+          "bytes": 68576
         },
         "reference": {
           "file": "dark/1280x800/start/reference.png",
@@ -12398,8 +12398,8 @@
         },
         "comparison": {
           "file": "dark/1280x800/start/comparison.png",
-          "sha256": "19be060655e92428290526601a8866164055dc85aa57bd72ef5e127ad48a7f7b",
-          "bytes": 218763
+          "sha256": "07ba8717c1abb9aca90e651a948103d2a60d57d56570286da315fb3da07041bd",
+          "bytes": 218724
         }
       }
     },
@@ -12453,11 +12453,11 @@
             "visibility": "visible"
           },
           "integrations_content": {
-            "x": 416,
+            "x": 596,
             "y": 102,
-            "width": 720,
-            "height": 108,
-            "display": "flex",
+            "width": 540,
+            "height": 369.5,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -12577,25 +12577,25 @@
             "visibility": "visible"
           },
           "#harnessLeadModel": {
-            "x": 468,
+            "x": 354,
             "y": 553.22,
-            "width": 344,
+            "width": 437.45,
             "height": 44,
             "display": "block",
             "visibility": "visible"
           },
           "#harnessPolicy": {
-            "x": 822,
+            "x": 801.45,
             "y": 553.22,
-            "width": 344,
+            "width": 364.55,
             "height": 44,
             "display": "block",
             "visibility": "visible"
           },
           "#harnessWorkflowMode": {
-            "x": 354,
+            "x": 486,
             "y": 607.22,
-            "width": 219,
+            "width": 475,
             "height": 44,
             "display": "block",
             "visibility": "visible"
@@ -12729,16 +12729,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 10.6469,
-        "changed_pixel_ratio_0_1": 0.057546,
+        "mean_absolute_rgb_0_255": 10.8399,
+        "changed_pixel_ratio_0_1": 0.058614,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "dark/1280x800/harness/actual.png",
-          "sha256": "cd988c8557c6af212e3e241a2a1a11a4677c8c48eacaf171fde4a398a0e144fa",
-          "bytes": 67180
+          "sha256": "c6adcb0a0b98ded56f83d8c9a6500b855e3903fb340e610c3d862370678a263a",
+          "bytes": 67874
         },
         "reference": {
           "file": "dark/1280x800/harness/reference.png",
@@ -12747,8 +12747,8 @@
         },
         "comparison": {
           "file": "dark/1280x800/harness/comparison.png",
-          "sha256": "6170cddffd707f33281e31b9fa6ec567b3f9c532f9e46d55e0a8c41f7b321792",
-          "bytes": 232535
+          "sha256": "14802878579e56bd57a39f0d1012a11dcd497720b94209ab45f3b66765e676c5",
+          "bytes": 233312
         }
       }
     },
@@ -12802,11 +12802,11 @@
             "visibility": "visible"
           },
           "integrations_content": {
-            "x": 416,
+            "x": 596,
             "y": 102,
-            "width": 720,
-            "height": 108,
-            "display": "flex",
+            "width": 540,
+            "height": 369.5,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -13059,8 +13059,8 @@
       "images": {
         "actual": {
           "file": "dark/1280x800/hall/actual.png",
-          "sha256": "f064511e13daaf9cdb01383d22408f79cf564ac6296ed234ee7b58abbdbdec82",
-          "bytes": 89303
+          "sha256": "5c613c837572ddb2693ad188ebf7eb6abbf61ea39ce032e2f1cea7110de1190f",
+          "bytes": 89304
         },
         "reference": {
           "file": "dark/1280x800/hall/reference.png",
@@ -13069,8 +13069,8 @@
         },
         "comparison": {
           "file": "dark/1280x800/hall/comparison.png",
-          "sha256": "97349f99d902c1bde150e76c390e8c021c1107831cead4f88f6658cb29a6def7",
-          "bytes": 249796
+          "sha256": "bfd61107c7fd4ef31862703786cd90772f58f16ff5fdb4c6fea347b2c782308f",
+          "bytes": 249755
         }
       }
     },
@@ -13124,11 +13124,11 @@
             "visibility": "visible"
           },
           "integrations_content": {
-            "x": 416,
+            "x": 596,
             "y": 102,
-            "width": 720,
-            "height": 108,
-            "display": "flex",
+            "width": 540,
+            "height": 369.5,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -13442,11 +13442,11 @@
             "visibility": "visible"
           },
           "integrations_content": {
-            "x": 416,
+            "x": 596,
             "y": 102,
-            "width": 720,
-            "height": 108,
-            "display": "flex",
+            "width": 540,
+            "height": 369.5,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -13757,11 +13757,11 @@
             "visibility": "visible"
           },
           "integrations_content": {
-            "x": 416,
+            "x": 596,
             "y": 102,
-            "width": 720,
-            "height": 108,
-            "display": "flex",
+            "width": 540,
+            "height": 369.5,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -14152,8 +14152,8 @@
             "x": -104,
             "y": 146,
             "width": 374,
-            "height": 156.5,
-            "display": "flex",
+            "height": 390,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -14391,16 +14391,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 24.4147,
-        "changed_pixel_ratio_0_1": 0.308926,
+        "mean_absolute_rgb_0_255": 24.4148,
+        "changed_pixel_ratio_0_1": 0.308929,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "dark/390x844/start/actual.png",
-          "sha256": "5b8c25238c86b5a75655109d1e7f5de9d34cea374bbf20316c09f7f4473004de",
-          "bytes": 46434
+          "sha256": "c3dbb983b8a27773f1b5df8fe6fe582b2dcf5e3dd42efcee329b0ab182ef8315",
+          "bytes": 46419
         },
         "reference": {
           "file": "dark/390x844/start/reference.png",
@@ -14409,8 +14409,8 @@
         },
         "comparison": {
           "file": "dark/390x844/start/comparison.png",
-          "sha256": "81a083f595b4e255ad21ac6df245501bbfe75df2dee45bcb8063a7f361f25973",
-          "bytes": 138522
+          "sha256": "57182ca3babecaef1e2645c1a2650d624d4a4ec5347f10ad4b12f327252660f6",
+          "bytes": 138536
         }
       }
     },
@@ -14467,8 +14467,8 @@
             "x": -104,
             "y": 146,
             "width": 374,
-            "height": 156.5,
-            "display": "flex",
+            "height": 390,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -14581,7 +14581,7 @@
         "required": {
           "#harnessPromptInput": {
             "x": 27,
-            "y": 389.17,
+            "y": 441.17,
             "width": 336,
             "height": 88,
             "display": "block",
@@ -14589,39 +14589,39 @@
           },
           "#harnessLeadModel": {
             "x": 27,
-            "y": 502.02,
-            "width": 164,
+            "y": 554.02,
+            "width": 177.81,
             "height": 44,
             "display": "block",
             "visibility": "visible"
           },
           "#harnessPolicy": {
-            "x": 199,
-            "y": 502.02,
-            "width": 164,
+            "x": 214.81,
+            "y": 554.02,
+            "width": 148.17,
             "height": 44,
             "display": "block",
             "visibility": "visible"
           },
           "#harnessWorkflowMode": {
-            "x": 27,
+            "x": 71,
             "y": 606.02,
-            "width": 180,
+            "width": 170,
             "height": 44,
             "display": "block",
             "visibility": "visible"
           },
           "#harnessProjectSummary": {
             "x": 258,
-            "y": 722.02,
+            "y": 670.02,
             "width": 105,
             "height": 18,
             "display": "block",
             "visibility": "visible"
           },
           "#harnessRunBtn": {
-            "x": 27,
-            "y": 658.02,
+            "x": 291,
+            "y": 606.02,
             "width": 72,
             "height": 44,
             "display": "flex",
@@ -14740,16 +14740,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 17.0426,
-        "changed_pixel_ratio_0_1": 0.109789,
+        "mean_absolute_rgb_0_255": 16.5634,
+        "changed_pixel_ratio_0_1": 0.105885,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "dark/390x844/harness/actual.png",
-          "sha256": "dd40eb5606a3320adbd997b0c92e497806377b376929f488bb0b2fcc4b1d3822",
-          "bytes": 42253
+          "sha256": "0ddfc3482bd0231f26ebb043d73ff773e8388ef2e9a29e455c64130ff6605721",
+          "bytes": 40650
         },
         "reference": {
           "file": "dark/390x844/harness/reference.png",
@@ -14758,8 +14758,8 @@
         },
         "comparison": {
           "file": "dark/390x844/harness/comparison.png",
-          "sha256": "2f60a271f8613d2312663f6c66b36dd8fc901048a18da600fa666dfee73f5741",
-          "bytes": 142559
+          "sha256": "9c7d1e559095f51a631d11d87cb8e05d708061125d0caffbc9948c65ee7cec26",
+          "bytes": 140587
         }
       }
     },
@@ -14816,8 +14816,8 @@
             "x": -104,
             "y": 146,
             "width": 374,
-            "height": 156.5,
-            "display": "flex",
+            "height": 390,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -15138,8 +15138,8 @@
             "x": -104,
             "y": 146,
             "width": 374,
-            "height": 156.5,
-            "display": "flex",
+            "height": 390,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -15456,8 +15456,8 @@
             "x": -104,
             "y": 146,
             "width": 374,
-            "height": 156.5,
-            "display": "flex",
+            "height": 390,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {
@@ -15771,8 +15771,8 @@
             "x": -104,
             "y": 146,
             "width": 374,
-            "height": 156.5,
-            "display": "flex",
+            "height": 390,
+            "display": "grid",
             "visibility": "visible"
           },
           "workspace": {

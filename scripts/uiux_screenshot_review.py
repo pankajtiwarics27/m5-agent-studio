@@ -638,8 +638,8 @@ REVIEWS: dict[str, dict[str, object]] = {
             "Tools disclosure rather than its closed content; D2/D3 mark explicit Inspector and pane deltas. "
             "Pinned Chromium Open Sans files keep the raw geometry portable across Debian and Ubuntu; "
             "there is no cross-host geometry tolerance. The agent review is distinct from the explicit "
-            "human decision: candidate d1065e2174248919da13307d4253eb6c3cb53aa9550e29f5ce5af762567b1126 "
-            "was approved through Arena ask_user uiv2-26-pinned-font-approval=approve on 2026-11-07."
+            "human decision: candidate a81c6a5c71fc1cb088163dc649718581f4df09e3ab29c84b0af3010c182d9798 "
+            "was approved through Arena ask_user uiv2-26-latest-main-approval=approve on 2026-11-07."
         ),
         "eye": [
             "candidate/dark/1640x900/start/comparison.png",
