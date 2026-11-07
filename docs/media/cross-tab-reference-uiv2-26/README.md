@@ -37,7 +37,14 @@ Set `STUDIO_SCREENSHOT_CHROME`, `STUDIO_PUPPETEER_CORE`, `STUDIO_SCREENSHOT_CHRO
 `LD_LIBRARY_PATH`, and `STUDIO_PYTHON` when the pinned browser or Python environment is not on the
 default path. The walk cleans up its demo process and temporary workspace.
 
-## Approved candidate and what was opened
+## Integration recapture required
+
+The candidate and human decision below are **historical**, bound to clean HEAD `cafdd08`. After that
+review, `origin/main` `1b940bc` added the owner-requested task-first Harness/shared-shell layout.
+The old approval has therefore been removed from the current contract rather than reused. A fresh
+48-capture candidate and explicit human approval are required on the clean integration HEAD.
+
+## Superseded pre-integration candidate and what was opened
 
 The approved UIV2-03 reference is a structural contract, not a pixel-clone target. Authored D1–D3
 annotations explain the wrapping integrations band, preserved global controls, and each pane's

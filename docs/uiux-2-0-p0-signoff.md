@@ -8,7 +8,7 @@ and what a revert does and does not touch.
 * Status: **historical-approval-unbound** — Signed in the ledger; this page reports the historical owner record, not a new approval.
 * Approval binding: **unbound** — The historical record has no approved input snapshot and does not establish approval of current inputs.
 * Pinned baseline source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (input artifacts are hashed separately).
-* 6 panes · 21 preserved capabilities · 230 markup controls (127 chrome, 103 panes) · 71 rendered by script.
+* 6 panes · 21 preserved capabilities · 237 markup controls (130 chrome, 107 panes) · 71 rendered by script.
 * 118 routes exist, 71 with a resolved or possible caller, 47 with none observed and 0 unknown due to unresolved edges; 48 state-changing candidates traced.
 * 0 fetch site(s) have 0 unresolved URL or method edge(s) (0 method).
 * Baseline screenshots recorded in the index: 6 of 6 (not provenance-verified).
@@ -28,7 +28,7 @@ separates the historical signature from any explicit binding to current input di
 | # | Ask | Evidence in this package |
 |---|---|---|
 | 1 | Accept the preservation matrix as the baseline P1 must preserve | 21 capability rows across 6 panes, carried row for row from product/M5_2_0_UIUX_Autonomous_Roadmap.json |
-| 2 | Accept the control inventory as the list of controls that must stay reachable | 230 markup controls (127 chrome, 103 panes) plus 71 rendered by script |
+| 2 | Accept the control inventory as the list of controls that must stay reachable | 237 markup controls (130 chrome, 107 panes) plus 71 rendered by script |
 | 3 | Review route candidates and preserve confirmed browser-reachable routes and their gates | 118 routes exist; 71 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 48 state-changing candidates; the lexical scan is not exhaustive |
 | 4 | Accept that P1 may not weaken the shared boundary | host allowlist (400), cross-origin rejection (403), bearer token (401, 503 when unconfigured), rate limit (429) and body-size limit (413), read from the middleware itself |
 | 5 | Review the rollback path and the state effects of each story | this package adds no migration or privilege; review each story's actual merge, revert and recovery effects, then regenerate artifacts and re-run the checks below |
@@ -104,27 +104,13 @@ An agent session over a workspace, with the diff, approval, and abort controls.
 | compaction | Harness primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
 | GSD and SDLC | Harness primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
 
-**Controls — 30 in the markup:**
+**Controls — 34 in the markup:**
 
 | Tag | Id | Label | Handler |
 |---|---|---|---|
 | button | — | Approve | resolveHarnessApproval('__inventory_probe__','approve','__inventory_probe__') |
 | button | — | + New session | startFreshHarnessDraft() |
 | input | harnessSessionFilter | — | — |
-| button | — | Set / Create | saveWorkspaceDirectory() |
-| input | harnessWorkspaceInput | — | — |
-| select | harnessRecentDirsSelect | — | — |
-| input | harnessUseWorktree | — | — |
-| select | harnessLeadModel | — | — |
-| select | harnessCriticModel | — | — |
-| select | harnessPolicy | Standard (Ask before Bash) Autonomous (Auto Build & Test) Plan & Audit (Read-Only) | — |
-| summary | — | Run settings | — |
-| select | harnessEfficiencyMode | Ponytail + Concise Ponytail Senior Concise (STE100) Standard Verbose | — |
-| select | harnessReasoning | Off (Fastest) Low Medium xHigh | — |
-| select | harnessMaxSteps | 6 steps 10 steps 16 steps 24 steps | — |
-| select | harnessSessionActionSelect | Session Actions… Inspect Git Status & Diff Permissions & Revocations Compact Session Context (≤2 KB) Open Agile SDLC Product Board Verification & Artifacts | — |
-| button | harnessAbortBtn | Abort | abortHarnessRun() |
-| button | harnessPermissionBadge | No permissions | openHarnessGrants() |
 | button | harnessTimelineToggle | Session log | toggleHarnessTimeline() |
 | button | — | All | setHarnessEventFilter('all') |
 | button | — | Tools | setHarnessEventFilter('tool') |
@@ -135,9 +121,27 @@ An agent session over a workspace, with the diff, approval, and abort controls.
 | button | harnessTimelineReplay | Replay log | replayHarnessLog() |
 | button | harnessTimelineResync | Resync | harnessResyncFromSnapshot('operator') |
 | textarea | harnessPromptInput | — | — |
-| select | harnessWorkflowMode | Autonomous Turn (Step Loop) Plan, Build, Verify (GSD 3-Wave) Agile SDLC Factory (Full Build) Agile SDLC Board & Backlog… | — |
-| button | harnessRunBtn | Run | executeHarnessSelectedWorkflow() |
 | button | harnessAttachBtn | Attach context | openContextModal() |
+| select | harnessLeadModel | — | — |
+| select | harnessPolicy | Standard (Ask before Bash) Autonomous (Auto Build & Test) Plan & Audit (Read-Only) | — |
+| select | harnessWorkflowMode | Autonomous Turn (Step Loop) Plan, Build, Verify (GSD 3-Wave) Agile SDLC Factory (Full Build) Agile SDLC Board & Backlog… | — |
+| summary | — | Task settings | — |
+| button | — | Close | document.getElementById('harnessTaskSettings').open = false |
+| button | — | Set / Create | saveWorkspaceDirectory() |
+| input | harnessWorkspaceInput | — | — |
+| select | harnessRecentDirsSelect | — | — |
+| input | harnessUseWorktree | — | — |
+| select | harnessCriticModel | — | — |
+| summary | — | Run settings | — |
+| select | harnessEfficiencyMode | Ponytail + Concise Ponytail Senior Concise (STE100) Standard Verbose | — |
+| select | harnessReasoning | Off (Fastest) Low Medium xHigh | — |
+| select | harnessMaxSteps | 6 steps 10 steps 16 steps 24 steps | — |
+| select | harnessSessionActionSelect | Session Actions… Inspect Git Status & Diff Permissions & Revocations Compact Session Context (≤2 KB) Open Agile SDLC Product Board Verification & Artifacts | — |
+| button | harnessAbortBtn | Abort | abortHarnessRun() |
+| button | harnessRunBtn | Run | executeHarnessSelectedWorkflow() |
+| button | harnessPermissionBadge | No permissions | openHarnessGrants() |
+| button | harnessProjectSummary | Choose a project | document.getElementById('harnessTaskSettings').open = true; document.getElementById('harnessWorkspaceInput').focus() |
+| summary | — | Review run details | — |
 
 **Routes reached from this pane's controls — 15, walking at most 2 calls; 6 route(s) reached through the same shared helper were excluded because this pane's walk never passes the function that supplied their URL:**
 
@@ -318,7 +322,7 @@ A single streaming conversation with the selected model.
 
 ## Shared chrome
 
-127 controls: button 73, input 31, select 12, summary 5, textarea 6.
+130 controls: button 75, input 31, select 12, summary 6, textarea 6.
 
 Tabs, command palette, modals and the shared toolbar. A pane story may restyle chrome, but every control here stays reachable: the inventory test fails if one disappears.
 
@@ -381,11 +385,11 @@ provenance; a matching snapshot cannot clear separate review holds.
 | Input | Current digest | Owner-recorded digest |
 |---|---|---|
 | `ledger_content_sha256` | `d4137cf1e214931953734cc97943732ea5204b5884c6aa26339cc7c27ed5908b` | `not recorded` |
-| `source_manifest_sha256` | `427059f2e6050c6be1591277a0028e1c9ef1d71b763a6d83275e40ab84b52435` | `not recorded` |
-| `control_inventory_sha256` | `e5e60955e8e47619b673983110646b857b01627f9f586f27931212fc81d382ae` | `not recorded` |
-| `route_map_sha256` | `18f6da019cc428ab904eb9df32c491e443824e2b8d202a4e945d0fd5027109b8` | `not recorded` |
-| `authorization_trace_sha256` | `ca909c2bc44302c6ee7959a4575bb080a38a8a9b25e8710c34e753ecf9fcaff9` | `not recorded` |
-| `frontend_sha256` | `749cad6760d294f62fe7b0821469bdeeac56f50f6eaa65dabf1f084f293c9941` | `not recorded` |
+| `source_manifest_sha256` | `e6231ad6f51e87474cf782e19c7705038d3d5cb618117de985183d992a8b3644` | `not recorded` |
+| `control_inventory_sha256` | `f1e767ce6a6d51fa7ff76c7abdb406bbbc2dd6687a500fabccd942ae71799c96` | `not recorded` |
+| `route_map_sha256` | `c1074eb77ff2ff6d03e4b3fac8f5b39680c1c204f8509564dfa3383f3fa24562` | `not recorded` |
+| `authorization_trace_sha256` | `ef5432a20763cb2c3a84d38e182b585d2bf6651972705f616d9ffae8a248f3d5` | `not recorded` |
+| `frontend_sha256` | `6576b48dd802161eda5187f1714eb5007af23aacc84f8105cb504075e26cd79b` | `not recorded` |
 | `screenshot_manifest_sha256` | `b488bf453ae260b6564ae592f0455e3d70cff3121dca1e7c823c7abb270b44d3` | `not recorded` |
 | `screenshot_index_sha256` | `16b0620ca1d02a1b181ad15b3a2b0c6aae9e7aa539654d27ed80d9147189634e` | `not recorded` |
 | `generator_sha256` | `6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65` | `not recorded` |

@@ -51,9 +51,9 @@
           "artifact": "product/M5_2_0_UIUX_Control_Inventory.json",
           "totals": {
             "panes": 6,
-            "markup_controls": 230,
-            "pane_controls": 103,
-            "chrome_controls": 127,
+            "markup_controls": 237,
+            "pane_controls": 107,
+            "chrome_controls": 130,
             "script_rendered_controls": 71,
             "script_rendered_by_function": {
               "ensureStageCardMounted": 1,
@@ -213,9 +213,9 @@
           "totals": {
             "panes": 6,
             "preserved_capabilities": 21,
-            "markup_controls": 230,
-            "chrome_controls": 127,
-            "pane_controls": 103,
+            "markup_controls": 237,
+            "chrome_controls": 130,
+            "pane_controls": 107,
             "script_rendered_controls": 71,
             "routes": 118,
             "routes_with_resolved_or_possible_caller": 71,
@@ -250,7 +250,7 @@
           "totals": {
             "tokens": 56,
             "groups": 8,
-            "references": 1563,
+            "references": 1592,
             "theme_overrides": 20,
             "density_overrides": 5,
             "contrast_pairs": 28,
@@ -820,10 +820,10 @@
         {
           "artifact": "product/M5_2_0_UIUX_Polish.json",
           "totals": {
-            "radius_rules": 134,
+            "radius_rules": 139,
             "motion_rules": 18,
             "press_rules": 2,
-            "hover_rules": 34,
+            "hover_rules": 35,
             "captures": 8,
             "findings": 0
           }
@@ -1146,8 +1146,8 @@
   "inventory": {
     "tabs": 6,
     "routes": 118,
-    "markup_controls": 230,
-    "chrome_controls": 127,
+    "markup_controls": 237,
+    "chrome_controls": 130,
     "script_rendered_controls": 71,
     "capabilities": 21,
     "e2e_rows": 21,

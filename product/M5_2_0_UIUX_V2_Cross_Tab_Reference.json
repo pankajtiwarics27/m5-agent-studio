@@ -9,7 +9,7 @@
   "statement": "The actual app and the explicitly approved UIV2-03 wireframe are captured at the same six-tab viewport/theme matrix. Pixel differences are measured and annotated, never hidden by a blanket tolerance. Independent structural rules must pass, and future --check runs also require a live structural baseline approved by a human. New PNGs are local evidence, not Git inputs.",
   "source": {
     "static": "static/index.html",
-    "static_sha256": "749cad6760d294f62fe7b0821469bdeeac56f50f6eaa65dabf1f084f293c9941",
+    "static_sha256": "6576b48dd802161eda5187f1714eb5007af23aacc84f8105cb504075e26cd79b",
     "walk": "scripts/uiux_v2_cross_tab_reference_walk.mjs",
     "walk_sha256": "a83f32a2263feb969df20b6b7cbc79fdf3dc3e746decc52af37d9a5f5e577fee"
   },
@@ -941,22 +941,9 @@
   ],
   "approval": {
     "required": true,
-    "status": "approved",
+    "status": "pending",
     "artifact": "product/M5_2_0_UIUX_V2_Cross_Tab_Approval.json",
-    "rule": "A human must approve the annotated candidate; the agent cannot infer or self-certify this decision.",
-    "human_approval": {
-      "decision": "approved",
-      "reference": "user:Arena ask_user uiv2-26-settled-approval=approve, 2026-11-07",
-      "recorded_at": "2026-11-07T10:43:40.105626+00:00",
-      "scope": "Structural fidelity of all 48 annotated live/reference comparisons; not a pixel-clone claim."
-    },
-    "candidate": {
-      "manifest": "docs/media/cross-tab-reference-uiv2-26/candidate/candidate-manifest.json",
-      "manifest_sha256": "efbe1c23dcba32ceec6618db271e605eaf2532f76b13d1c4d3aa099a7c38191b",
-      "git_head": "cafdd08242f095c546a8e5546f80cbfc4791c343"
-    },
-    "captures": 48,
-    "approval_sha256": "995a64f231beca6ab0c9b335957aedd889371e75323510d8c444ac2db359d844"
+    "rule": "A human must approve the annotated candidate; the agent cannot infer or self-certify this decision."
   },
   "totals": {
     "panes": 6,

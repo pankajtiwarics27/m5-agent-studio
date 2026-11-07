@@ -6,9 +6,9 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 re-derived from the markup on every run.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
-* Frontend digest: `749cad6760d294f62fe7b0821469bdeeac56f50f6eaa65dabf1f084f293c9941`.
-* Panes: 6 · controls in panes: 103 · controls in the
-  shared chrome: 127 · script-rendered: 71.
+* Frontend digest: `6576b48dd802161eda5187f1714eb5007af23aacc84f8105cb504075e26cd79b`.
+* Panes: 6 · controls in panes: 107 · controls in the
+  shared chrome: 130 · script-rendered: 71.
 
 ## What this page is, and is not
 
@@ -22,18 +22,18 @@ the end, attributed to the function that renders them — a heuristic, not a cal
 | Pane | Section | Total | Without id | Without any label | Breakdown |
 |---|---|---|---|---|---|
 | start | `pane-start` | 14 | 8 | 0 | button 8, input 2, select 1, summary 3 |
-| harness | `pane-harness` | 30 | 9 | 0 | button 16, input 3, select 9, summary 1, textarea 1 |
+| harness | `pane-harness` | 34 | 12 | 0 | button 18, input 3, select 9, summary 3, textarea 1 |
 | hall | `pane-hall` | 20 | 3 | 0 | button 9, select 8, summary 2, textarea 1 |
 | council | `pane-council` | 17 | 2 | 0 | button 9, input 1, select 5, summary 1, textarea 1 |
 | debate | `pane-debate` | 10 | 1 | 0 | button 5, input 1, select 2, summary 1, textarea 1 |
 | chat | `pane-chat` | 12 | 0 | 0 | button 5, input 3, select 3, textarea 1 |
-| (chrome) | outside the panes | 127 | 48 | 0 | button 73, input 31, select 12, summary 5, textarea 6 |
+| (chrome) | outside the panes | 130 | 50 | 0 | button 75, input 31, select 12, summary 6, textarea 6 |
 
 ## What the numbers already say
 
-* 230 controls are in the markup and 71 more are built by script — a checklist written from the markup alone would miss 24% of the interactive surface.
-* The shared chrome carries 127 controls; all six panes together carry 103. Most of the clicking happens in the shell, not inside a tab.
-* 71 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
+* 237 controls are in the markup and 71 more are built by script — a checklist written from the markup alone would miss 23% of the interactive surface.
+* The shared chrome carries 130 controls; all six panes together carry 107. Most of the clicking happens in the shell, not inside a tab.
+* 76 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
 
 ## Pane `start`
 
@@ -58,40 +58,44 @@ Section `pane-start`, 14 interactive elements.
 
 ## Pane `harness`
 
-Section `pane-harness`, 30 interactive elements.
+Section `pane-harness`, 34 interactive elements.
 
 | # | Element | id | Type | Label or text | Handler |
 |---|---|---|---|---|---|
 | 1 | button | — | button | Inventory-only approval route anchor | resolveHarnessApproval('__inventory_probe__','approve','__inventory_probe__') |
 | 2 | button | — | — | + New session | startFreshHarnessDraft() |
 | 3 | input | harnessSessionFilter | search | Filter harness sessions by title, id, status or policy | renderHarnessSidebar() |
-| 4 | button | — | button | Set / Create | saveWorkspaceDirectory() |
-| 5 | input | harnessWorkspaceInput | text | ~/Projects/my-app | syncProjectDirInputs(this.value) |
-| 6 | select | harnessRecentDirsSelect | — | Recent project directories | if(this.value)saveWorkspaceDirectory(this.value) |
-| 7 | input | harnessUseWorktree | checkbox | — | — |
-| 8 | select | harnessLeadModel | — | — | handleModelSelectChange(this, patchActiveHarnessSettings) |
-| 9 | select | harnessCriticModel | — | — | handleModelSelectChange(this, patchActiveHarnessSettings) |
-| 10 | select | harnessPolicy | — | Standard (Ask before Bash) Autonomous (Auto Build & Test) Plan & Audit (Read-Only) | patchActiveHarnessSettings() |
-| 11 | summary | — | — | Run settings | — |
-| 12 | select | harnessEfficiencyMode | — | Ponytail + Concise Ponytail Senior Concise (STE100) Standard Verbose | — |
-| 13 | select | harnessReasoning | — | Off (Fastest) Low Medium xHigh | — |
-| 14 | select | harnessMaxSteps | — | 6 steps 10 steps 16 steps 24 steps | — |
-| 15 | select | harnessSessionActionSelect | — | Session actions | runHarnessSessionAction(this) |
-| 16 | button | harnessAbortBtn | — | Abort | abortHarnessRun() |
-| 17 | button | harnessPermissionBadge | button | No permissions | openHarnessGrants() |
-| 18 | button | harnessTimelineToggle | button | Session log | toggleHarnessTimeline() |
-| 19 | button | — | button | All | setHarnessEventFilter('all') |
-| 20 | button | — | button | Tools | setHarnessEventFilter('tool') |
-| 21 | button | — | button | Approvals | setHarnessEventFilter('approval') |
-| 22 | button | — | button | Errors | setHarnessEventFilter('error') |
-| 23 | button | — | button | System | setHarnessEventFilter('system') |
-| 24 | button | harnessTimelineJump | button | Jump to latest ↓ | jumpToLatestHarnessEvent() |
-| 25 | button | harnessTimelineReplay | button | Replay log | replayHarnessLog() |
-| 26 | button | harnessTimelineResync | button | Resync | harnessResyncFromSnapshot('operator') |
-| 27 | textarea | harnessPromptInput | — | Your task for the Harness | — |
-| 28 | select | harnessWorkflowMode | — | Harness workflow mode | syncHarnessWorkflowModeUI() |
-| 29 | button | harnessRunBtn | — | Run | executeHarnessSelectedWorkflow() |
-| 30 | button | harnessAttachBtn | button | Attach context | openContextModal() |
+| 4 | button | harnessTimelineToggle | button | Session log | toggleHarnessTimeline() |
+| 5 | button | — | button | All | setHarnessEventFilter('all') |
+| 6 | button | — | button | Tools | setHarnessEventFilter('tool') |
+| 7 | button | — | button | Approvals | setHarnessEventFilter('approval') |
+| 8 | button | — | button | Errors | setHarnessEventFilter('error') |
+| 9 | button | — | button | System | setHarnessEventFilter('system') |
+| 10 | button | harnessTimelineJump | button | Jump to latest ↓ | jumpToLatestHarnessEvent() |
+| 11 | button | harnessTimelineReplay | button | Replay log | replayHarnessLog() |
+| 12 | button | harnessTimelineResync | button | Resync | harnessResyncFromSnapshot('operator') |
+| 13 | textarea | harnessPromptInput | — | Your task for the Harness | — |
+| 14 | button | harnessAttachBtn | button | Attach context | openContextModal() |
+| 15 | select | harnessLeadModel | — | — | handleModelSelectChange(this, patchActiveHarnessSettings) |
+| 16 | select | harnessPolicy | — | Standard (Ask before Bash) Autonomous (Auto Build & Test) Plan & Audit (Read-Only) | patchActiveHarnessSettings() |
+| 17 | select | harnessWorkflowMode | — | Harness workflow mode | syncHarnessWorkflowModeUI() |
+| 18 | summary | — | — | Task settings | — |
+| 19 | button | — | button | Close | document.getElementById('harnessTaskSettings').open = false |
+| 20 | button | — | button | Set / Create | saveWorkspaceDirectory() |
+| 21 | input | harnessWorkspaceInput | text | ~/Projects/my-app | syncProjectDirInputs(this.value) |
+| 22 | select | harnessRecentDirsSelect | — | Recent project directories | if(this.value)saveWorkspaceDirectory(this.value) |
+| 23 | input | harnessUseWorktree | checkbox | — | — |
+| 24 | select | harnessCriticModel | — | — | handleModelSelectChange(this, patchActiveHarnessSettings) |
+| 25 | summary | — | — | Run settings | — |
+| 26 | select | harnessEfficiencyMode | — | Ponytail + Concise Ponytail Senior Concise (STE100) Standard Verbose | — |
+| 27 | select | harnessReasoning | — | Off (Fastest) Low Medium xHigh | — |
+| 28 | select | harnessMaxSteps | — | 6 steps 10 steps 16 steps 24 steps | — |
+| 29 | select | harnessSessionActionSelect | — | Session actions | runHarnessSessionAction(this) |
+| 30 | button | harnessAbortBtn | — | Abort | abortHarnessRun() |
+| 31 | button | harnessRunBtn | — | Run | executeHarnessSelectedWorkflow() |
+| 32 | button | harnessPermissionBadge | button | No permissions | openHarnessGrants() |
+| 33 | button | harnessProjectSummary | button | Choose a project | document.getElementById('harnessTaskSettings').open = true; document.getElementById('harnessWorkspaceInput').focus() |
+| 34 | summary | — | — | Review run details | — |
 
 ## Pane `hall`
 
@@ -182,7 +186,7 @@ Section `pane-chat`, 12 interactive elements.
 
 ## Shared chrome
 
-127 interactive elements outside every pane (tab bar,
+130 interactive elements outside every pane (tab bar,
 top bar and monitor rail). These are reachable from all six tabs, which is why they are not
 attributed to one.
 
@@ -311,10 +315,13 @@ attributed to one.
 | 121 | button | — | — | Cancel | closeSpawnModal() |
 | 122 | button | — | — | Open Empty Room | confirmSpawnSession(false) |
 | 123 | button | spawnConveneBtn | — | Spawn & Convene 4-LLM Council | confirmSpawnSession(true) |
-| 124 | select | integrationsQuickMenu | — | Open studio tools and integrations | openIntegrationFromMenu(this) |
-| 125 | button | monitorToggleBtn | — | Toggle the contextual inspector | toggleMonitorRail() |
-| 126 | button | — | — | Unload every local model to free memory | unloadAllModels() |
-| 127 | summary | — | — | Run evidenceContracts, handoffs and measured verdicts | — |
+| 124 | button | harnessSessionsToggle | button | Sessions | toggleHarnessSessions() |
+| 125 | summary | — | — | Tools & integrations | — |
+| 126 | select | integrationsQuickMenu | — | Open studio tools and integrations | openIntegrationFromMenu(this) |
+| 127 | button | — | — | Unload every local model to free memory | unloadAllModels() |
+| 128 | button | monitorToggleBtn | — | Toggle the contextual inspector | toggleMonitorRail() |
+| 129 | summary | — | — | Run evidenceContracts, handoffs and measured verdicts | — |
+| 130 | button | — | button | Close inspector | toggleMonitorRail(true) |
 
 ## Controls built by script
 

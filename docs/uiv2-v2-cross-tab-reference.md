@@ -84,13 +84,15 @@ The cross-tab matrix is the common empty/seeded state. Populated, long-content, 
 
 ## Human structural-fidelity approval
 
-**Approved.** `user:Arena ask_user uiv2-26-settled-approval=approve, 2026-11-07` at `2026-11-07T10:43:40.105626+00:00`.
+**Pending. No live structural-fidelity approval is recorded.** The candidate is not an approved baseline and `--check` fails closed.
 
-- Candidate: `docs/media/cross-tab-reference-uiv2-26/candidate/candidate-manifest.json`
-- Candidate SHA-256: `efbe1c23dcba32ceec6618db271e605eaf2532f76b13d1c4d3aa099a7c38191b`
-- HEAD: `cafdd08242f095c546a8e5546f80cbfc4791c343`
+Review the 48 annotated comparisons. Only after an explicit user decision, bind that exact candidate with:
 
-Future `--check` runs compare all 48 live structural signatures with this approval and still rerun every independent reference/layout assertion.
+```bash
+python3 scripts/uiux_v2_cross_tab_reference.py \
+  --approve-candidate docs/media/cross-tab-reference-uiv2-26/candidate/candidate-manifest.json \
+  --approval-reference 'user:<conversation and date of the explicit approval>'
+```
 
 ## Reproduce
 

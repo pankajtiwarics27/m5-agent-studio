@@ -3046,11 +3046,10 @@
       "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
       "agent_prompt": "Implement UIV2-26: Cross-tab visual regression reference gate. Required outcome: Capture actual running UI and compare against approved reference screenshots in light/dark and responsive viewports. Specific gate: Required 1640x900,1440x900,1280x800,390x844 screenshots; annotate differences; human approval of structural fidelity; cannot mark done using source inspection alone. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
       "tracking": {
-        "status": "done",
-        "progress_percent": 100,
+        "status": "in_progress",
+        "progress_percent": 90,
         "attempt_count": 1,
         "started_at": "2026-11-07T12:50:00+05:30",
-        "completed_at": "2026-11-07T16:18:01+05:30",
         "commit_sha": "cafdd08",
         "changed_files": [
           "scripts/uiux_v2_cross_tab_reference_walk.mjs (new: authenticated isolated demo, keyboard tab activation, settled Council readiness, 48 live + 48 same-variant approved-wireframe captures + 48 annotated comparisons, informational pixel metrics, independent DOM/layout checks, exact approved structural-signature drift checks, process-group cleanup)",
@@ -3093,10 +3092,12 @@
           "All six-tab functions and safety boundaries preserved: no backend route or payload changed. The only app change is the measured mobile Chat flex-basis fix plus rebuilt studio.py. Full suite 3158 passed, browser safety 33 passed, Start/Pipeline/Chat/Compare/Council/Harness real state walks passed, V2 preservation has 230 mapped controls, release gate is 37/37 and 7/7, and authorization/workspace behavior remains unchanged."
         ],
         "known_regressions": [],
-        "blockers": [],
-        "handoff_summary": "UIV2-26 is a CI-registered, human-approved cross-tab structural regression gate. Six tabs x four viewports x light/dark produce live/reference/annotated-comparison triplets with no pixel-tolerance pass. Settled candidate efbe1c23 has explicit user approval, 1904/1904 candidate checks, exact repeat signatures, and a direct approved-check exit 0 with 2000/2000 checks. A small mobile Chat overlap found by the review is fixed; no backend/API/session/authorization/workspace contract changed. Next story: UIV2-27 functional preservation and defect closure.",
-        "exact_next_action": "Start UIV2-27 from the merged UIV2-26 HEAD: pin the commit, rerun the complete control/API preservation map and historical defect cases, and keep the approved cross-tab structural gate required in CI.",
-        "updated_at": "2026-11-07T16:18:01+05:30"
+        "blockers": [
+          "Integration recapture: origin/main 1b940bc adds the owner-requested task-first Harness/shared-shell layout after candidate efbe1c23 was approved at cafdd08. A fresh clean-HEAD 48-capture candidate and explicit human approval are required; the old approval is not reused."
+        ],
+        "handoff_summary": "The pre-integration candidate efbe1c23 was explicitly approved and passed 2000/2000 approved checks. Merging origin/main 1b940bc then changed the Harness/shared-shell structure, so that approval is now historical. Generated UIUX artifacts and the 237-control V2 matrix have been regenerated from the merged source; UIV2-26 is back in progress pending a fresh candidate, browser gate and human approval.",
+        "exact_next_action": "Commit the clean origin/main integration with the old live approval superseded; capture and independently repeat the 48-frame matrix on the task-first layout, then obtain fresh explicit user approval before marking UIV2-26 done.",
+        "updated_at": "2026-11-07T16:35:00+05:30"
       }
     },
     {
@@ -3500,20 +3501,20 @@
       "id": "P6",
       "name": "Cross-tab QA and release gate",
       "total": 5,
-      "done": 1,
-      "in_progress": 0,
+      "done": 0,
+      "in_progress": 1,
       "blocked": 0,
       "not_started": 4,
-      "percent_complete": 20
+      "percent_complete": 0
     }
   ],
   "progress": {
     "total": 30,
-    "done": 26,
-    "in_progress": 0,
+    "done": 25,
+    "in_progress": 1,
     "blocked": 0,
     "not_started": 4,
-    "percent_complete": 87
+    "percent_complete": 83
   },
   "session_recovery_protocol": [
     "Read global prompt and tracking",

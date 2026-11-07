@@ -65,6 +65,7 @@
       "test_screenshots.py",
       "test_status_components.py",
       "test_stream_perf.py",
+      "test_task_layout.py",
       "test_terminology.py",
     "test_ui_disclosure.py",
     "test_uiv2_cross_tab_reference.py",

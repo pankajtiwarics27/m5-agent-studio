@@ -6,7 +6,7 @@
   "source": {
     "frontend": {
       "path": "static/index.html",
-      "sha256": "749cad6760d294f62fe7b0821469bdeeac56f50f6eaa65dabf1f084f293c9941"
+      "sha256": "6576b48dd802161eda5187f1714eb5007af23aacc84f8105cb504075e26cd79b"
     },
     "backend": {
       "path": "app.py",
@@ -22,13 +22,13 @@
     }
   },
   "anchors": {
-    "pane": 3415,
-    "workspace": 3486,
-    "stage_selection": 9773,
-    "state_model": 9101,
-    "activity": 9052,
-    "stream_handlers": 9894,
-    "recovery": 9676
+    "pane": 3529,
+    "workspace": 3600,
+    "stage_selection": 9937,
+    "state_model": 9265,
+    "activity": 9216,
+    "stream_handlers": 10058,
+    "recovery": 9840
   },
   "stage_model": {
     "overview": 0,

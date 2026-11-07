@@ -8,23 +8,23 @@
   "check_with": "python3 scripts/uiux_v2_preservation_matrix.py --check",
   "statement": "Control -> DOM handler -> API route -> test coverage for every interactive control in static/index.html, plus the three UIV2-02 contract investigations. api_status is existing when every call the handler makes resolves to a mounted @app route, absent-route when a call matches no mounted route, unknown when the resolver left an edge open, no-api for handlers that never fetch, and no-handler for controls without an inline handler. The contracts distinguish existing / partial / absent / unknown and cite file evidence; the generator hard-fails if the sources drift from the classification, so --check is a gate.",
   "pinned_source_commit": "9a584a36f1fbe29ba467562dd12a705626769f00",
-  "frontend_sha256": "749cad6760d294f62fe7b0821469bdeeac56f50f6eaa65dabf1f084f293c9941",
+  "frontend_sha256": "6576b48dd802161eda5187f1714eb5007af23aacc84f8105cb504075e26cd79b",
   "app_sha256": "af0b42f1333c4a6093432c7f48aad61233344ac0114bd27bf2e69d8c1aa73ad0",
   "totals": {
-    "controls": 230,
+    "controls": 237,
     "by_pane": {
       "start": 14,
-      "harness": 30,
+      "harness": 34,
       "hall": 20,
       "council": 17,
       "debate": 10,
       "chat": 12
     },
-    "chrome_controls": 127,
+    "chrome_controls": 130,
     "api_status_counts": {
       "existing": 32,
-      "no-api": 119,
-      "no-handler": 79
+      "no-api": 121,
+      "no-handler": 84
     },
     "mounted_routes": 118,
     "fetch_call_sites": 68
@@ -252,195 +252,6 @@
     },
     {
       "pane": "harness",
-      "id": null,
-      "tag": "button",
-      "text": "Set / Create",
-      "handler": "saveWorkspaceDirectory",
-      "calls": [
-        {
-          "method": "POST",
-          "route": "/api/workspace/directory",
-          "kind": "exact"
-        }
-      ],
-      "api_status": "existing",
-      "tests": [
-        "test_demo_isolation.py",
-        "test_harness_settings.py",
-        "test_screenshot_capture_browser.py",
-        "test_start_health.py"
-      ]
-    },
-    {
-      "pane": "harness",
-      "id": "harnessWorkspaceInput",
-      "tag": "input",
-      "text": null,
-      "handler": "syncProjectDirInputs",
-      "calls": [],
-      "api_status": "no-api",
-      "tests": []
-    },
-    {
-      "pane": "harness",
-      "id": "harnessRecentDirsSelect",
-      "tag": "select",
-      "text": null,
-      "handler": "if",
-      "calls": [],
-      "api_status": "no-api",
-      "tests": []
-    },
-    {
-      "pane": "harness",
-      "id": "harnessUseWorktree",
-      "tag": "input",
-      "text": null,
-      "handler": null,
-      "calls": [],
-      "api_status": "no-handler",
-      "tests": []
-    },
-    {
-      "pane": "harness",
-      "id": "harnessLeadModel",
-      "tag": "select",
-      "text": null,
-      "handler": "handleModelSelectChange",
-      "calls": [],
-      "api_status": "no-api",
-      "tests": []
-    },
-    {
-      "pane": "harness",
-      "id": "harnessCriticModel",
-      "tag": "select",
-      "text": null,
-      "handler": "handleModelSelectChange",
-      "calls": [],
-      "api_status": "no-api",
-      "tests": []
-    },
-    {
-      "pane": "harness",
-      "id": "harnessPolicy",
-      "tag": "select",
-      "text": "Standard (Ask before Bash) Autonomous (Auto Build & Test) Plan & Audit (Read-Only)",
-      "handler": "patchActiveHarnessSettings",
-      "calls": [
-        {
-          "method": "PATCH",
-          "route": "/api/harness/sessions/{session_id}",
-          "kind": "exact"
-        }
-      ],
-      "api_status": "existing",
-      "tests": [
-        "test_child_delegation.py",
-        "test_durable_task_state_machine.py",
-        "test_harness_approval_ui.py",
-        "test_harness_evidence.py",
-        "test_harness_permissions.py",
-        "test_harness_recovery.py",
-        "test_harness_settings.py",
-        "test_harness_timeline.py",
-        "test_mcp_idempotency_reconciliation.py",
-        "test_portable_handoff_and_switching.py",
-        "test_process_supervision.py",
-        "test_recovery_guard.py",
-        "test_routing_experiments.py",
-        "test_scoped_grants.py",
-        "test_security_incident_containment.py",
-        "test_single_agent_vertical_slice.py",
-        "test_start_recent.py",
-        "test_task_events.py",
-        "test_uiux_adversarial.py",
-        "test_workspace_snapshots.py"
-      ]
-    },
-    {
-      "pane": "harness",
-      "id": null,
-      "tag": "summary",
-      "text": "Run settings",
-      "handler": null,
-      "calls": [],
-      "api_status": "no-handler",
-      "tests": []
-    },
-    {
-      "pane": "harness",
-      "id": "harnessEfficiencyMode",
-      "tag": "select",
-      "text": "Ponytail + Concise Ponytail Senior Concise (STE100) Standard Verbose",
-      "handler": null,
-      "calls": [],
-      "api_status": "no-handler",
-      "tests": []
-    },
-    {
-      "pane": "harness",
-      "id": "harnessReasoning",
-      "tag": "select",
-      "text": "Off (Fastest) Low Medium xHigh",
-      "handler": null,
-      "calls": [],
-      "api_status": "no-handler",
-      "tests": []
-    },
-    {
-      "pane": "harness",
-      "id": "harnessMaxSteps",
-      "tag": "select",
-      "text": "6 steps 10 steps 16 steps 24 steps",
-      "handler": null,
-      "calls": [],
-      "api_status": "no-handler",
-      "tests": []
-    },
-    {
-      "pane": "harness",
-      "id": "harnessSessionActionSelect",
-      "tag": "select",
-      "text": "Session Actions\u2026 Inspect Git Status & Diff Permissions & Revocations Compact Session Context (\u22642 KB) Open Agile SDLC Product Board Verification & Artifacts",
-      "handler": "runHarnessSessionAction",
-      "calls": [],
-      "api_status": "no-api",
-      "tests": []
-    },
-    {
-      "pane": "harness",
-      "id": "harnessAbortBtn",
-      "tag": "button",
-      "text": "Abort",
-      "handler": "abortHarnessRun",
-      "calls": [
-        {
-          "method": "POST",
-          "route": "/api/harness/abort/{session_id}",
-          "kind": "exact"
-        }
-      ],
-      "api_status": "existing",
-      "tests": [
-        "test_harness_recovery.py",
-        "test_security_and_quality.py",
-        "test_uiux_preservation_e2e.py",
-        "test_worker_leases_and_fencing.py"
-      ]
-    },
-    {
-      "pane": "harness",
-      "id": "harnessPermissionBadge",
-      "tag": "button",
-      "text": "No permissions",
-      "handler": "openHarnessGrants",
-      "calls": [],
-      "api_status": "no-api",
-      "tests": []
-    },
-    {
-      "pane": "harness",
       "id": "harnessTimelineToggle",
       "tag": "button",
       "text": "Session log",
@@ -568,6 +379,63 @@
     },
     {
       "pane": "harness",
+      "id": "harnessAttachBtn",
+      "tag": "button",
+      "text": "Attach context",
+      "handler": "openContextModal",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": "harnessLeadModel",
+      "tag": "select",
+      "text": null,
+      "handler": "handleModelSelectChange",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": "harnessPolicy",
+      "tag": "select",
+      "text": "Standard (Ask before Bash) Autonomous (Auto Build & Test) Plan & Audit (Read-Only)",
+      "handler": "patchActiveHarnessSettings",
+      "calls": [
+        {
+          "method": "PATCH",
+          "route": "/api/harness/sessions/{session_id}",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": [
+        "test_child_delegation.py",
+        "test_durable_task_state_machine.py",
+        "test_harness_approval_ui.py",
+        "test_harness_evidence.py",
+        "test_harness_permissions.py",
+        "test_harness_recovery.py",
+        "test_harness_settings.py",
+        "test_harness_timeline.py",
+        "test_mcp_idempotency_reconciliation.py",
+        "test_portable_handoff_and_switching.py",
+        "test_process_supervision.py",
+        "test_recovery_guard.py",
+        "test_routing_experiments.py",
+        "test_scoped_grants.py",
+        "test_security_incident_containment.py",
+        "test_single_agent_vertical_slice.py",
+        "test_start_recent.py",
+        "test_task_events.py",
+        "test_uiux_adversarial.py",
+        "test_workspace_snapshots.py"
+      ]
+    },
+    {
+      "pane": "harness",
       "id": "harnessWorkflowMode",
       "tag": "select",
       "text": "Autonomous Turn (Step Loop) Plan, Build, Verify (GSD 3-Wave) Agile SDLC Factory (Full Build) Agile SDLC Board & Backlog\u2026",
@@ -575,6 +443,158 @@
       "calls": [],
       "api_status": "no-api",
       "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": null,
+      "tag": "summary",
+      "text": "Task settings",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": null,
+      "tag": "button",
+      "text": "Close",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": null,
+      "tag": "button",
+      "text": "Set / Create",
+      "handler": "saveWorkspaceDirectory",
+      "calls": [
+        {
+          "method": "POST",
+          "route": "/api/workspace/directory",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": [
+        "test_demo_isolation.py",
+        "test_harness_settings.py",
+        "test_screenshot_capture_browser.py",
+        "test_start_health.py"
+      ]
+    },
+    {
+      "pane": "harness",
+      "id": "harnessWorkspaceInput",
+      "tag": "input",
+      "text": null,
+      "handler": "syncProjectDirInputs",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": "harnessRecentDirsSelect",
+      "tag": "select",
+      "text": null,
+      "handler": "if",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": "harnessUseWorktree",
+      "tag": "input",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": "harnessCriticModel",
+      "tag": "select",
+      "text": null,
+      "handler": "handleModelSelectChange",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": null,
+      "tag": "summary",
+      "text": "Run settings",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": "harnessEfficiencyMode",
+      "tag": "select",
+      "text": "Ponytail + Concise Ponytail Senior Concise (STE100) Standard Verbose",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": "harnessReasoning",
+      "tag": "select",
+      "text": "Off (Fastest) Low Medium xHigh",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": "harnessMaxSteps",
+      "tag": "select",
+      "text": "6 steps 10 steps 16 steps 24 steps",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": "harnessSessionActionSelect",
+      "tag": "select",
+      "text": "Session Actions\u2026 Inspect Git Status & Diff Permissions & Revocations Compact Session Context (\u22642 KB) Open Agile SDLC Product Board Verification & Artifacts",
+      "handler": "runHarnessSessionAction",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": "harnessAbortBtn",
+      "tag": "button",
+      "text": "Abort",
+      "handler": "abortHarnessRun",
+      "calls": [
+        {
+          "method": "POST",
+          "route": "/api/harness/abort/{session_id}",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": [
+        "test_harness_recovery.py",
+        "test_security_and_quality.py",
+        "test_uiux_preservation_e2e.py",
+        "test_worker_leases_and_fencing.py"
+      ]
     },
     {
       "pane": "harness",
@@ -588,12 +608,32 @@
     },
     {
       "pane": "harness",
-      "id": "harnessAttachBtn",
+      "id": "harnessPermissionBadge",
       "tag": "button",
-      "text": "Attach context",
-      "handler": "openContextModal",
+      "text": "No permissions",
+      "handler": "openHarnessGrants",
       "calls": [],
       "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": "harnessProjectSummary",
+      "tag": "button",
+      "text": "Choose a project",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "harness",
+      "id": null,
+      "tag": "summary",
+      "text": "Review run details",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
       "tests": []
     },
     {
@@ -2734,20 +2774,30 @@
     },
     {
       "pane": "chrome",
-      "id": "integrationsQuickMenu",
-      "tag": "select",
-      "text": "Tools & Integrations\u2026 Cloud & Local Providers MCP Tools Hub Agent Skills (SKILL.md) Knowledge & CodeGraph External Harness CLI Bridge",
-      "handler": "openIntegrationFromMenu",
+      "id": "harnessSessionsToggle",
+      "tag": "button",
+      "text": "Sessions",
+      "handler": "toggleHarnessSessions",
       "calls": [],
       "api_status": "no-api",
       "tests": []
     },
     {
       "pane": "chrome",
-      "id": "monitorToggleBtn",
-      "tag": "button",
-      "text": "Inspector",
-      "handler": "toggleMonitorRail",
+      "id": null,
+      "tag": "summary",
+      "text": "Tools & integrations",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "integrationsQuickMenu",
+      "tag": "select",
+      "text": "Tools & Integrations\u2026 Cloud & Local Providers MCP Tools Hub Agent Skills (SKILL.md) Knowledge & CodeGraph External Harness CLI Bridge",
+      "handler": "openIntegrationFromMenu",
       "calls": [],
       "api_status": "no-api",
       "tests": []
@@ -2770,12 +2820,32 @@
     },
     {
       "pane": "chrome",
+      "id": "monitorToggleBtn",
+      "tag": "button",
+      "text": "Inspector",
+      "handler": "toggleMonitorRail",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
       "id": null,
       "tag": "summary",
       "text": "Run evidenceContracts, handoffs and measured verdicts",
       "handler": null,
       "calls": [],
       "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Close",
+      "handler": "toggleMonitorRail",
+      "calls": [],
+      "api_status": "no-api",
       "tests": []
     }
   ],
@@ -2785,7 +2855,7 @@
       "classification": "present_registry__picker_rendered_from_it",
       "picker": {
         "status": "rendered_from_registry",
-        "evidence": "select#chatPersona at static/index.html:3600 ships no <option>; renderChatPersonaPicker() fills it from CHAT_PERSONAS on load and on every filter",
+        "evidence": "select#chatPersona at static/index.html:3714 ships no <option>; renderChatPersonaPicker() fills it from CHAT_PERSONAS on load and on every filter",
         "option_source": "CHAT_PERSONAS"
       },
       "registry": {
