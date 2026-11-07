@@ -3416,7 +3416,8 @@
           "GitHub Actions PR #242 run 42413669915 on f6d7b7a -> Browser safety passed in 4m59s; Python 3.11/3.12/3.13 failed only the stale Start command-center and Pipeline workspace inventory assertions exposed by the full suite.",
           "Integrated origin/main 684c384, retaining native onboarding-shell Start scrolling and Studio-host path selection; regenerated Start, Pipeline and all dependent artifacts; tests/test_start_command_center.py tests/test_pipeline_workspace.py tests/test_uiux_docs_verification.py -> 87 passed.",
           "Merged-source browser reruns -> UIV2-28 120/120 and 62 captures, keyboard 15/15, responsive 27/27; integrated approved visual check -> 48/48 variants and 2200/2200, manifest sha256 c1e276e6f54e7af998c05bb452f1b8cd96ebd4c2635588fc291ed2ed18ee3d8a.",
-          "Merged-source release gate regenerated after the full dependency chain -> 37/37 artifact checks, 7/7 phase gates, 0 findings."
+          "Merged-source release gate regenerated after the full dependency chain -> 37/37 artifact checks, 7/7 phase gates, 0 findings.",
+          "GitHub Actions integrated PR #242 run 42415167284 and branch run 42415162547 on a5817f9 -> all four jobs passed in both runs: Python 3.11, 3.12, 3.13 and Browser safety regressions; PR merge state CLEAN."
         ],
         "visual_evidence": [
           "docs/media/uiv2-28-accessibility/before-keyboard/ and before-responsive/ plus contrast-before.json — original browser and computed-style baselines (Git-ignored local evidence).",
@@ -3440,13 +3441,13 @@
           },
           {
             "regression": "PR #242 CI run 42413669915 failed Start command-center and Pipeline workspace inventory checks on all three Python versions while Browser safety passed.",
-            "status": "closed_locally_pending_fresh_ci",
-            "resolution": "Regenerated both frontend-owned inventories and their dependency chain, integrated origin/main 684c384, and passed the three owning pytest modules 87/87 plus 37/37 release-gate checks and all browser/visual gates on merged source."
+            "status": "closed_in_integrated_ci_42415167284_and_42415162547",
+            "resolution": "Start and Pipeline inventories plus dependent artifacts were regenerated and origin/main 684c384 integrated. All four jobs passed in both GitHub Actions runs 42415167284 and 42415162547 on a5817f9; the PR merge state is clean."
           }
         ],
         "blockers": [],
-        "handoff_summary": "UIV2-28 is locally complete with measured evidence: 120/120 adversarial checks and 62 captures, 15/15 keyboard, 27/27 responsive, 184/184 state, 72/72 long-content, 100 focused tests, and 21/21 preservation rows over 272 source-mapped controls/121 routes. Nonzero nested scroll and exact Escape focus/scroll recovery pass at desktop and phone 200%. The clean c674c3b candidate received explicit human approval and the final visual gate passes 2200/2200. No backend contract or safety boundary changed. Final branch CI and merge remain.",
-        "exact_next_action": "Commit the approval and completed evidence, push arena/1d52b74b-m5-agent-studio, open the UIV2-28 PR, require all four GitHub Actions jobs to pass, and merge without weakening any gate. Then start UIV2-29."
+        "handoff_summary": "UIV2-28 is complete and verified on integrated a5817f9. Local evidence includes 120/120 adversarial checks and 62 captures, 15/15 keyboard, 27/27 responsive, 184/184 state, 72/72 long-content, 21/21 preservation, 329 broader owning tests and 37/37 release-gate checks. The exact structural baseline has explicit user approval and integrated visual checks pass 2200/2200. Both integrated GitHub Actions runs 42415167284 and 42415162547 are four/four green. No backend contract or safety boundary changed. Only final evidence-head CI and merge remain.",
+        "exact_next_action": "Commit this CI evidence, push the same session branch, confirm the evidence-head PR jobs are green, merge PR #242, and start UIV2-29."
       }
     },
     {

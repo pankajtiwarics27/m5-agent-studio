@@ -21,6 +21,7 @@ Base: `adbce75385e5e5ce359aaace65501ed6b27fa0ef` (the merged UIV2-27 head).
 | Council state matrix | Existing UIV2-27 gate | **184/184 checks, 40 captures**, eight viewport/theme variants |
 | Long-conclusion visual matrix | Existing UIV2-27 gate | **72/72 checks, 16 captures**, eight variants |
 | Complete control/API preservation suite | UIV2-27 was 21/21 | **21/21 rows, 32/32 steps, 0 failures in 446.0s** |
+| Integrated PR CI | First run exposed two stale inventories on Python 3.11/3.12/3.13 | Runs **42415167284** and **42415162547**: all four jobs passed on `a5817f9` |
 
 The legacy baseline totals include test-instrumentation defects as well as product defects; they
 are not represented as eleven separate UI bugs. The walk repairs retain real Tab/Enter/Space
