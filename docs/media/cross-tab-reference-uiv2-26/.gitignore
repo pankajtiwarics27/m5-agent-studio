@@ -1,0 +1,4 @@
+# Local visual evidence is reviewed and hash-bound, never committed as PNG binaries.
+*.png
+candidate-manifest.json
+check-manifest.json

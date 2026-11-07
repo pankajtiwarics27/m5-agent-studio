@@ -3046,10 +3046,10 @@
       "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
       "agent_prompt": "Implement UIV2-26: Cross-tab visual regression reference gate. Required outcome: Capture actual running UI and compare against approved reference screenshots in light/dark and responsive viewports. Specific gate: Required 1640x900,1440x900,1280x800,390x844 screenshots; annotate differences; human approval of structural fidelity; cannot mark done using source inspection alone. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempt_count": 0,
-        "started_at": null,
+        "status": "in_progress",
+        "progress_percent": 5,
+        "attempt_count": 1,
+        "started_at": "2026-11-07T12:50:00+05:30",
         "completed_at": null,
         "commit_sha": null,
         "changed_files": [],
@@ -3058,8 +3058,8 @@
         "acceptance_evidence": [],
         "known_regressions": [],
         "blockers": [],
-        "handoff_summary": "",
-        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+        "handoff_summary": "Claimed UIV2-26 at d769353 (main immediately after UIV2-25 merged). Existing approved wireframe and committed captures are present; the missing piece is one live six-tab comparison gate with authored difference annotations and explicit human structural-fidelity approval.",
+        "exact_next_action": "Inspect the existing capture/walk contracts, reproduce the live six-tab matrix, and design the smallest reference-comparison gate without committing new PNG binaries."
       }
     },
     {
@@ -3464,18 +3464,18 @@
       "name": "Cross-tab QA and release gate",
       "total": 5,
       "done": 0,
-      "in_progress": 0,
+      "in_progress": 1,
       "blocked": 0,
-      "not_started": 5,
+      "not_started": 4,
       "percent_complete": 0
     }
   ],
   "progress": {
     "total": 30,
     "done": 25,
-    "in_progress": 0,
+    "in_progress": 1,
     "blocked": 0,
-    "not_started": 5,
+    "not_started": 4,
     "percent_complete": 83
   },
   "session_recovery_protocol": [
