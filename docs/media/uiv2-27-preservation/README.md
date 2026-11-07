@@ -13,10 +13,11 @@ Compare and Council offline cases use the app's own demo protocol; the Council d
 
 The first complete UIV2-27 run on merged `660b504c1e769928ab9702ce9790a3bb2f7c7747` proved only
 **9/21 rows**, with seven failing steps. It was a defect-finding run, not release evidence. The final
-complete clean-commit run at `e11c902a0ee896bc0f0c76137736caaa6e79b5c0` passed **21/21 rows and
-32/32 steps in 427.8 seconds**: 13 authenticated / anonymous route probes, 14 pytest nodes, and all
-18 walks. Its committed run record is `product/M5_2_0_UIUX_Preservation_Run.json`, SHA-256
-`adad9bcd876f6a43b52d60eb72ffc3f5f64490d56bd489270a6d42786ccca3de`.
+complete clean integrated-commit run at `f90f943b95128be6dc58b8c5bc988a7794c4b03d` (implementation
+`e11c902a…` plus `origin/main` `22a07ee`) passed **21/21 rows and 32/32 steps in 426.0 seconds**:
+13 authenticated / anonymous route probes, 14 pytest nodes, and all 18 walks. Its committed run record
+is `product/M5_2_0_UIUX_Preservation_Run.json`, SHA-256
+`63cf8748acbad4772ae2e530da592bde0a89835f1c3f054bd38049c33ad8ddab`.
 The executable map is **21 rows / 73 provers / 0 findings**.
 
 The fixes are deliberately small:

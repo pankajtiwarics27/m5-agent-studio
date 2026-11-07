@@ -626,8 +626,8 @@
   ],
   "last_run": {
     "recorded": true,
-    "commit": "e11c902",
-    "seconds": 427.8,
+    "commit": "f90f943",
+    "seconds": 426.0,
     "totals": {
       "rows": 21,
       "passed_rows": 21,

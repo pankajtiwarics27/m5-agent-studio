@@ -9,14 +9,15 @@ claim ledger. Local PNGs and capture manifests are evidence, not Git release inp
 ### UIV2-27 — Functional preservation and defect closure
 
 **Status:** done locally at implementation commit
-`e11c902a0ee896bc0f0c76137736caaa6e79b5c0`; integration is in PR #233 and must have four green CI
+`e11c902a0ee896bc0f0c76137736caaa6e79b5c0`, integrated with current main at
+`f90f943b95128be6dc58b8c5bc988a7794c4b03d`; integration is in PR #233 and must have four green CI
 jobs before merge.
 
 - **Defects closed:** successful Council terminal SSE frames no longer become dropped turns; refused
   deletion cannot discard the active pane; the populated Harness trajectory keeps a 90 px short-window
   floor; Compare waits for actual finalization; current native disclosures, the complete Chat handoff,
   and all six Harness decisions are exercised without weakening existing assertions.
-- **Functional proof:** clean-commit preservation run **21/21 rows, 32/32 steps, 427.8 s**, including
+- **Functional proof:** clean integrated-commit preservation run **21/21 rows, 32/32 steps, 426.0 s**, including
   13 route probes, 14 pytest nodes and 18/18 walks. The original complete baseline was **9/21** and is
   retained as defect-finding history, not as approval evidence.
 - **Executable map:** **21 rows / 73 provers / 0 findings**, with **243 controls and 118 routes** still
@@ -32,12 +33,13 @@ jobs before merge.
 - **Generated gates:** deterministic standalone and source artifacts; release gate **37/37 checks,
   7/7 phases, 0 findings**; committed screenshot review **1,784 captures, 0 findings**.
 - **Evidence guide:** `docs/media/uiv2-27-preservation/README.md`. Run record SHA-256:
-  `adad9bcd876f6a43b52d60eb72ffc3f5f64490d56bd489270a6d42786ccca3de`.
+  `63cf8748acbad4772ae2e530da592bde0a89835f1c3f054bd38049c33ad8ddab`.
 - **Integration note:** initial CI run `42396138225` passed Browser safety and found one stale
   UIV2-25 generated inventory in all three Python jobs. That artifact and its documentation are
   regenerated in the final tracking commit; no test was relaxed. Current `origin/main` `22a07ee`
   (host-path selection and Chat recovery/completion fixes) is integrated; all derived inventories
-  regenerate cleanly and the combined focused suite is **299 passed**.
+  regenerate cleanly and the combined focused suite is **299 passed**. Integrated CI run
+  `42399156397` is four/four green, and the integrated visual matrices are refreshed.
 - **Rollback:** revert the story's merged PR with a merge-commit revert. Do not delete sessions,
   databases, workspaces, credentials, migrations, or user files. This story added no migration.
 
