@@ -6,7 +6,7 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 re-derived from the markup on every run.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
-* Frontend digest: `61ab90eadb851d0aca6be6887ae14f05a98a4e84b0e07c50926d4ac8d052cd08`.
+* Frontend digest: `b09835677705d4413d619b5d60361f4c92caf75679511369d2bdcf93c97850bb`.
 * Panes: 6 · controls in panes: 103 · controls in the
   shared chrome: 127 · script-rendered: 71.
 
@@ -312,8 +312,8 @@ attributed to one.
 | 122 | button | — | — | Open Empty Room | confirmSpawnSession(false) |
 | 123 | button | spawnConveneBtn | — | Spawn & Convene 4-LLM Council | confirmSpawnSession(true) |
 | 124 | select | integrationsQuickMenu | — | Open studio tools and integrations | openIntegrationFromMenu(this) |
-| 125 | button | monitorToggleBtn | — | Inspector | toggleMonitorRail() |
-| 126 | button | — | — | Unload models | unloadAllModels() |
+| 125 | button | monitorToggleBtn | — | Toggle the contextual inspector | toggleMonitorRail() |
+| 126 | button | — | — | Unload every local model to free memory | unloadAllModels() |
 | 127 | summary | — | — | Run evidenceContracts, handoffs and measured verdicts | — |
 
 ## Controls built by script
