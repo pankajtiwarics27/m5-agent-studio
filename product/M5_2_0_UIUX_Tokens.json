@@ -42,7 +42,7 @@
   "totals": {
     "tokens": 56,
     "groups": 8,
-    "references": 1608,
+    "references": 1609,
     "theme_overrides": 20,
     "density_overrides": 5,
     "contrast_pairs": 28,
@@ -221,7 +221,7 @@
         "light": "#596579"
       },
       "density_override": null,
-      "references": 188
+      "references": 189
     },
     {
       "name": "--text-faint",

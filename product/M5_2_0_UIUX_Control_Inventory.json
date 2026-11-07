@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "d4c8f9799eff233cc8580dc363083ed72e75812f1081f0e90015d8360038412c",
+  "frontend_sha256": "5a53fbca71fb092f2bc0db89eba91a9803501cfc6668ceddd4f8681146d050eb",
   "panes": [
     {
       "dom_id": "start",
@@ -756,11 +756,11 @@
     {
       "dom_id": "chat",
       "section_id": "pane-chat",
-      "control_count": 12,
+      "control_count": 13,
       "counts": {
         "button": 5,
         "input": 3,
-        "select": 3,
+        "select": 4,
         "textarea": 1
       },
       "controls_without_id": 0,
@@ -793,6 +793,12 @@
           "tag": "input",
           "id": "chatToolsEnabled",
           "type": "checkbox"
+        },
+        {
+          "tag": "select",
+          "id": "chatToolProtocol",
+          "aria-describedby": "chatToolProtocolHint",
+          "text": "Native (OpenAI-compatible) Tagged text (compatibility)"
         },
         {
           "tag": "input",
@@ -1803,8 +1809,8 @@
   },
   "totals": {
     "panes": 6,
-    "markup_controls": 242,
-    "pane_controls": 107,
+    "markup_controls": 243,
+    "pane_controls": 108,
     "chrome_controls": 135,
     "script_rendered_controls": 72,
     "script_rendered_by_function": {

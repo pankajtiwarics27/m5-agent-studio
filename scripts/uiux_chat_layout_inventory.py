@@ -212,7 +212,7 @@ def build_inventory() -> dict[str, object]:
     checks.append(check(
         "on a phone the controls are three rows, not five",
         ".chat-header-bar > div:first-child { flex: 1 1 100%; }" in phone
-        and ".chat-header-bar > div:not(:first-child) { flex: 1 1 0; min-width: 0; }" in phone
+        and ".chat-header-bar > div:not(:first-child) { flex: 1 1 120px; min-width: 0; }" in phone
         and ".chat-header-bar > #chatClearBtn { flex: 0 0 auto;" in phone,
         f"{len(phone.splitlines())} line phone block",
     ))
