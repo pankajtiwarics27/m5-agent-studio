@@ -230,3 +230,14 @@ runtime module's exact file/evaluator. Screenshot/security/scoped-selector tests
 pass61 cases in that order; Ruff/mypy62/map/sign-off checks pass. Security/runtime
 code, approvals and CI selections are unchanged. Both push and PR checks must
 succeed on the corrected head; no release or owner test4 acceptance is inferred.
+
+Integration checkpoint: main advanced through PR #233 while this fix's CI ran.
+Merged that accepted source into this branch and resolved generated-file conflicts
+by rebuilding standalone, all37 UI/UX sources, the separate Pipeline/Start/V2
+preservation/cross-tab contracts and the preservation second pass. Aggregate:
+37/37 checks,7/7 gates,0findings. On the merged source, screenshot→security→scope
+regressions again pass61 and the actual picker browser walk passes41 (no requests
+or page errors); Ruff/mypy62/frontend syntax pass. Before integration the broader
+40-module scoped group passed809 tests with30 browser skips (browser checks are
+a separate mandatory job, not counted as passes here). Inherited approval records
+are identical to main. Complete CI on the integrated head is still required.

@@ -168,7 +168,7 @@
         "Start a new session",
         "Reload the session list"
       ],
-      "line": 6781
+      "line": 6786
     },
     {
       "container": "hallSummonState",
@@ -181,7 +181,7 @@
         "Read it again",
         "Reload the session list"
       ],
-      "line": 6794
+      "line": 6799
     },
     {
       "container": "hallSummonState",
@@ -195,7 +195,7 @@
         "Read the conclusion",
         "Start a new session"
       ],
-      "line": 6808
+      "line": 6813
     },
     {
       "container": "hallSummonState",
@@ -208,7 +208,7 @@
         "Read it now",
         "Stop watching"
       ],
-      "line": 6824
+      "line": 6829
     },
     {
       "container": "hallSummonState",
@@ -222,7 +222,7 @@
         "Read the session",
         "Check readiness"
       ],
-      "line": 6840
+      "line": 6845
     },
     {
       "container": "hallSummonState",
@@ -235,7 +235,7 @@
         "Read the old conclusion",
         "Convene the round"
       ],
-      "line": 7434
+      "line": 7439
     },
     {
       "container": "hallSummonState",
@@ -249,7 +249,7 @@
         "Check readiness",
         "Ask one model"
       ],
-      "line": 8102
+      "line": 8107
     },
     {
       "container": "chatState",
@@ -262,7 +262,7 @@
         "Retry",
         "Dismiss"
       ],
-      "line": 12259
+      "line": 12269
     },
     {
       "container": "chatState",
@@ -275,7 +275,7 @@
         "Back to Chat",
         "Open Harness"
       ],
-      "line": 12285
+      "line": 12295
     },
     {
       "container": "chatState",
@@ -288,7 +288,7 @@
         "Undo",
         "Dismiss"
       ],
-      "line": 12469
+      "line": 12479
     }
   ],
   "containers": [
@@ -353,7 +353,7 @@
       "handler": "installSkill"
     },
     {
-      "line": 14584,
+      "line": 14594,
       "handler": "openHarnessDiffModal"
     }
   ],

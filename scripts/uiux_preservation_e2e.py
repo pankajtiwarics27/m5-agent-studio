@@ -270,6 +270,24 @@ ROWS: tuple[dict, ...] = (
             ("walk", "council_readiness_walk.mjs", "Open Empty Room still creates a session without invoking a seat"),
             ("walk", "council_verdict_walk.mjs", "pinning the Lead Arbiter's verdict states where the decision came from, word for word"),
             ("walk", "council_readiness_walk.mjs", "Post note only remains enabled and saves the note without summoning"),
+            ("walk", "council_verdict_walk.mjs", "a long pinned conclusion scrolls independently from the keyboard without moving the transcript"),
+            ("walk", "council_state_walk.mjs", "a refused delete keeps the active session, its transcript and its row, with Retry available"),
+            ("pytest", "tests/test_council_state_consistency.py::test_successful_terminal_frames_do_not_enter_the_dropped_stream_path"),
+            ("pytest", "tests/test_council_state_consistency.py::test_a_closed_session_refuses_a_summon_and_names_the_way_back"),
+            ("pytest", "tests/test_council_state_consistency.py::test_a_human_message_reopens_a_closed_session_and_keeps_the_conclusion"),
+            ("pytest", "tests/test_council_clear_session.py::test_delete_requires_the_bearer_token"),
+            ("pytest", "tests/test_council_clear_session.py::test_delete_one_session_keeps_the_others"),
+            ("pytest", "tests/test_council_clear_session.py::test_running_session_is_guarded_409_and_clear_all_skips_it"),
+            ("pytest", "tests/test_council_clear_session.py::test_delete_persists_across_a_restart"),
+            ("pytest", "tests/test_council_clear_session.py::test_hall_tables_are_the_only_ones_the_delete_touches"),
+            ("pytest", "tests/test_council_clear_session.py::test_a_refused_delete_cannot_clear_the_active_pane"),
+            ("pytest", "tests/test_council_verdict.py::test_uiv2_12_conclusion_panel_gates_hold"),
+            ("control", "hallClearSessionBtn"),
+            ("control", "hallClearAllBtn"),
+            ("route", "POST", "/api/hall/sessions/{session_id}/close"),
+            ("route", "POST", "/api/hall/sessions/{session_id}/message"),
+            ("route", "DELETE", "/api/hall/sessions/{session_id}"),
+            ("route", "DELETE", "/api/hall/sessions"),
         ),
     },
     {
@@ -344,6 +362,7 @@ NEEDS_SERVER = {
     "start_walk.mjs",
     "status_walk.mjs",
     "uiux_interaction_polish_walk.mjs",
+    "uiv2_preservation_visual_walk.mjs",
 }
 
 # Walks that exist for a story but prove no matrix row are not failures - most of them prove a
@@ -376,7 +395,7 @@ SUPPORT_WALKS = {
     "chat_layout_walk.mjs": "the Chat layout walk (UIV2-18) proves the column, the control bar and the composer's position on a screen; the capability it belongs to is Chat itself, which the matrix already enumerates from the pane's own controls",
     "compare_evidence_walk.mjs": "the Compare evidence walk (UIV2-17) proves what the results table, the verdict card and the inspector's evidence lines say about a reply; the capability it belongs to is the comparison itself, which the matrix already enumerates from the pane's own controls",
     "compare_balanced_walk.mjs": "the Compare composition walk (UIV2-16) proves how the question, the folded criteria and the answer columns are drawn; the capability it belongs to is the comparison itself, which the matrix already enumerates from the pane's own controls",
-    "council_state_walk.mjs": "the Council state walk (UIV2-15) proves how a refused, reopened, dropped or deleted turn is drawn; the capability it belongs to is the Council session itself, which the matrix already enumerates from the pane's own controls",
+    "uiv2_preservation_visual_walk.mjs": "the UIV2-27 long-conclusion visual walk proves real route-created content at four viewports in light and dark: independent body scrolling, keyboard disclosure and resize, sticky geometry, shared-overlay focus, narrow composer reachability, and page overflow; these are state/layout proofs for the Council capability already enumerated by the matrix",
 }
 
 

@@ -847,12 +847,12 @@
           "totals": {
             "matrix_rows": 21,
             "mapped_rows": 21,
-            "provers": 55,
-            "walk_provers": 40,
-            "pytest_provers": 4,
-            "route_provers": 9,
-            "control_provers": 2,
-            "walks": 17,
+            "provers": 73,
+            "walk_provers": 42,
+            "pytest_provers": 14,
+            "route_provers": 13,
+            "control_provers": 4,
+            "walks": 18,
             "support_walks": 27,
             "findings": 0
           }

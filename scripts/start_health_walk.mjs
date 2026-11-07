@@ -222,6 +222,24 @@ async function run(args) {
     await page.evaluate(() => switchTab("start"));
     await sleep(args.settleMs * 4);
 
+    // UIV2-24 made health and workspace native disclosures. Open them through their actual
+    // keyboard summaries before focusing descendants; a control inside a closed disclosure
+    // intentionally cannot take focus.
+    await page.focus("#startHealthDetails > summary");
+    await page.keyboard.press("Enter");
+    await page.focus("#startWorkspaceDetails > summary");
+    await page.keyboard.press("Enter");
+    await sleep(args.settleMs * 2);
+    const disclosures = await page.evaluate(() => ({
+      health: document.getElementById("startHealthDetails").open,
+      workspace: document.getElementById("startWorkspaceDetails").open,
+    }));
+    record(
+      "the health and workspace disclosures open from the keyboard",
+      disclosures.health && disclosures.workspace,
+      `health=${disclosures.health} workspace=${disclosures.workspace}`,
+    );
+
     // What the server says, so the card can be held against it rather than believed.
     const server = await page.evaluate(async () => {
       const [telemetry, sessions, workspace] = await Promise.all([

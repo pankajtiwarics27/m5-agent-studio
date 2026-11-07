@@ -13,7 +13,7 @@
  *
  * What it proves:
  *
- *   1. the plan is printed with its four decisions and no row is empty;
+ *   1. the plan is printed with its six decisions and no row is empty;
  *   2. every control the run payload sends is read by the plan - changing the workflow
  *      mode, the policy, the worktree box, a model and the directory each move the row
  *      that claims them;
@@ -209,8 +209,8 @@ async function run(args) {
     // ── The plan, as it stands ────────────────────────────────────────────
     const initial = await readPlan(page);
     record(
-      "the plan prints its four decisions, in order, and none of them is empty",
-      initial.order.join(",") === "directory,policy,models,workflow"
+      "the plan prints its six decisions, in order, and none of them is empty",
+      initial.order.join(",") === "directory,tools,context,policy,models,workflow"
         && Object.values(initial.rows).every((row) => row.value.length > 0)
         && initial.groupLabel === "What Run will do",
       initial.order.map((key) => `${key}=${initial.rows[key].value.slice(0, 42)}`).join(" | "),
@@ -220,6 +220,12 @@ async function run(args) {
       initial.rows.directory.value.length > 0
         && /· (direct|isolated git worktree)$/.test(initial.rows.directory.value),
       initial.rows.directory.value,
+    );
+    record(
+      "the tools and context rows state the admitted skills and pinned documents",
+      /^(?:no extra skills|\d+ skills? active:)/.test(initial.rows.tools.value)
+        && /^\d+ pinned docs? included in Harness context$/.test(initial.rows.context.value),
+      `tools="${initial.rows.tools.value}" context="${initial.rows.context.value}"`,
     );
     record(
       "the policy row is the option's own label, with no second description",
@@ -322,9 +328,10 @@ async function run(args) {
     );
     const modelsRow = await page.evaluate(() => {
       const select = document.getElementById("harnessCriticModel");
+      const leadValue = document.getElementById("harnessLeadModel").value;
       const other = [...select.options]
         .map((option) => option.value)
-        .find((value) => value && value !== "__custom__" && value !== select.value);
+        .find((value) => value && value !== "__custom__" && value !== select.value && value !== leadValue);
       if (!other) return { skipped: true };
       select.value = other;
       select.dispatchEvent(new Event("change"));
@@ -333,7 +340,7 @@ async function run(args) {
     record(
       "changing the critic moves the models row",
       modelsRow.skipped === true || (/critic/.test(modelsRow.row) && !/critic same/.test(modelsRow.row)),
-      modelsRow.skipped ? "only one model in the catalog, so the row cannot differ" : modelsRow.row,
+      modelsRow.skipped ? "no catalog model differs from the lead, so the critic cannot differ" : modelsRow.row,
     );
 
     // ── Run with no task is a sentence, not silence ───────────────────────
@@ -508,20 +515,35 @@ async function run(args) {
 
     const fitted = await page.evaluate(() => {
       const box = document.getElementById("harnessPromptInput");
-      const line = parseFloat(getComputedStyle(box).lineHeight) || 18;
-      const brief = { scroll: box.scrollHeight, client: box.clientHeight };
+      const style = getComputedStyle(box);
+      const line = parseFloat(style.lineHeight) || 18;
+      const expectedBrief = chatHandoffBrief();
+      const fullText = Boolean(expectedBrief) && box.value === expectedBrief;
+      const brief = {
+        scroll: box.scrollHeight,
+        client: box.clientHeight,
+        maxHeight: parseFloat(style.maxHeight),
+        overflowY: style.overflowY,
+        fullText,
+      };
+      box.focus({ preventScroll: true });
+      box.scrollTop = box.scrollHeight;
+      brief.scrolled = box.scrollTop;
       box.value = "";
       box.dispatchEvent(new Event("input"));
       const rest = { client: box.clientHeight };
-      return { brief, rest, resize: getComputedStyle(box).resize, line };
+      return { brief, rest, resize: style.resize, line, minHeight: parseFloat(style.minHeight) };
     });
     record(
-      "a carried brief is shown in full, and the box rests again once the task goes",
-      fitted.brief.scroll <= fitted.brief.client + 2
+      "a carried brief keeps every word readable in its bounded composer, which rests once the task goes",
+      fitted.brief.fullText
+        && (fitted.brief.scroll <= fitted.brief.client + 2
+          || (["auto", "scroll"].includes(fitted.brief.overflowY) && fitted.brief.scrolled > 0))
+        && Number.isFinite(fitted.brief.maxHeight) && fitted.brief.client <= fitted.brief.maxHeight + 2
         && fitted.brief.client > fitted.rest.client
-        && fitted.rest.client <= fitted.line * 3 + 2
+        && Number.isFinite(fitted.minHeight) && Math.abs(fitted.rest.client - fitted.minHeight) <= 2
         && fitted.resize === "none",
-      `brief ${fitted.brief.client}px of ${fitted.brief.scroll}px, rest ${fitted.rest.client}px (line ${fitted.line}px), resize=${fitted.resize}`,
+      `brief ${fitted.brief.client}px of ${fitted.brief.scroll}px, scrollTop=${fitted.brief.scrolled}px max=${fitted.brief.maxHeight}px overflow=${fitted.brief.overflowY}, rest ${fitted.rest.client}px (minimum ${fitted.minHeight}px), resize=${fitted.resize}`,
     );
 
     const cleared = await page.evaluate(() => {
@@ -546,6 +568,12 @@ async function run(args) {
     );
 
     // ── Keyboard and labels ───────────────────────────────────────────────
+    // The advanced group lives inside the task-first parent disclosure. Open the parent
+    // through its real summary before testing the nested group, just as a keyboard user must.
+    await page.evaluate(() => document.querySelector("#harnessTaskSettings > summary").focus());
+    await page.keyboard.press("Enter");
+    await sleep(args.settleMs * 2);
+    const taskSettingsOpened = await page.evaluate(() => document.getElementById("harnessTaskSettings").open);
     const keyboard = await page.evaluate(() => {
       const named = (id) => {
         const node = document.getElementById(id);
@@ -587,9 +615,9 @@ async function run(args) {
     const afterClose = await page.evaluate(() => document.getElementById("harnessAdvanced").open);
     record(
       "the collapsed group opens and closes from the keyboard and keeps its summary",
-      keyboard.focusable === true && opened.open === true && opened.summary.length > 0
+      taskSettingsOpened === true && keyboard.focusable === true && opened.open === true && opened.summary.length > 0
         && closedAgain === true && afterClose === false,
-      `focusable=${keyboard.focusable} opened=${opened.open} closed=${!afterClose}`,
+      `parent=${taskSettingsOpened} focusable=${keyboard.focusable} opened=${opened.open} closed=${!afterClose}`,
     );
 
     // ── Narrow ────────────────────────────────────────────────────────────
@@ -612,7 +640,7 @@ async function run(args) {
     record(
       "the plan survives a 900px viewport without overflowing the composer",
       narrow.overflow === false && narrow.planVisible && narrow.hintVisible && narrow.buttonsVisible
-        && narrow.rows === 4,
+        && narrow.rows === 6,
       `overflow=${narrow.overflow} plan ${narrow.planVisible} hint ${narrow.hintVisible} rows=${narrow.rows}`,
     );
     await shoot(page, "plan-narrow");

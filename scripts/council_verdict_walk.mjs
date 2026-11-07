@@ -613,6 +613,145 @@ async function run(args) {
     );
     await shoot(page, "council-verdict-light", "#hallVerdict");
 
+    // ── UIV2-27: a long pinned conclusion scrolls without trapping the transcript ──
+    // Use the existing session and close routes, with enough real content to make both regions
+    // overflow. CSS assertions cannot prove that wheel/keyboard input reaches the right region.
+    await page.evaluate(() => applyTheme("dark"));
+    const longRequest = Array.from({ length: 90 }, (_, index) =>
+      `Transcript paragraph ${index + 1}: the archived discussion remains readable below the pinned decision.`,
+    ).join(" ");
+    const longConclusion = Array.from({ length: 80 }, (_, index) =>
+      `Decision paragraph ${index + 1}: keep the provenance, dissent, and recovery conditions explicit.`,
+    ).join(" ") + " Final decision marker: conclusion-scroll-end.";
+    const longSession = await page.evaluate(async ({ requestText, conclusionText }) => {
+      const createdResponse = await fetch("/api/hall/sessions", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ request: requestText, title: "UIV2-27 long pinned conclusion" }),
+      });
+      const created = await createdResponse.json();
+      if (!createdResponse.ok) return { error: `create ${createdResponse.status}`, id: "" };
+      const closeResponse = await fetch(`/api/hall/sessions/${encodeURIComponent(created.id)}/close`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conclusion: conclusionText, author: "Lead Arbiter" }),
+      });
+      if (!closeResponse.ok) return { error: `close ${closeResponse.status}`, id: created.id };
+      await selectHallSession(created.id);
+      return { id: created.id, error: "" };
+    }, { requestText: longRequest, conclusionText: longConclusion });
+    if (longSession.error) throw new Error(`the long-conclusion fixture failed: ${longSession.error}`);
+    await sleep(args.settleMs * 4);
+    const scrollBefore = await page.evaluate(() => {
+      const stream = document.getElementById("hallStream");
+      const body = document.getElementById("hallConclusionBody");
+      stream.scrollTop = 0;
+      body.scrollTop = 0;
+      body.focus({ preventScroll: true });
+      stream.scrollTop = 0;
+      return {
+        bodyScrollable: body.scrollHeight > body.clientHeight + 20,
+        streamScrollable: stream.scrollHeight > stream.clientHeight + 20,
+        bodyHeight: body.clientHeight,
+        streamHeight: stream.clientHeight,
+        streamTop: stream.scrollTop,
+        focused: document.activeElement === body,
+      };
+    });
+    await page.keyboard.press("PageDown");
+    await sleep(args.settleMs * 2);
+    const conclusionKeys = await page.evaluate(() => ({
+      bodyTop: document.getElementById("hallConclusionBody").scrollTop,
+      streamTop: document.getElementById("hallStream").scrollTop,
+      focused: document.activeElement === document.getElementById("hallConclusionBody"),
+    }));
+    record(
+      "a long pinned conclusion scrolls independently from the keyboard without moving the transcript",
+      scrollBefore.bodyScrollable && scrollBefore.streamScrollable && scrollBefore.bodyHeight <= 112
+        && scrollBefore.focused && conclusionKeys.focused && conclusionKeys.bodyTop > 0
+        && conclusionKeys.streamTop === scrollBefore.streamTop,
+      `body=${Math.round(scrollBefore.bodyHeight)}px scroll=${Math.round(conclusionKeys.bodyTop)}px; transcript=${Math.round(conclusionKeys.streamTop)}px`,
+    );
+    // A sticky card taller than its scrollport cannot remain wholly visible. The seat roster is
+    // a native disclosure precisely so a reader can make room; collapse it from the keyboard and
+    // prove that action restores the reading layout rather than changing the sticky rule.
+    await page.evaluate(() => document.querySelector("#hallSeatsSettings > summary").focus());
+    await page.keyboard.press("Enter");
+    await sleep(args.settleMs * 3);
+    const readingRoom = await page.evaluate(() => {
+      const stream = document.getElementById("hallStream");
+      const banner = document.getElementById("hallConclusionBanner");
+      return {
+        seatsOpen: document.getElementById("hallSeatsSettings").open,
+        streamHeight: stream.clientHeight,
+        bannerHeight: banner.getBoundingClientRect().height,
+        streamScrollable: stream.scrollHeight > stream.clientHeight + 20,
+      };
+    });
+    record(
+      "collapsing Council role models from the keyboard gives the pinned card and transcript room",
+      !readingRoom.seatsOpen && readingRoom.streamScrollable
+        && readingRoom.streamHeight >= readingRoom.bannerHeight + 30,
+      `stream=${Math.round(readingRoom.streamHeight)}px banner=${Math.round(readingRoom.bannerHeight)}px open=${readingRoom.seatsOpen}`,
+    );
+    const sticky = await page.evaluate(() => {
+      const stream = document.getElementById("hallStream");
+      const banner = document.getElementById("hallConclusionBanner");
+      stream.scrollTop = stream.scrollHeight;
+      const streamRect = stream.getBoundingClientRect();
+      const bannerRect = banner.getBoundingClientRect();
+      return {
+        streamTop: stream.scrollTop,
+        position: getComputedStyle(banner).position,
+        bannerTop: bannerRect.top,
+        streamViewportTop: streamRect.top,
+        streamHeight: stream.clientHeight,
+      };
+    });
+    record(
+      "the pinned banner stays at the transcript's top while the long transcript still scrolls",
+      sticky.streamTop > 0 && sticky.position === "sticky" && sticky.streamHeight >= 90
+        && sticky.bannerTop >= sticky.streamViewportTop - 1
+        && sticky.bannerTop <= sticky.streamViewportTop + 40,
+      `transcript=${Math.round(sticky.streamTop)}px; banner-stream top=${Math.round(sticky.bannerTop - sticky.streamViewportTop)}px`,
+    );
+    await shoot(page, "council-conclusion-scroll", "#hallConclusionBanner");
+
+    const resizeBefore = await page.evaluate(() => {
+      const separator = document.getElementById("hallConclusionResize");
+      separator.focus();
+      return parseFloat(getComputedStyle(document.getElementById("hallConclusionBody")).maxHeight);
+    });
+    await page.keyboard.press("ArrowDown");
+    await sleep(args.settleMs);
+    const resizeAfter = await page.evaluate(() => ({
+      height: parseFloat(getComputedStyle(document.getElementById("hallConclusionBody")).maxHeight),
+      focused: document.activeElement === document.getElementById("hallConclusionResize"),
+    }));
+    record(
+      "the conclusion separator resizes from the keyboard and retains focus",
+      resizeAfter.focused && resizeAfter.height > resizeBefore,
+      `${Math.round(resizeBefore)}px -> ${Math.round(resizeAfter.height)}px`,
+    );
+    await page.evaluate(() => document.querySelector('[data-conclusion-action="expand"]').focus());
+    await page.keyboard.press("Enter");
+    await sleep(args.settleMs * 2);
+    const expanded = await page.evaluate(() => ({
+      open: document.getElementById("hallConclusionModal").classList.contains("open"),
+      hasEnd: document.getElementById("hallConclusionModalBody").textContent.includes("conclusion-scroll-end"),
+      focusInside: document.getElementById("hallConclusionModal").contains(document.activeElement),
+    }));
+    await page.keyboard.press("Escape");
+    await sleep(args.settleMs * 2);
+    const collapsed = await page.evaluate(() => ({
+      open: document.getElementById("hallConclusionModal").classList.contains("open"),
+      focusAction: document.activeElement && document.activeElement.dataset
+        ? document.activeElement.dataset.conclusionAction || "" : "",
+    }));
+    record(
+      "Expand shows the whole conclusion in the shared overlay and Escape restores the trigger focus",
+      expanded.open && expanded.hasEnd && expanded.focusInside && !collapsed.open && collapsed.focusAction === "expand",
+      `expanded=${expanded.open} full=${expanded.hasEnd} returned=${collapsed.focusAction}`,
+    );
+
     // ── the machine with no runtime behind it ──────────────────────────────
     const offlinePage = await browser.newPage();
     offlinePage.on("pageerror", (error) => pageErrors.push(String(error)));
