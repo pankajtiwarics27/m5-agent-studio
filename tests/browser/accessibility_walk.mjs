@@ -140,6 +140,8 @@ async function main() {
 
     await page.focus("#harnessPolicy");
     await page.keyboard.press("Tab");
+    const attachFocused = await page.$eval("#harnessAttachBtn", el => el === document.activeElement);
+    await page.keyboard.press("Tab");
     const workflowFocused = await page.$eval("#harnessWorkflowMode", el => el === document.activeElement);
     await page.keyboard.press("Tab");
     const taskSettingsFocused = await page.$eval("#harnessTaskSettings > summary", el => el === document.activeElement);
@@ -155,8 +157,8 @@ async function main() {
           Number.parseFloat(getComputedStyle(summary).outlineWidth) >= 2 : false,
       };
     });
-    results.push(check("Tab reaches Run settings through workflow and task settings with a visible focus ring",
-      workflowFocused && taskSettingsFocused && runSettingsFocus.focused && runSettingsFocus.visibleRing, JSON.stringify(runSettingsFocus)));
+    results.push(check("Tab reaches Run settings through context, workflow and task settings with a visible focus ring",
+      attachFocused && workflowFocused && taskSettingsFocused && runSettingsFocus.focused && runSettingsFocus.visibleRing, JSON.stringify(runSettingsFocus)));
 
     await page.keyboard.press("Space");
     const openedRunSettings = await page.evaluate(() => ({

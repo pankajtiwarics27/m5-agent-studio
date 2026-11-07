@@ -26,11 +26,11 @@
     "approved_inputs": null,
     "current_inputs": {
       "ledger_content_sha256": "d4137cf1e214931953734cc97943732ea5204b5884c6aa26339cc7c27ed5908b",
-      "source_manifest_sha256": "c93d284c32bdfa163749555f24745ab2100778a77893a1048a199ce32ab63715",
-      "control_inventory_sha256": "3d74229e3d4ef423f80c43644ba20ce84e0051d7c50fda0ec73142c576fea243",
-      "route_map_sha256": "19a3b972224fe25b2b5d8da0d06751ebb79e983b1f20b46dba59bfe7087bc685",
-      "authorization_trace_sha256": "7e4da04df8c1bccc3a248dc94384cb4876b124ab98fc489a58283f460505bff1",
-      "frontend_sha256": "9a83b69e49691f36bef19c98c04dce7cccaa25b60f67ea3bb49aec68af1176ef",
+      "source_manifest_sha256": "ae4f567c2ac442f3f13b507b368132244655877973dfcf39ce9aadb955931961",
+      "control_inventory_sha256": "f86e3b7f82133a761881406ae870c930f434f6aee91be92c91519fa02a8e9d37",
+      "route_map_sha256": "bba6c50beb997ce64e9f6d2ab01f147baac9f6520749529e4d4027ba45a21e62",
+      "authorization_trace_sha256": "da8a096a0c68edcc96a8274ae5fd3d1cb3ca88c9a83e14a84d1481746e9bbbd7",
+      "frontend_sha256": "e934c6b7369f15ae5cd1899b8a8906b65a3bc6fa579384c3647d4033d86de89a",
       "screenshot_manifest_sha256": "b488bf453ae260b6564ae592f0455e3d70cff3121dca1e7c823c7abb270b44d3",
       "screenshot_index_sha256": "16b0620ca1d02a1b181ad15b3a2b0c6aae9e7aa539654d27ed80d9147189634e",
       "generator_sha256": "6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65",
@@ -40,11 +40,11 @@
   },
   "inputs": {
     "ledger_sha256": "1adcb5f5fe82d14855291246cfe4ed08aafb57ab7143703a1ce5e3c5fc0ea43c",
-    "source_manifest_sha256": "c93d284c32bdfa163749555f24745ab2100778a77893a1048a199ce32ab63715",
-    "control_inventory_sha256": "3d74229e3d4ef423f80c43644ba20ce84e0051d7c50fda0ec73142c576fea243",
-    "route_map_sha256": "19a3b972224fe25b2b5d8da0d06751ebb79e983b1f20b46dba59bfe7087bc685",
-    "authorization_trace_sha256": "7e4da04df8c1bccc3a248dc94384cb4876b124ab98fc489a58283f460505bff1",
-    "frontend_sha256": "9a83b69e49691f36bef19c98c04dce7cccaa25b60f67ea3bb49aec68af1176ef"
+    "source_manifest_sha256": "ae4f567c2ac442f3f13b507b368132244655877973dfcf39ce9aadb955931961",
+    "control_inventory_sha256": "f86e3b7f82133a761881406ae870c930f434f6aee91be92c91519fa02a8e9d37",
+    "route_map_sha256": "bba6c50beb997ce64e9f6d2ab01f147baac9f6520749529e4d4027ba45a21e62",
+    "authorization_trace_sha256": "da8a096a0c68edcc96a8274ae5fd3d1cb3ca88c9a83e14a84d1481746e9bbbd7",
+    "frontend_sha256": "e934c6b7369f15ae5cd1899b8a8906b65a3bc6fa579384c3647d4033d86de89a"
   },
   "approval_request": [
     {
@@ -55,7 +55,7 @@
     {
       "id": 2,
       "ask": "Accept the control inventory as the list of controls that must stay reachable",
-      "evidence": "237 markup controls (130 chrome, 107 panes) plus 71 rendered by script"
+      "evidence": "242 markup controls (135 chrome, 107 panes) plus 72 rendered by script"
     },
     {
       "id": 3,
@@ -76,10 +76,10 @@
   "totals": {
     "panes": 6,
     "preserved_capabilities": 21,
-    "markup_controls": 237,
-    "chrome_controls": 130,
+    "markup_controls": 242,
+    "chrome_controls": 135,
     "pane_controls": 107,
-    "script_rendered_controls": 71,
+    "script_rendered_controls": 72,
     "routes": 118,
     "routes_with_resolved_or_possible_caller": 71,
     "routes_no_caller_observed": 47,
@@ -525,13 +525,6 @@
           "handler": null
         },
         {
-          "tag": "button",
-          "id": "harnessAttachBtn",
-          "text": "Attach context",
-          "onclick": "openContextModal()",
-          "handler": "openContextModal"
-        },
-        {
           "tag": "select",
           "id": "harnessLeadModel",
           "text": null,
@@ -544,6 +537,13 @@
           "text": "Standard (Ask before Bash) Autonomous (Auto Build & Test) Plan & Audit (Read-Only)",
           "onclick": null,
           "handler": null
+        },
+        {
+          "tag": "button",
+          "id": "harnessAttachBtn",
+          "text": "Attach context",
+          "onclick": "openContextModal()",
+          "handler": "openContextModal"
         },
         {
           "tag": "select",
@@ -1716,10 +1716,10 @@
     }
   ],
   "chrome": {
-    "control_count": 130,
+    "control_count": 135,
     "counts": {
-      "button": 75,
-      "input": 31,
+      "button": 79,
+      "input": 32,
       "select": 12,
       "summary": 6,
       "textarea": 6

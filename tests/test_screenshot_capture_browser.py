@@ -667,14 +667,14 @@ def test_compare_history_browser_browse_export_and_error_recovery(browser_env: d
     assert demo["token"] not in result.stdout + result.stderr
 
 
-def test_integrations_strip_wraps_without_horizontal_scroll(browser_env: dict[str, str]) -> None:
-    """Real CSS/renderers at seven widths, offline and with no user state."""
+def test_configured_integrations_search_paging_and_contrast(browser_env: dict[str, str]) -> None:
+    """Real picker/renderers, both themes/densities, 130 items, offline interactions."""
     result = subprocess.run(
         ["node", str(ROOT / "tests" / "browser" / "integrations_strip_walk.mjs")],
         cwd=ROOT, env=browser_env, capture_output=True, text=True, timeout=90, check=False,
     )
     assert result.returncode == 0, f"{result.stdout}\n{result.stderr}"
-    assert json.loads(result.stdout)["passed"] == 21
+    assert json.loads(result.stdout)["passed"] == 84
 
 
 def test_task_first_workspace_preserves_visible_controls(browser_env: dict[str, str]) -> None:

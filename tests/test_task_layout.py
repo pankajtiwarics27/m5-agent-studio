@@ -73,3 +73,36 @@ def test_recovery_and_approvals_are_independent_of_secondary_panels():
     for element_id in ("harnessRecoveryPanel", "harnessRefusalState", "harnessPermissionBadge", "harnessTimeline"):
         assert not any(tag == "details" for tag, _ in parsed.parents[element_id])
         assert ("section", "pane-harness") in parsed.parents[element_id]
+
+
+def test_integration_picker_is_a_single_bounded_disclosure_with_explicit_counts():
+    parsed = markup()
+    for element_id in (
+        "integrationSearch", "integrationMcpTab", "integrationSkillsTab", "integrationPrev",
+        "integrationNext", "integrationPageStatus", "mcpServersCountBadge", "mcpEnabledCountBadge",
+        "mcpToolsCountBadge", "providersCountBadge", "skillsCountBadge", "ocDocsCountBadge",
+    ):
+        assert parsed.counts[element_id] == 1
+        assert ("details", "studioTools") in parsed.parents[element_id]
+    assert parsed.controls["integrationSearch"]["type"] == "search"
+    assert parsed.controls["integrationMcpTab"]["aria-pressed"] == "true"
+    assert parsed.controls["integrationSkillsTab"]["aria-pressed"] == "false"
+    assert "hidden" in parsed.controls["activeSkillsPills"]
+    assert "disabled" in parsed.controls["integrationPrev"]
+    assert "disabled" in parsed.controls["integrationNext"]
+    assert parsed.controls["integrationPageStatus"]["aria-live"] == "polite"
+
+
+def test_picker_filters_without_execution_or_policy_changes():
+    html = (ROOT / "static/index.html").read_text()
+    picker = html.split("  function renderIntegrationPicker(", 1)[1].split("  function renderSkillsUI()", 1)[0]
+    assert "matches.slice(start, start + INTEGRATION_PAGE_SIZE)" in picker
+    assert "const INTEGRATION_PAGE_SIZE = 6;" in html
+    assert "data-integration-id=" in picker
+    assert 'onclick="toggleIntegrationRow(this)"' in picker
+    assert 'aria-pressed="${on}"' in picker
+    for forbidden in ("fetch(", "localStorage", "approval_policy", "tools/call", "color:#fef3c7"):
+        assert forbidden not in picker
+    assert "MCP servers: <strong" in html
+    assert "MCP tools: <strong" in html
+    assert "MCP:<span" not in html
