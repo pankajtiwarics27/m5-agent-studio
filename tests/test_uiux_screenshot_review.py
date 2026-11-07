@@ -87,8 +87,19 @@ def test_every_committed_capture_belongs_to_a_reviewed_set(generator) -> None:
     payload = generator.build(MEDIA, measure=False)
     assert payload["findings"] == []
     reviewed = {row["set"] for row in payload["sets"] if row["reviewed"]}
-    on_disk = {path.parent.relative_to(MEDIA).parts[0] for path in MEDIA.rglob("*.png")}
+    on_disk = set(generator.capture_sets(MEDIA))
     assert on_disk == reviewed, f"unreviewed sets: {sorted(on_disk - reviewed)}"
+
+
+def test_ignored_local_evidence_is_explicitly_opt_in(generator, media_copy: Path, monkeypatch) -> None:
+    """Local PNGs can be reviewed without becoming drift inputs on a fresh clone."""
+    local = media_copy / "polish" / "local-ignored-evidence.png"
+    shutil.copy(media_copy / "polish" / "polish-dark-hover-primary.png", local)
+    monkeypatch.setattr(generator, "ignored_local_captures", lambda _root: {local.resolve()})
+    committed = generator.capture_sets(media_copy)
+    reviewed_locally = generator.capture_sets(media_copy, include_ignored=True)
+    assert "local-ignored-evidence.png" not in {path.name for path in committed["polish"]["files"]}
+    assert "local-ignored-evidence.png" in {path.name for path in reviewed_locally["polish"]["files"]}
 
 
 def test_no_pane_is_unphotographed(generator) -> None:

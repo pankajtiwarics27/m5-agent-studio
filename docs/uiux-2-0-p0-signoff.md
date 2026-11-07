@@ -8,7 +8,7 @@ and what a revert does and does not touch.
 * Status: **historical-approval-unbound** — Signed in the ledger; this page reports the historical owner record, not a new approval.
 * Approval binding: **unbound** — The historical record has no approved input snapshot and does not establish approval of current inputs.
 * Pinned baseline source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (input artifacts are hashed separately).
-* 6 panes · 21 preserved capabilities · 228 markup controls (126 chrome, 102 panes) · 71 rendered by script.
+* 6 panes · 21 preserved capabilities · 230 markup controls (127 chrome, 103 panes) · 71 rendered by script.
 * 118 routes exist, 71 with a resolved or possible caller, 47 with none observed and 0 unknown due to unresolved edges; 48 state-changing candidates traced.
 * 0 fetch site(s) have 0 unresolved URL or method edge(s) (0 method).
 * Baseline screenshots recorded in the index: 6 of 6 (not provenance-verified).
@@ -28,7 +28,7 @@ separates the historical signature from any explicit binding to current input di
 | # | Ask | Evidence in this package |
 |---|---|---|
 | 1 | Accept the preservation matrix as the baseline P1 must preserve | 21 capability rows across 6 panes, carried row for row from product/M5_2_0_UIUX_Autonomous_Roadmap.json |
-| 2 | Accept the control inventory as the list of controls that must stay reachable | 228 markup controls (126 chrome, 102 panes) plus 71 rendered by script |
+| 2 | Accept the control inventory as the list of controls that must stay reachable | 230 markup controls (127 chrome, 103 panes) plus 71 rendered by script |
 | 3 | Review route candidates and preserve confirmed browser-reachable routes and their gates | 118 routes exist; 71 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 48 state-changing candidates; the lexical scan is not exhaustive |
 | 4 | Accept that P1 may not weaken the shared boundary | host allowlist (400), cross-origin rejection (403), bearer token (401, 503 when unconfigured), rate limit (429) and body-size limit (413), read from the middleware itself |
 | 5 | Review the rollback path and the state effects of each story | this package adds no migration or privilege; review each story's actual merge, revert and recovery effects, then regenerate artifacts and re-run the checks below |
@@ -219,26 +219,27 @@ The four-stage pipeline view for a single request.
 |---|---|---|
 | Four-stage orchestrator with architect/coder role selection | Pipeline primary view or progressive-disclosure inspector | existing endpoint, permission semantics, durable state and error behavior |
 
-**Controls — 16 in the markup:**
+**Controls — 17 in the markup:**
 
 | Tag | Id | Label | Handler |
 |---|---|---|---|
+| textarea | councilPrompt | Write an async token-bucket rate limiter in Python safe under concurrent asyncio tasks, with graceful cancellation and unit tests. | — |
+| button | — | Token Bucket | setCouncilPreset('Write an async token-bucket rate limiter in Python safe under concurrent asyncio tasks.') |
+| button | — | Portfolio Actor | setCouncilPreset('Design an event-sourced Portfolio Rebalancer Actor in Python with integer atomic units, deterministic MarketSnapshot replay, and stale-price circuit breakers.') |
+| button | councilStopBtn | Stop | stopActiveStream() |
+| button | councilRunBtn | Run pipeline | runCouncil() |
+| summary | pipelineSetupSummary | Stage setup4 voice selectors · auto-unload on · reasoning off | — |
 | select | c-arch | — | — |
 | select | c-coder | — | — |
 | select | c-critic | — | — |
 | select | c-judge | — | — |
 | input | c-unload | — | — |
 | select | c-reasoning | Off — Direct Fast (~29 tok/s) Low — Bounded (900t cap) Medium — Deep (1800t cap) | — |
-| textarea | councilPrompt | Write an async token-bucket rate limiter in Python safe under concurrent asyncio tasks, with graceful cancellation and unit tests. | — |
-| button | — | Token Bucket | setCouncilPreset('Write an async token-bucket rate limiter in Python safe under concurrent asyncio tasks.') |
-| button | — | Portfolio Actor | setCouncilPreset('Design an event-sourced Portfolio Rebalancer Actor in Python with integer atomic units, deterministic MarketSnapshot replay, and stale-price circuit breakers.') |
-| button | councilStopBtn | Stop | stopActiveStream() |
-| button | councilRunBtn | Run pipeline | runCouncil() |
-| button | step-card-0 | VIEWAll Stages Ready | selectStageFilter(0) |
-| button | step-card-1 | 1 • ARCHITECTSpec Idle | selectStageFilter(1) |
-| button | step-card-2 | 2 • CODERDraft Idle | selectStageFilter(2) |
-| button | step-card-3 | 3 • CRITICAudit Idle | selectStageFilter(3) |
-| button | step-card-4 | 4 • JUDGEFinal Idle | selectStageFilter(4) |
+| button | step-card-0 | RUNAll stages Ready | selectStageFilter(0) |
+| button | step-card-1 | 01 · ARCHITECTSpec Idle | selectStageFilter(1) |
+| button | step-card-2 | 02 · BUILDERDraft Idle | selectStageFilter(2) |
+| button | step-card-3 | 03 · CRITICAudit Idle | selectStageFilter(3) |
+| button | step-card-4 | 04 · JUDGEFinal Idle | selectStageFilter(4) |
 
 **Routes reached from this pane's controls — 1, walking at most 2 calls; 7 route(s) reached through the same shared helper were excluded because this pane's walk never passes the function that supplied their URL:**
 
@@ -317,7 +318,7 @@ A single streaming conversation with the selected model.
 
 ## Shared chrome
 
-126 controls: button 73, input 31, select 12, summary 4, textarea 6.
+127 controls: button 73, input 31, select 12, summary 5, textarea 6.
 
 Tabs, command palette, modals and the shared toolbar. A pane story may restyle chrome, but every control here stays reachable: the inventory test fails if one disappears.
 
@@ -380,11 +381,11 @@ provenance; a matching snapshot cannot clear separate review holds.
 | Input | Current digest | Owner-recorded digest |
 |---|---|---|
 | `ledger_content_sha256` | `d4137cf1e214931953734cc97943732ea5204b5884c6aa26339cc7c27ed5908b` | `not recorded` |
-| `source_manifest_sha256` | `a89544d1d50cb660b351651216a52e7bc668055252945101ee00b8ed10cc3667` | `not recorded` |
-| `control_inventory_sha256` | `6bec3dc411671d8a9ece5fd7174a92355f2f82b4472663ac168a9299af6baa59` | `not recorded` |
-| `route_map_sha256` | `efc2e892d1c6a6c4ef939e5b7b0341bac30e7ad4e368cc7d39c8200e6038459f` | `not recorded` |
-| `authorization_trace_sha256` | `b16c878e3914f4e19628c40bf3c1cf71502b081f3510cf03507af28e1d24e8e9` | `not recorded` |
-| `frontend_sha256` | `d6cc4db68edb409ecab9ea6d26c6d75680654e5bcdd19784873ff185d5c98b01` | `not recorded` |
+| `source_manifest_sha256` | `88ebc2881687c617c9bd873614694358c150482e130c64e71e3d012283025733` | `not recorded` |
+| `control_inventory_sha256` | `6e04e8f45c174248dcf2433242c3145a7443a7f80e3f25a7f275ab459444b1b7` | `not recorded` |
+| `route_map_sha256` | `9f1121b2cf87daff928ceb05be66e6ce76a4f91a3a7872c1968d92daba1b5eca` | `not recorded` |
+| `authorization_trace_sha256` | `4d207695f11a232832c6de0a42e802dc58cb7ab3791781feba3bf7565145af7a` | `not recorded` |
+| `frontend_sha256` | `61ab90eadb851d0aca6be6887ae14f05a98a4e84b0e07c50926d4ac8d052cd08` | `not recorded` |
 | `screenshot_manifest_sha256` | `b488bf453ae260b6564ae592f0455e3d70cff3121dca1e7c823c7abb270b44d3` | `not recorded` |
 | `screenshot_index_sha256` | `16b0620ca1d02a1b181ad15b3a2b0c6aae9e7aa539654d27ed80d9147189634e` | `not recorded` |
 | `generator_sha256` | `6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65` | `not recorded` |

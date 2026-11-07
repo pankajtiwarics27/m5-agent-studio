@@ -39,41 +39,42 @@ through `setStatus()`, so the state, the tone and the label cannot disagree.
 | `failed` | `danger` | failed |
 | `error` | `danger` | failed |
 
-10 states, 6 tones, 4 bases, 23 surfaces using the component, 7 of them live regions.
+10 states, 6 tones, 4 bases, 24 surfaces using the component, 7 of them live regions.
 
 ## Surfaces
 
 | Element | Tone | Announced | Line |
 |---|---|---|---|
-| (unnamed) | `ok` | no | 2023 |
-| `#dockerStateBadge` | `neutral` | no | 2070 |
-| `#sdlcProgressBadge` | `neutral` | no | 2687 |
-| `#startReadinessPill` | `neutral` | yes | 2840 |
-| `#startRecentSummary` | `neutral` | yes | 2868 |
-| `#onboardingSummary` | `neutral` | yes | 2886 |
-| `#startHealthSummary` | `neutral` | yes | 2927 |
-| `#startWorkspaceSummary` | `neutral` | yes | 2947 |
-| `#harnessActiveStatusBadge` | `info` | yes | 3080 |
-| `#hallStatusBadge` | `info` | yes | 3170 |
-| `#councilReadinessCount` | `neutral` | no | 3184 |
-| (unnamed) | `warn` | no | 6675 |
-| (unnamed) | `warn` | no | 6773 |
-| (unnamed) | `neutral` | no | 10347 |
-| (unnamed) | `busy` | no | 10348 |
-| (unnamed) | `ok` | no | 10349 |
-| (unnamed) | `warn` | no | 10350 |
-| (unnamed) | `warn` | no | 10351 |
-| (unnamed) | `warn` | no | 10352 |
-| (unnamed) | `danger` | no | 10353 |
-| (unnamed) | `warn` | no | 10354 |
-| (unnamed) | `warn` | no | 10355 |
-| (unnamed) | `neutral` | no | 10356 |
+| (unnamed) | `ok` | no | 2157 |
+| `#dockerStateBadge` | `neutral` | no | 2204 |
+| `#sdlcProgressBadge` | `neutral` | no | 2821 |
+| `#startReadinessPill` | `neutral` | yes | 2974 |
+| `#startRecentSummary` | `neutral` | yes | 3002 |
+| `#onboardingSummary` | `neutral` | yes | 3020 |
+| `#startHealthSummary` | `neutral` | yes | 3061 |
+| `#startWorkspaceSummary` | `neutral` | yes | 3081 |
+| `#harnessActiveStatusBadge` | `info` | yes | 3214 |
+| `#hallStatusBadge` | `info` | yes | 3304 |
+| `#councilReadinessCount` | `neutral` | no | 3318 |
+| `#pipelineWorkspaceState` | `info` | no | 3478 |
+| (unnamed) | `warn` | no | 6843 |
+| (unnamed) | `warn` | no | 6941 |
+| (unnamed) | `neutral` | no | 10792 |
+| (unnamed) | `busy` | no | 10793 |
+| (unnamed) | `ok` | no | 10794 |
+| (unnamed) | `warn` | no | 10795 |
+| (unnamed) | `warn` | no | 10796 |
+| (unnamed) | `warn` | no | 10797 |
+| (unnamed) | `danger` | no | 10798 |
+| (unnamed) | `warn` | no | 10799 |
+| (unnamed) | `warn` | no | 10800 |
+| (unnamed) | `neutral` | no | 10801 |
 
 ## Writers
 
 | Measure | Count |
 |---|---|
-| `setStatus()` call sites | 29 |
+| `setStatus()` call sites | 30 |
 | `evidenceNote()` call sites | 4 |
 | Evidence blocks in markup | 2 |
 | Legacy `className = "badge …"` writers | 0 |

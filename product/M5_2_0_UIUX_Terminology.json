@@ -278,6 +278,11 @@
     },
     {
       "where": "status chip",
+      "tone": "info",
+      "word": "ready"
+    },
+    {
+      "where": "status chip",
       "tone": "warn",
       "word": "demo text"
     }

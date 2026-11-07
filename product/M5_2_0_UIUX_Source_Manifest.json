@@ -12,9 +12,9 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "d6cc4db68edb409ecab9ea6d26c6d75680654e5bcdd19784873ff185d5c98b01",
-      "bytes": 965180,
-      "lines": 16784
+      "sha256": "61ab90eadb851d0aca6be6887ae14f05a98a4e84b0e07c50926d4ac8d052cd08",
+      "bytes": 997290,
+      "lines": 17229
     },
     {
       "path": "app.py",
@@ -26,9 +26,9 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "fd36b00653e00256eab40735584bfd1466acfdcf8995509c918829e887bcd0aa",
-      "bytes": 3746951,
-      "lines": 80739
+      "sha256": "a703945e17af8187ff62b300a349f75bd33ea75bc4d2aa6fb50402afd5b1f358",
+      "bytes": 3779061,
+      "lines": 81184
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -376,9 +376,9 @@
     {
       "path": "scripts/uiux_preservation_e2e.py",
       "role": "maps each preservation-matrix row to the walk, test, route and control that proves it",
-      "sha256": "ebc39cde58a9c8b8e3e6394620c1219c170fb67bb7a7abc3b7e4e3baf3a162d7",
-      "bytes": 43753,
-      "lines": 835
+      "sha256": "fe1e16302494954cd43e60aa81d4d42ff8bec1d8eeb9e8181b513ca8e37d44f3",
+      "bytes": 44257,
+      "lines": 836
     },
     {
       "path": "tests/test_uiux_preservation_e2e.py",
@@ -418,16 +418,16 @@
     {
       "path": "scripts/uiux_screenshot_review.py",
       "role": "traces every committed capture to the script that made it and checks that the theme in its name is the theme in its pixels",
-      "sha256": "6db58fc2fe43d956cfe92446b13612aa700ca8e89a7b2bcc75de15797001b9a5",
-      "bytes": 76031,
-      "lines": 1427
+      "sha256": "c0a1c9cc36d53d99253513734838758bbb73a921adc551338bc8310c670979ab",
+      "bytes": 80083,
+      "lines": 1487
     },
     {
       "path": "tests/test_uiux_screenshot_review.py",
       "role": "breaks the media tree one way at a time and checks the screenshot review notices",
-      "sha256": "6d0b60efdaf454d2128f53536a5bc2e720a7ec64e40e35cf39c02e9396ebcf68",
-      "bytes": 10801,
-      "lines": 226
+      "sha256": "504c9729ade7688982d86b5ce060bccdb7399ffb17efc8065e6e893cd4d43092",
+      "bytes": 11525,
+      "lines": 237
     },
     {
       "path": "scripts/uiux_docs_verification.py",
@@ -460,8 +460,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "d6cc4db68edb409ecab9ea6d26c6d75680654e5bcdd19784873ff185d5c98b01",
-    "lines": 16784,
+    "sha256": "61ab90eadb851d0aca6be6887ae14f05a98a4e84b0e07c50926d4ac8d052cd08",
+    "lines": 17229,
     "tab_count": 6,
     "tabs": [
       {

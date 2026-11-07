@@ -6,7 +6,7 @@ executed by [`scripts/preservation_suite.py`](../scripts/preservation_suite.py).
 
 * 21 of 21 matrix rows mapped, 55 provers, 0 findings
 * 40 walk checks, 4 pytest nodes, 9 route probes, 2 wired controls
-* 17 walks prove a row; 25 more are listed with the reason they do not
+* 17 walks prove a row; 26 more are listed with the reason they do not
 
 ## What this page is, and is not
 
@@ -94,6 +94,7 @@ than succeed. That is what "existing endpoint and permission semantics" means in
 | `mcp_wizard_walk.mjs` | the MCP guide walk (UIV2-22) proves that connecting a server is four questions rather than one form: that a step which is not satisfied refuses to advance and names the field, that the token is a password field the review never reads back, that a local command needs a consent naming the exact command and that the consent cannot grant the operator's `STUDIO_ALLOW_MCP_STDIO` opt-in, that raw headers and environment JSON stay behind a shut disclosure, and that saving re-checks every earlier step and reports the connection test where the button is; the capability it belongs to is the MCP surface, which the matrix already enumerates from the tool strip and the dialog's own controls |
 | `overlay_walk.mjs` | the overlay controller (P1-04) is shared machinery the matrix does not enumerate |
 | `pipeline_recovery_walk.mjs` | Pipeline failure recovery (P3-07) extends a capability rather than preserving it |
+| `pipeline_workspace_walk.mjs` | the Pipeline workspace walk (UIV2-25) proves that All Stages and exactly the server's four stages survive, that keyboard selection, the unchanged four-seat payload, real loading/long/error streams, checkpoint restoration without a POST, stable Copy focus/scroll, responsive output and the Inspector all describe the same observed run; the capability it belongs to is the existing four-stage Pipeline, which the matrix already enumerates from the pane's own controls |
 | `polish_walk.mjs` | the polish layer (P5-05) proves affordances across all six panes |
 | `presentation_walk.mjs` | the presentation contract (P1-05) is the shape failures are drawn in |
 | `responsive_walk.mjs` | the layout walk (P5-03) proves the matrix rows still fit a phone |
