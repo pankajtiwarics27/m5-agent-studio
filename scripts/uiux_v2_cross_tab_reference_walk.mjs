@@ -648,6 +648,7 @@ async function main() {
       captures.push(entry);
       failures.push(...failed.map((check) => ({ key, ...check })));
       console.log(`${failed.length ? "FAIL" : "PASS"} ${key}: ${checks.length - failed.length}/${checks.length}; mean RGB Δ=${comparison.metrics.mean_absolute_rgb_0_255}; changed=${comparison.metrics.changed_pixel_ratio_0_1}`);
+      for (const check of failed) console.error(`DETAIL ${key} ${check.id}: ${check.detail}`);
     }
     const checkTotal = captures.reduce((sum, row) => sum + row.checks.length, 0);
     const manifest = {

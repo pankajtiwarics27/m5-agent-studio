@@ -11,7 +11,7 @@
     "static": "static/index.html",
     "static_sha256": "6576b48dd802161eda5187f1714eb5007af23aacc84f8105cb504075e26cd79b",
     "walk": "scripts/uiux_v2_cross_tab_reference_walk.mjs",
-    "walk_sha256": "4b43c44d330ff53e789ab0ed568342d64a280a9c520a7a67d0f2ca0bf83df624"
+    "walk_sha256": "3a3d4ea9e91f87131e3cad182d55477a070cd99804a990decf44cd7e5a886692"
   },
   "approved_reference": {
     "wireframe": "docs/media/uiv2-v2/reference/wireframe.html",

@@ -286,6 +286,7 @@ def test_browser_gate_measures_pixels_without_a_tolerance_verdict() -> None:
     assert 'textContent.includes("would receive demo text")' in source
     assert "approved.live-structural-signature" in source
     assert "approved.reference-structural-signature" in source
+    assert 'console.error(`DETAIL ${key} ${check.id}: ${check.detail}`)' in source
     assert "candidate" in source and "inferred: false" in source
     assert 'detached: process.platform !== "win32"' in source
     assert 'process.kill(-child.pid, name)' in source
