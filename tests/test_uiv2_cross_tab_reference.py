@@ -172,6 +172,7 @@ def test_task_first_integration_has_positive_browser_contracts() -> None:
     assert layout["harness_shared_left_nav_width"] == [192, 240]
     assert "closed by default at every width" in layout["inspector"]
     source = WALK.read_text(encoding="utf-8")
+    assert 'integrations: rect("#studioTools")' in source  # D1 outlines the visible disclosure, not closed content.
     for rule in (
         'check("tools-closed-by-default"',
         'check("inspector-closed-by-default"',

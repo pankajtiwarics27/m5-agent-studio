@@ -335,7 +335,7 @@ async function collectLive(page, pane, theme, viewport) {
       typography: { body: bodyStyle.fontFamily, size: bodyStyle.fontSize },
       document: { width: document.documentElement.scrollWidth, height: document.documentElement.scrollHeight },
       regions: {
-        header, nav, integrations: rect(".skills-strip"), tools: rect("#studioTools"), workspace: rect(".workspace"),
+        header, nav, integrations: rect("#studioTools"), integrations_content: rect(".skills-strip"), workspace: rect(".workspace"),
         pane: activePane, inspector, session,
       },
       secondary_state: {
