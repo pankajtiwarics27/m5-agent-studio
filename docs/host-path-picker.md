@@ -11,6 +11,13 @@ CodeGraph workspace fields. It navigates the **Studio host** filesystem. A remot
 server/container is not the browser's computer; browser directory uploads do not
 provide trusted host absolute paths. Type a path manually if browsing is unavailable.
 
+On **Start**, scroll the main content past **Readiness details** and **System
+health**, then expand **Project workspace** and press **Browse…**. This does not
+require a connected model source. The Start content owns native scrolling inside
+the fixed workspace; opening disclosures must not clip the controls below them.
+Keyboard users can Tab to the native workspace summary, press Space to expand it,
+then Tab through the path field to Browse. Cancelling returns focus to the opener.
+
 Choose an approved/recent location, use Up, filter names or enter a known host
 folder and Go. **Cancel**, Close, backdrop and Escape discard the selection;
 browsing never creates directories or changes the workspace. **Use this folder**
@@ -168,3 +175,32 @@ and the existing approved cross-tab check: **48 captures, 2200/2200 checks**.
 Ruff, mypy62 and frontend syntax remain clean. The full pre-integration count is
 not represented as a post-integration run; updated multi-version CI is required
 on the integrated head before merge. No PR merge has been authorized/performed.
+
+## Start scrolling regression — issue #236
+
+Owner manual test4 could not reach Project workspace because Start clipped its
+content below Readiness details. An offline Chromium regression failed before the
+patch: at390×568 the content shell was1263px tall, extended below the viewport,
+and had visible rather than scrollable overflow. The fix makes that shell a
+shrinking flex child with `min-height:0` and native `overflow-y:auto`; it does not
+change global pane overflow, the fixed header/navigation, or any API/consent path.
+
+The real-markup/controller path-picker browser walk now includes16 additional
+Start reachability cases: light/dark, comfortable/compact,390×568,900×700,
+1440×810 and1572×865, with five synthetic recent tasks and a model-source blocker.
+Real wheel scrolling reaches/opens Project workspace; the real Browse button
+opens the picker, directory navigation then Cancel preserves the original path
+and restores focus. Tab/Space/Enter/Escape repeat reachability without a pointer.
+No workspace update, folder creation, model request or external request occurs.
+This closes a test gap: the previous walk focused an offscreen field and invoked
+the picker programmatically, which could pass despite unreachable controls.
+The complete picker walk passes41 cases with0 network requests and0 page errors.
+Full multi-version/browser CI and the owner's same test4 retry remain pending;
+this is author regression evidence, not a new human/security approval.
+
+Author checkpoint: the mandatory browser suite passes36 tests with no skips;
+workspace-path/Start/Pipeline regressions pass124 tests. Ruff, mypy62, frontend
+syntax and docs checks pass. Regenerated all37 normal UI/UX artifact sources,
+the separate Pipeline/Start inventories and preservation second pass; the
+aggregate reports37/37 checks,7/7 gates,0findings. The inherited cross-tab approval
+and security review records are unchanged.
