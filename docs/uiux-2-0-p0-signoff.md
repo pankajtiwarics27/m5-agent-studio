@@ -68,7 +68,7 @@ The preflight checklist a new user sees first: what is ready, what still needs t
 | button | — | Inspector | toggleMonitorRail() |
 | summary | — | Project workspace loading | — |
 | input | startWorkspaceInput | — | — |
-| button | — | Browse… | openPathPicker('startWorkspaceInput', {workspace:true}) |
+| button | — | Browse Studio host… | openPathPicker('startWorkspaceInput', {workspace:true}) |
 | select | startWorkspaceRecent | Recent folders… | — |
 | button | startWorkspaceBtn | Set / Create | saveStartWorkspace() |
 
@@ -131,7 +131,7 @@ An agent session over a workspace, with the diff, approval, and abort controls.
 | button | — | Close | document.getElementById('harnessTaskSettings').open = false |
 | button | — | Set / Create | saveWorkspaceDirectory() |
 | input | harnessWorkspaceInput | — | — |
-| button | — | Browse… | openPathPicker('harnessWorkspaceInput', {workspace:true}) |
+| button | — | Browse Studio host… | openPathPicker('harnessWorkspaceInput', {workspace:true}) |
 | select | harnessRecentDirsSelect | — | — |
 | input | harnessUseWorktree | — | — |
 | select | harnessCriticModel | — | — |
@@ -390,11 +390,11 @@ provenance; a matching snapshot cannot clear separate review holds.
 | Input | Current digest | Owner-recorded digest |
 |---|---|---|
 | `ledger_content_sha256` | `d4137cf1e214931953734cc97943732ea5204b5884c6aa26339cc7c27ed5908b` | `not recorded` |
-| `source_manifest_sha256` | `90bc48db2d41c16dc0a7b73b84ffe7e2badd154afb7d24721fcabdd1ddb40eb5` | `not recorded` |
-| `control_inventory_sha256` | `ff11eb642303ab74caf2c547b12b9bf5e1dd186cd82af91412ca617d0c93590a` | `not recorded` |
-| `route_map_sha256` | `24956ce72b34b85a653d97a2f0d888e30ccd1039abf7ddecd56be4ae3f422e49` | `not recorded` |
-| `authorization_trace_sha256` | `597eb9b70f3dfc6458530a52b7e0ef61cc62205ca662a5c25a4a3052c90c6655` | `not recorded` |
-| `frontend_sha256` | `0e483245c2f655e223b9c06f5c534b7dffd4d523b14c83a71f6cca8b3726a2e7` | `not recorded` |
+| `source_manifest_sha256` | `b2642714b974c52c0e50140864d89312ac92023f920b2984d038dd99815cf967` | `not recorded` |
+| `control_inventory_sha256` | `3885458c478176a31675d8e688641b5b24b684704fffc2ee7c49a2bbeb599f70` | `not recorded` |
+| `route_map_sha256` | `3f04549c9d5aed752b0daddf07181835073351404ec82d065c38b9673451685a` | `not recorded` |
+| `authorization_trace_sha256` | `feb716d6cb1eb7ce507dfa3282c217ce8b38a3f9e9f8098dd39a9ab9402ec461` | `not recorded` |
+| `frontend_sha256` | `97815ea2e3d3cdc25479fa1e9420053a8682517baf2fd3c8c4c07e128b9a6f79` | `not recorded` |
 | `screenshot_manifest_sha256` | `b488bf453ae260b6564ae592f0455e3d70cff3121dca1e7c823c7abb270b44d3` | `not recorded` |
 | `screenshot_index_sha256` | `16b0620ca1d02a1b181ad15b3a2b0c6aae9e7aa539654d27ed80d9147189634e` | `not recorded` |
 | `generator_sha256` | `6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65` | `not recorded` |

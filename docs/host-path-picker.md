@@ -6,21 +6,28 @@ protocol fix. Architecture: [ADR-0028](adr/0028-confirmed-studio-host-path-selec
 
 ## Operator workflow
 
-**Browse…** opens the same accessible popup from Start, Harness, SDLC and
+**Browse Studio host…** opens the same accessible popup from Start, Harness, SDLC and
 CodeGraph workspace fields. It navigates the **Studio host** filesystem. A remote
 server/container is not the browser's computer; browser directory uploads do not
 provide trusted host absolute paths. Type a path manually if browsing is unavailable.
 
+On **Start**, scroll the main content past **Readiness details** and **System
+health**, then expand **Project workspace** and press **Browse Studio host…**. This does not
+require a connected model source. The Start content owns native scrolling inside
+the fixed workspace; opening disclosures must not clip the controls below them.
+Keyboard users can Tab to the native workspace summary, press Space to expand it,
+then Tab through the path field to Browse. Cancelling returns focus to the opener.
+
 Choose an approved/recent location, use Up, filter names or enter a known host
 folder and Go. **Cancel**, Close, backdrop and Escape discard the selection;
-browsing never creates directories or changes the workspace. **Use this folder**
+browsing never creates directories or changes the workspace. **Choose folder**
 updates the existing shared workspace setting with `create_if_missing:false`.
 The manual Set / Create workflow is unchanged. Listings never read file contents.
 
 **New folder** is a different action: edit a single name, review its full parent
 and destination, check confirmation, then **Create folder**. Changing the parent
 or name resets confirmation. Creation does not change the workspace; review the
-new folder and separately press Use. Cancel cannot undo a creation already
+new folder and separately press Choose folder. Cancel cannot undo a creation already
 confirmed/submitted. A late creation reply does not replace newer navigation.
 
 MCP's executable Browse replaces only the executable draft. Script/file-path
@@ -40,7 +47,7 @@ Only the description and a fixed name-only system instruction are sent—not pat
 listings, files, environment or conversation history. Anything you put in the
 free-text description is of course included. The returned name is untrusted:
 **Use suggested name** copies an editable draft, not a creation/application grant.
-Then review/edit, confirm Create and separately Use. No tools are advertised or run.
+Then review/edit, confirm Create and separately Choose. No tools are advertised or run.
 
 ## Authenticated API boundary
 
@@ -168,3 +175,115 @@ and the existing approved cross-tab check: **48 captures, 2200/2200 checks**.
 Ruff, mypy62 and frontend syntax remain clean. The full pre-integration count is
 not represented as a post-integration run; updated multi-version CI is required
 on the integrated head before merge. No PR merge has been authorized/performed.
+
+## Start scrolling regression — issue #236
+
+Owner manual test4 could not reach Project workspace because Start clipped its
+content below Readiness details. An offline Chromium regression failed before the
+patch: at390×568 the content shell was1263px tall, extended below the viewport,
+and had visible rather than scrollable overflow. The fix makes that shell a
+shrinking flex child with `min-height:0` and native `overflow-y:auto`; it does not
+change global pane overflow, the fixed header/navigation, or any API/consent path.
+
+The real-markup/controller path-picker browser walk now includes16 additional
+Start reachability cases: light/dark, comfortable/compact,390×568,900×700,
+1440×810 and1572×865, with five synthetic recent tasks and a model-source blocker.
+Real wheel scrolling reaches/opens Project workspace; the real Browse button
+opens the picker, directory navigation then Cancel preserves the original path
+and restores focus. Tab/Space/Enter/Escape repeat reachability without a pointer.
+No workspace update, folder creation, model request or external request occurs.
+This closes a test gap: the previous walk focused an offscreen field and invoked
+the picker programmatically, which could pass despite unreachable controls.
+The complete picker walk passes41 cases with0 network requests and0 page errors.
+Full multi-version/browser CI and the owner's same test4 retry remain pending;
+this is author regression evidence, not a new human/security approval.
+
+Author checkpoint: the mandatory browser suite passes36 tests with no skips;
+workspace-path/Start/Pipeline regressions pass124 tests. Ruff, mypy62, frontend
+syntax and docs checks pass. Regenerated all37 normal UI/UX artifact sources,
+the separate Pipeline/Start inventories and preservation second pass; the
+aggregate reports37/37 checks,7/7 gates,0findings. The inherited cross-tab approval
+and security review records are unchanged.
+
+Full-CI correction on PR #237: the Python jobs found five failures missed by the
+initial focused run (the browser job passed). Two responsive negative tests
+matched the entire old CSS prefix, so their mutations stopped changing the source
+after scrolling declarations were added. They now target only the shell's width
+while preserving its independent scroll rules; their mutation/finding assertions
+are unchanged. Three cross-tab contract tests failed because the separate
+`scripts/uiux_v2_cross_tab_reference.py` generator, outside the37-source release
+gate, had not been run. Regenerating it changes only the reference artifact's
+static source SHA; it neither approves a candidate nor alters the inherited
+approval, structural rules or fingerprint. All five CI-reported failures now
+pass locally, as do Ruff/mypy62/docs checks. Required full CI must rerun on the
+corrected head before merge; owner test4 acceptance is still pending.
+
+A second CI correction addresses scoped push collection, not the scrolling fix:
+full PR Python3.11/3.12 passed while the scoped push order imported the security
+CLI wrapper instead of the runtime module. `tests/test_screenshots.py` prepended
+`scripts/` globally to `sys.path`; unlike full collection, this selection had not
+yet cached the runtime security module. A fresh screenshot→security collection
+reproduced the missing evaluator error. Importing the screenshot validator via
+its `scripts` namespace removes the global path mutation. A clean-child regression
+fails before this change and now checks both an unchanged import path and the
+runtime module's exact file/evaluator. Screenshot/security/scoped-selector tests
+pass61 cases in that order; Ruff/mypy62/map/sign-off checks pass. Security/runtime
+code, approvals and CI selections are unchanged. Both push and PR checks must
+succeed on the corrected head; no release or owner test4 acceptance is inferred.
+
+Integration checkpoint: main advanced through PR #233 while this fix's CI ran.
+Merged that accepted source into this branch and resolved generated-file conflicts
+by rebuilding standalone, all37 UI/UX sources, the separate Pipeline/Start/V2
+preservation/cross-tab contracts and the preservation second pass. Aggregate:
+37/37 checks,7/7 gates,0findings. On the merged source, screenshot→security→scope
+regressions again pass61 and the actual picker browser walk passes41 (no requests
+or page errors); Ruff/mypy62/frontend syntax pass. Before integration the broader
+40-module scoped group passed809 tests with30 browser skips (browser checks are
+a separate mandatory job, not counted as passes here). Inherited approval records
+are identical to main. Complete CI on the integrated head is still required.
+
+
+## Selection-first UX — issue #238
+
+Owner manual test4 passed, including cancellation and explicit creation, but the
+custom browser was confusing compared with the expected Finder flow. This UI-only
+follow-up makes the scope and commit action explicit without introducing a native
+OS bridge or a new filesystem/provider capability.
+
+- Workspace and executable entry buttons say **Browse Studio host…**. The chooser
+  identifies itself as Studio's web picker, not Finder or an upload dialog. Native
+  browser file/directory dialogs return browser-side files or handles, not a trusted
+  Studio-host absolute path; no guessed path or upload is substituted here. A
+  native desktop bridge would be a separate, explicitly authorized capability.
+- Existing-folder/file selection is primary. Navigate, inspect **Selected**, then
+  press **Choose folder** or **Choose file**. Contextual help says whether this
+  updates the shared workspace, replaces a draft field, appends a quoted argument,
+  or changes only a named environment value. MCP drafts still require Save.
+- A fixed footer keeps status/errors, selection and **Cancel / Choose** available
+  while the body scrolls. Long paths have a bounded scrollable preview rather
+  than pushing the actions offscreen. No synthetic Finder chrome is implied.
+- **New folder… (optional)** is a secondary disclosure. It states before creation
+  that creation is a separate write, does not apply the selection, and cannot be
+  undone by Cancel. Confirmation, audit and separate application are unchanged.
+  Optional model naming stays nested, is collapsed each time the picker opens,
+  and still requires an explicit request with the existing data/consent boundary.
+- Roots, hidden/secret exclusions, no-follow rules, authentication, sessionStorage,
+  manual Set / Create and all backend routes/contracts are unchanged.
+
+The real-markup browser walk adds22 UX cases to the previous41: host-visible
+entry labels, context-specific commit help and reset, and expanded creation/model
+forms with long selections across both themes/densities and four viewport sizes.
+The existing delegated Enter navigation/filtering still makes one read per keypress without applying or creating. The new label regression failed before patch. All63 picker cases now pass with
+zero external requests/page errors. Full multi-version/browser CI and
+owner review of the new UI are still pending; no approval record is self-signed.
+Owner functional testing proceeds independently with test5 (Start-to-Harness draft
+handoff without pressing Run), not a test of uninstalled picker changes.
+
+Author verification for issue #238:161 workspace/Start/Pipeline/responsive/contract
+regressions and36 mandatory browser tests pass (no browser skips), including the
+63-case actual picker walk. Cross-tab structural check passes48 captures and
+2200/2200 assertions against the unchanged inherited approval. Regenerated all37
+release-gate sources plus the separate Pipeline/Start/V2 preservation/cross-tab
+contracts and preservation second pass:37/37 checks,7/7 gates,0findings. Ruff,
+mypy62, docs and frontend syntax pass. Synthetic light desktop/dark mobile picker
+previews are author evidence only, outside Git, not new signed visual approval.

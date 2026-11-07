@@ -30,7 +30,7 @@ try {
     window.fetch = async (url, init = {}) => {
       const parsed = new URL(url, 'https://studio.invalid');
       const route = parsed.pathname, path = parsed.searchParams.get('path') || '/host';
-      calls.push({route, method:init.method || 'GET', body:init.body ? JSON.parse(init.body) : null});
+      calls.push({route, query:parsed.searchParams.get('query'), method:init.method || 'GET', body:init.body ? JSON.parse(init.body) : null});
       if (holds[route]) await new Promise(resolve => releases[route] = resolve);
       const entries = [{name:"project's folder",path:"/host/project's folder",kind:'directory'}];
       if (parsed.searchParams.get('kind') === 'file') entries.push({name:"runner's script.py", path:"/host/runner's script.py",kind:'file'});
@@ -56,6 +56,72 @@ try {
   const value = id => page.$eval(`#${id}`, node => node.value);
   const close = async () => page.evaluate(() => picker.close());
   await page.evaluate(() => { document.querySelectorAll('.pane').forEach(n=>n.classList.toggle('active',n.id==='pane-start'));  document.getElementById('startWorkspaceInput').value='/original'; });
+  // Selection-first host UX must be explicit before opening any chooser.
+  assert(await page.$$eval('[data-path-for]', nodes => nodes.every(n=>n.textContent.includes('Studio host'))));
+  assert.equal(await page.$eval('#pathPickerApplyBtn',n=>n.getAttribute('aria-describedby')),'pathPickerSelectionHint');
+  passed++;
+  // Owner test4: Start must be scrollable BEFORE invoking the picker. The old walk
+  // focused an offscreen field/programmatically opened the dialog, masking clipping.
+  await page.evaluate(() => {
+    const blocker = document.getElementById('startNextBlocker');
+    blocker.hidden = false;
+    blocker.innerHTML = '<h3>Connect a model source</h3><p>Offline fixture: local runtime not asked; no model request is needed to browse.</p>';
+    document.getElementById('startRecentList').innerHTML = Array.from({length:5}, (_,i) =>
+      `<button type="button" class="start-recent-row"><span class="start-recent-main"><span class="start-recent-title">Synthetic recent task ${i}</span><span class="start-recent-meta">0 steps · plan · offline fixture</span></span></button>`).join('');
+  });
+  const browse = '#startWorkspaceDetails [data-path-for="startWorkspaceInput"]';
+  for (const theme of ['light','dark']) for (const density of ['comfortable','compact']) {
+    for (const [width,height] of [[390,568],[900,700],[1440,810],[1572,865]]) {
+      const label = `${theme}/${density}/${width}x${height}`;
+      await page.setViewport({width,height});
+      await page.evaluate(({theme,density}) => {
+        document.body.dataset.theme=theme; document.body.dataset.density=density;
+        document.querySelectorAll('#pane-start details').forEach(n=>n.open=false);
+        document.querySelector('.onboarding-shell').scrollTop=0;
+      }, {theme,density});
+      const layout = await page.$eval('.onboarding-shell', n => ({
+        height:n.clientHeight, content:n.scrollHeight, bottom:n.getBoundingClientRect().bottom,
+        overflow:getComputedStyle(n).overflowY, top:n.getBoundingClientRect().top,
+        x:n.getBoundingClientRect().left+n.clientWidth/2,
+      }));
+      assert(layout.overflow==='auto' && layout.content>layout.height && layout.height>0 && layout.bottom<=height+1,
+        `Start scroll owner ${label}: ${JSON.stringify(layout)}`);
+      // A real wheel must reveal the collapsed workspace; no scrollIntoView/helper.
+      await page.mouse.move(layout.x, (layout.top+layout.bottom)/2);
+      await page.mouse.wheel({deltaY:4000});
+      await page.waitForFunction(()=>document.querySelector('.onboarding-shell').scrollTop>0, {timeout:1500});
+      await page.click('#startWorkspaceDetails > summary');
+      await page.mouse.wheel({deltaY:4000});
+      await page.waitForFunction(selector=>{
+        const r=document.querySelector(selector).getBoundingClientRect(); return r.top>=0 && r.bottom<=innerHeight;
+      }, {timeout:1500}, browse);
+      await page.click(browse);
+      await page.waitForFunction(()=>document.activeElement.id==='pathPickerLocation');
+      await page.click('.path-picker-entry');
+      await page.waitForFunction(()=>document.getElementById('pathPickerLocation').value.includes("project's folder"));
+      await page.click('.path-picker-actions button:first-child'); // real Cancel
+      assert.equal(await value('startWorkspaceInput'),'/original');
+      assert.equal(await page.evaluate(()=>document.activeElement.getAttribute('data-path-for')),'startWorkspaceInput');
+      // Keyboard-only return from the top: Tab reveals each native disclosure;
+      // Space opens workspace, Tab reaches its input and Browse, Enter opens it.
+      await page.evaluate(()=>document.querySelectorAll('#pane-start details').forEach(n=>n.open=false));
+      await page.focus('#startTaskInput');
+      for (let i=0;i<30;i++) {
+        await page.keyboard.press('Tab');
+        if (await page.evaluate(()=>document.activeElement.matches('#startWorkspaceDetails > summary'))) break;
+      }
+      assert(await page.evaluate(()=>document.activeElement.matches('#startWorkspaceDetails > summary')),`Keyboard summary ${label}`);
+      await page.keyboard.press('Space'); await page.keyboard.press('Tab'); await page.keyboard.press('Tab');
+      assert.equal(await page.evaluate(()=>document.activeElement.getAttribute('data-path-for')),'startWorkspaceInput');
+      await page.keyboard.press('Enter');
+      await page.waitForFunction(()=>document.activeElement.id==='pathPickerLocation');
+      await page.keyboard.press('Escape');
+      assert.equal(await value('startWorkspaceInput'),'/original');
+      assert.equal(await page.evaluate(()=>document.activeElement.getAttribute('data-path-for')),'startWorkspaceInput');
+      assert.equal(await page.evaluate(()=>calls.filter(c=>c.method==='POST'||c.route.endsWith('/directory')).length),0);
+      passed++;
+    }
+  }
   // Themes, densities, narrow/short and wide viewports; focus containment and return.
   for (const theme of ['light','dark']) for (const density of ['comfortable','compact']) for (const width of [320,390,900,1440]) {
     await page.setViewport({width,height:width===320?568:900});
@@ -77,7 +143,50 @@ try {
     assert.equal(await page.evaluate(()=>document.activeElement.id), 'startWorkspaceInput');
     assert.equal(await value('startWorkspaceInput'), '/original');
     passed++;
+    // Expanded creation/model forms scroll in the body, not over Choose/Cancel.
+    await open();
+    assert.equal(await page.$eval('#pathPickerNewFolder', n=>n.open),false);
+    assert.equal(await page.$eval('.path-picker-ai', n=>n.open),false);
+    await page.$eval('#pathPickerNewFolder', n=>n.open=true);
+    await page.$eval('.path-picker-ai', n=>n.open=true);
+    await page.$eval('#pathPickerSelected', n=>n.textContent='/host/'+'long-folder/'.repeat(80));
+    const footer = await page.$eval('.path-picker-footer', n=>{
+      const r=n.getBoundingClientRect(), body=document.querySelector('.path-picker-body');
+      return {top:r.top,bottom:r.bottom,overflow:n.scrollWidth>n.clientWidth+1,
+        scroll:getComputedStyle(body).overflowY,content:body.scrollHeight,height:body.clientHeight};
+    });
+    assert(footer.top>=0 && footer.bottom<=layout.height+1 && !footer.overflow && footer.scroll==='auto' && footer.content>footer.height, JSON.stringify(footer));
+    await page.focus('#pathPickerApplyBtn');
+    const action = await page.$eval('#pathPickerApplyBtn', n=>{const r=n.getBoundingClientRect();return {top:r.top,bottom:r.bottom};});
+    assert(action.top>=0 && action.bottom<=layout.height+1,JSON.stringify(action));
+    await page.keyboard.press('Escape');
+    passed++;
   }
+  for (const [id,options,label,hint] of [
+    ['startWorkspaceInput',{workspace:true},'Choose folder',/shared workspace/],
+    ['mcpCommand',{kind:'file'},'Choose file',/draft/],
+    ['mcpArgs',{kind:'file',append:true},'Choose file',/quoted/],
+    ['mcpEnvJson',{env:true},'Choose folder',/named environment/],
+  ]) {
+    await open(id,options);
+    assert.equal(await page.$eval('#pathPickerApplyBtn',n=>n.textContent),label);
+    assert.match(await page.$eval('#pathPickerSelectionHint',n=>n.textContent),hint);
+    assert.equal(await page.$eval('.path-picker-ai',n=>n.open),false);
+    await close(); passed++;
+  }
+  await open();
+  await page.focus('#pathPickerLocation'); await page.keyboard.down('Control');
+  await page.keyboard.press('A'); await page.keyboard.up('Control');
+  await page.keyboard.type('/recent');
+  const beforeEnter = await page.evaluate(()=>calls.length);
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(()=>document.getElementById('pathPickerSelected').textContent==='/recent');
+  assert.equal(await page.evaluate(()=>calls.length),beforeEnter+1);
+  await page.type('#pathPickerSearch','project'); await page.keyboard.press('Enter');
+  await page.waitForFunction(()=>calls.at(-1).query==='project');
+  assert.equal(await page.evaluate(()=>calls.length),beforeEnter+2);
+  assert.equal(await value('startWorkspaceInput'),'/original');
+  await close(); passed++;
   assert.equal(await page.evaluate(()=>calls.filter(c=>c.method==='POST'||c.route.endsWith('/directory')).length),0);
   passed++;
   await open(); await page.evaluate(()=>picker.load('/bad'));

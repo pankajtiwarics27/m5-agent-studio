@@ -6,7 +6,7 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 re-derived from the markup on every run.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
-* Frontend digest: `0e483245c2f655e223b9c06f5c534b7dffd4d523b14c83a71f6cca8b3726a2e7`.
+* Frontend digest: `97815ea2e3d3cdc25479fa1e9420053a8682517baf2fd3c8c4c07e128b9a6f79`.
 * Panes: 6 · controls in panes: 110 · controls in the
   shared chrome: 162 · script-rendered: 72.
 
@@ -53,7 +53,7 @@ Section `pane-start`, 15 interactive elements.
 | 10 | button | — | button | Inspector | toggleMonitorRail() |
 | 11 | summary | — | — | Project workspace loading | — |
 | 12 | input | startWorkspaceInput | text | ~/Projects/my-app | — |
-| 13 | button | — | button | Browse host workspace folders | openPathPicker('startWorkspaceInput', {workspace:true}) |
+| 13 | button | — | button | Browse Studio host workspace folders | openPathPicker('startWorkspaceInput', {workspace:true}) |
 | 14 | select | startWorkspaceRecent | — | Recent project folders | if(this.value) pickStartWorkspace(this.value) |
 | 15 | button | startWorkspaceBtn | button | Set / Create | saveStartWorkspace() |
 
@@ -84,7 +84,7 @@ Section `pane-harness`, 35 interactive elements.
 | 19 | button | — | button | Close | document.getElementById('harnessTaskSettings').open = false |
 | 20 | button | — | button | Set / Create | saveWorkspaceDirectory() |
 | 21 | input | harnessWorkspaceInput | text | ~/Projects/my-app | syncProjectDirInputs(this.value) |
-| 22 | button | — | button | Browse host workspace folders | openPathPicker('harnessWorkspaceInput', {workspace:true}) |
+| 22 | button | — | button | Browse Studio host workspace folders | openPathPicker('harnessWorkspaceInput', {workspace:true}) |
 | 23 | select | harnessRecentDirsSelect | — | Recent project directories | if(this.value)saveWorkspaceDirectory(this.value) |
 | 24 | input | harnessUseWorktree | checkbox | — | — |
 | 25 | select | harnessCriticModel | — | — | handleModelSelectChange(this, patchActiveHarnessSettings) |
@@ -227,7 +227,7 @@ attributed to one.
 | 30 | button | — | — | Save to OpenContext | saveOpenContextDoc() |
 | 31 | button | — | — | Scan Workspace Graph | refreshCodeGraphOverview() |
 | 32 | input | cgWorkspaceInput | text | — | — |
-| 33 | button | — | button | Browse host workspace folders | openPathPicker('cgWorkspaceInput', {workspace:true}) |
+| 33 | button | — | button | Browse Studio host workspace folders | openPathPicker('cgWorkspaceInput', {workspace:true}) |
 | 34 | select | cgModeSelect | — | codegraph_architecture (Hubs & God Nodes) codegraph_path (Graphify Shortest Path A -> B) codegraph_impact (Caller Blast-Radius) codegraph_context (Symbol Search) codegraph_quality (Complexity Hotspots) ponytail-debt (Shortcut & Rationale Ledger) | — |
 | 35 | input | cgQueryInput | text | e.g. api_run_harness_turn -> stream_any_model | — |
 | 36 | button | — | — | Run Query | runCodeGraphPlayground() |
@@ -250,7 +250,7 @@ attributed to one.
 | 53 | select | mcpAuthHeader | — | Authorization: Bearer x-api-key None (Zero-Key) | mcpWizardRefresh() |
 | 54 | input | mcpToken | password | Optional for free servers | mcpWizardRefresh() |
 | 55 | input | mcpCommand | text | python3, uv, npx, uvx, docker | mcpWizardRefresh() |
-| 56 | button | — | button | Browse host executable files | openPathPicker('mcpCommand', {kind:'file'}) |
+| 56 | button | — | button | Browse Studio host executable files | openPathPicker('mcpCommand', {kind:'file'}) |
 | 57 | input | mcpArgs | text | -y @playwright/mcp@latest --headless | mcpWizardRefresh() |
 | 58 | button | — | button | Append file path… | openPathPicker('mcpArgs', {kind:'file',append:true}) |
 | 59 | button | — | button | Append folder path… | openPathPicker('mcpArgs', {append:true}) |
@@ -306,7 +306,7 @@ attributed to one.
 | 109 | button | — | — | Refresh | refreshSdlcBoard() |
 | 110 | button | — | — | Close | closeSdlcModal() |
 | 111 | input | sdlcWorkspaceInput | text | ~/Projects/my-new-app | syncProjectDirInputs(this.value) |
-| 112 | button | — | button | Browse host workspace folders | openPathPicker('sdlcWorkspaceInput', {workspace:true}) |
+| 112 | button | — | button | Browse Studio host workspace folders | openPathPicker('sdlcWorkspaceInput', {workspace:true}) |
 | 113 | button | — | button | Set Directory | saveWorkspaceDirectory(document.getElementById('sdlcWorkspaceInput').value) |
 | 114 | textarea | sdlcVisionInput | — | e.g. Build a modern full-stack E-Commerce storefront with live search, filterable catalog, slide-over cart drawer, promo codes, SQLite order persistence, and unit/E2E tests — OR an end-to-end HTML5 Canvas survival roguelike game with wave progression, upgrades, spatial audio, and 60fps loop. | — |
 | 115 | select | sdlcMaxStories | — | 3 stories 5 stories 8 stories | — |
@@ -346,7 +346,7 @@ attributed to one.
 | 149 | input | pathPickerSearch | search | — | — |
 | 150 | button | — | button | Filter | loadPathPicker(pathPickerState.path) |
 | 151 | input | pathPickerEnvKey | text | PROJECT_DIRECTORY | — |
-| 152 | summary | — | — | New folder | — |
+| 152 | summary | — | — | New folder… (optional) | — |
 | 153 | input | pathPickerNewName | text | — | pathPickerNameChanged() |
 | 154 | input | pathPickerCreateConfirm | checkbox | — | pathPickerCreateReady() |
 | 155 | button | pathPickerCreateBtn | button | Create folder | createPathPickerFolder() |
@@ -356,7 +356,7 @@ attributed to one.
 | 159 | button | pathPickerAskModel | button | Ask model for a name | askPathPickerModel() |
 | 160 | button | pathPickerUseSuggestion | button | Use suggested name | usePathPickerSuggestion() |
 | 161 | button | — | button | Cancel | closePathPicker() |
-| 162 | button | pathPickerApplyBtn | button | Use this folder | applyPathPicker() |
+| 162 | button | pathPickerApplyBtn | button | Choose folder | applyPathPicker() |
 
 ## Controls built by script
 

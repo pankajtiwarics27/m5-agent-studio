@@ -1,14 +1,14 @@
 {
   "story": "UIV2-28",
   "git": {
-    "head": "adbce75385e5e5ce359aaace65501ed6b27fa0ef",
+    "head": "f6d7b7a9c37db14137e82bdc9e533c6ffdc5281e",
     "dirty": true
   },
   "source_sha256": {
-    "static/index.html": "0e483245c2f655e223b9c06f5c534b7dffd4d523b14c83a71f6cca8b3726a2e7",
+    "static/index.html": "97815ea2e3d3cdc25479fa1e9420053a8682517baf2fd3c8c4c07e128b9a6f79",
     "scripts/uiv2_accessibility_adversarial_walk.mjs": "831d65473af6d28d3e77294420fa49130addb5c02d132b433d0141ded525e0c7"
   },
-  "generated_at": "2026-11-07T20:13:57.511Z",
+  "generated_at": "2026-11-07T21:10:14.474Z",
   "method": {
     "contrast": "WCAG 2 relative luminance on computed solid backgrounds",
     "zoom": "half CSS viewport with deviceScaleFactor=2",
@@ -1084,23 +1084,23 @@
       "viewport": "1440x900",
       "theme": "light",
       "pane": "start",
-      "path": "/tmp/uiv2-28-adversarial-after/rendered-1440x900-light-start.png",
-      "sha256": "2b2de1c093d493e3542ec32e80156171d62ca67856175153379f5d94533ebf72"
+      "path": "/tmp/uiv2-28-merged-adversarial/rendered-1440x900-light-start.png",
+      "sha256": "8cd6d46f7cbc1e89fc7dcf2c6b2f79bfe35460125942f99ea838c6519dc2dbfa"
     },
     {
       "group": "rendered",
       "viewport": "1440x900",
       "theme": "light",
       "pane": "harness",
-      "path": "/tmp/uiv2-28-adversarial-after/rendered-1440x900-light-harness.png",
-      "sha256": "7aef48310542d524b58b9fc282a6d1b0922c9a80b697df5e6c5f029363939895"
+      "path": "/tmp/uiv2-28-merged-adversarial/rendered-1440x900-light-harness.png",
+      "sha256": "2ce26f8af6636655905f26ee4379fdcf66c9f6439d3f2f0a7564861c5edf1adb"
     },
     {
       "group": "rendered",
       "viewport": "1440x900",
       "theme": "light",
       "pane": "hall",
-      "path": "/tmp/uiv2-28-adversarial-after/rendered-1440x900-light-hall.png",
+      "path": "/tmp/uiv2-28-merged-adversarial/rendered-1440x900-light-hall.png",
       "sha256": "614c2c9e871ae58651a863073f44a410a353b7837f6ebd001282c745b2a5a928"
     },
     {
@@ -1108,47 +1108,47 @@
       "viewport": "1440x900",
       "theme": "light",
       "pane": "council",
-      "path": "/tmp/uiv2-28-adversarial-after/rendered-1440x900-light-council.png",
-      "sha256": "9390d90d40151778e370d0a8e810dced566499174e6897e4ada9b6ba9d0042e1"
+      "path": "/tmp/uiv2-28-merged-adversarial/rendered-1440x900-light-council.png",
+      "sha256": "b1a7688f15fea4d1e37d43c86a673ac3997df909e12ad5530e5ba22265cb0c3e"
     },
     {
       "group": "rendered",
       "viewport": "1440x900",
       "theme": "light",
       "pane": "debate",
-      "path": "/tmp/uiv2-28-adversarial-after/rendered-1440x900-light-debate.png",
-      "sha256": "f1154e615d7fa58f00cf15a732d050daba32fe1f545d77db559846948ec6e054"
+      "path": "/tmp/uiv2-28-merged-adversarial/rendered-1440x900-light-debate.png",
+      "sha256": "74b9997db943f4455fff6fe0f02fbd4631dfe28a460a8fe3c468174e4b7de844"
     },
     {
       "group": "rendered",
       "viewport": "1440x900",
       "theme": "light",
       "pane": "chat",
-      "path": "/tmp/uiv2-28-adversarial-after/rendered-1440x900-light-chat.png",
-      "sha256": "67dece172859e319747f341248982aae10f70d2395a4566e4660425826045bbe"
+      "path": "/tmp/uiv2-28-merged-adversarial/rendered-1440x900-light-chat.png",
+      "sha256": "5d43a43f8746b2d069ceb5748fe33ff8ecc6ec421bbfaf3f3e6a220f28512c41"
     },
     {
       "group": "rendered",
       "viewport": "1440x900",
       "theme": "dark",
       "pane": "start",
-      "path": "/tmp/uiv2-28-adversarial-after/rendered-1440x900-dark-start.png",
-      "sha256": "6132f48896102092c829b43e2bb49bdc456ee8b29102fb288d3ded45790b2a57"
+      "path": "/tmp/uiv2-28-merged-adversarial/rendered-1440x900-dark-start.png",
+      "sha256": "92932f4058d5a6130e4ab1fa36b04676365ef36f735c913ef5b59e13ec8164de"
     },
     {
       "group": "rendered",
       "viewport": "1440x900",
       "theme": "dark",
       "pane": "harness",
-      "path": "/tmp/uiv2-28-adversarial-after/rendered-1440x900-dark-harness.png",
-      "sha256": "1ec8afe35d603a233fa3223cab8ed7fcce782bd354f4ca2aafd558052adb90d7"
+      "path": "/tmp/uiv2-28-merged-adversarial/rendered-1440x900-dark-harness.png",
+      "sha256": "3ac3ce45e046fc69c88e9dcbe70ddb5ba83773ea2aeffc891684e34a442f56ce"
     },
     {
       "group": "rendered",
       "viewport": "1440x900",
       "theme": "dark",
       "pane": "hall",
-      "path": "/tmp/uiv2-28-adversarial-after/rendered-1440x900-dark-hall.png",
+      "path": "/tmp/uiv2-28-merged-adversarial/rendered-1440x900-dark-hall.png",
       "sha256": "157593465f0ab3c0136357eba00d576a6a33923777f66d8d4f38470cda247ea4"
     },
     {
@@ -1156,39 +1156,39 @@
       "viewport": "1440x900",
       "theme": "dark",
       "pane": "council",
-      "path": "/tmp/uiv2-28-adversarial-after/rendered-1440x900-dark-council.png",
-      "sha256": "1830cc5042eb1ae4414271e49e8201e556d4ff1f3789fa4c39b20d0eef849bc6"
+      "path": "/tmp/uiv2-28-merged-adversarial/rendered-1440x900-dark-council.png",
+      "sha256": "f09d810b4a9bd5537256fc672fe71b97af7b5ad4c0645d68f0f490360f6c1a2b"
     },
     {
       "group": "rendered",
       "viewport": "1440x900",
       "theme": "dark",
       "pane": "debate",
-      "path": "/tmp/uiv2-28-adversarial-after/rendered-1440x900-dark-debate.png",
-      "sha256": "b9edad484984baa83fc3bc0472371ae98df0aa614a76c1ee255d05d8ef1e3564"
+      "path": "/tmp/uiv2-28-merged-adversarial/rendered-1440x900-dark-debate.png",
+      "sha256": "55a4f389938580696546a7df88e57082010eb8a852f0c42d5d8aa20cf512ee72"
     },
     {
       "group": "rendered",
       "viewport": "1440x900",
       "theme": "dark",
       "pane": "chat",
-      "path": "/tmp/uiv2-28-adversarial-after/rendered-1440x900-dark-chat.png",
-      "sha256": "0bcbacc1a22e2dc31a2dfcd2b7deb7370de84f536f07495c7cc12c133fd7d96d"
+      "path": "/tmp/uiv2-28-merged-adversarial/rendered-1440x900-dark-chat.png",
+      "sha256": "db7e0e6b0d216c492e2c732a03cdac505bfb4440637e6830e0bb141c3dc97e00"
     },
     {
       "group": "zoom-200",
       "viewport": "1640x900",
       "theme": "light",
       "pane": "start",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-1640x900-light-start.png",
-      "sha256": "0c2c30ef9dd55ffbc129f6e478f78fe87644f5735d2bfec55965cd46735a3187"
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-1640x900-light-start.png",
+      "sha256": "8ad592ce71a824a35405406cc8493f2ad524efdccad40ab36638c9404b59ff78"
     },
     {
       "group": "zoom-200",
       "viewport": "1640x900",
       "theme": "light",
       "pane": "harness",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-1640x900-light-harness.png",
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-1640x900-light-harness.png",
       "sha256": "6c6562a08555e38b6cd6547c463cd359bd55974919ee9dc2fbffe8e0a70e274d"
     },
     {
@@ -1196,7 +1196,7 @@
       "viewport": "1640x900",
       "theme": "light",
       "pane": "hall",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-1640x900-light-hall.png",
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-1640x900-light-hall.png",
       "sha256": "6b4e9765793904d5a9c6b82d331a6eee1026831228e5197e8c4911a53aad551c"
     },
     {
@@ -1204,7 +1204,7 @@
       "viewport": "1640x900",
       "theme": "light",
       "pane": "council",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-1640x900-light-council.png",
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-1640x900-light-council.png",
       "sha256": "428bb487067f26936ab35fa5725204b10920292c5b48da12afcd73ff15eb42c8"
     },
     {
@@ -1212,7 +1212,7 @@
       "viewport": "1640x900",
       "theme": "light",
       "pane": "debate",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-1640x900-light-debate.png",
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-1640x900-light-debate.png",
       "sha256": "37bd1b797d520f9058129950f7a3733ec7190bd9431cfc3c6968d0014b2c9efe"
     },
     {
@@ -1220,23 +1220,23 @@
       "viewport": "1640x900",
       "theme": "light",
       "pane": "chat",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-1640x900-light-chat.png",
-      "sha256": "174ea78356a7ba61fba088feaf062232da98c82ae1b87036113bcd1c986c7528"
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-1640x900-light-chat.png",
+      "sha256": "5bb8687652c5e482a35a3312218e768ca92b62e05aac968611e7a1c5d29a639e"
     },
     {
       "group": "zoom-200",
       "viewport": "1640x900",
       "theme": "dark",
       "pane": "start",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-1640x900-dark-start.png",
-      "sha256": "27427de16c3793a5b92502eb6fe05c356d6352ee4d7c190cb30f10737a3001c8"
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-1640x900-dark-start.png",
+      "sha256": "bd1b1b7b60e0417eafcb280ee4c8c1d72e6634ad49a8b05a52150ee82ca5a49a"
     },
     {
       "group": "zoom-200",
       "viewport": "1640x900",
       "theme": "dark",
       "pane": "harness",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-1640x900-dark-harness.png",
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-1640x900-dark-harness.png",
       "sha256": "da5208168788e37f5742924d8f9a8193280dc48f8ba6736afa3748ea8cde3cef"
     },
     {
@@ -1244,7 +1244,7 @@
       "viewport": "1640x900",
       "theme": "dark",
       "pane": "hall",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-1640x900-dark-hall.png",
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-1640x900-dark-hall.png",
       "sha256": "61e39d1e398d8ab1fe1555240d0aceff7bc403c0001fbcdb0f9cb2a47f52bb37"
     },
     {
@@ -1252,7 +1252,7 @@
       "viewport": "1640x900",
       "theme": "dark",
       "pane": "council",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-1640x900-dark-council.png",
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-1640x900-dark-council.png",
       "sha256": "33c960b2ddb49eed10147ff4bb5d62ab5528294a8cf4f5d0f20708c57e15ae64"
     },
     {
@@ -1260,7 +1260,7 @@
       "viewport": "1640x900",
       "theme": "dark",
       "pane": "debate",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-1640x900-dark-debate.png",
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-1640x900-dark-debate.png",
       "sha256": "d6993a34085ca7b260b97093e1136fa33c46f38e83fc8d88da284e5e4bd62d0c"
     },
     {
@@ -1268,23 +1268,23 @@
       "viewport": "1640x900",
       "theme": "dark",
       "pane": "chat",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-1640x900-dark-chat.png",
-      "sha256": "723ecaf875ca60b387359b060e2b7e6f86757b65294e09a1a865a0c705f8b8ca"
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-1640x900-dark-chat.png",
+      "sha256": "231e55f18edf80af8959bb5b9a9692e3c3f7ed18f1e6df35ae9020e4aa0aa771"
     },
     {
       "group": "zoom-200",
       "viewport": "1440x900",
       "theme": "light",
       "pane": "start",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-1440x900-light-start.png",
-      "sha256": "cfbc8d1f36b95f0dc2fc52a7456f42b16c9b85c2cb680b7898de322a957494fd"
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-1440x900-light-start.png",
+      "sha256": "220ce984ff2a46a4bac95183c0fdb6df94f054c57ec82a80a6d54a9fa4b0e1bb"
     },
     {
       "group": "zoom-200",
       "viewport": "1440x900",
       "theme": "light",
       "pane": "harness",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-1440x900-light-harness.png",
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-1440x900-light-harness.png",
       "sha256": "36f7f91e177dfee1323d317b0063250d810c26966a2284cc1dc18c2f3f694117"
     },
     {
@@ -1292,7 +1292,7 @@
       "viewport": "1440x900",
       "theme": "light",
       "pane": "hall",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-1440x900-light-hall.png",
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-1440x900-light-hall.png",
       "sha256": "261f088c901b97024d919268628c810e150a517997bba382f6f60d3df7916b9c"
     },
     {
@@ -1300,7 +1300,7 @@
       "viewport": "1440x900",
       "theme": "light",
       "pane": "council",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-1440x900-light-council.png",
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-1440x900-light-council.png",
       "sha256": "7c33c4ff4df0bb70990a2b799b456ed6ee9b2a7cb8a63f6139d893caf2c0bf58"
     },
     {
@@ -1308,7 +1308,7 @@
       "viewport": "1440x900",
       "theme": "light",
       "pane": "debate",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-1440x900-light-debate.png",
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-1440x900-light-debate.png",
       "sha256": "41dfd947dbb5936195e2d810899e950e0f38aed1deb4e2a321ccf5cd6657b286"
     },
     {
@@ -1316,23 +1316,23 @@
       "viewport": "1440x900",
       "theme": "light",
       "pane": "chat",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-1440x900-light-chat.png",
-      "sha256": "fe033fef9023dcc6d510b0b7ed61413f554f471ef131c28645105b83fc1982fa"
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-1440x900-light-chat.png",
+      "sha256": "6888f5ba86496d8df79f7af54e0fc936a6429f5cc3c64979234867f273cf1fa0"
     },
     {
       "group": "zoom-200",
       "viewport": "1440x900",
       "theme": "dark",
       "pane": "start",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-1440x900-dark-start.png",
-      "sha256": "10c5f4814d443ae45899a16fb037b139b8e295d96ddb6da48eac143c794df486"
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-1440x900-dark-start.png",
+      "sha256": "6d4eb86ed7992c8a3726b9036d7c0773338a32080c09e38e7d8088bec80c24a8"
     },
     {
       "group": "zoom-200",
       "viewport": "1440x900",
       "theme": "dark",
       "pane": "harness",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-1440x900-dark-harness.png",
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-1440x900-dark-harness.png",
       "sha256": "56fec8966cfb08da3218f39dda8fb96c8b1805440e32f24a74607f7a24073ce4"
     },
     {
@@ -1340,7 +1340,7 @@
       "viewport": "1440x900",
       "theme": "dark",
       "pane": "hall",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-1440x900-dark-hall.png",
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-1440x900-dark-hall.png",
       "sha256": "4ee5d99bf0e2e9e0847b17517d25e22eb7cbfdbc09b6fabb57a16e3ab5aa33e9"
     },
     {
@@ -1348,7 +1348,7 @@
       "viewport": "1440x900",
       "theme": "dark",
       "pane": "council",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-1440x900-dark-council.png",
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-1440x900-dark-council.png",
       "sha256": "6dcf6db9355c2acd02cc1328e47e4b63da379f8e7ce5e33ab3257ef1106f1a4e"
     },
     {
@@ -1356,7 +1356,7 @@
       "viewport": "1440x900",
       "theme": "dark",
       "pane": "debate",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-1440x900-dark-debate.png",
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-1440x900-dark-debate.png",
       "sha256": "64a49f9e75d0ec05ec9ee4734221c15d62e13b55cfd14111babe9146748d043a"
     },
     {
@@ -1364,23 +1364,23 @@
       "viewport": "1440x900",
       "theme": "dark",
       "pane": "chat",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-1440x900-dark-chat.png",
-      "sha256": "ff2d830a48d006b3913b6866cf14cfc4b6a1b0bc19903534de306185b47bfbc8"
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-1440x900-dark-chat.png",
+      "sha256": "4e281aa586702b0b44a1f50edcbbed023998589bbd429fbb06e00c7e8e8f5ece"
     },
     {
       "group": "zoom-200",
       "viewport": "1280x800",
       "theme": "light",
       "pane": "start",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-1280x800-light-start.png",
-      "sha256": "5793ffef208d89d878418ba932266da54309bb6d709dc041e26089c78ccce555"
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-1280x800-light-start.png",
+      "sha256": "6e5893f652665add2cfacfe39bbf784fc6f6de85dcfcd7a6a651bc44e48c17af"
     },
     {
       "group": "zoom-200",
       "viewport": "1280x800",
       "theme": "light",
       "pane": "harness",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-1280x800-light-harness.png",
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-1280x800-light-harness.png",
       "sha256": "e2fb1578048834449f2b83bc956c5d4e9b4c6a83cd7db59014d8b1c643f319fd"
     },
     {
@@ -1388,7 +1388,7 @@
       "viewport": "1280x800",
       "theme": "light",
       "pane": "hall",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-1280x800-light-hall.png",
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-1280x800-light-hall.png",
       "sha256": "f4c280c0d80ee849dd5084143eaa1d1d59cd909e42c2a68a36b100ae06f51355"
     },
     {
@@ -1396,7 +1396,7 @@
       "viewport": "1280x800",
       "theme": "light",
       "pane": "council",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-1280x800-light-council.png",
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-1280x800-light-council.png",
       "sha256": "9f96608678d274f4d6897ec9b5404c89a10aa37c137de47c3665242c0d12dcbe"
     },
     {
@@ -1404,7 +1404,7 @@
       "viewport": "1280x800",
       "theme": "light",
       "pane": "debate",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-1280x800-light-debate.png",
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-1280x800-light-debate.png",
       "sha256": "e2b59299b66defda7bef572d79aed708fc355e9103b1c68e881ca97469cab3ce"
     },
     {
@@ -1412,23 +1412,23 @@
       "viewport": "1280x800",
       "theme": "light",
       "pane": "chat",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-1280x800-light-chat.png",
-      "sha256": "6a803e84332fd28ef65a0f086954ab7e247f2fd00a58034547b6edc026542238"
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-1280x800-light-chat.png",
+      "sha256": "89c4ad44e7ab06a3ec418f6e8a1b974ba05b7ccdfa6f8d912287e082136b8578"
     },
     {
       "group": "zoom-200",
       "viewport": "1280x800",
       "theme": "dark",
       "pane": "start",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-1280x800-dark-start.png",
-      "sha256": "dd3fb8c833d64ae8709a9ec670feee4976cd4dafc3cc9a9d9361b7ad8fd00ce4"
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-1280x800-dark-start.png",
+      "sha256": "f38d0b9c1bbd117908d37c867e057a864ed9087ba4992c6fe23558bc2f16b734"
     },
     {
       "group": "zoom-200",
       "viewport": "1280x800",
       "theme": "dark",
       "pane": "harness",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-1280x800-dark-harness.png",
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-1280x800-dark-harness.png",
       "sha256": "964e563dca71673d11fa5b2faa14861f90e1a498d664c045eb28f5f52d8273a6"
     },
     {
@@ -1436,7 +1436,7 @@
       "viewport": "1280x800",
       "theme": "dark",
       "pane": "hall",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-1280x800-dark-hall.png",
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-1280x800-dark-hall.png",
       "sha256": "36a01de35ea27777e99a4684116ab9fe9a92dfdca2bec4bebd7db2380bf16910"
     },
     {
@@ -1444,7 +1444,7 @@
       "viewport": "1280x800",
       "theme": "dark",
       "pane": "council",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-1280x800-dark-council.png",
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-1280x800-dark-council.png",
       "sha256": "5e613413316e6cd57596ca5437ae18aac535558093744ccdf50f90aae24050d0"
     },
     {
@@ -1452,7 +1452,7 @@
       "viewport": "1280x800",
       "theme": "dark",
       "pane": "debate",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-1280x800-dark-debate.png",
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-1280x800-dark-debate.png",
       "sha256": "cbcb9e74952bd1e4f2ce176024b47b7bcbe9405ca3a69903b322491aac76ed40"
     },
     {
@@ -1460,23 +1460,23 @@
       "viewport": "1280x800",
       "theme": "dark",
       "pane": "chat",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-1280x800-dark-chat.png",
-      "sha256": "622a3ba0cf12553911cd7fdcfe81b21b9c0417eedc53c5ecb92d206d52e38bdf"
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-1280x800-dark-chat.png",
+      "sha256": "606d48f26cc533abb8e75beb36a23d07bf4d4a2d70386a25b889ab57baab3a9a"
     },
     {
       "group": "zoom-200",
       "viewport": "390x844",
       "theme": "light",
       "pane": "start",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-390x844-light-start.png",
-      "sha256": "7081c47cfdceac47f1793db4089925db5f80047cdd062e894ebf56dad631989f"
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-390x844-light-start.png",
+      "sha256": "305999f4e8f25951a8f776b40a1676652eb68eefe3cbf10b495543019b97abf2"
     },
     {
       "group": "zoom-200",
       "viewport": "390x844",
       "theme": "light",
       "pane": "harness",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-390x844-light-harness.png",
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-390x844-light-harness.png",
       "sha256": "84771fe62b58f2bb58ad91aff5a54949b9254910a802a6538580a4ada8bba406"
     },
     {
@@ -1484,7 +1484,7 @@
       "viewport": "390x844",
       "theme": "light",
       "pane": "hall",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-390x844-light-hall.png",
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-390x844-light-hall.png",
       "sha256": "efa3c114591554e4a16f0f156a5cf413404ac1f48a9419943b00eedc85ee1961"
     },
     {
@@ -1492,7 +1492,7 @@
       "viewport": "390x844",
       "theme": "light",
       "pane": "council",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-390x844-light-council.png",
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-390x844-light-council.png",
       "sha256": "3104e1a210202cbfa454d41aba24b7e4093290cb51495e9bf7e98eedf35fc180"
     },
     {
@@ -1500,7 +1500,7 @@
       "viewport": "390x844",
       "theme": "light",
       "pane": "debate",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-390x844-light-debate.png",
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-390x844-light-debate.png",
       "sha256": "1eb8fc1a111d3df0874e250de33c1d8fe5a30201efca63138f2d87b5c4256a58"
     },
     {
@@ -1508,7 +1508,7 @@
       "viewport": "390x844",
       "theme": "light",
       "pane": "chat",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-390x844-light-chat.png",
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-390x844-light-chat.png",
       "sha256": "6516829e69d857a640b8820012eafc4344cca408183c5015bd43429557867811"
     },
     {
@@ -1516,15 +1516,15 @@
       "viewport": "390x844",
       "theme": "dark",
       "pane": "start",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-390x844-dark-start.png",
-      "sha256": "8da8f79f36a762c411982268492c89ab2020147f285f054af518a022cbef19e3"
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-390x844-dark-start.png",
+      "sha256": "40267c149b8d16a66615726c4bf142e53753307cc69beb8179cb76faca67df5f"
     },
     {
       "group": "zoom-200",
       "viewport": "390x844",
       "theme": "dark",
       "pane": "harness",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-390x844-dark-harness.png",
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-390x844-dark-harness.png",
       "sha256": "d47161de27c3b2f303d03be310e1876185f22ea0b17a1f61a3298a06dd1ec8dd"
     },
     {
@@ -1532,7 +1532,7 @@
       "viewport": "390x844",
       "theme": "dark",
       "pane": "hall",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-390x844-dark-hall.png",
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-390x844-dark-hall.png",
       "sha256": "f8d9d8c224f9729b1d2f7f183338fc2e5fce450f68da591a7a2ea6c02e092fbf"
     },
     {
@@ -1540,7 +1540,7 @@
       "viewport": "390x844",
       "theme": "dark",
       "pane": "council",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-390x844-dark-council.png",
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-390x844-dark-council.png",
       "sha256": "40764bc5b7f4c757096ce671406e22195e243a435fab67950ee3b8ba86bcfa87"
     },
     {
@@ -1548,7 +1548,7 @@
       "viewport": "390x844",
       "theme": "dark",
       "pane": "debate",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-390x844-dark-debate.png",
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-390x844-dark-debate.png",
       "sha256": "23994d35c041630b3ebb57a25d8f8e5a591e0e9db572cf1549a1e3e470ff6fc7"
     },
     {
@@ -1556,7 +1556,7 @@
       "viewport": "390x844",
       "theme": "dark",
       "pane": "chat",
-      "path": "/tmp/uiv2-28-adversarial-after/zoom-200-390x844-dark-chat.png",
+      "path": "/tmp/uiv2-28-merged-adversarial/zoom-200-390x844-dark-chat.png",
       "sha256": "855927d7fdb1415657a0e03222c884e045fd11d1f7494ac6aac7e860b69ee466"
     },
     {
@@ -1564,7 +1564,7 @@
       "viewport": "1280x800",
       "theme": "dark",
       "pane": "conclusion-modal",
-      "path": "/tmp/uiv2-28-adversarial-after/long-recovery-1280x800-dark-conclusion-modal.png",
+      "path": "/tmp/uiv2-28-merged-adversarial/long-recovery-1280x800-dark-conclusion-modal.png",
       "sha256": "f4c210a3db8b800b5000431e07d64df40b951fdd3406a12ec8cbd7461c64405a"
     },
     {
@@ -1572,7 +1572,7 @@
       "viewport": "390x844",
       "theme": "light",
       "pane": "conclusion-modal",
-      "path": "/tmp/uiv2-28-adversarial-after/long-recovery-390x844-light-conclusion-modal.png",
+      "path": "/tmp/uiv2-28-merged-adversarial/long-recovery-390x844-light-conclusion-modal.png",
       "sha256": "4525380239def17590a45346539dc4595a8f3e456faeea7b29171768c7cbf6f7"
     }
   ]

@@ -47,7 +47,7 @@ IMPACTED_CONTROLS = (
 
 REQUIRED_FRONTEND = {
     "brand-contrast": ".brand-chip { width: 28px; height: 28px; border-radius: var(--radius-sm); background: var(--accent); color: var(--primary-text);",
-    "start-recovery-scroll": "#pane-start { overflow-y: auto; overscroll-behavior: contain; }",
+    "start-recovery-scroll": ".onboarding-shell { flex: 1; min-height: 0; overflow-y: auto; width: 100%; max-width: 860px;",
     "start-input-shrink": ".start-launch input { flex: 1 1 320px; min-width: 0; }",
     "summary-target": "font-size: 12px; min-width: 0; min-height: var(--target-min);",
     "hall-action-scroll": ".hall-header > div:last-child { width: 100%; overflow-x: auto; overscroll-behavior-x: contain; }",
@@ -98,7 +98,7 @@ MEASURED_REPAIRS = (
     ("#chatPersona", "20×44 CSS px at 200% phone zoom", "140px group minimum wraps only when two columns cannot fit"),
     ("#monitorToggleBtn", "clipped at a 195px effective viewport", "wrapping workspace toolbar; reachable at 200%"),
     ("#startTaskInput", "220px fixed minimum caused horizontal overflow", "zero flex minimum with the desktop basis retained"),
-    ("Start / Council / Chat recovery", "short-height content had no reachable scroll path", "pane/main overflow recovery with overscroll containment"),
+    ("Start / Council / Chat recovery", "short-height content had no reachable scroll path", "native Start-shell and Council/Chat main overflow recovery"),
 )
 
 

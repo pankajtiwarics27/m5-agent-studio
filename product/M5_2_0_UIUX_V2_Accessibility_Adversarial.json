@@ -17,7 +17,7 @@
     "zoom_factor": 2
   },
   "source_sha256": {
-    "static/index.html": "0e483245c2f655e223b9c06f5c534b7dffd4d523b14c83a71f6cca8b3726a2e7",
+    "static/index.html": "97815ea2e3d3cdc25479fa1e9420053a8682517baf2fd3c8c4c07e128b9a6f79",
     "scripts/uiv2_accessibility_adversarial_walk.mjs": "831d65473af6d28d3e77294420fa49130addb5c02d132b433d0141ded525e0c7",
     "scripts/a11y_walk.mjs": "191400491161725465f2f87acd78456e75be08938e29cfcef99d733ea9037c7d",
     "scripts/responsive_walk.mjs": "f39b774a33f1122458c5435d8e566c57e30cba64834239091a26034b1cd40cbd",
@@ -525,7 +525,7 @@
     {
       "control": "Start / Council / Chat recovery",
       "before": "short-height content had no reachable scroll path",
-      "after_contract": "pane/main overflow recovery with overscroll containment"
+      "after_contract": "native Start-shell and Council/Chat main overflow recovery"
     }
   ],
   "state_coverage": {
@@ -616,7 +616,7 @@
       "captures": 62
     },
     "git": {
-      "head": "adbce75385e5e5ce359aaace65501ed6b27fa0ef",
+      "head": "f6d7b7a9c37db14137e82bdc9e533c6ffdc5281e",
       "dirty": true
     },
     "validation_errors": []

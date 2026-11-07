@@ -60,13 +60,13 @@ when they are not rendered or tabbable.
 - Original responsive baseline: `before-responsive/` and `before-responsive.log`; final:
   `after-responsive/` and `after-responsive.log`.
 - Original computed contrast readings: `contrast-before.json`.
-- Final adversarial manifest: `after/capture-manifest.json` — 120/120, 62 captures, SHA-256
-  `ea0169fc323f20eb0994bbd4ec03b91b31ee1c875f8e278bdf2efb1afe494a4d` at the time copied.
+- Final integrated adversarial manifest: `after/capture-manifest.json` — 120/120, 62 captures,
+  SHA-256 `741ad39309073084b082876cf6d012d04da124f268ba9f8b1aeb1f24fa305d94` at the time copied.
 - Full actual/reference/annotated candidate: `cross-tab-candidate/` — 48 of each image kind;
   clean-HEAD `candidate-manifest.json` passed candidate validation with 2104/2104 checks and has
   SHA-256 `a1dd3b8767b8903a907561a07f6844c5523f1dd1bcbae3fee13f25906bd790d3`.
-- Final approved check: `approved-check/check-manifest.json` — 2200/2200 checks, SHA-256
-  `5182b4a85a241465b87e0d7f7cdad1a5557d03216ea2980d08d2a1bd86ff2212`.
+- Final integrated approved check: `approved-check/check-manifest.json` — 2200/2200 checks,
+  SHA-256 `c1e276e6f54e7af998c05bb452f1b8cd96ebd4c2635588fc291ed2ed18ee3d8a`.
 - Loading/error/recovery states: `council-state/` and `council-state/matrix.log` — 184/184.
 - Long content and nested scrolling: `council-long/capture-manifest.json` — 72/72.
 - Complete preservation output: `preservation.log` and the committed
@@ -80,6 +80,12 @@ geometry. The previous approval was not silently reused: the user explicitly app
 structure and then approved the exact clean-HEAD manifest through `ask_user`
 (`uiv2-28-visual-approval` and `uiv2-28-clean-head-approval`, 2026-11-08). The binding and complete
 approval record are in `product/M5_2_0_UIUX_V2_Cross_Tab_Approval.json`.
+
+`origin/main` through `684c384` is integrated. Its native `.onboarding-shell` scrolling supersedes
+this branch's initial outer-pane Start scroller, and its Studio-host path-picker behavior is retained
+unchanged. The merged source repeats 120/120 adversarial, 15/15 keyboard, 27/27 responsive and
+2200/2200 approved visual checks. The first PR run's Start and Pipeline inventory failures were
+regenerated through their owning scripts; their three pytest modules then passed 87/87.
 
 ## Preservation and regeneration
 

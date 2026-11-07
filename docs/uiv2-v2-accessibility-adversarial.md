@@ -15,7 +15,7 @@ Measured runtime accessibility and recovery evidence, not a screen-reader certif
 
 **120/120 checks passed; 62 captures; 0 failures.**
 
-Run Git head: `adbce75385e5e5ce359aaace65501ed6b27fa0ef`; dirty worktree during evidence capture: `true`.
+Run Git head: `f6d7b7a9c37db14137e82bdc9e533c6ffdc5281e`; dirty worktree during evidence capture: `true`.
 
 Local after evidence: `/tmp/uiv2-28-adversarial-after/capture-manifest.json` and its 62 PNGs. Original baselines are `/tmp/uiv2-28-before-a11y.log`, `/tmp/uiv2-28-before-responsive.log`, and `/tmp/uiv2-28-contrast-before.json`; these `/tmp` paths are review evidence, not release inputs.
 
@@ -31,7 +31,7 @@ The final long-recovery pass added four checks beyond the initial 116-check matr
 | `#chatPersona` | 20×44 CSS px at 200% phone zoom | 140px group minimum wraps only when two columns cannot fit |
 | `#monitorToggleBtn` | clipped at a 195px effective viewport | wrapping workspace toolbar; reachable at 200% |
 | `#startTaskInput` | 220px fixed minimum caused horizontal overflow | zero flex minimum with the desktop basis retained |
-| `Start / Council / Chat recovery` | short-height content had no reachable scroll path | pane/main overflow recovery with overscroll containment |
+| `Start / Council / Chat recovery` | short-height content had no reachable scroll path | native Start-shell and Council/Chat main overflow recovery |
 
 ## Matrix accounting
 

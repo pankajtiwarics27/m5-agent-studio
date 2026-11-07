@@ -708,4 +708,4 @@ def test_host_path_picker_consent_focus_and_draft_edits(browser_env: dict[str, s
     )
     assert result.returncode == 0, f"{result.stdout}\n{result.stderr}"
     report = json.loads(result.stdout)
-    assert report["passed"] == 25 and report["network"] == 0 and report["errors"] == []
+    assert report["passed"] == 63 and report["network"] == 0 and report["errors"] == []
