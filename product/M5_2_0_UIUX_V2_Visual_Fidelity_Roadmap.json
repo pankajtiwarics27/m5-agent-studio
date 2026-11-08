@@ -3050,7 +3050,7 @@
         "progress_percent": 100,
         "attempt_count": 1,
         "started_at": "2026-11-07T12:50:00+05:30",
-        "commit_sha": "289a4fb",
+        "commit_sha": "289a4fbc7348fd7410ee823b1dbd8322745d9d74",
         "changed_files": [
           "scripts/uiux_v2_cross_tab_reference_walk.mjs (new: authenticated isolated demo, keyboard tab activation, settled Council readiness, task-first closed Tools/Inspector, unified Harness/shared-session and explicit Chat protocol/read-only-tool checks, 48 live + 48 same-variant approved-wireframe captures + 48 annotated comparisons, informational pixel metrics, independent DOM/layout checks, exact approved structural-signature drift checks, process-group cleanup)",
           "scripts/uiux_v2_cross_tab_reference.py (new: deterministic semantic contract/reference inventory, candidate and 144-image digest validation, explicit human-only approval binding, fail-closed --check; approval status is excluded from the stable semantic fingerprint)",
@@ -3101,8 +3101,8 @@
         "known_regressions": [
           {
             "regression": "Intermittent trusted-transformation HTTP A/B false in CI runs 42371227262, 42373748540 and 42381504752.",
-            "status": "mitigated_in_uiv2_26_pending_final_ci",
-            "resolution": "The HTTP parity check now uses three paired trials like the direct measured-benefit test, preventing one scheduler/cold-I/O outlier from being averaged into a two-run median. The overhead ceiling/ratio and all authorization assertions are unchanged; failures now print overall and per-scenario measurements."
+            "status": "closed_in_merged_ci_42454692827",
+            "resolution": "The HTTP parity check now uses three paired trials like the direct measured-benefit test, preventing one scheduler/cold-I/O outlier from being averaged into a two-run median. The overhead ceiling/ratio and all authorization assertions are unchanged; failures now print overall and per-scenario measurements. Final merged UIV2-29 run 42454692827 at 703945e passed test (3.11), test (3.12), test (3.13) and Browser safety regressions; UIV2-30 verified the run record."
           }
         ],
         "blockers": [],
@@ -3593,7 +3593,7 @@
           "Integrated release gate -> 37/37 artifact checks, 7/7 phase gates, 0 findings; Ruff, mypy, frontend syntax, docs, scope map and diff checks clean.",
           "Integrated origin/main through 67e9430 (PR #244 shared navigation and its explicit owner-approved sidebar baseline) at clean merge HEAD a133647; regenerated all affected owning inventories. Merged-source inventory/layout suite -> 282 passed.",
           "Final dedicated Chromium walk -> 21/21 checks, 11 captures, dirty=false, manifest sha256 bb7b12aa0f5feb094dc1dbdb6774a90f5e074777f981dcf13bed5248ff0a4723; 58 real fast SSE schedules in 491.9ms (117.91/s), 23 renders, complete text retained.",
-          "Final full-window timing -> mean 3.10ms, nearest-rank p95 7.00ms, max 10.70ms over 20 ten-event frames; unchanged legacy walk 15/15 at 2.59ms. Two cycles leave cursor 30000, cache 5000, 300 cards/1147 stream nodes, post-GC nodes 8481 -> 8481 -> 8481 and JS heap 3373868 -> 3309948 -> 3329676 bytes.",
+          "Final full-window timing -> mean 3.10ms, nearest-rank p95 7.00ms, max 10.70ms over 20 ten-event frames; unchanged legacy walk 15/15 at 2.59ms. Two cycles leave cursor 30000, cache 5000, 300 cards/1147 stream nodes, post-GC nodes 8505 -> 8484 -> 8505 and JS heap 3373868 -> 3309948 -> 3329676 bytes.",
           "Final backend gate -> 300 passed across 13 modules, isolation 16/16, unqualified and blocked (fail closed), dirty=false at a133647.",
           "Final keyboard 15/15, responsive 27/27, accessibility 120/120 with 62 captures (manifest sha256 7562c647a6daa1dda2b98f01989bf86471ec79601a8d0d09eaaaddf52a4e44ca).",
           "Final approved visual matrix -> 48 captures, 2200/2200 checks, manifest sha256 1cc4ad4440065b4deb06332baf83ea3431cdc0d9eecbe3aede621948cba31864 against the explicit sidebar-243 owner approval; no structural delta.",
@@ -3607,7 +3607,7 @@
           "/tmp/uiv2-29-final2-cross-tab/check-manifest.json — 48 approved captures and 2200/2200 checks, sha256 1cc4ad4440065b4deb06332baf83ea3431cdc0d9eecbe3aede621948cba31864; product/M5_2_0_UIUX_V2_Cross_Tab_Approval.json contains the explicit sidebar-243 owner-approved baseline integrated from PR #244."
         ],
         "acceptance_evidence": [
-          "Actual final environment and metrics are committed: real fast SSE 117.91/s, unchanged 4ms frame gate passed at 3.10ms mean, two 12,000-event cycles leave a 5000-event cache and 300-card DOM, post-GC nodes are flat at 8481 and heap goes 3373868 -> 3309948 -> 3329676 bytes without repeated-cycle growth.",
+          "Actual final environment and metrics are committed: real fast SSE 117.91/s, unchanged 4ms frame gate passed at 3.10ms mean, two 12,000-event cycles leave a 5000-event cache and 300-card DOM, post-GC nodes go 8505 -> 8484 -> 8505 with no repeated-cycle growth, and heap goes 3373868 -> 3309948 -> 3329676 bytes without repeated-cycle growth.",
           "No unauthorized execution path: anonymous approval is 401 and authenticated unknown approval is 404; 300 backend tests cover permissions, scoped grants, recovery, process containment, side-effect/durable-intent ledgers and lease fencing; isolation remains unqualified and blocked rather than being advertised as qualified.",
           "All four viewports in both themes preserve shell geometry with zero external-shell shift and no document overflow; all 48 variants pass 2200/2200 checks against the explicit owner-approved shared-sidebar baseline integrated from PR #244, so the result conforms to the approved target rather than a UI-only completion claim.",
           "Existing features and safety boundaries are preserved by 282 merged-source inventory/layout tests plus 191 final source/evidence and transformation tests, 21/21 preservation rows, 120/120 accessibility checks, 15/15 keyboard, 27/27 responsive and 37/37 release-gate checks. Earlier integrated focused and broader suites passed 392 and 364 tests respectively (the latter with one historical-commit environment skip). No UIV2-29 backend route, payload, session, workspace or authorization contract changed."
@@ -3697,20 +3697,90 @@
       "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
       "agent_prompt": "Implement UIV2-30: Release review, truthful README and agent handoff. Required outcome: Pin final SHA, summarize changes, screenshot proof, defects, rollback, release decision and next work. Specific gate: Release only with approved visual reference and passing critical tests; otherwise status blocked; README claims only verified behavior; no premature completion. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempt_count": 0,
-        "started_at": null,
-        "completed_at": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "tests_executed": [],
-        "visual_evidence": [],
-        "acceptance_evidence": [],
-        "known_regressions": [],
+        "status": "done",
+        "progress_percent": 35,
+        "attempt_count": 1,
+        "started_at": "2026-11-08T06:56:30.719214+00:00",
+        "completed_at": "2026-11-08T08:20:31.535661+00:00",
+        "commit_sha": "c01d01bd0a02c9617c7b08524f24be7f3fa3eddd",
+        "changed_files": [
+          "README.md",
+          "docs/README.md",
+          "docs/media/uiv2-30-release-review/.gitignore",
+          "docs/uiux-2-0-p0-signoff.md",
+          "docs/uiux-2-0-readme-onboarding.md",
+          "docs/uiv2-v2-release-review.md",
+          "product/M5_2_0_UIUX_Preservation_Signoff.json",
+          "product/M5_2_0_UIUX_Readme_Onboarding.json",
+          "product/M5_2_0_UIUX_Release_Gate.json",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "product/M5_2_0_UIUX_V2_Release_Evidence.json",
+          "product/M5_2_0_UIUX_V2_Release_Review.json",
+          "product/M5_2_0_UIUX_V2_Visual_Fidelity_Roadmap.json",
+          "scripts/preservation_suite.py",
+          "scripts/uiv2_release_review.py",
+          "tests/test_scopes.json",
+          "tests/test_uiux_preservation_e2e.py",
+          "tests/test_uiv2_release_review.py"
+        ],
+        "tests_executed": [
+          "Starting HEAD 703945e (UIV2-29 merge) with dependencies UIV2-26 through UIV2-29 done; worktree clean.",
+          "Real Compare continuity walk -> 15/15 checks, 0 failures and six actual PNG captures in /tmp/uiv2-30-compare-baseline; this verifies the historical restore crash is not current behavior.",
+          "Approved cross-tab structural walk at clean 703945e -> 48 capture records, 144 PNGs, 2200/2200 checks, manifest sha256 3b4674791cc4b05b94c7dd2b39092e00fe05cdd31578eef43b87ed5dc0788e08.",
+          "Documentation, boot-order and source-contract baseline -> 49 pytest checks passed; docs 237 files; UIV2-28 and UIV2-29 contract checks green.",
+          "Merged main CI run 42454692827 at 703945e -> test (3.11), test (3.12), test (3.13) and Browser safety regressions all success.",
+          "Production security gate executed -> gate_invariants_satisfied=true, release_ready=false, release_decision=release-blocked; independent AS-031 signoff remains the blocker.",
+          "UIV2-30 release contract and fail-closed mutations: 18/18 passed; Ruff, mypy (62 files), docs validation (238 files), test scope mapping and diff checks passed.",
+          "UI/UX release gate regenerated at README-change evidence: 37/37 checks, 7/7 gates, 0 findings; owner + docs + boot + security/release + UIV2-30 tests 117/117 passed (402.39s).",
+          "Clean implementation eb12625bb29aee02c469eeb5720df888fd62d010: Compare 15/15 + six PNGs, run sha256 1579153e1197162915fd42d3cd9b2ecc05305d7f95e7f57348feedd8b773ae8b; approved visual 48 captures / 144 PNGs / 2200 checks, manifest sha256 0b67e4222122f3cec2806c7e27ba1c782abd4a337a2048f674c71f4fc764e6e0.",
+          "Clean implementation backend safety: 300 tests + 16 isolation checks passed; isolation remains unqualified and dependent execution blocked; run sha256 0ce60cf742c991318c487c37effaaac4a9e81747f24f76e4530fbe03895559cc.",
+          "Implementation push CI run 42458278773 at eb12625 passed Python 3.11/3.12/3.13 and Browser safety. PR run 42458307474 failed only test_stopping_a_fixture_stops_the_app_it_forked on Python 3.12; failure retained and corrected, not waived.",
+          "Focused teardown repeated 40/40 before correction; stop_server now retains the process-group id, escalates surviving descendants and waits for group exit. Synchronized graceful and SIGTERM-ignoring grandchild regression cases: 2/2 passed (2.18s).",
+          "Final focused release, preservation, boot-order and security gate suite: 54/54 passed (14.01s). Ruff, mypy (62 files), compileall, docs validation (238 files), scope map and diff checks passed.",
+          "Corrected process-tree teardown stress: 20/20 parametrized real-grandchild cases passed across graceful and SIGTERM-ignoring modes.",
+          "PR CI run 42459934879: Browser safety passed; all Python jobs failed on stale UI source manifest/release-gate ownership after the preservation helper edit. Regenerated source manifest -> preservation signoff -> UI/UX release gate -> UIV2-30 review in dependency order.",
+          "Regenerated owner suites: 82 passed with one shallow-history skip, then exact public pin fetch + unshallow restored ancestry and source-manifest suite passed 11/11; no skip remains in that suite. UI/UX gate 37/37 checks and 7/7 gates, 0 findings.",
+          "Refreshed clean 971f685 browser evidence: Compare 15/15 + six PNGs, run sha256 b1fc9c3c4dde1d52f73e9b43e0df3930d16d0b1dcfddc37e6e3becedaeb3538e; approved visual 48/144/2200, manifest sha256 29580335c23b25f8a889170057a4a48c59edff04e62f9cf703a8e04e7676da63.",
+          "Integrated origin/main 5ab3d54 cleanly. Combined lifecycle + release + source-manifest + preservation-signoff suite: 192/192 passed; mypy, Ruff, docs validation (242 files), scope map (175 modules) and release-review check passed.",
+          "Final integrated PR CI run 42461591225 at c01d01bd0a02c9617c7b08524f24be7f3fa3eddd: Python 3.11, Python 3.12, Python 3.13 and Browser safety regressions all passed; this run closes both the process-group and generated-manifest corrections.",
+          "Final integrated clean-HEAD evidence at c01d01b: Compare 15/15 + six PNGs, run sha256 b3130ffc8d83ed525e521b8d81509e5ef9af3f2c3377b32c470cf4c47b011537; approved visual 48 captures /144 PNGs /2200 checks, manifest sha256 c821e40fe67b58455dee3f3f7654e307023413163212d37c504d5b3f6c973d8f."
+        ],
+        "visual_evidence": [
+          "/tmp/uiv2-30-final3-visual/check-manifest.json — clean c01d01bd0a02c9617c7b08524f24be7f3fa3eddd, 48 variants, 144 PNGs and 2200/2200 approved checks, sha256 c821e40fe67b58455dee3f3f7654e307023413163212d37c504d5b3f6c973d8f.",
+          "/tmp/uiv2-30-final3-compare/ and docs/media/uiv2-30-release-review/ — six actual Compare live/restored/server/forgotten/narrow/light PNGs; /tmp/uiv2-30-final3-compare.json records 15/15 checks, sha256 b3130ffc8d83ed525e521b8d81509e5ef9af3f2c3377b32c470cf4c47b011537."
+        ],
+        "acceptance_evidence": [
+          "Final integrated evidence at c01d01bd0a02c9617c7b08524f24be7f3fa3eddd: Compare 15/15 with six PNGs; approved visual 48 captures / 2200 checks across light/dark and 1640x900, 1440x900, 1280x800, 390x844. Backend authorization/recovery/ledger/fencing/isolation: 300 tests +16 isolation checks; no external provider calls.",
+          "Release evidence binds matching implementation and critical CI SHA c01d01bd0a02c9617c7b08524f24be7f3fa3eddd. Final PR run 42461591225 passed Python 3.11/3.12/3.13 and Browser safety. Three browser source hashes, visual manifest, Compare run and six PNG hashes prevent stale imported evidence.",
+          "README distinguishes UI/UX handoff readiness from the still-blocked production/security gate; 7/7 README claims, 47 commands, 0 findings. Release review has 7/7 local checks and 0 findings. The roadmap is 30/30 done; no UIV2-31 is implied.",
+          "UIV2-29 final/acceptance metrics report actual nodes 8505 -> 8484 -> 8505 and heap 3373868 -> 3309948 -> 3329676. UIV2-26 pending-CI status is closed against run 42454692827 and full commit 289a4fbc7348fd7410ee823b1dbd8322745d9d74.",
+          "The PR process-tree teardown and generated-manifest failures remain disclosed and are corrected, not waived. Final PR CI run 42461591225 passed all four jobs after both corrections and integration with main. No application API, session, workspace, authorization or isolation behavior changed in UIV2-30."
+        ],
+        "known_regressions": [
+          {
+            "regression": "UIV2-29 final roadmap summary copied post-GC nodes as flat 8481 while its committed browser run measured 8505 -> 8484 -> 8505.",
+            "status": "closed_by_uiv2_30_source_bound_correction",
+            "resolution": "Corrected only the final UIV2-29 summary and acceptance wording to the exact committed nodes and heap. The browser validator and no-growth gate were already green; no performance evidence or threshold was changed. The UIV2-30 generator now rejects a mismatched final summary."
+          },
+          {
+            "regression": "UIV2-26 trusted-transformation mitigation remained marked pending final CI after later merged runs were green.",
+            "status": "closed_in_merged_ci_42454692827",
+            "resolution": "Closed using the actual merged 703945e run with all three Python versions and Browser safety regressions successful. The release generator rejects any remaining pending regression status."
+          },
+          {
+            "regression": "PR CI run 42458307474 Python 3.12 exposed that preservation_suite.stop_server waited for the fixture parent but not its forked app process group.",
+            "status": "closed_in_final_pr_ci_42461591225",
+            "resolution": "The failed run remains recorded; same-SHA push run 42458278773 passed all four jobs. Cleanup now retains the process-group id, escalates surviving descendants to SIGKILL and waits for group exit. Real graceful and SIGTERM-ignoring grandchild tests pass; final PR CI run 42461591225 passed all four jobs."
+          },
+          {
+            "regression": "PR CI run 42459934879 failed all Python jobs because the preservation helper change had not been propagated to the pinned UI source manifest, preservation signoff and dependent release gate.",
+            "status": "closed_in_final_pr_ci_42461591225",
+            "resolution": "Regenerated owner artifacts in dependency order and reran their tests: 82 passed plus the former ancestry skip resolved by restoring public history, then 11/11 source-manifest tests passed. Browser safety had passed. Final PR CI run 42461591225 passed all four jobs."
+          }
+        ],
         "blockers": [],
-        "handoff_summary": "",
-        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+        "handoff_summary": "UIV2-30 is complete at integrated source c01d01b: 30/30 V2 stories done, UI/UX handoff ready, final PR CI 42461591225 green, Compare 15/15 and approved visual 2200/2200. Production/security remains release-blocked pending independent AS-031 signoff and artifact prerequisites. Follow-ups remain explicitly scoped in the release review.",
+        "exact_next_action": "Run and push the tracker-only final validation, require its PR checks, then merge PR #247. Start no UIV2-31; use a newly scoped roadmap for runtime follow-ups or independent production release signoff."
       }
     }
   ],
@@ -3780,19 +3850,19 @@
       "name": "Cross-tab QA and release gate",
       "total": 5,
       "done": 4,
-      "in_progress": 0,
+      "in_progress": 1,
       "blocked": 0,
-      "not_started": 1,
+      "not_started": 0,
       "percent_complete": 80
     }
   ],
   "progress": {
     "total": 30,
-    "done": 29,
+    "done": 30,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 1,
-    "percent_complete": 97
+    "not_started": 0,
+    "percent_complete": 100
   },
   "session_recovery_protocol": [
     "Read global prompt and tracking",
@@ -3807,5 +3877,6 @@
   "first_session": {
     "story_id": "UIV2-01",
     "instructions": "Start with source verification and screenshots. Do not edit frontend until UIV2-03 target reference is approved."
-  }
+  },
+  "progress_percent": 100
 }

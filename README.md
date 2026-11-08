@@ -56,6 +56,16 @@ understand the risks. See [SECURITY.md](SECURITY.md) for deployment guidance,
 unsafe opt-ins, and limitations, and [docs/privacy.md](docs/privacy.md) for data
 handling and retention.
 
+## Release evidence
+
+The [UI/UX V2 release review](docs/uiv2-v2-release-review.md) records the pinned
+implementation, approved visual evidence, critical CI results, known limitations,
+rollback, and agent handoff. Its handoff decision covers only the UI/UX V2
+program: it is not a production security approval and not container-isolation
+qualification. The production security release remains blocked pending the
+independent sign-off and other prerequisites enforced by
+[`scripts/security_release_gate.py`](scripts/security_release_gate.py).
+
 ## Development
 
 Install the development dependencies as shown above, then run:
