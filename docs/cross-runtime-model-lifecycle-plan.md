@@ -475,3 +475,16 @@ upstream Starlette/httpx deprecation warning. Documentation validation passed wi
 scanned; the 64-file UI source manifest and whitespace checks passed. These are unchanged-code
 regressions, not tests of an implemented coordinator. Full multi-Python CI, browser tests,
 hardware qualification and independent security review were not run for this docs-only plan.
+
+## LC-07 implementation boundary (dormant)
+
+The [full request-fit contract](request-fit-admission.md) supplies immutable final
+wire preparation, strict reserve arithmetic and an injected warm-resident count
+service with durable no-replay markers and fresh pre/post native/memory evidence.
+Dormant Ollama/LM Studio inference now separately defaults to refusal without an
+exact-byte fit callback. No production counter or installed qualification is
+supplied; a possibly loading tokenizer is not admissible. ADR-0037 is proposed,
+not reviewed. This does not mark all-workflow enforcement complete: LC-08 must
+wire complete final assembly and canonical/app/standalone consumers at every
+entry point, replacing legacy estimates/trimming for coordinated mode. LC-09/11
+recovery/release gates remain. No activation or test8 retry is authorized.

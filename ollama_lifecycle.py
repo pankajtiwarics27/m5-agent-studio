@@ -186,6 +186,7 @@ class OllamaLifecycleBridge:
         clock_ms: Callable[[], int],
         authorize: Callable[[OllamaPermit], bool] | None = None,
         timeout_s: float = 60.0,
+        admit_request: Callable[[RequestLease, str, str], bool] | None = None,
     ) -> None:
         if memory._coordinator is not coordinator:
             raise OllamaDenied("coordinator_mismatch")
@@ -196,6 +197,7 @@ class OllamaLifecycleBridge:
         ):
             raise OllamaDenied("invalid_timeout")
         self.coordinator, self.memory, self.transport = coordinator, memory, transport
+        self.admit_request = admit_request
         self.clock, self.authorize, self.timeout_s = (
             clock_ms,
             authorize,
@@ -561,6 +563,21 @@ class OllamaLifecycleBridge:
             )
             if self._recorded(conn, intent, "sent") is not None:
                 raise OllamaDenied("native_send_already_recorded")
+            if isinstance(intent, RequestLease):
+                try:
+                    fit = (
+                        self.admit_request(
+                            intent,
+                            digest,
+                            _profile_digest(permit.qualification.profile),
+                        )
+                        if self.admit_request is not None
+                        else False
+                    )
+                except Exception:
+                    raise OllamaDenied("request_fit_unavailable") from None
+                if fit is not True:
+                    raise OllamaDenied("request_fit_required")
             self._memory_send(conn, permit, lease, sample, now)
             self._event(conn, intent, "sent", digest)
             if isinstance(intent, TransitionStep) and intent.kind == "load":

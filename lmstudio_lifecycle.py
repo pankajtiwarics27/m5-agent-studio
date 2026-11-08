@@ -201,6 +201,7 @@ class LmStudioLifecycleBridge:
         environment: Callable[[], Awaitable[LmEnvironment]],
         authorize: Callable[[LmPermit], bool] | None = None,
         timeout_s: float = 60.0,
+        admit_request: Callable[[RequestLease, str, str], bool] | None = None,
     ) -> None:
         if memory._coordinator is not coordinator:
             raise LmStudioDenied("coordinator_mismatch")
@@ -211,6 +212,7 @@ class LmStudioLifecycleBridge:
         ):
             raise LmStudioDenied("invalid_timeout")
         self.coord, self.memory, self.transport = coordinator, memory, transport
+        self.admit_request = admit_request
         self.clock, self.environment, self.authorize, self.timeout = (
             clock_ms,
             environment,
@@ -572,6 +574,19 @@ class LmStudioLifecycleBridge:
                 (intent.domain_id, _key(intent), "lmstudio_sent_" + _stage(intent)),
             ).fetchone():
                 raise LmStudioDenied("send_already_recorded")
+            if isinstance(intent, RequestLease):
+                try:
+                    fit = (
+                        self.admit_request(
+                            intent, digest, permit.qualification.profile.digest
+                        )
+                        if self.admit_request is not None
+                        else False
+                    )
+                except Exception:
+                    raise LmStudioDenied("request_fit_unavailable") from None
+                if fit is not True:
+                    raise LmStudioDenied("request_fit_required")
             self._memory(conn, permit, lease, sample, now)
             self._event(conn, permit, "sent", digest)
             if isinstance(intent, TransitionStep) and intent.kind == "load":

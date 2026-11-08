@@ -240,3 +240,15 @@ Broader local verification at source commit `051bf03`:
   3.11/3.12/3.13 and browser safety. PR-head CI remains a separate merge gate;
   no merge authorization is implied. Release supply-chain build/verify was not
   repeated locally; the CI Python jobs include that check.
+
+## LC-07 dispatch fit seam
+
+Inference dispatch now additionally requires `admit_request` to return exactly
+true for the request lease, body digest and native profile digest. The optional
+constructor callback defaults to denial (`request_fit_required`); exceptions deny
+as `request_fit_unavailable`. The [full request-fit contract](request-fit-admission.md)
+explains ephemeral approval and separate native/policy/memory/terminal checks.
+No production consumer/counter is installed. This preflight TTL is not checked
+at stream completion; it must not invalidate a legitimate long response. The
+existing bridge fixture's true callback is explicitly a fake assumption, not
+installed count proof. No native activation or standalone wiring is implied.

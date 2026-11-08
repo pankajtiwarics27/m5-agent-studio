@@ -215,3 +215,15 @@ must not become an invented complete empty inventory. Source review/strict fake
 parsing does not qualify a currently installed version. The adapter therefore
 requires external installed-scope attestations and native evidence producers,
 none of which is registered or certified by this story.
+
+## LC-07 counter source recheck
+
+The [dormant request-fit contract](request-fit-admission.md#native-source-limitations)
+records pinned oMLX route, helper and schema inspection. The public tokenizer can
+load an engine, rejects chat media, and constructs a smaller generation request;
+full settings/template/unchanged-input equivalence is not established. It is not
+registered or qualified. Prior Ollama/LM Studio research establishes no full exact
+REST counter either. An already-installed matching non-loading tokenizer with
+admitted bounded footprint remains a requirement, not an inferred capability.
+All positive counter/media-bound tests use synthetic installed assumptions. No
+support-matrix, runtime setting, acceptance ledger or security signoff advances.
