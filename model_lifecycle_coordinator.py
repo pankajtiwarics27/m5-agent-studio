@@ -24,7 +24,7 @@ from local_runtime_lifecycle import ModelInstanceObservation, ObservationStamp, 
 if os.name == "posix":
     import fcntl
 
-_SCHEMA = 2
+_SCHEMA = 4
 _APPLICATION_ID = 0x4D354C43
 _MAX_INTEGER = 2**63 - 1
 _T = TypeVar("_T")
@@ -101,7 +101,49 @@ class TransitionStep:
 
 
 @dataclass(frozen=True, slots=True)
+class ReleaseStep:
+    """Unload-only intent: real source/hold, no target and no load authority."""
+    operation_id: str
+    request_id: str
+    domain_id: str
+    generation: int
+    owner_epoch: int
+    kind: Literal["drain", "unload"]
+    source: ModelTarget
+    source_instance_id: str
+    memory_id: str
+
+    def __post_init__(self) -> None:
+        for value in (self.operation_id, self.request_id, self.domain_id, self.source_instance_id, self.memory_id):
+            _label(value)
+        for integer_value in (self.generation, self.owner_epoch):
+            _integer(integer_value, positive=True)
+        if self.kind not in ("drain", "unload") or not isinstance(self.source, ModelTarget):
+            raise CoordinatorError("invalid_release_step")
+
+
+@dataclass(frozen=True, slots=True)
 class RequestLease:
+    lease_id: str
+    request_id: str
+    domain_id: str
+    generation: int
+    owner_epoch: int
+    target: ModelTarget
+    instance_id: str
+
+    def __post_init__(self) -> None:
+        for value in (self.lease_id, self.request_id, self.domain_id, self.instance_id):
+            _label(value)
+        for integer_value in (self.generation, self.owner_epoch):
+            _integer(integer_value, positive=True)
+        if not isinstance(self.target, ModelTarget):
+            raise CoordinatorError("invalid_lease")
+
+
+@dataclass(frozen=True, slots=True)
+class LoadLease:
+    """Exclusive explicit-load completion slot, never inference authority."""
     lease_id: str
     request_id: str
     domain_id: str
@@ -131,7 +173,7 @@ class EvidenceScope:
         _integer(self.generation)
         if self.operation_id is not None:
             _label(self.operation_id)
-        if self.purpose not in ("reconcile", "unload", "verify"):
+        if self.purpose not in ("reconcile", "unload", "verify", "load_control"):
             raise CoordinatorError("invalid_evidence_scope")
         if self.purpose != "reconcile" and self.operation_id is None:
             raise CoordinatorError("invalid_evidence_scope")
@@ -199,8 +241,8 @@ def _initialize_schema(conn: sqlite3.Connection) -> None:
     statements = (
         "CREATE TABLE owner(singleton INTEGER PRIMARY KEY CHECK(singleton=1), epoch INTEGER NOT NULL, last_now INTEGER NOT NULL)",
         "CREATE TABLE domains(id TEXT PRIMARY KEY, bindings TEXT NOT NULL, generation INTEGER NOT NULL, state TEXT NOT NULL CHECK(state IN ('reconciling','idle','switching')), resident TEXT, resident_instance_id TEXT, operation_id TEXT)",
-        "CREATE TABLE requests(seq INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT UNIQUE NOT NULL, domain TEXT NOT NULL REFERENCES domains(id), target TEXT NOT NULL, deadline INTEGER NOT NULL, status TEXT NOT NULL CHECK(status IN ('queued','admitted','completed','cancelled','expired','interrupted')), cancel_requested INTEGER NOT NULL DEFAULT 0)",
-        "CREATE TABLE operations(id TEXT PRIMARY KEY, domain TEXT NOT NULL REFERENCES domains(id), generation INTEGER NOT NULL, owner_epoch INTEGER NOT NULL, source TEXT, source_instance_id TEXT, target TEXT NOT NULL, stage TEXT NOT NULL CHECK(stage IN ('drain','unload','load','verify')), dispatched INTEGER NOT NULL DEFAULT 0, deadline INTEGER, status TEXT NOT NULL CHECK(status IN ('active','uncertain','complete','reconciled')))",
+        "CREATE TABLE requests(seq INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT UNIQUE NOT NULL, domain TEXT NOT NULL REFERENCES domains(id), target TEXT NOT NULL, deadline INTEGER NOT NULL, purpose TEXT NOT NULL CHECK(purpose IN ('inference','load','unload')), status TEXT NOT NULL CHECK(status IN ('queued','admitted','completed','cancelled','expired','interrupted')), cancel_requested INTEGER NOT NULL DEFAULT 0)",
+        "CREATE TABLE operations(id TEXT PRIMARY KEY, domain TEXT NOT NULL REFERENCES domains(id), generation INTEGER NOT NULL, owner_epoch INTEGER NOT NULL, source TEXT, source_instance_id TEXT, target TEXT, stage TEXT NOT NULL CHECK(stage IN ('drain','unload','load','verify')), dispatched INTEGER NOT NULL DEFAULT 0, deadline INTEGER, status TEXT NOT NULL CHECK(status IN ('active','uncertain','complete','reconciled')), goal TEXT NOT NULL DEFAULT 'acquire' CHECK(goal IN ('acquire','release')), request_id TEXT REFERENCES requests(id), source_memory_id TEXT REFERENCES memory_reservations(id), CHECK((goal='acquire' AND target IS NOT NULL AND request_id IS NULL AND source_memory_id IS NULL) OR (goal='release' AND target IS NULL AND source IS NOT NULL AND source_instance_id IS NOT NULL AND stage IN ('drain','unload') AND request_id IS NOT NULL AND source_memory_id IS NOT NULL)))",
         "CREATE UNIQUE INDEX one_pending_operation ON operations(domain) WHERE status IN ('active','uncertain')",
         "CREATE TABLE leases(id TEXT PRIMARY KEY, request_id TEXT UNIQUE NOT NULL REFERENCES requests(id), domain TEXT NOT NULL REFERENCES domains(id), generation INTEGER NOT NULL, owner_epoch INTEGER NOT NULL, status TEXT NOT NULL CHECK(status IN ('active','released','interrupted')))",
         "CREATE UNIQUE INDEX one_active_request ON leases(domain) WHERE status='active'",
@@ -321,11 +363,25 @@ class LifecycleCoordinator:
                 if row["resident_instance_id"] is not None:
                     _label(row["resident_instance_id"])
                 _integer(row["generation"])
-            for row in conn.execute("SELECT target,source,source_instance_id FROM operations"):
-                if _decode(row["target"]) is None or (_decode(row["source"]) is None) != (row["source_instance_id"] is None):
+            for row in conn.execute("SELECT * FROM operations"):
+                source, target = _decode(row["source"]), _decode(row["target"])
+                if (source is None) != (row["source_instance_id"] is None):
                     raise CoordinatorError("journal_invalid")
-            for row in conn.execute("SELECT target,deadline FROM requests"):
-                if _decode(row["target"]) is None:
+                if row["goal"] == "acquire":
+                    if target is None or row["request_id"] is not None or row["source_memory_id"] is not None:
+                        raise CoordinatorError("journal_invalid")
+                elif row["goal"] == "release":
+                    request = conn.execute("SELECT * FROM requests WHERE id=?", (row["request_id"],)).fetchone()
+                    memory = conn.execute("SELECT * FROM memory_reservations WHERE id=?", (row["source_memory_id"],)).fetchone()
+                    if (target is not None or source is None or row["stage"] not in ("drain", "unload")
+                            or request is None or request["purpose"] != "unload" or request["domain"] != row["domain"] or request["target"] != row["source"]
+                            or memory is None or memory["kind"] != "model" or memory["domain"] != row["domain"]
+                            or json.loads(memory["binding"]).get("profile", {}).get("target") != asdict(source)):
+                        raise CoordinatorError("journal_invalid")
+                else:
+                    raise CoordinatorError("journal_invalid")
+            for row in conn.execute("SELECT target,deadline,purpose FROM requests"):
+                if _decode(row["target"]) is None or row["purpose"] not in ("inference", "load", "unload"):
                     raise CoordinatorError("journal_invalid")
                 _integer(row["deadline"])
             for memory_domain in conn.execute("SELECT * FROM memory_domains"):
@@ -447,6 +503,17 @@ class LifecycleCoordinator:
         raise CoordinatorError("runtime_unbound")
 
     def enqueue(self, request_id: str, domain_id: str, target: ModelTarget, *, deadline_ms: int, now_ms: int) -> str:
+        return self._enqueue(request_id, domain_id, target, purpose="inference", deadline_ms=deadline_ms, now_ms=now_ms)
+
+    def enqueue_load(self, request_id: str, domain_id: str, target: ModelTarget, *, deadline_ms: int, now_ms: int) -> str:
+        """Queue explicit-load intent, not a fake inference request or native grant."""
+        return self._enqueue(request_id, domain_id, target, purpose="load", deadline_ms=deadline_ms, now_ms=now_ms)
+
+    def enqueue_unload(self, request_id: str, domain_id: str, source: ModelTarget, *, deadline_ms: int, now_ms: int) -> str:
+        """Queue exact owned-source release. The request reference is NOT a new target."""
+        return self._enqueue(request_id, domain_id, source, purpose="unload", deadline_ms=deadline_ms, now_ms=now_ms)
+
+    def _enqueue(self, request_id: str, domain_id: str, target: ModelTarget, *, purpose: Literal["inference", "load", "unload"], deadline_ms: int, now_ms: int) -> str:
         _label(request_id)
         _integer(deadline_ms)
         _integer(now_ms)
@@ -461,7 +528,7 @@ class LifecycleCoordinator:
             conn.execute("UPDATE requests SET status='expired' WHERE domain=? AND status='queued' AND deadline<=?", (domain_id, now_ms))
             previous = conn.execute("SELECT * FROM requests WHERE id=?", (request_id,)).fetchone()
             if previous is not None:
-                if (previous["domain"], previous["target"], previous["deadline"]) != (domain_id, _encode(target), deadline_ms):
+                if (previous["domain"], previous["target"], previous["deadline"], previous["purpose"]) != (domain_id, _encode(target), deadline_ms, purpose):
                     raise CoordinatorError("idempotency_conflict")
                 return str(previous["status"])
             if deadline_ms <= now_ms:
@@ -469,8 +536,8 @@ class LifecycleCoordinator:
             count = conn.execute("SELECT COUNT(*) FROM requests WHERE domain=? AND status='queued'", (domain_id,)).fetchone()[0]
             if count >= self._queue_limit:
                 raise CoordinatorError("queue_full")
-            conn.execute("INSERT INTO requests(id,domain,target,deadline,status) VALUES(?,?,?,?,'queued')", (request_id, domain_id, _encode(target), deadline_ms))
-            self._event(conn, domain_id, "enqueued")
+            conn.execute("INSERT INTO requests(id,domain,target,deadline,purpose,status) VALUES(?,?,?,?,?,'queued')", (request_id, domain_id, _encode(target), deadline_ms, purpose))
+            self._event(conn, domain_id, {"load": "load_enqueued", "unload": "unload_enqueued"}.get(purpose, "enqueued"))
             return "queued"
         return self._call(enqueue, now_ms=now_ms)
 
@@ -492,17 +559,39 @@ class LifecycleCoordinator:
             return str(row["status"])
         return self._call(cancel, now_ms=now_ms)
 
-    def claim_next(self, domain_id: str, *, now_ms: int, step_timeout_ms: int = 60_000) -> TransitionStep | RequestLease | None:
+    def claim_next(self, domain_id: str, *, now_ms: int, step_timeout_ms: int = 60_000, request_id: str | None = None) -> TransitionStep | ReleaseStep | RequestLease | LoadLease | None:
+        """Claim one domain stage/request; optionally fence to the FIFO waiter.
+
+        request_id is an internal consumer fence, not authority. It never skips
+        another queued owner or advances an operation for a different target.
+        Native permits and independent completion evidence are still required.
+        """
+        if request_id is not None:
+            _label(request_id)
         _integer(step_timeout_ms, positive=True)
         _integer(now_ms)
         _integer(now_ms + step_timeout_ms)
-        def claim(conn: sqlite3.Connection) -> TransitionStep | RequestLease | None:
+        def claim(conn: sqlite3.Connection) -> TransitionStep | ReleaseStep | RequestLease | LoadLease | None:
             domain = self._domain(conn, domain_id)
             conn.execute("UPDATE requests SET status='expired' WHERE domain=? AND status='queued' AND deadline<=?", (domain_id, now_ms))
+            # Optional consumer fence: select/check FIFO ownership in the SAME
+            # write transaction as claim, not a racy pre-query in an app actor.
+            head = None
+            if request_id is not None:
+                head = conn.execute("SELECT * FROM requests WHERE domain=? AND status='queued' ORDER BY seq LIMIT 1", (domain_id,)).fetchone()
+                if head is None or head["id"] != request_id:
+                    return None
             if domain["state"] == "reconciling":
                 return None
             if domain["operation_id"] is not None:
                 operation = conn.execute("SELECT * FROM operations WHERE id=?", (domain["operation_id"],)).fetchone()
+                if operation["status"] != "active":
+                    return None  # Completed release still fences pending settlement.
+                if operation["goal"] == "release":
+                    if head is not None and (head["id"] != operation["request_id"] or head["purpose"] != "unload"):
+                        return None
+                elif head is not None and (operation["target"] != head["target"] or head["purpose"] == "unload"):
+                    return None
                 if operation["dispatched"]:
                     if now_ms >= operation["deadline"]:
                         self._uncertain(conn, domain_id, operation["id"], "step_timeout")
@@ -513,31 +602,58 @@ class LifecycleCoordinator:
                 request = conn.execute("SELECT * FROM requests WHERE domain=? AND status='queued' ORDER BY seq LIMIT 1", (domain_id,)).fetchone()
                 if request is None:
                     return None
+                if request["purpose"] == "unload":
+                    # Absent/mismatched/unowned sources need a separate qualified
+                    # absence/recovery policy, not synthetic success or eviction.
+                    if request["target"] != domain["resident"] or domain["resident_instance_id"] is None:
+                        return None
+                    memory = conn.execute("SELECT * FROM memory_reservations WHERE domain=? AND kind='model' AND status='dispatched' AND owner_epoch=?", (domain_id, self._epoch)).fetchone()
+                    policy = conn.execute("SELECT state FROM memory_domains WHERE domain=?", (domain_id,)).fetchone()
+                    if (memory is None or policy is None or policy["state"] != "ready"
+                            or json.loads(memory["binding"]).get("profile", {}).get("target") != json.loads(request["target"])):
+                        return None
+                    operation_id = uuid.uuid4().hex
+                    generation = domain["generation"] + 1
+                    _integer(generation)
+                    conn.execute("INSERT INTO operations(id,domain,generation,owner_epoch,source,source_instance_id,target,stage,status,goal,request_id,source_memory_id) VALUES(?,?,?,?,?,?,NULL,'drain','active','release',?,?)", (operation_id, domain_id, generation, self._epoch, domain["resident"], domain["resident_instance_id"], request["id"], memory["id"]))
+                    conn.execute("UPDATE domains SET generation=?,state='switching',operation_id=? WHERE id=?", (generation, operation_id, domain_id))
+                    conn.execute("UPDATE operations SET dispatched=1,deadline=? WHERE id=?", (now_ms + step_timeout_ms, operation_id))
+                    self._event(conn, domain_id, "dispatch_release_drain", operation_id)
+                    source = _decode(domain["resident"])
+                    assert source is not None
+                    return ReleaseStep(operation_id, request["id"], domain_id, generation, self._epoch, "drain", source, domain["resident_instance_id"], memory["id"])
                 if request["target"] == domain["resident"]:
                     target = _decode(request["target"])
                     assert target is not None
-                    lease = RequestLease(uuid.uuid4().hex, request["id"], domain_id, domain["generation"], self._epoch, target, domain["resident_instance_id"])
+                    cls = LoadLease if request["purpose"] == "load" else RequestLease
+                    lease = cls(uuid.uuid4().hex, request["id"], domain_id, domain["generation"], self._epoch, target, domain["resident_instance_id"])
                     conn.execute("INSERT INTO leases VALUES(?,?,?,?,?,'active')", (lease.lease_id, lease.request_id, domain_id, lease.generation, self._epoch))
                     conn.execute("UPDATE requests SET status='admitted' WHERE id=?", (request["id"],))
-                    self._event(conn, domain_id, "request_reserved")
+                    self._event(conn, domain_id, "load_reserved" if request["purpose"] == "load" else "request_reserved")
                     return lease
                 operation_id = uuid.uuid4().hex
                 generation = domain["generation"] + 1
                 _integer(generation)
                 stage = "load" if domain["resident"] is None else "drain"
-                conn.execute("INSERT INTO operations VALUES(?,?,?,?,?,?,?,?,0,NULL,'active')", (operation_id, domain_id, generation, self._epoch, domain["resident"], domain["resident_instance_id"], request["target"], stage))
+                conn.execute("INSERT INTO operations(id,domain,generation,owner_epoch,source,source_instance_id,target,stage,dispatched,deadline,status) VALUES(?,?,?,?,?,?,?,?,0,NULL,'active')", (operation_id, domain_id, generation, self._epoch, domain["resident"], domain["resident_instance_id"], request["target"], stage))
                 conn.execute("UPDATE domains SET generation=?,state='switching',operation_id=? WHERE id=?", (generation, operation_id, domain_id))
                 operation = conn.execute("SELECT * FROM operations WHERE id=?", (operation_id,)).fetchone()
             conn.execute("UPDATE operations SET dispatched=1,deadline=? WHERE id=?", (now_ms + step_timeout_ms, operation["id"]))
             self._event(conn, domain_id, "dispatch_" + operation["stage"], operation["id"])
+            if operation["goal"] == "release":
+                source = _decode(operation["source"])
+                assert source is not None
+                return ReleaseStep(operation["id"], operation["request_id"], domain_id, operation["generation"], self._epoch, operation["stage"], source, operation["source_instance_id"], operation["source_memory_id"])
             target = _decode(operation["target"])
             assert target is not None
             return TransitionStep(operation["id"], domain_id, operation["generation"], self._epoch, operation["stage"], _decode(operation["source"]), operation["source_instance_id"], target)
         return self._call(claim, now_ms=now_ms)
 
     def _active_step(self, conn: sqlite3.Connection, step: TransitionStep, now_ms: int) -> sqlite3.Row | None:
+        if type(step) is not TransitionStep:
+            return None
         row = conn.execute("SELECT * FROM operations WHERE id=?", (step.operation_id,)).fetchone()
-        if (row is None or step.owner_epoch != self._epoch or row["owner_epoch"] != self._epoch
+        if (row is None or row["goal"] != "acquire" or step.owner_epoch != self._epoch or row["owner_epoch"] != self._epoch
                 or row["domain"] != step.domain_id or row["generation"] != step.generation
                 or row["stage"] != step.kind or not row["dispatched"] or row["status"] != "active"
                 or _decode(row["source"]) != step.source or row["source_instance_id"] != step.source_instance_id
@@ -547,6 +663,89 @@ class LifecycleCoordinator:
             self._uncertain(conn, step.domain_id, step.operation_id, "late_completion")
             return None
         return row
+
+    def _release_operation(self, conn: sqlite3.Connection, step: ReleaseStep) -> sqlite3.Row | None:
+        if type(step) is not ReleaseStep:
+            return None
+        row = conn.execute("SELECT * FROM operations WHERE id=?", (step.operation_id,)).fetchone()
+        domain = self._domain(conn, step.domain_id)
+        if (row is None or row["goal"] != "release" or row["target"] is not None
+                or row["domain"] != step.domain_id or row["generation"] != step.generation
+                or row["owner_epoch"] != self._epoch or step.owner_epoch != self._epoch
+                or row["request_id"] != step.request_id or row["source_memory_id"] != step.memory_id
+                or row["source"] != _encode(step.source) or row["source_instance_id"] != step.source_instance_id
+                or domain["generation"] != step.generation or domain["operation_id"] != step.operation_id):
+            return None
+        return row
+
+    def mark_release_uncertain(self, step: ReleaseStep, *, reference: str, now_ms: int) -> bool:
+        """Fence even a physically completed release whose settlement failed."""
+        _label(reference)
+        def mark(conn: sqlite3.Connection) -> bool:
+            row = self._release_operation(conn, step)
+            if row is None or row["status"] not in ("active", "complete"):
+                return False
+            conn.execute("UPDATE operations SET status='uncertain' WHERE id=?", (step.operation_id,))
+            self._uncertain(conn, step.domain_id, step.operation_id, reference)
+            return True
+        return self._call(mark, now_ms=now_ms)
+
+    def complete_release(self, step: ReleaseStep, *, reference: str, now_ms: int, evidence: ReconciliationEvidence | None = None) -> bool:
+        """Physical stage proof only. Keep the barrier until real memory settlement."""
+        _label(reference)
+        def complete(conn: sqlite3.Connection) -> bool:
+            row = self._release_operation(conn, step)
+            if row is None or row["status"] != "active" or row["stage"] != step.kind or not row["dispatched"]:
+                return False
+            if now_ms >= row["deadline"]:
+                self._uncertain(conn, step.domain_id, step.operation_id, "late_release_completion")
+                return False
+            domain = self._domain(conn, step.domain_id)
+            if domain["state"] != "switching":
+                return False
+            if conn.execute("SELECT 1 FROM leases WHERE domain=? AND status='active'", (step.domain_id,)).fetchone():
+                raise CoordinatorError("requests_not_drained")
+            if step.kind == "drain":
+                conn.execute("UPDATE operations SET stage='unload',dispatched=0,deadline=NULL WHERE id=?", (step.operation_id,))
+            else:
+                if evidence is None:
+                    raise CoordinatorError("release_unverified")
+                self._verify_evidence(domain, evidence, None, now_ms, "unload")
+                conn.execute("UPDATE operations SET status='complete' WHERE id=?", (step.operation_id,))
+                conn.execute("UPDATE domains SET resident=NULL,resident_instance_id=NULL WHERE id=?", (step.domain_id,))
+            self._event(conn, step.domain_id, "complete_release_" + step.kind, step.operation_id, reference)
+            return True
+        return self._call(complete, now_ms=now_ms)
+
+    def finish_unload(self, step: ReleaseStep, *, reference: str, now_ms: int) -> bool:
+        """Retire the barrier ONLY after the bound real model hold was settled.
+
+        True means barrier retirement, not a canonical completed API command:
+        cancelled/expired requests keep those statuses. No native consumer exists.
+        """
+        _label(reference)
+        def finish(conn: sqlite3.Connection) -> bool:
+            row = self._release_operation(conn, step)
+            if row is None or row["status"] != "complete" or row["stage"] != "unload" or step.kind != "unload":
+                return False
+            domain = self._domain(conn, step.domain_id)
+            request = conn.execute("SELECT * FROM requests WHERE id=?", (step.request_id,)).fetchone()
+            memory = conn.execute("SELECT * FROM memory_reservations WHERE id=?", (step.memory_id,)).fetchone()
+            policy = conn.execute("SELECT state FROM memory_domains WHERE domain=?", (step.domain_id,)).fetchone()
+            if (domain["state"] != "switching" or domain["resident"] is not None or domain["resident_instance_id"] is not None
+                    or request is None or request["purpose"] != "unload" or request["domain"] != step.domain_id or request["target"] != _encode(step.source)
+                    or request["status"] not in ("queued", "cancelled", "expired")
+                    or memory is None or memory["status"] != "released" or memory["kind"] != "model" or memory["owner_epoch"] != self._epoch or memory["domain"] != step.domain_id
+                    or json.loads(memory["binding"]).get("profile", {}).get("target") != asdict(step.source)
+                    or policy is None or policy["state"] != "ready"
+                    or conn.execute("SELECT 1 FROM memory_reservations WHERE domain=? AND kind='model' AND status!='released'", (step.domain_id,)).fetchone()):
+                return False
+            status = "cancelled" if request["cancel_requested"] else request["status"] if request["status"] in ("cancelled", "expired") else "expired" if request["deadline"] <= now_ms else "completed"
+            conn.execute("UPDATE requests SET status=? WHERE id=?", (status, step.request_id))
+            conn.execute("UPDATE domains SET state='idle',operation_id=NULL WHERE id=?", (step.domain_id,))
+            self._event(conn, step.domain_id, "release_settled", step.operation_id, reference)
+            return True
+        return self._call(finish, now_ms=now_ms)
 
     def _uncertain(self, conn: sqlite3.Connection, domain: str, op: str | None, ref: str) -> None:
         conn.execute("UPDATE domains SET state='reconciling' WHERE id=?", (domain,))
@@ -573,10 +772,10 @@ class LifecycleCoordinator:
             return True
         return self._call(note, now_ms=now_ms)
 
-    def _verify_evidence(self, domain: sqlite3.Row, evidence: ReconciliationEvidence, target: ModelTarget | None, now_ms: int, purpose: str) -> str | None:
+    def _verify_evidence(self, domain: sqlite3.Row, evidence: ReconciliationEvidence, target: ModelTarget | None, now_ms: int, purpose: str, *, scope_id: str | None = None) -> str | None:
         if not isinstance(evidence, ReconciliationEvidence) or evidence.operations_terminal is not True or evidence.headroom_verified is not True:
             raise CoordinatorError("release_unverified")
-        expected_scope = EvidenceScope(self._epoch, domain["generation"], domain["operation_id"], purpose)
+        expected_scope = EvidenceScope(self._epoch, domain["generation"], scope_id if scope_id is not None else domain["operation_id"], purpose)
         if (evidence.scope != expected_scope or evidence.clock_id != self.observer_clock_id
                 or evidence.now != now_ms / 1000):
             raise CoordinatorError("evidence_scope_mismatch")
@@ -663,39 +862,79 @@ class LifecycleCoordinator:
             self._event(conn, domain_id, "reconciled", domain["operation_id"], evidence.reference)
         self._call(reconcile, now_ms=now_ms)
 
+    def _active_lease(self, conn: sqlite3.Connection, lease: RequestLease | LoadLease, purpose: Literal["inference", "load"]) -> sqlite3.Row | None:
+        expected = RequestLease if purpose == "inference" else LoadLease
+        if type(lease) is not expected:
+            return None
+        row = conn.execute("SELECT * FROM leases WHERE id=?", (lease.lease_id,)).fetchone()
+        request = conn.execute("SELECT * FROM requests WHERE id=?", (lease.request_id,)).fetchone()
+        domain = self._domain(conn, lease.domain_id)
+        if (row is None or request is None or request["purpose"] != purpose or request["status"] != "admitted"
+                or request["domain"] != lease.domain_id or request["target"] != _encode(lease.target)
+                or row["status"] != "active" or row["owner_epoch"] != self._epoch
+                or lease.owner_epoch != self._epoch or row["request_id"] != lease.request_id
+                or row["domain"] != lease.domain_id or row["generation"] != lease.generation
+                or domain["generation"] != lease.generation or domain["resident"] != _encode(lease.target)
+                or domain["resident_instance_id"] != lease.instance_id):
+            return None
+        return request
+
     def mark_request_uncertain(self, lease: RequestLease, *, reference: str, now_ms: int) -> bool:
         """Hold the domain after an inference disconnect; do not free its slot."""
+        return self._mark_lease_uncertain(lease, "inference", reference=reference, now_ms=now_ms)
+
+    def mark_load_uncertain(self, lease: LoadLease, *, reference: str, now_ms: int) -> bool:
+        """Retain an interrupted control slot; do not infer native completion."""
+        return self._mark_lease_uncertain(lease, "load", reference=reference, now_ms=now_ms)
+
+    def _mark_lease_uncertain(self, lease: RequestLease | LoadLease, purpose: Literal["inference", "load"], *, reference: str, now_ms: int) -> bool:
         _label(reference)
         def mark(conn: sqlite3.Connection) -> bool:
-            row = conn.execute("SELECT * FROM leases WHERE id=?", (lease.lease_id,)).fetchone()
-            domain = self._domain(conn, lease.domain_id)
-            if (row is None or row["status"] != "active" or row["owner_epoch"] != self._epoch
-                    or lease.owner_epoch != self._epoch or row["request_id"] != lease.request_id
-                    or row["domain"] != lease.domain_id or row["generation"] != lease.generation
-                    or domain["generation"] != lease.generation or domain["resident"] != _encode(lease.target)
-                    or domain["resident_instance_id"] != lease.instance_id):
+            if self._active_lease(conn, lease, purpose) is None:
                 return False
             self._uncertain(conn, lease.domain_id, None, reference)
             return True
         return self._call(mark, now_ms=now_ms)
 
     def finish_request(self, lease: RequestLease, *, reference: str, now_ms: int) -> bool:
-        """Caller-confirmed terminal work releases ONLY its request slot."""
+        """Caller-confirmed terminal inference releases ONLY its request slot."""
         _label(reference)
         def finish(conn: sqlite3.Connection) -> bool:
-            row = conn.execute("SELECT * FROM leases WHERE id=?", (lease.lease_id,)).fetchone()
-            domain = self._domain(conn, lease.domain_id)
-            if (row is None or row["status"] != "active" or row["owner_epoch"] != self._epoch
-                    or lease.owner_epoch != self._epoch or row["request_id"] != lease.request_id
-                    or row["domain"] != lease.domain_id or row["generation"] != lease.generation
-                    or domain["generation"] != lease.generation or domain["resident"] != _encode(lease.target)
-                    or domain["resident_instance_id"] != lease.instance_id):
+            if self._active_lease(conn, lease, "inference") is None:
                 return False
             conn.execute("UPDATE leases SET status='released' WHERE id=?", (lease.lease_id,))
             conn.execute("UPDATE requests SET status=CASE WHEN cancel_requested=1 THEN 'cancelled' ELSE 'completed' END WHERE id=?", (lease.request_id,))
             self._event(conn, lease.domain_id, "request_finished", ref=reference)
             return True
         return self._call(finish, now_ms=now_ms)
+
+    def finish_load(self, lease: LoadLease, evidence: ReconciliationEvidence, *, reference: str, now_ms: int) -> bool:
+        """Proof-based CONTROL slot completion, not per-request fit or memory settlement.
+
+        A cancelled/expired admitted control still needs independent terminal
+        proof to release its slot; it is never reported as a completed request.
+        A consumer must separately enforce installed qualification and LC03.
+        """
+        _label(reference)
+        return self._call(lambda conn: self._finish_load(conn, lease, evidence, reference=reference, now_ms=now_ms), now_ms=now_ms)
+
+    def _finish_load(self, conn: sqlite3.Connection, lease: LoadLease, evidence: ReconciliationEvidence, *, reference: str, now_ms: int) -> bool:
+        """Internal atomic seam; native/memory consumer owns this SAME write."""
+        _label(reference)
+        request = self._active_lease(conn, lease, "load")
+        if request is None:
+            return False
+        domain = self._domain(conn, lease.domain_id)
+        if domain["state"] != "idle" or domain["operation_id"] is not None:
+            return False
+        instance = self._verify_evidence(domain, evidence, lease.target, now_ms, "load_control", scope_id=lease.lease_id)
+        if instance != lease.instance_id:
+            raise CoordinatorError("target_unverified")
+        status = "cancelled" if request["cancel_requested"] else "expired" if request["deadline"] <= now_ms else "completed"
+        conn.execute("UPDATE leases SET status='released' WHERE id=?", (lease.lease_id,))
+        conn.execute("UPDATE requests SET status=? WHERE id=?", (status, lease.request_id))
+        self._event(conn, lease.domain_id, "load_finished", ref=reference)
+        return True
 
     def evidence_scope(self, domain_id: str) -> EvidenceScope:
         """Scope for a NEW observation; not a proof generator or acceptance."""
@@ -704,7 +943,12 @@ class LifecycleCoordinator:
             purpose = "reconcile"
             if domain["state"] != "reconciling":
                 op = conn.execute("SELECT stage,dispatched,status FROM operations WHERE id=?", (domain["operation_id"],)).fetchone()
-                if op is None or not op["dispatched"] or op["status"] != "active" or op["stage"] not in ("unload", "verify"):
+                if op is None:
+                    control = conn.execute("SELECT l.id FROM leases l JOIN requests r ON r.id=l.request_id WHERE l.domain=? AND l.status='active' AND r.purpose='load' AND r.status='admitted' AND l.owner_epoch=? AND l.generation=?", (domain_id, self._epoch, domain["generation"])).fetchone()
+                    if control is None:
+                        raise CoordinatorError("observation_not_requested")
+                    return EvidenceScope(self._epoch, domain["generation"], control["id"], "load_control")
+                if not op["dispatched"] or op["status"] != "active" or op["stage"] not in ("unload", "verify"):
                     raise CoordinatorError("observation_not_requested")
                 purpose = op["stage"]
             return EvidenceScope(self._epoch, domain["generation"], domain["operation_id"], purpose)

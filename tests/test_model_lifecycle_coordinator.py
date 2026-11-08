@@ -609,3 +609,32 @@ def test_fork_with_inherited_locked_mutex_is_bounded_and_cannot_unlock_parent(tm
         future.result(timeout=5)
         with pytest.raises(lc.CoordinatorError, match="namespace_busy"):
             lc.LifecycleCoordinator(tmp_path / "owner")
+
+
+def test_request_scoped_claim_does_not_dispatch_an_earlier_foreign_waiter(tmp_path):
+    coord,fleet=opened(tmp_path)
+    with coord:
+        enqueue(coord,'first',A)
+        enqueue(coord,'second',B)
+        before=coord.snapshot('shared')
+        assert coord.claim_next('shared',now_ms=1000,request_id='second') is None
+        assert coord.snapshot('shared')==before
+        step=coord.claim_next('shared',now_ms=1000,request_id='first')
+        assert step.kind=='load' and step.target==A
+        fleet.apply(coord,step,1000)
+        assert coord.claim_next('shared',now_ms=1000,request_id='second') is None
+        verify=coord.claim_next('shared',now_ms=1000,request_id='first')
+        assert verify.kind=='verify' and verify.target==A
+
+
+def test_request_scoped_claim_cannot_advance_a_different_cancelled_targets_operation(tmp_path):
+    coord,fleet=opened(tmp_path)
+    with coord:
+        enqueue(coord,'first',A)
+        step=coord.claim_next('shared',now_ms=1000,request_id='first')
+        fleet.apply(coord,step,1000)
+        coord.cancel('first',now_ms=1000)
+        enqueue(coord,'second',B)
+        before=coord.snapshot('shared')
+        assert coord.claim_next('shared',now_ms=1000,request_id='second') is None
+        assert coord.snapshot('shared')==before

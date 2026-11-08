@@ -27,6 +27,7 @@ from typing import (
 from local_runtime_lifecycle import CapabilityEvidence, ObservationStamp
 from model_lifecycle_coordinator import (
     LifecycleCoordinator,
+    LoadLease,
     ModelTarget,
     ReconciliationEvidence,
     RequestLease,
@@ -50,7 +51,7 @@ from ollama_protocol import (
 from runtime_persistence import assert_no_active_write_transaction
 from shared_memory_admission import MemoryLease, MemorySample, SharedMemoryAdmission
 
-Intent = TransitionStep | RequestLease
+Intent = TransitionStep | RequestLease | LoadLease
 REQUIRED_CAPABILITIES = (
     "native_chat",
     "explicit_local_source",
@@ -113,7 +114,7 @@ class OllamaPermit:
 
     def __post_init__(self) -> None:
         if not isinstance(
-            self.intent, (TransitionStep, RequestLease)
+            self.intent, (TransitionStep, RequestLease, LoadLease)
         ) or not isinstance(self.qualification, OllamaQualification):
             raise OllamaDenied("invalid_permit")
         integer(self.expires_ms, positive=True)
@@ -165,7 +166,11 @@ def _target(intent: Intent) -> ModelTarget:
 
 
 def _key(intent: Intent) -> str:
-    return intent.lease_id if isinstance(intent, RequestLease) else intent.operation_id
+    return (
+        intent.lease_id
+        if isinstance(intent, (RequestLease, LoadLease))
+        else intent.operation_id
+    )
 
 
 def _profile_digest(profile: OllamaProfile) -> str:
@@ -173,7 +178,36 @@ def _profile_digest(profile: OllamaProfile) -> str:
 
 
 def _stage(intent: Intent) -> str:
-    return "infer" if isinstance(intent, RequestLease) else intent.kind
+    return (
+        "infer"
+        if isinstance(intent, RequestLease)
+        else "load_control"
+        if isinstance(intent, LoadLease)
+        else intent.kind
+    )
+
+
+def validate_qualification(q: OllamaQualification, now: int) -> None:
+    """Pure installed metadata check, shared by pre-disruption and send gates."""
+    integer(now)
+    if (
+        not isinstance(q, OllamaQualification)
+        or q.source_pin != SOURCE_PIN
+        or now >= q.expires_ms
+    ):
+        raise OllamaDenied("native_qualification_mismatch")
+    caps = {c.name: c for c in q.capabilities if isinstance(c, CapabilityEvidence)}
+    if len(caps) != len(q.capabilities) or any(
+        name not in caps
+        or caps[name].state_for_installed_scope(
+            runtime_id=q.runtime_id,
+            runtime_version=q.server_version,
+            profile_fingerprint=q.profile.memory.target.profile_fingerprint,
+        )
+        != "supported"
+        for name in REQUIRED_CAPABILITIES
+    ):
+        raise OllamaDenied("native_capability_unqualified")
 
 
 class OllamaLifecycleBridge:
@@ -230,18 +264,7 @@ class OllamaLifecycleBridge:
             or q.runtime_id != _target(permit.intent).runtime_id
         ):
             raise OllamaDenied("native_qualification_mismatch")
-        caps = {c.name: c for c in q.capabilities if isinstance(c, CapabilityEvidence)}
-        if len(caps) != len(q.capabilities) or any(
-            name not in caps
-            or caps[name].state_for_installed_scope(
-                runtime_id=q.runtime_id,
-                runtime_version=q.server_version,
-                profile_fingerprint=q.profile.memory.target.profile_fingerprint,
-            )
-            != "supported"
-            for name in REQUIRED_CAPABILITIES
-        ):
-            raise OllamaDenied("native_capability_unqualified")
+        validate_qualification(q, now)
         try:
             approved = self.authorize(permit) if self.authorize is not None else False
         except Exception:
@@ -291,6 +314,8 @@ class OllamaLifecycleBridge:
             or request is None
             or lease["status"] != "active"
             or request["status"] != "admitted"
+            or request["purpose"]
+            != ("load" if type(intent) is LoadLease else "inference")
             or lease["request_id"] != intent.request_id
             or lease["domain"] != intent.domain_id
             or request["domain"] != intent.domain_id
@@ -322,7 +347,7 @@ class OllamaLifecycleBridge:
         intent = permit.intent
         instance = (
             intent.instance_id
-            if isinstance(intent, RequestLease)
+            if isinstance(intent, (RequestLease, LoadLease))
             else intent.source_instance_id
             if intent.kind in ("drain", "unload")
             else None
@@ -601,6 +626,10 @@ class OllamaLifecycleBridge:
                 self.coordinator.mark_uncertain(
                     intent, reference="ollama_native_uncertain", now_ms=now
                 )
+            elif isinstance(intent, LoadLease):
+                self.coordinator.mark_load_uncertain(
+                    intent, reference="native_load_uncertain", now_ms=now
+                )
             else:
                 self.coordinator.mark_request_uncertain(
                     intent, reference="ollama_native_uncertain", now_ms=now
@@ -680,6 +709,45 @@ class OllamaLifecycleBridge:
             self._failure(permit, lease)
             raise
 
+    def _proof(
+        self,
+        permit: OllamaPermit,
+        observed: OllamaObservation,
+        evidence: ReconciliationEvidence,
+        *,
+        verify: bool,
+    ) -> None:
+        if (
+            not isinstance(evidence, ReconciliationEvidence)
+            or evidence.reference != observed.reference
+            or evidence.clock_id != observed.stamp.clock_id
+        ):
+            raise OllamaDenied("native_proof_scope_mismatch")
+        inventory = next(
+            (
+                x
+                for x in evidence.inventories
+                if x.runtime.runtime_id == permit.qualification.runtime_id
+            ),
+            None,
+        )
+        if (
+            inventory is None
+            or inventory.runtime_version != observed.version
+            or inventory.stamp.clock_id != observed.stamp.clock_id
+            or inventory.stamp.observed_at is None
+            or observed.stamp.observed_at is None
+            or inventory.stamp.observed_at < observed.stamp.observed_at
+        ):
+            raise OllamaDenied("native_proof_scope_mismatch")
+        if verify and not any(
+            x.artifact_id == permit.intent.target.artifact_id
+            and x.effective_context_tokens
+            == permit.qualification.profile.memory.context_tokens
+            for x in inventory.instances
+        ):
+            raise OllamaDenied("native_context_unverified")
+
     async def confirm(
         self,
         permit: OllamaPermit,
@@ -725,36 +793,7 @@ class OllamaLifecycleBridge:
             raise
         except Exception:
             raise OllamaDenied("native_proof_unavailable") from None
-        if (
-            not isinstance(evidence, ReconciliationEvidence)
-            or evidence.reference != observed.reference
-            or evidence.clock_id != observed.stamp.clock_id
-        ):
-            raise OllamaDenied("native_proof_scope_mismatch")
-        inventory = next(
-            (
-                x
-                for x in evidence.inventories
-                if x.runtime.runtime_id == permit.qualification.runtime_id
-            ),
-            None,
-        )
-        if (
-            inventory is None
-            or inventory.runtime_version != observed.version
-            or inventory.stamp.clock_id != observed.stamp.clock_id
-            or inventory.stamp.observed_at is None
-            or observed.stamp.observed_at is None
-            or inventory.stamp.observed_at < observed.stamp.observed_at
-        ):
-            raise OllamaDenied("native_proof_scope_mismatch")
-        if intent.kind == "verify" and not any(
-            x.artifact_id == intent.target.artifact_id
-            and x.effective_context_tokens
-            == permit.qualification.profile.memory.context_tokens
-            for x in inventory.instances
-        ):
-            raise OllamaDenied("native_context_unverified")
+        self._proof(permit, observed, evidence, verify=intent.kind == "verify")
         now = self._now()
         self.coordinator._call(lambda conn: self._active(conn, permit, now), now_ms=now)
         self._observation(permit, observed, now, absent=intent.kind == "unload")
@@ -763,6 +802,60 @@ class OllamaLifecycleBridge:
         return self.coordinator.complete_step(
             intent, reference="ollama_native_confirm", now_ms=now, evidence=evidence
         )
+
+    async def confirm_load(
+        self,
+        permit: OllamaPermit,
+        *,
+        lease: MemoryLease,
+        sample: Callable[[], Awaitable[MemorySample]],
+        produce: Callable[[OllamaObservation], Awaitable[ReconciliationEvidence]],
+    ) -> bool:
+        """Fresh real control-slot/native/profile/memory proof, never inference.
+
+        Final current authority, model budget and slot completion share one write.
+        Native observations/proof/sample production remain outside transactions.
+        """
+        intent = permit.intent
+        if type(intent) is not LoadLease or lease.domain_id != intent.domain_id:
+            raise OllamaDenied("load_control_intent_required")
+
+        def current(conn: sqlite3.Connection, measured: MemorySample) -> None:
+            self._active(conn, permit, self._now())
+            self.memory._admitted_model(
+                conn, lease, permit.qualification.profile.memory, measured, self._now()
+            )
+            self._loaded_profile(conn, permit, lease.work_id)
+
+        async def measured() -> MemorySample:
+            assert_no_active_write_transaction("native load memory producer")
+            async with asyncio.timeout(5):
+                return await sample()
+
+        before = await measured()
+        self.coordinator._call(lambda conn: current(conn, before), now_ms=self._now())
+        observed = await self.observe(permit.qualification.runtime_id)
+        self._observation(permit, observed, self._now())
+        after = await measured()
+        assert_no_active_write_transaction("native load proof producer")
+        try:
+            async with asyncio.timeout(5):
+                evidence = await produce(observed)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            raise OllamaDenied("load_control_proof_unavailable") from None
+        self._proof(permit, observed, evidence, verify=True)
+        now = self._now()
+        self._observation(permit, observed, self._now())
+
+        def finish(conn: sqlite3.Connection) -> bool:
+            current(conn, after)
+            return self.coordinator._finish_load(
+                conn, intent, evidence, reference=observed.reference, now_ms=now
+            )
+
+        return self.coordinator._call(finish, now_ms=now)
 
     async def infer(
         self,

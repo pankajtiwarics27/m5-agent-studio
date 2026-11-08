@@ -555,7 +555,7 @@ def test_standalone_native_namespaces_execute_real_kernels_without_repo_module_i
     code = """import sys,pathlib,importlib.abc,asyncio
 root=pathlib.Path(REPO)
 sys.path[:]=[p for p in sys.path if pathlib.Path(p or '.').resolve()!=root]
-public={'local_runtime_lifecycle','model_lifecycle_coordinator','shared_memory_admission','omlx_lifecycle','ollama_protocol','ollama_lifecycle','lmstudio_protocol','lmstudio_lifecycle','request_fit','request_fit_admission','native_dispatch_executor'}
+public={'local_runtime_lifecycle','model_lifecycle_coordinator','shared_memory_admission','omlx_lifecycle','ollama_protocol','ollama_lifecycle','lmstudio_protocol','lmstudio_lifecycle','request_fit','request_fit_admission','native_dispatch_executor','native_transition_driver','native_inference_scheduler'}
 class NoSiblingFallback(importlib.abc.MetaPathFinder):
  def find_spec(self,fullname,path=None,target=None):
   if fullname in public:raise AssertionError('standalone sibling import: '+fullname)
@@ -589,6 +589,79 @@ async def run():
    assert b.coord.snapshot('shared').active_requests==0
   finally:b.coord.close()
 asyncio.run(run())
+from test_native_transition_driver import fixture,admission,loaded
+async def cold():
+ for backend in ('ollama','lmstudio'):
+  b=fixture(pathlib.Path('cold-'+backend),backend)
+  try:
+   queued=b.transition.enqueue(admission(b),'isolated-cold','shared',deadline_ms=100000)
+   req,mem=await loaded(b,queued)
+   assert req.target.runtime_id==backend and mem.kind=='model'
+   assert b.memory.view('shared').committed_bytes==600
+  finally:b.coord.close()
+asyncio.run(cold())
+from test_native_inference_scheduler import scheduler
+async def scheduled():
+ for backend in ('ollama','lmstudio'):
+  b=fixture(pathlib.Path('scheduled-'+backend),backend)
+  try:
+   result=await collect(scheduler(b).stream(admission(b).call))
+   assert result[-1]['type']=='usage' and b.count_calls==1
+   assert b.coord.snapshot('shared').active_requests==0
+  finally:b.coord.close()
+asyncio.run(scheduled())
+from test_omlx_dispatch_integration import environment,scheduler as omlx_scheduler,source
+from pytest import MonkeyPatch
+async def omlx_source():
+ for backend in ('ollama','lmstudio'):
+  with MonkeyPatch.context() as patch:
+   env,b=environment(pathlib.Path('omlx-source-'+backend),patch,backend)
+   with b.coord:
+    await source.start_loaded(*env)
+    env[4].calls.clear()
+    result=await collect(omlx_scheduler(env,b).stream(admission(b).call))
+    assert result[-1]['type']=='usage' and b.count_calls==1
+    assert len(env[4].posts)==1 and env[4].posts[0].path.endswith('/unload')
+    assert 'omlx' not in env[2].models
+asyncio.run(omlx_source())
+from test_model_lifecycle_controls import load_reservation
+async def explicit_load_kernel():
+ for backend in ('ollama','lmstudio'):
+  b=fixture(pathlib.Path('load-control-'+backend),backend)
+  with b.coord:
+   result=await collect(scheduler(b).stream(admission(b).call))
+   assert result[-1]['type']=='usage' and b.count_calls==1
+   b.now+=1
+   control=load_reservation(b.coord,b.fleet,target=b.q.profile.memory.target,now=b.now)
+   assert type(control) is pkg.model_lifecycle_coordinator.LoadLease
+   assert not isinstance(control,pkg.model_lifecycle_coordinator.RequestLease)
+   assert b.coord.finish_load(control,b.fleet.evidence(b.coord,b.now),reference='fake-load-proof',now_ms=b.now)
+   assert b.count_calls==1 and b.memory.view('shared').committed_bytes==600
+asyncio.run(explicit_load_kernel())
+from test_native_load_control import scheduler as load_scheduler,call as load_call
+async def native_load_command():
+ for backend in ('ollama','lmstudio'):
+  b=fixture(pathlib.Path('native-load-'+backend),backend)
+  with b.coord:
+   execute=load_scheduler(b)
+   assert await execute.command(load_call(b))=={'status':'confirmed'}
+   assert await execute.command(load_call(b))=={'status':'confirmed'}
+   assert len(b.driver.mutations(b))==1 and getattr(b,'count_calls',0)==0
+   assert (await collect(execute.stream(admission(b).call)))[-1]['type']=='usage'
+   assert b.count_calls==1 and b.memory.view('shared').committed_bytes==600
+asyncio.run(native_load_command())
+from test_model_lifecycle_release import opened as release_opened,loaded as release_loaded,release as release_step,physical as release_physical,sample as release_sample
+coord,memory,fleet=release_opened(pathlib.Path('release-only-kernel'))
+with coord:
+ model=release_loaded(coord,memory,fleet)
+ step=release_step(coord)
+ assert type(step) is pkg.model_lifecycle_coordinator.ReleaseStep and not hasattr(step,'target')
+ assert coord.complete_release(step,reference='fake-physical',now_ms=1000,evidence=release_physical(coord,fleet,step))
+ assert coord.claim_next('shared',now_ms=1000) is None
+ assert not coord.finish_unload(step,reference='held-memory',now_ms=1000)
+ memory.settle(model,release_sample(memory,now=1000),terminal=True,reference='actual-zero',now_ms=1000)
+ assert coord.finish_unload(step,reference='barrier-retired',now_ms=1000)
+ assert coord.snapshot('shared').state=='idle'
 print('isolated native executor and shared transaction guards passed')
 """.replace("REPO", repr(str(root)))
     env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}
