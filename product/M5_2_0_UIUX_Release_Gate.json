@@ -249,9 +249,9 @@
         {
           "artifact": "product/M5_2_0_UIUX_Tokens.json",
           "totals": {
-            "tokens": 56,
+            "tokens": 58,
             "groups": 8,
-            "references": 1631,
+            "references": 1635,
             "theme_overrides": 20,
             "density_overrides": 5,
             "contrast_pairs": 28,
