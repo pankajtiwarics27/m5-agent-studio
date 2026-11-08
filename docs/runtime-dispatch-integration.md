@@ -216,3 +216,27 @@ and standalone startup/token/origin smokes passed. Generated source-bound record
 were refreshed through their generators; backend safety was freshly rerun:
 **300 tests plus 16 isolation checks passed**, with live container isolation still
 unqualified/blocked. No visual approval/source pin or acceptance ledger advanced.
+
+### Full offline regression after warm gateway/standalone integration
+
+At `b90e86c7fb796d813e6d534ec9b10e17389576ac`, the first full run completed
+**4,272 passed, 1 failed, 32 skipped**, one upstream warning, in 806.80 seconds.
+The failure was the historical Council model-default mutation replacing the first
+matching assignment anywhere in `app.py`, which now hits the new gateway rather
+than the intended summon handler. The test now selects `api_hall_summon` by AST
+range, verifies the intended assignment exists exactly once and leaves the new
+gateway unchanged. The actual Council missing-model refusal is unchanged. Its
+focused suite passed **20 tests**.
+
+A fresh full rerun with that test repair completed **4,273 passed, 32 skipped,
+1 warning in 806.79 seconds** on local Python 3.11. The 32 skips are 31 browser
+cases requiring explicit Chrome/Puppeteer configuration and the explicitly
+opt-in live-container test. Browser CI and Python 3.12/3.13 CI are **not** claimed
+by this local run. The warning is upstream Starlette/httpx deprecation.
+
+GitHub check inspection returned HTTP 401, so CI could not be inspected and the
+final test/evidence repair could not be published pending reconnection. Warm
+implementation through `b90e86c` had already been pushed to draft PR256 before
+the connection failed. This validation does not close the remaining LC-08 cold
+orchestration/canonical-workflow work, qualify installed producers, authorize
+merge/native activation or resume test8.
