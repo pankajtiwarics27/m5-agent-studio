@@ -700,3 +700,59 @@ governance/deferred-security consistency, JavaScript, demo/screenshot manifest a
 both app/standalone startup/auth/origin smokes passed. Standalone4,242,427 bytes.
 Release review reports zero findings; live isolation remains unqualified/blocked.
 These are author-run checks, not native qualification or independent acceptance.
+
+## Optional native unload-command actor continuation (still dormant)
+
+The preceding release-step checkpoint `cd8683a` subsequently passed **4661 tests,
+32 skips,one warning**, with PR CI42506183587 and push CI42506129464 green.
+PR259 comment6725073022 supersedes its chronological pending-full notes. Those
+results do not validate the current continuation.
+
+`NativeUnloadPlan` is now an optional trusted composition seam on the existing
+native actor. No plan is installed by default. Explicit Ollama/LM Studio unload
+commands share the same bounded lock wait and actor lock as load/inference, then
+capture the actual current source hold/instance/generation through the real driver.
+Only the owned FIFO release intent is consumed, at most **drain then unload**;
+there is no polling, implicit target load or acquire-to-self. Wrong purpose claims
+are fenced rather than converted into release authority. The concrete existing
+release driver still requires native configuration/authorization/profile/activity,
+full-runtime physical proof and independently sampled actual model-memory zero
+settlement before durable final barrier retirement.
+
+Canonical `confirmed` is not a bridge ACK, a `ReleaseResult.retired` boolean, an
+empty observed runtime, or a completed row alone. The actor verifies the exact
+uncancelled/unexpired unload request, release operation/source/instance/epoch/
+generation, released actual source-model hold and unique durable `release_settled`
+receipt after barrier retirement. Historical completion stays valid if a different
+actor has already claimed a successor; the old callback cannot poison that work.
+Cancellation/expiry after send may retire resources safely but cannot become API
+success or poison released memory. Interruptions before real retirement preserve
+uncertainty, charged holds and explicit reconciliation. Lock-wait cancellation
+must neither enqueue work nor release another lock owner's lock.
+
+No default plan/qualifier/authorizer/native client/proof/sample producer, HTTP
+model-control redirection, settings/server change or activation is added. The
+existing HTTP model controls remain oMLX-specific/unredirected. Already-absent or
+unmatched source is refused, not fabricated success. oMLX unload-only,
+unload-all/cache, remaining canonical workflows and LC09 recovery/session/grant/
+budget completion remain open. Private schema staysv4; migration/reset and
+architecture/security acceptance are not introduced.
+
+Initial evidence: **83 new fake/offline tests;1085 passed,one upstream warning** in
+the combined19-module lifecycle/native/dispatch/fit/persistence suite (51.88s).
+Coverage includes both actors in the isolated private standalone bundle, same-
+actor load/inference ordering, independent-actor held-memory/FIFO races, false
+retirement/missing receipt, plan/readiness/factory/proof/sample failures,
+post-send cancel/expiry, lock interruption, wrong purposes and unsupported controls.
+Full regression and exact-head CI must be recorded separately after execution.
+
+Pre-full final-source checks: Ruff, mypy75, scopes194 modules/13 areas, docs/ADR,
+baseline/governance/deferred-security consistency, JavaScript, demo/screenshot
+manifest, both authenticated startup/origin smokes and fresh backend302/16 passed.
+The standalone is4,251,726 bytes; generated source/preservation/performance/release
+checks pass with zero findings and unchanged visual pins. Live isolation remains
+unqualified/blocked. Five disposable mutations caught skipped durable completion,
+ignored cancelled status, missing retirement receipt, bypassed lock acquisition and
+stranded pre-driver factory failures (two failures each). No source worktree was
+mutated by the fault harness. Full regression and exact-head CI remain pending
+at this chronological checkpoint; this is not independent acceptance/activation.

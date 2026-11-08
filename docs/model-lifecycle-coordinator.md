@@ -353,3 +353,17 @@ Native step support does not install an unload command actor or HTTP route.
 Private schema remains v4; prior-version preservation/refusal and the absent
 reviewed backup/migration gate remain unchanged. See the
 [integration continuation](runtime-dispatch-integration.md#concrete-native-release-step-continuation-ollamalm-studio-still-no-command-actor).
+
+### Optional unload actor continuation
+
+An explicitly composed `NativeUnloadPlan` can now consume the existing source-only
+release primitive on the shared native actor for Ollama/LM Studio. It does not
+alter kernel schemas or weaken native/LC03 proof. At most two owned FIFO stages
+are claimed; only durable exact request/operation/source-model retirement and its
+`release_settled` receipt can produce canonical `confirmed`. Physical proof alone,
+a returned retired flag or an empty runtime cannot. Cancelled/expired cleanup
+retains its noncompleted status and cannot poison subsequent source acquisition.
+Historical completion is checked independently of a successor's current slot.
+No default plan or public route is enabled; already-absent/unmatched sources,
+oMLX unload-only and unload-all/cache remain unsupported. See the
+[integration actor continuation](runtime-dispatch-integration.md#optional-native-unload-command-actor-continuation-still-dormant).

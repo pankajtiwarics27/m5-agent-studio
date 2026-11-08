@@ -1,9 +1,9 @@
 {
   "story": "UIV2-29",
   "kind": "backend-safety-run",
-  "generated_at": "2026-11-08T17:38:35.233551+00:00",
+  "generated_at": "2026-11-08T18:14:15.779891+00:00",
   "git": {
-    "head": "7ea89ee637b00d2750f715995cac6a38575edcdd",
+    "head": "cd8683a3d3e67e3e24d7773a4ededb2493cdc893",
     "dirty": true
   },
   "source_sha256": {
@@ -73,7 +73,7 @@
       "    from starlette.testclient import TestClient as TestClient  # noqa",
       "",
       "-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html",
-      "302 passed, 1 warning in 75.10s (0:01:15)"
+      "302 passed, 1 warning in 74.69s (0:01:14)"
     ]
   },
   "isolation": {
@@ -99,7 +99,7 @@
       "  [PASS] no new privileges — --security-opt=no-new-privileges",
       "  [PASS] no implicit image pull — --pull=never",
       "  [PASS] resource limits — --pids-limit=128 --memory=2g --cpus=2",
-      "  [PASS] single workspace bind mount — type=bind,source=/tmp/m5-isolation-smoke-t08oduh_,target=/workspace",
+      "  [PASS] single workspace bind mount — type=bind,source=/tmp/m5-isolation-smoke-snl73l1w,target=/workspace",
       "",
       "== 3. Skill-code execution gates (app._run_skill_script) ==",
       "  [PASS] default-off skill-code denial — PermissionError",
@@ -155,7 +155,7 @@
       "scripts/isolation_smoke.py"
     ]
   },
-  "duration_seconds": 76.762,
+  "duration_seconds": 76.269,
   "totals": {
     "test_modules": 13,
     "tests_passed": 302,

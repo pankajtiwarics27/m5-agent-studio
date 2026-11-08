@@ -136,6 +136,17 @@ confirmation. Keep the public/actor unload command, oMLX unload-only permits,
 already-absent policy, unload-all/cache, native producers and activation unavailable.
 No schema change or implicit recovery/migration is introduced by this continuation.
 
+Compose an optional NativeUnloadPlan on the existing native load/inference actor,
+without default installation or HTTP redirection. Capture the actual source after
+shared lock acquisition and consume only its two FIFO-fenced release stages.
+Canonical confirmed requires exact durable live completed request, release goal/
+source/instance/epoch/generation, released source-model hold and final retirement
+receipt; a returned retired flag or physical absence alone is insufficient. Do not
+require the slot to remain idle after historical completion, or poison successor
+work on cancelled/expired cleanup. Preserve unknown holds/barriers on interrupted
+work and never unlock another lock owner. Keep oMLX unload-only, already-absent
+success, unload-all/cache, production composition and LC09 recovery unavailable.
+
 ## Alternatives
 
 - Replace served routing immediately: would activate unqualified transports and

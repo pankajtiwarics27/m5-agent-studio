@@ -676,6 +676,19 @@ async def native_release_steps():
    assert b.memory.view('shared').committed_bytes==0 and b.coord.snapshot('shared').state=='idle'
    assert len(b.driver.mutations(b))==1 and getattr(b,'count_calls',0)==0
 asyncio.run(native_release_steps())
+from test_native_unload_control import scheduler as unload_scheduler
+from test_native_unload_steps import call as unload_call
+async def native_unload_command():
+ for backend in ('ollama','lmstudio'):
+  b=fixture(pathlib.Path('native-unload-command-'+backend),backend)
+  with b.coord:
+   execute=unload_scheduler(b)
+   assert await execute.command(load_call(b))=={'status':'confirmed'}
+   b.wire.calls.clear()
+   assert await execute.command(unload_call(b))=={'status':'confirmed'}
+   assert b.memory.view('shared').committed_bytes==0 and b.coord.snapshot('shared').state=='idle'
+   assert len(b.driver.mutations(b))==1 and getattr(b,'count_calls',0)==0
+asyncio.run(native_unload_command())
 print('isolated native executor and shared transaction guards passed')
 """.replace("REPO", repr(str(root)))
     env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}

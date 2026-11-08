@@ -280,3 +280,13 @@ cleanup retains its cancelled/expired request status, never API success.
 This is concrete bridge/step-driver support, **not** an installed unload command
 actor, HTTP redirection, native qualifier, transport/sample/evidence producer or
 production activation. No polling/replay or already-absent success is implemented.
+
+## Optional unload actor continuation
+
+An explicitly supplied `NativeUnloadPlan` can now orchestrate this bridge's
+release steps on the same actor lock as load/inference. Canonical confirmation
+requires the exact completed live unload row, released actual source hold and
+durable final retirement receipt, not ACK or a retired flag. Post-send cancelled/
+expired cleanup cannot become confirmed or poison released memory. No default
+plan, native producer, HTTP redirection or production activation is installed.
+Already-absent success and unload-all/cache remain unavailable.
