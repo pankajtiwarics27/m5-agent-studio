@@ -678,6 +678,33 @@ class LifecycleCoordinator:
             return None
         return row
 
+    def _active_release(self, conn: sqlite3.Connection, step: ReleaseStep, now_ms: int, *, finishing: bool = False) -> sqlite3.Row | None:
+        """Native release gate, separate from acquire and inference authority.
+
+        Only an already-sent stage may finish after its request was cancelled or
+        expired; the final control status remains cancelled/expired, not success.
+        """
+        row = self._release_operation(conn, step)
+        if row is None or row["status"] != "active" or row["stage"] != step.kind or not row["dispatched"]:
+            return None
+        if now_ms >= row["deadline"]:
+            self._uncertain(conn, step.domain_id, step.operation_id, "late_native_release")
+            return None
+        domain = self._domain(conn, step.domain_id)
+        request = conn.execute("SELECT * FROM requests WHERE id=?", (step.request_id,)).fetchone()
+        memory = conn.execute("SELECT * FROM memory_reservations WHERE id=?", (step.memory_id,)).fetchone()
+        policy = conn.execute("SELECT state FROM memory_domains WHERE domain=?", (step.domain_id,)).fetchone()
+        if (domain["state"] != "switching" or domain["resident"] != _encode(step.source) or domain["resident_instance_id"] != step.source_instance_id
+                or request is None or request["domain"] != step.domain_id or request["purpose"] != "unload" or request["target"] != _encode(step.source)
+                or request["status"] not in (("queued", "cancelled", "expired") if finishing else ("queued",))
+                or (not finishing and (request["cancel_requested"] or request["deadline"] <= now_ms))
+                or memory is None or memory["status"] != "dispatched" or memory["kind"] != "model" or memory["domain"] != step.domain_id or memory["owner_epoch"] != self._epoch
+                or json.loads(memory["binding"]).get("profile", {}).get("target") != asdict(step.source)
+                or policy is None or policy["state"] != "ready"
+                or conn.execute("SELECT 1 FROM leases WHERE domain=? AND status='active'", (step.domain_id,)).fetchone()):
+            return None
+        return row
+
     def mark_release_uncertain(self, step: ReleaseStep, *, reference: str, now_ms: int) -> bool:
         """Fence even a physically completed release whose settlement failed."""
         _label(reference)

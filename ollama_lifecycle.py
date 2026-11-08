@@ -32,6 +32,7 @@ from model_lifecycle_coordinator import (
     ReconciliationEvidence,
     RequestLease,
     TransitionStep,
+    ReleaseStep,
     _encode,
 )
 from ollama_protocol import (
@@ -51,7 +52,7 @@ from ollama_protocol import (
 from runtime_persistence import assert_no_active_write_transaction
 from shared_memory_admission import MemoryLease, MemorySample, SharedMemoryAdmission
 
-Intent = TransitionStep | RequestLease | LoadLease
+Intent = TransitionStep | RequestLease | LoadLease | ReleaseStep
 REQUIRED_CAPABILITIES = (
     "native_chat",
     "explicit_local_source",
@@ -114,7 +115,7 @@ class OllamaPermit:
 
     def __post_init__(self) -> None:
         if not isinstance(
-            self.intent, (TransitionStep, RequestLease, LoadLease)
+            self.intent, (TransitionStep, RequestLease, LoadLease, ReleaseStep)
         ) or not isinstance(self.qualification, OllamaQualification):
             raise OllamaDenied("invalid_permit")
         integer(self.expires_ms, positive=True)
@@ -158,6 +159,8 @@ class OllamaObservation:
 
 
 def _target(intent: Intent) -> ModelTarget:
+    if isinstance(intent, ReleaseStep):
+        return intent.source
     if isinstance(intent, TransitionStep) and intent.kind in ("drain", "unload"):
         if intent.source is None:
             raise OllamaDenied("source_missing")
@@ -183,6 +186,8 @@ def _stage(intent: Intent) -> str:
         if isinstance(intent, RequestLease)
         else "load_control"
         if isinstance(intent, LoadLease)
+        else "release_" + intent.kind
+        if isinstance(intent, ReleaseStep)
         else intent.kind
     )
 
@@ -293,6 +298,13 @@ class OllamaLifecycleBridge:
             for r in runtimes
         ):
             raise OllamaDenied("runtime_not_coordinated_local_ollama")
+        if isinstance(intent, ReleaseStep):
+            release = self.coordinator._active_release(
+                conn, intent, now, finishing=finishing
+            )
+            if release is None:
+                raise OllamaDenied("release_intent_stale_or_busy")
+            return release
         if isinstance(intent, TransitionStep):
             if conn.execute(
                 "SELECT 1 FROM leases WHERE domain=? AND status='active'",
@@ -516,13 +528,23 @@ class OllamaLifecycleBridge:
         now: int,
     ) -> None:
         intent = permit.intent
-        if isinstance(intent, TransitionStep) and intent.kind == "unload":
+        if (
+            isinstance(intent, ReleaseStep)
+            or isinstance(intent, TransitionStep)
+            and intent.kind == "unload"
+        ):
             row = conn.execute(
                 "SELECT * FROM memory_reservations WHERE domain=? AND kind='model' AND status!='released'",
                 (intent.domain_id,),
             ).fetchone()
-            if row is None or parse_json(row["binding"])["profile"] != asdict(
-                permit.qualification.profile.memory
+            if (
+                row is None
+                or (
+                    isinstance(intent, ReleaseStep)
+                    and (row["id"] != intent.memory_id or row["status"] != "dispatched")
+                )
+                or parse_json(row["binding"])["profile"]
+                != asdict(permit.qualification.profile.memory)
             ):
                 raise OllamaDenied("native_memory_profile_mismatch")
             self._loaded_profile(conn, permit, row["work_id"])
@@ -622,7 +644,11 @@ class OllamaLifecycleBridge:
         now = self._now()
         intent = permit.intent
         try:
-            if isinstance(intent, TransitionStep):
+            if isinstance(intent, ReleaseStep):
+                self.coordinator.mark_release_uncertain(
+                    intent, reference="native_release_uncertain", now_ms=now
+                )
+            elif isinstance(intent, TransitionStep):
                 self.coordinator.mark_uncertain(
                     intent, reference="ollama_native_uncertain", now_ms=now
                 )
@@ -642,13 +668,21 @@ class OllamaLifecycleBridge:
 
     def drain(self, permit: OllamaPermit, activity: OllamaActivity) -> bool:
         if (
-            not isinstance(permit.intent, TransitionStep)
+            not isinstance(permit.intent, (TransitionStep, ReleaseStep))
             or permit.intent.kind != "drain"
         ):
             raise OllamaDenied("drain_intent_required")
         now = self._now()
         self.coordinator._call(lambda conn: self._active(conn, permit, now), now_ms=now)
         self._activity(permit, activity, now)
+        if isinstance(permit.intent, ReleaseStep):
+            self.coordinator._call(
+                lambda conn: self._memory_send(conn, permit, None, None, now),
+                now_ms=now,
+            )
+            return self.coordinator.complete_release(
+                permit.intent, reference=activity.reference, now_ms=now
+            )
         return self.coordinator.complete_step(
             permit.intent, reference=activity.reference, now_ms=now
         )
@@ -663,7 +697,7 @@ class OllamaLifecycleBridge:
     ) -> str:
         """One native load/unload send. ACK is never physical release authority."""
         intent = permit.intent
-        if not isinstance(intent, TransitionStep) or intent.kind not in (
+        if not isinstance(intent, (TransitionStep, ReleaseStep)) or intent.kind not in (
             "load",
             "unload",
         ):
@@ -693,11 +727,13 @@ class OllamaLifecycleBridge:
             now = self._now()
 
             def accepted(conn: sqlite3.Connection) -> None:
-                self._active(conn, permit, now)
+                self._active(
+                    conn, permit, now, finishing=isinstance(intent, ReleaseStep)
+                )
                 self._event(conn, intent, "ack", str(now))
 
             self.coordinator._call(accepted, now_ms=now)
-            if intent.kind == "load":
+            if isinstance(intent, TransitionStep) and intent.kind == "load":
                 if not self.coordinator.complete_step(
                     intent, reference="ollama_native_load_ack", now_ms=now
                 ):
@@ -741,7 +777,7 @@ class OllamaLifecycleBridge:
         ):
             raise OllamaDenied("native_proof_scope_mismatch")
         if verify and not any(
-            x.artifact_id == permit.intent.target.artifact_id
+            x.artifact_id == _target(permit.intent).artifact_id
             and x.effective_context_tokens
             == permit.qualification.profile.memory.context_tokens
             for x in inventory.instances
@@ -755,7 +791,7 @@ class OllamaLifecycleBridge:
     ) -> bool:
         """Current post-send all-runtime/instance/terminal/physical evidence only."""
         intent = permit.intent
-        if not isinstance(intent, TransitionStep) or intent.kind not in (
+        if not isinstance(intent, (TransitionStep, ReleaseStep)) or intent.kind not in (
             "verify",
             "unload",
         ):
@@ -763,7 +799,7 @@ class OllamaLifecycleBridge:
         now = self._now()
 
         def check(conn: sqlite3.Connection) -> None:
-            self._active(conn, permit, now)
+            self._active(conn, permit, now, finishing=isinstance(intent, ReleaseStep))
             if intent.kind == "unload" and self._recorded(conn, intent, "ack") is None:
                 raise OllamaDenied("native_ack_missing")
             if intent.kind == "verify":
@@ -795,10 +831,19 @@ class OllamaLifecycleBridge:
             raise OllamaDenied("native_proof_unavailable") from None
         self._proof(permit, observed, evidence, verify=intent.kind == "verify")
         now = self._now()
-        self.coordinator._call(lambda conn: self._active(conn, permit, now), now_ms=now)
+        self.coordinator._call(
+            lambda conn: self._active(
+                conn, permit, now, finishing=isinstance(intent, ReleaseStep)
+            ),
+            now_ms=now,
+        )
         self._observation(permit, observed, now, absent=intent.kind == "unload")
         # Source target owns unload; target qualification owns verify. /ps alone
         # cannot produce the coordinator's exact receipt or physical proof.
+        if isinstance(intent, ReleaseStep):
+            return self.coordinator.complete_release(
+                intent, reference="ollama_native_confirm", now_ms=now, evidence=evidence
+            )
         return self.coordinator.complete_step(
             intent, reference="ollama_native_confirm", now_ms=now, evidence=evidence
         )

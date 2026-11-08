@@ -331,3 +331,50 @@ completion, retained barrier, real memory settlement and final retirement throug
 its own namespaced coordinator/memory kernels. Native unload command consumers,
 unload-all/cache, already-absent success policy, routes/settings, default producers,
 installed qualification and production activation remain **unimplemented**.
+
+### Native release gate continuation (no schema change or command activation)
+
+Ollama and LM Studio now explicitly support `ReleaseStep` as source-only native
+permit intent; oMLX unload-only still refuses. `_active_release` is separate from
+`_active_step`: it checks exact current dispatched release stage and request,
+source/instance/hold, epoch/generation, ready memory state and empty admitted slots.
+Before effects, request cancellation/expiry denies. Only an acknowledged already-
+sent stage may use the native finishing path after cancellation/expiry, and the
+final request status still cannot become completed. Native receipt prefixes are
+disjoint from acquire-stage receipts. Inference, load-control and acquire checks
+are not relaxed or repurposed.
+
+The concrete step consumer captures the real source hold/instance/generation,
+validates actual native loaded-profile records before completing drain, confirms
+full-runtime physical absence, independently settles the exact model reservation,
+then invokes `finish_unload`. Its `ReleaseResult.retired` denotes only barrier
+retirement, including cancelled/expired cleanup; it is not canonical `confirmed`.
+Native step support does not install an unload command actor or HTTP route.
+Private schema remains v4; prior-version preservation/refusal and the absent
+reviewed backup/migration gate remain unchanged. See the
+[integration continuation](runtime-dispatch-integration.md#concrete-native-release-step-continuation-ollamalm-studio-still-no-command-actor).
+
+### Optional unload actor continuation
+
+An explicitly composed `NativeUnloadPlan` can now consume the existing source-only
+release primitive on the shared native actor for Ollama/LM Studio. It does not
+alter kernel schemas or weaken native/LC03 proof. At most two owned FIFO stages
+are claimed; only durable exact request/operation/source-model retirement and its
+`release_settled` receipt can produce canonical `confirmed`. Physical proof alone,
+a returned retired flag or an empty runtime cannot. Cancelled/expired cleanup
+retains its noncompleted status and cannot poison subsequent source acquisition.
+Historical completion is checked independently of a successor's current slot.
+No default plan or public route is enabled; already-absent/unmatched sources,
+oMLX unload-only and unload-all/cache remain unsupported. See the
+[integration actor continuation](runtime-dispatch-integration.md#optional-native-unload-command-actor-continuation-still-dormant).
+
+### oMLX source-only actor continuation
+
+The same `ReleaseStep`/durable-retirement protocol can now be explicitly consumed
+by an oMLX source-only native job, with distinct LC04 qualification plus actual
+source-memory profile and original native-load record. No acquire target or
+request-fit metadata is invented. Release send/ACK markers are separate from
+acquire; source absence and independent held-memory zero settlement remain required.
+Optional oMLX actor composition is not default installation or HTTP redirection.
+Schema/migration policy remains unchanged. See the
+[source-only integration](runtime-dispatch-integration.md#omlx-source-only-unload-command-continuation-dormant).

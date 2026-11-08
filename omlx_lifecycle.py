@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import math
+import hashlib
 import json
 import sqlite3
 import uuid
@@ -18,7 +19,7 @@ from urllib.parse import quote
 import runtime_persistence
 from local_runtime_lifecycle import CapabilityEvidence, ObservationStamp, RuntimeIdentity
 from model_lifecycle_coordinator import (
-    LifecycleCoordinator, ModelTarget, ReconciliationEvidence, TransitionStep, _integer, _label,
+    LifecycleCoordinator, ModelTarget, ReconciliationEvidence, TransitionStep, ReleaseStep, _integer, _label,
 )
 from shared_memory_admission import MemoryLease, MemorySample, ModelMemoryProfile, SharedMemoryAdmission
 
@@ -75,17 +76,37 @@ class OmlxQualification:
             raise OmlxError('invalid_qualification')
 
 
+def validate_unload_qualification(q: OmlxQualification, profile: ModelMemoryProfile, now: int, *, clock_id: str, max_age: float) -> None:
+    """Pure source-only readiness, not an oMLX fit/counter/load qualification."""
+    if (not isinstance(q, OmlxQualification) or not isinstance(profile, ModelMemoryProfile)
+            or q.target != profile.target or q.context_tokens != profile.context_tokens
+            or q.runtime.runtime_id != q.target.runtime_id or q.runtime.backend != 'omlx'
+            or q.runtime.location != 'local' or q.runtime.egress != 'local-only'
+            or q.runtime.ownership_mode not in ('coordinated', 'isolated') or q.source_revision != OMLX_SOURCE_REVISION):
+        raise OmlxError('qualification_scope_mismatch')
+    if q.stamp.freshness(now=now/1000, clock_id=clock_id, max_age=max_age) != 'fresh':
+        raise OmlxError('qualification_stale')
+    caps = {x.name: x for x in q.capabilities}
+    if any(name not in caps or caps[name].state_for_installed_scope(runtime_id=q.runtime.runtime_id,
+            runtime_version=q.runtime_version, profile_fingerprint=q.target.profile_fingerprint) != 'supported' for name in _REQUIRED):
+        raise OmlxError('installed_capability_unknown')
+
+
+def _source_profile_digest(profile: object) -> str:
+    return hashlib.sha256(json.dumps(profile, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+
+
 @dataclass(frozen=True, slots=True)
 class OmlxPermit:
     """Trusted server policy attestation, not a cryptographic grant or HTTP input."""
-    step: TransitionStep
+    step: TransitionStep | ReleaseStep
     qualification: OmlxQualification
     expires_ms: int
     reference: str
     authorized: bool = False
 
     def __post_init__(self) -> None:
-        if not isinstance(self.step, TransitionStep) or not isinstance(self.qualification, OmlxQualification):
+        if not isinstance(self.step, (TransitionStep, ReleaseStep)) or not isinstance(self.qualification, OmlxQualification):
             raise OmlxError('invalid_permit')
         _integer(self.expires_ms, positive=True)
         _label(self.reference)
@@ -96,7 +117,7 @@ class OmlxPermit:
 @dataclass(frozen=True, slots=True)
 class OmlxActivity:
     """Scoped native facts NOT inferred from the pool status route."""
-    step: TransitionStep
+    step: TransitionStep | ReleaseStep
     instance_id: str | None
     active_streams: int | None
     stamp: ObservationStamp
@@ -105,7 +126,7 @@ class OmlxActivity:
     helper_visibility_complete: bool = False
 
     def __post_init__(self) -> None:
-        if not isinstance(self.step, TransitionStep) or not isinstance(self.stamp, ObservationStamp):
+        if not isinstance(self.step, (TransitionStep, ReleaseStep)) or not isinstance(self.stamp, ObservationStamp):
             raise OmlxError('invalid_activity')
         if self.instance_id is not None:
             _label(self.instance_id)
@@ -133,7 +154,7 @@ class OmlxWireModel:
 @dataclass(frozen=True, slots=True)
 class OmlxObservation:
     """Wire-only snapshot: no native instance/digest/effective context inferred."""
-    step: TransitionStep
+    step: TransitionStep | ReleaseStep
     models: tuple[OmlxWireModel, ...]
     stamp: ObservationStamp
     reference: str
@@ -221,7 +242,7 @@ class OmlxLifecycleBridge:
         if approved is not True:
             raise OmlxError('authorization_unavailable')
         q, step = permit.qualification, permit.step
-        expected = step.source if step.kind in ('drain', 'unload') else step.target
+        expected = step.source if isinstance(step, ReleaseStep) or step.kind in ('drain', 'unload') else step.target
         if (q.target != expected or q.runtime.runtime_id != q.target.runtime_id or q.runtime.backend != 'omlx'
                 or q.runtime.memory_domain_id != step.domain_id or q.runtime.location != 'local'
                 or q.runtime.egress != 'local-only' or q.runtime.ownership_mode not in ('coordinated', 'isolated')
@@ -238,10 +259,11 @@ class OmlxLifecycleBridge:
             raise OmlxError('installed_capability_unknown')
         return q
 
-    def _current(self, permit: OmlxPermit, now: int, *, require_fresh: bool = True) -> int:
+    def _current(self, permit: OmlxPermit, now: int, *, require_fresh: bool = True, finishing: bool = False) -> int:
         self._gate(permit, now, require_fresh=require_fresh)
         def check(conn: sqlite3.Connection) -> int:
-            row = self._coordinator._active_step(conn, permit.step, now)
+            row = (self._coordinator._active_release(conn, permit.step, now, finishing=finishing)
+                   if isinstance(permit.step, ReleaseStep) else self._coordinator._active_step(conn, permit.step, now))
             if row is None:
                 raise OmlxError('intent_stale')
             binding = self._coordinator._binding(self._coordinator._domain(conn, permit.step.domain_id),
@@ -262,9 +284,9 @@ class OmlxLifecycleBridge:
             raise OmlxError('activity_unverified')
         return activity.active_streams == 0
 
-    async def _request(self, permit: OmlxPermit, method: Literal['GET', 'POST'], path: str) -> tuple[int, Mapping[str, object]]:
+    async def _request(self, permit: OmlxPermit, method: Literal['GET', 'POST'], path: str, *, finishing: bool = False) -> tuple[int, Mapping[str, object]]:
         now = self._now()
-        deadline = self._current(permit, now)
+        deadline = self._current(permit, now, finishing=finishing)
         timeout = min(self._timeout, (deadline-now)/1000, (permit.expires_ms-now)/1000)
         if timeout <= 0:
             raise OmlxError('intent_stale')
@@ -280,17 +302,17 @@ class OmlxLifecycleBridge:
             raise OmlxError('malformed_response')
         return response
 
-    async def observe(self, permit: OmlxPermit) -> OmlxObservation:
-        status, payload = await self._request(permit, 'GET', '/v1/models/status')
+    async def observe(self, permit: OmlxPermit, *, finishing: bool = False) -> OmlxObservation:
+        status, payload = await self._request(permit, 'GET', '/v1/models/status', finishing=finishing)
         if status != 200:
             raise OmlxError('observation_unavailable', status_code=status)
         rows = parse_omlx_status(payload)
-        self._current(permit, self._now())
+        self._current(permit, self._now(), finishing=finishing)
         return OmlxObservation(permit.step, rows, ObservationStamp(self._now()/1000,
                                 self._coordinator.observer_clock_id), uuid.uuid4().hex)
 
     @staticmethod
-    def _wire_ready(observation: OmlxObservation, step: TransitionStep, *, empty: bool) -> None:
+    def _wire_ready(observation: OmlxObservation, step: TransitionStep | ReleaseStep, *, empty: bool) -> None:
         occupied = [x for x in observation.models if x.loaded or x.loading or x.reported_bytes > 0]
         if any(x.loading or x.helper or x.distributed or x.external or x.engine_type not in ('llm', 'vlm') for x in occupied):
             raise OmlxError('resident_visibility_unsupported')
@@ -302,6 +324,30 @@ class OmlxLifecycleBridge:
         elif occupied[0].pinned:
             raise OmlxError('pinned_source')
 
+    def _release_binding(self, conn: sqlite3.Connection, permit: OmlxPermit) -> None:
+        step = permit.step
+        if not isinstance(step, ReleaseStep):
+            raise OmlxError('release_intent_required')
+        row = conn.execute("SELECT * FROM memory_reservations WHERE id=?", (step.memory_id,)).fetchone()
+        if row is None or row['status'] != 'dispatched' or row['domain'] != step.domain_id or row['kind'] != 'model' or row['owner_epoch'] != self._coordinator._epoch:
+            raise OmlxError('source_memory_unverified')
+        profile = json.loads(row['binding'])['profile']
+        if profile['target'] != asdict(step.source) or profile['context_tokens'] != permit.qualification.context_tokens:
+            raise OmlxError('source_memory_unverified')
+        record = conn.execute("SELECT reference FROM journal WHERE domain=? AND operation_id=? AND event='omlx_profile_load'", (step.domain_id, row['work_id'])).fetchone()
+        if record is None or record['reference'] != _source_profile_digest(profile):
+            raise OmlxError('source_profile_unverified')
+
+    def _release_ack(self, permit: OmlxPermit, now: int) -> None:
+        step = permit.step
+        if not isinstance(step, ReleaseStep):
+            raise OmlxError('release_intent_required')
+        def ack(conn: sqlite3.Connection) -> None:
+            if self._coordinator._active_release(conn, step, now, finishing=True) is None:
+                raise OmlxError('intent_stale')
+            self._coordinator._event(conn, step.domain_id, 'omlx_ack_release_unload', step.operation_id, permit.reference)
+        self._coordinator._call(ack, now_ms=now)
+
     def drain(self, permit: OmlxPermit, activity: OmlxActivity) -> bool:
         if permit.step.kind != 'drain':
             raise OmlxError('wrong_phase')
@@ -309,6 +355,9 @@ class OmlxLifecycleBridge:
         self._current(permit, now)
         if not self._activity(permit, activity, now):
             return False
+        if isinstance(permit.step, ReleaseStep):
+            self._coordinator._call(lambda conn: self._release_binding(conn, permit), now_ms=now)
+            return self._coordinator.complete_release(permit.step, reference=activity.reference, now_ms=now)
         return self._coordinator.complete_step(permit.step, reference=activity.reference, now_ms=now)
 
     def _claim_send(self, permit: OmlxPermit, activity: OmlxActivity, observation: OmlxObservation,
@@ -322,10 +371,13 @@ class OmlxLifecycleBridge:
                 now=now/1000, clock_id=self._coordinator.observer_clock_id,
                 max_age=self._coordinator._max_observation_age) != 'fresh':
             raise OmlxError('observation_stale')
-        event = 'omlx_send_' + step.kind
+        event = 'omlx_send_' + ('release_' if isinstance(step, ReleaseStep) else '') + step.kind
         def claim(conn: sqlite3.Connection) -> None:
-            if self._coordinator._active_step(conn, step, now) is None:
+            active = (self._coordinator._active_release(conn, step, now) if isinstance(step, ReleaseStep) else self._coordinator._active_step(conn, step, now))
+            if active is None:
                 raise OmlxError('intent_stale')
+            if isinstance(step, ReleaseStep):
+                self._release_binding(conn, permit)
             if conn.execute('SELECT 1 FROM journal WHERE operation_id=? AND event=?', (step.operation_id,event)).fetchone():
                 raise OmlxError('effect_already_dispatched')
             if conn.execute("SELECT 1 FROM leases WHERE domain=? AND status='active'", (step.domain_id,)).fetchone():
@@ -335,6 +387,7 @@ class OmlxLifecycleBridge:
                     raise OmlxError('memory_reservation_required')
                 if not self._memory._dispatch(conn, lease, sample, now):
                     raise OmlxError('effect_already_dispatched')
+                self._coordinator._event(conn, step.domain_id, 'omlx_profile_load', step.operation_id, _source_profile_digest(json.loads(lease.binding)['profile']))
             self._coordinator._event(conn, step.domain_id, event, step.operation_id, permit.reference)
         if step.kind == 'load':
             if sample is None:
@@ -343,9 +396,12 @@ class OmlxLifecycleBridge:
         else:
             self._coordinator._call(claim, now_ms=now)
 
-    def _hold(self, step: TransitionStep, lease: MemoryLease | None, status_code: int | None = None) -> None:
+    def _hold(self, step: TransitionStep | ReleaseStep, lease: MemoryLease | None, status_code: int | None = None) -> None:
         now = self._now()
         reference = 'omlx_effect_uncertain' + (f'_http_{status_code}' if status_code is not None else '')
+        if isinstance(step, ReleaseStep):
+            self._coordinator.mark_release_uncertain(step, reference=reference, now_ms=now)
+            return
         def hold(conn: sqlite3.Connection) -> None:
             row = conn.execute('SELECT * FROM operations WHERE id=?', (step.operation_id,)).fetchone()
             domain = self._coordinator._domain(conn, step.domain_id)
@@ -391,22 +447,26 @@ class OmlxLifecycleBridge:
         try:
             status, payload = await self._request(permit, 'POST', path)
             now = self._now()
-            self._current(permit, now, require_fresh=False)
+            self._current(permit, now, require_fresh=False, finishing=isinstance(step, ReleaseStep))
             if status not in (200, 202) or payload.get('model_id') != model:
                 raise OmlxError('native_operation_failed')
             if status == 202:
                 if step.kind != 'unload' or payload.get('status') != 'unloading':
                     raise OmlxError('native_operation_failed')
-                if not self._coordinator.note_pending(step, now_ms=now):
+                if isinstance(step, ReleaseStep):
+                    self._release_ack(permit, now)
+                elif not self._coordinator.note_pending(step, now_ms=now):
                     raise OmlxError('intent_stale')
                 return 'pending'
             if payload.get('status') != 'ok':
                 raise OmlxError('native_operation_failed')
             if step.kind == 'unload':
-                if not self._coordinator.note_pending(step, now_ms=now):
+                if isinstance(step, ReleaseStep):
+                    self._release_ack(permit, now)
+                elif not self._coordinator.note_pending(step, now_ms=now):
                     raise OmlxError('intent_stale')
                 return 'pending'
-            if not self._coordinator.complete_step(step, reference='omlx_blocking_load_returned', now_ms=now):
+            if not isinstance(step, TransitionStep) or not self._coordinator.complete_step(step, reference='omlx_blocking_load_returned', now_ms=now):
                 raise OmlxError('intent_stale')
             return 'verify'
         except asyncio.CancelledError:
@@ -421,10 +481,16 @@ class OmlxLifecycleBridge:
         step = permit.step
         if step.kind not in ('unload', 'verify'):
             raise OmlxError('wrong_phase')
-        observation = await self.observe(permit)
+        if isinstance(step, ReleaseStep):
+            self._current(permit, self._now(), finishing=True)
+            def ack(conn: sqlite3.Connection) -> None:
+                if conn.execute("SELECT 1 FROM journal WHERE domain=? AND operation_id=? AND owner_epoch=? AND generation=? AND event='omlx_ack_release_unload'", (step.domain_id, step.operation_id, step.owner_epoch, step.generation)).fetchone() is None:
+                    raise OmlxError('release_ack_missing')
+            self._coordinator._call(ack, now_ms=self._now())
+        observation = await self.observe(permit, finishing=isinstance(step, ReleaseStep))
         if step.kind == 'unload':
             self._wire_ready(observation, step, empty=True)
-        else:
+        elif isinstance(step, TransitionStep):
             occupied = [x for x in observation.models if x.loaded or x.loading or x.reported_bytes > 0]
             if (len(occupied) != 1 or occupied[0].model_id != step.target.artifact_id or not occupied[0].loaded
                     or occupied[0].loading or occupied[0].helper or occupied[0].external or occupied[0].distributed):
@@ -437,7 +503,7 @@ class OmlxLifecycleBridge:
         except Exception:
             raise OmlxError('proof_unavailable') from None
         now = self._now()
-        self._current(permit, now)
+        self._current(permit, now, finishing=isinstance(step, ReleaseStep))
         if (not isinstance(evidence, ReconciliationEvidence) or evidence.reference != observation.reference
                 or evidence.clock_id != observation.stamp.clock_id):
             raise OmlxError('proof_scope_mismatch')
@@ -446,9 +512,11 @@ class OmlxLifecycleBridge:
                 or inventory.stamp.observed_at is None or observation.stamp.observed_at is None
                 or inventory.stamp.observed_at < observation.stamp.observed_at):
             raise OmlxError('proof_scope_mismatch')
-        if step.kind == 'verify' and not any(x.effective_context_tokens == permit.qualification.context_tokens
+        if isinstance(step, TransitionStep) and step.kind == 'verify' and not any(x.effective_context_tokens == permit.qualification.context_tokens
                                              for x in inventory.instances if x.artifact_id == step.target.artifact_id):
             raise OmlxError('context_unverified')
+        if isinstance(step, ReleaseStep):
+            return self._coordinator.complete_release(step, reference=observation.reference, now_ms=now, evidence=evidence)
         return self._coordinator.complete_step(step, reference=observation.reference, now_ms=now, evidence=evidence)
 
     async def tokenize(self) -> None:

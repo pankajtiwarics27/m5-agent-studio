@@ -580,9 +580,7 @@ def test_inference_or_load_actor_cannot_consume_release_step(
 
 
 @pytest.mark.parametrize("backend", ["ollama", "lmstudio", "omlx"])
-def test_existing_native_permits_do_not_implicitly_accept_release_steps(
-    tmp_path, backend
-):
+def test_native_permits_cannot_borrow_foreign_release_authority(tmp_path, backend):
     coord, memory, fleet = opened(tmp_path)
     with coord:
         loaded(coord, memory, fleet)
@@ -591,8 +589,12 @@ def test_existing_native_permits_do_not_implicitly_accept_release_steps(
             from test_omlx_lifecycle_bridge import permit, Clock
             import omlx_lifecycle as native
 
-            with pytest.raises(native.OmlxError, match="invalid_permit"):
-                permit(coord, step, Clock())
+            p = permit(coord, step, Clock())
+            bridge = native.OmlxLifecycleBridge(
+                coord, memory, lambda _: None, Clock(), authorize=lambda _: True
+            )
+            with pytest.raises(native.OmlxError, match="source_profile_unverified"):
+                coord._call(lambda conn: bridge._release_binding(conn, p))
         else:
             from test_native_transition_driver import fixture
 
@@ -602,7 +604,8 @@ def test_existing_native_permits_do_not_implicitly_accept_release_steps(
                 from lmstudio_protocol import LmStudioDenied
 
                 error = OllamaDenied if backend == "ollama" else LmStudioDenied
-                with pytest.raises(error, match="invalid_permit"):
-                    b.driver.permit(b, step)
+                with pytest.raises(error):
+                    b.bridge.drain(b.driver.permit(b, step), b.driver.activity(b, step))
+                assert b.wire.calls == []
             finally:
                 b.coord.close()

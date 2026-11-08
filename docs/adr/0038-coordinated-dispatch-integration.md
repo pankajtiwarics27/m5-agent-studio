@@ -124,6 +124,42 @@ existing actors fence it without native calls. This foundation is not an unload
 consumer, already-absent success policy, unload-all/cache, LC09 recovery, default
 producer or production activation.
 
+Extend only the Ollama/LM Studio native permit unions explicitly for source-only
+ReleaseStep, with a separate durable release gate and disjoint receipt prefixes.
+Retain all native qualification, loaded-profile, ownership/activity and observed
+version/config checks. Add pure UnloadAdmission and source-bound queued intent,
+plus distinct concrete release jobs consumed by a bounded step driver. Physical
+proof must precede independently sampled real source-hold zero settlement and
+final barrier retirement. After send, cancelled/expired cleanup may retire resources
+but cannot complete a command. A stage/barrier ReleaseResult is not canonical
+confirmation. Keep the public/actor unload command, oMLX unload-only permits,
+already-absent policy, unload-all/cache, native producers and activation unavailable.
+No schema change or implicit recovery/migration is introduced by this continuation.
+
+Compose an optional NativeUnloadPlan on the existing native load/inference actor,
+without default installation or HTTP redirection. Capture the actual source after
+shared lock acquisition and consume only its two FIFO-fenced release stages.
+Canonical confirmed requires exact durable live completed request, release goal/
+source/instance/epoch/generation, released source-model hold and final retirement
+receipt; a returned retired flag or physical absence alone is insufficient. Do not
+require the slot to remain idle after historical completion, or poison successor
+work on cancelled/expired cleanup. Preserve unknown holds/barriers on interrupted
+work and never unlock another lock owner. Keep oMLX unload-only, already-absent
+success, unload-all/cache, production composition and LC09 recovery unavailable.
+
+Add distinct OmlxUnloadAdmission with LC04 source qualification and the actual
+separately bound model-memory profile, never a fabricated native fit/load profile.
+Bind clock/observation policy/runtime to the actual owner before queue/probe.
+Explicitly extend only the oMLX release intent role and compose concrete OmlxRelease
+on the optional actor. Record source profile digest with actual load send; require
+that record and exact hold before release drain/mutation. Missing records refuse,
+not migrate/reset. Keep disjoint release send/ACK receipts, mandatory current ACK
+before confirmation, all native source/visibility gates, full-runtime physical
+proof, independent real zero settlement and durable canonical retirement checks.
+A pending200/202 ACK remains insufficient. Preserve cancelled/expired cleanup,
+uncertainty/no-replay and later target budget fencing. Do not qualify oMLX target/
+inference, install producers, redirect HTTP, activate or complete LC09 recovery.
+
 ## Alternatives
 
 - Replace served routing immediately: would activate unqualified transports and
