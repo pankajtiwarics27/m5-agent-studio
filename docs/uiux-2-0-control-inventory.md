@@ -6,9 +6,9 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 re-derived from the markup on every run.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
-* Frontend digest: `3033a0211ca3739298e1e751d0fe89c68edf97b1fa66645a63307a158f2eca97`.
+* Frontend digest: `7a938b83e3b512b80b20ed006436763117acb4445ce13b463bcc93f72699c6f6`.
 * Panes: 6 · controls in panes: 110 · controls in the
-  shared chrome: 162 · script-rendered: 72.
+  shared chrome: 162 · script-rendered: 74.
 
 ## What this page is, and is not
 
@@ -31,7 +31,7 @@ the end, attributed to the function that renders them — a heuristic, not a cal
 
 ## What the numbers already say
 
-* 272 controls are in the markup and 72 more are built by script — a checklist written from the markup alone would miss 21% of the interactive surface.
+* 272 controls are in the markup and 74 more are built by script — a checklist written from the markup alone would miss 21% of the interactive surface.
 * The shared chrome carries 162 controls; all six panes together carry 110. Most of the clicking happens in the shell, not inside a tab.
 * 92 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
 
@@ -360,12 +360,13 @@ attributed to one.
 
 ## Controls built by script
 
-72 interactive tags appear as template strings inside the
+74 interactive tags appear as template strings inside the
 inline script rather than in the markup. They are attributed to the nearest preceding function
 and are **not** in the tables above:
 
 | Function | Controls rendered |
 |---|---|
+| `debateModelPageFooter` | 2 |
 | `ensureStageCardMounted` | 1 |
 | `hallClearScopeNoteHtml` | 2 |
 | `harnessEvidenceChangeHtml` | 1 |
@@ -377,6 +378,7 @@ and are **not** in the tables above:
 | `renderActiveHall` | 3 |
 | `renderCommandPaletteList` | 1 |
 | `renderDebateCriteria` | 3 |
+| `renderDebateModelChecks` | 1 |
 | `renderDebateRecord` | 4 |
 | `renderDeliberationEvidence` | 1 |
 | `renderHallVerdict` | 1 |
@@ -396,7 +398,6 @@ and are **not** in the tables above:
 | `renderProvidersModal` | 3 |
 | `renderTelemetry` | 1 |
 | `saveMcpServer` | 1 |
-| `syncUnifiedSelectors` | 1 |
 
 ## Not verified
 

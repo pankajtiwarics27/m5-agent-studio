@@ -4,7 +4,7 @@
   "story": "UIV2-29",
   "statement": "Measured streaming, DOM/heap, layout and backend safety evidence; unprobed container isolation remains unqualified and blocked.",
   "source_sha256": {
-    "static/index.html": "3033a0211ca3739298e1e751d0fe89c68edf97b1fa66645a63307a158f2eca97",
+    "static/index.html": "7a938b83e3b512b80b20ed006436763117acb4445ce13b463bcc93f72699c6f6",
     "scripts/uiv2_performance_safety_walk.mjs": "6b9d124630d4284a1c96ac81dad82893350b07ec3e634c2ca2e1d6aad198753c",
     ".github/workflows/ci.yml": "1554e1d2bf5bbafc8aad972f0b590644e21b29080058d1ba08866b7a278b66ba"
   },
@@ -80,8 +80,8 @@
   },
   "visual_reference": {
     "contract": "product/M5_2_0_UIUX_V2_Cross_Tab_Reference.json",
-    "approved_manifest": "7186910f9c46979e6320a6e2fa84f53e84067159f2b4d92ea5e03a6b59f884b8",
-    "approval_reference": "user:Arena sidebar-243-recaptured-approval=approve; unchanged source55dff2b7c73f2064c7a649ceb1edfa9a9052d5a7; candidate7186910f9c46979e6320a6e2fa84f53e84067159f2b4d92ea5e03a6b59f884b8; visual baseline only, not merge authorization",
+    "approved_manifest": "394f2129ad5c110ff0d17afb5bab64a66532a542cdfb3ebdc2b25db187410800",
+    "approval_reference": "user:PR 258 owner review 2026-11-08 \"1. Approved\" - re-baseline the debate-pane #debateCriteriaDetails.y shift caused by UIV2-P7-03 label truncation (32px at >=1280, 48px at 390)",
     "policy": "the approved 48-variant structural gate remains mandatory; performance-only changes may not approve their own pixels"
   },
   "browser_evidence": {
@@ -116,11 +116,11 @@
         },
         "fast": {
           "model": "Gemma-4-21B-REAP-4bit",
-          "elapsed_ms": 331.09999999962747,
-          "renders": 18,
+          "elapsed_ms": 329.80000000074506,
+          "renders": 19,
           "schedules": 58,
           "model_tokens": 58,
-          "sse_per_second": 175.174,
+          "sse_per_second": 175.864,
           "complete_chars": 330
         }
       },
@@ -130,8 +130,8 @@
             "Nodes": 8481,
             "Documents": 2,
             "JSEventListeners": 334,
-            "JSHeapUsedSize": 3375100,
-            "JSHeapTotalSize": 3932160,
+            "JSHeapUsedSize": 3378912,
+            "JSHeapTotalSize": 4456448,
             "LayoutCount": 1,
             "RecalcStyleCount": 3
           },
@@ -139,7 +139,7 @@
             "Nodes": 8481,
             "Documents": 2,
             "JSEventListeners": 334,
-            "JSHeapUsedSize": 3337896,
+            "JSHeapUsedSize": 3328912,
             "JSHeapTotalSize": 3903488,
             "LayoutCount": 123,
             "RecalcStyleCount": 245
@@ -148,13 +148,13 @@
             "Nodes": 8481,
             "Documents": 2,
             "JSEventListeners": 334,
-            "JSHeapUsedSize": 3342772,
+            "JSHeapUsedSize": 3348040,
             "JSHeapTotalSize": 3903488,
             "LayoutCount": 245,
             "RecalcStyleCount": 487
           },
           "cycle_1": {
-            "elapsed_ms": 3977.7000000001863,
+            "elapsed_ms": 3968.5999999996275,
             "cursor": 18000,
             "cached": 5000,
             "cards": 300,
@@ -162,7 +162,7 @@
             "last": 18000
           },
           "cycle_2": {
-            "elapsed_ms": 3975.100000000093,
+            "elapsed_ms": 3973.89999999851,
             "cursor": 30000,
             "cached": 5000,
             "cards": 300,
@@ -173,9 +173,9 @@
         },
         "steady": {
           "calls": 20,
-          "mean_ms": 1.7700000000651925,
-          "p95_ms": 2.7000000001862645,
-          "max_ms": 3.400000000372529,
+          "mean_ms": 1.4750000000931323,
+          "p95_ms": 2.099999999627471,
+          "max_ms": 2.599999999627471,
           "cards": 300
         }
       },
@@ -207,10 +207,10 @@
         {
           "viewport": "1440x900",
           "theme": "light",
-          "cls_total": 0.22236,
-          "cls_internal_stream": 0.22236,
+          "cls_total": 0.19059,
+          "cls_internal_stream": 0.19059,
           "cls_external_shell": 0,
-          "shifts": 7,
+          "shifts": 6,
           "overflow": 0,
           "max_geometry_delta": 0,
           "cards": 300,
@@ -320,7 +320,7 @@
         "  [PASS] no new privileges — --security-opt=no-new-privileges",
         "  [PASS] no implicit image pull — --pull=never",
         "  [PASS] resource limits — --pids-limit=128 --memory=2g --cpus=2",
-        "  [PASS] single workspace bind mount — type=bind,source=/tmp/m5-isolation-smoke-jw37hau_,target=/workspace",
+        "  [PASS] single workspace bind mount — type=bind,source=/tmp/m5-isolation-smoke-zbmqczf7,target=/workspace",
         "",
         "== 3. Skill-code execution gates (app._run_skill_script) ==",
         "  [PASS] default-off skill-code denial — PermissionError",

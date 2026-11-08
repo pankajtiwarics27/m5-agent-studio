@@ -4,14 +4,14 @@
   "story": "UIV2-26",
   "human_approval": {
     "decision": "approved",
-    "reference": "user:Arena sidebar-243-recaptured-approval=approve; unchanged source55dff2b7c73f2064c7a649ceb1edfa9a9052d5a7; candidate7186910f9c46979e6320a6e2fa84f53e84067159f2b4d92ea5e03a6b59f884b8; visual baseline only, not merge authorization",
-    "recorded_at": "2026-11-08T04:36:35.639562+00:00",
+    "reference": "user:PR 258 owner review 2026-11-08 \"1. Approved\" - re-baseline the debate-pane #debateCriteriaDetails.y shift caused by UIV2-P7-03 label truncation (32px at >=1280, 48px at 390)",
+    "recorded_at": "2026-11-08T17:32:40.331303+00:00",
     "scope": "Structural fidelity of all 48 annotated live/reference comparisons; not a pixel-clone claim."
   },
   "candidate": {
-    "manifest": "docs/media/cross-tab-reference-uiv2-26/sidebar-243-candidate/candidate-manifest.json",
-    "manifest_sha256": "7186910f9c46979e6320a6e2fa84f53e84067159f2b4d92ea5e03a6b59f884b8",
-    "git_head": "55dff2b7c73f2064c7a649ceb1edfa9a9052d5a7"
+    "manifest": "/tmp/cand/candidate-manifest.json",
+    "manifest_sha256": "394f2129ad5c110ff0d17afb5bab64a66532a542cdfb3ebdc2b25db187410800",
+    "git_head": "1d3498a80309947e95c24d68caef185fefe435fa"
   },
   "contract_sha256": "caf0e5543c6e644eae4a12a6db0ed38a169ad361a96af75cdb04cbfa0f4c2435",
   "wireframe_sha256": "f1232a0ea81fccbfb343f6f16d8f8878edbcc20a478a96dbea8b45a44cba8a17",
@@ -314,16 +314,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 8.3867,
-        "changed_pixel_ratio_0_1": 0.056026,
+        "mean_absolute_rgb_0_255": 8.411,
+        "changed_pixel_ratio_0_1": 0.056278,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "light/1640x900/start/actual.png",
-          "sha256": "7952b696a7e112f6a8cbf16a1b24c91bbd5ce95a5f6395ff8e0aeaf8ba4750f1",
-          "bytes": 76059
+          "sha256": "202ce9a4a06bb0b8dd488fa677c75f8e5b0567e1e57fa0e5dccef601d2fec808",
+          "bytes": 76413
         },
         "reference": {
           "file": "light/1640x900/start/reference.png",
@@ -332,8 +332,8 @@
         },
         "comparison": {
           "file": "light/1640x900/start/comparison.png",
-          "sha256": "2e4268cf3865cf2cd3f428e41150367546e28a44d1539694e7980b40a2d683c6",
-          "bytes": 267863
+          "sha256": "a133f75817b2de7e2b33398cf24b0e23ff13c31a9ae7d96b5827a373c2d0bb60",
+          "bytes": 268315
         }
       }
     },
@@ -663,16 +663,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 7.593,
-        "changed_pixel_ratio_0_1": 0.045495,
+        "mean_absolute_rgb_0_255": 7.5983,
+        "changed_pixel_ratio_0_1": 0.045586,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "light/1640x900/harness/actual.png",
-          "sha256": "8288a7116e209a7aa28f84eaaca18eb70fb4344c48d02adafae9a90154788e1a",
-          "bytes": 72736
+          "sha256": "3d5e019d1a3096ebd1e10e9e4ee9a09f448a9922e938f72ce47890541ccc6986",
+          "bytes": 72304
         },
         "reference": {
           "file": "light/1640x900/harness/reference.png",
@@ -681,8 +681,8 @@
         },
         "comparison": {
           "file": "light/1640x900/harness/comparison.png",
-          "sha256": "305879e34e25a0f88c69a23f3e6a6e5fe3c6ff4d5098b52138d2ac5219f6c104",
-          "bytes": 278382
+          "sha256": "5fb76fd61c7250d8c00c7376e955dda91d700cd5c5e17cd66415d43d06f61553",
+          "bytes": 277832
         }
       }
     },
@@ -985,16 +985,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 6.5103,
-        "changed_pixel_ratio_0_1": 0.063084,
+        "mean_absolute_rgb_0_255": 6.5126,
+        "changed_pixel_ratio_0_1": 0.063169,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "light/1640x900/hall/actual.png",
-          "sha256": "c143f26bca812bdf5422036712f9376362583b81479dd0a6c3d4fdb7e4d949af",
-          "bytes": 101525
+          "sha256": "5cdae1e0626409556f8924a44d9123af88173306da0cf77da18268a61d7b84f7",
+          "bytes": 101897
         },
         "reference": {
           "file": "light/1640x900/hall/reference.png",
@@ -1003,8 +1003,8 @@
         },
         "comparison": {
           "file": "light/1640x900/hall/comparison.png",
-          "sha256": "d416421f906b5b3bd5ced1d83dc34d3c5af69abffef3b3e391492f5b81f1fbda",
-          "bytes": 305921
+          "sha256": "2476deab2bb09ee2d92c8a9bc167b881cf1c7ab2044a069c79472e5534889d53",
+          "bytes": 306472
         }
       }
     },
@@ -1303,16 +1303,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 5.8976,
-        "changed_pixel_ratio_0_1": 0.052246,
+        "mean_absolute_rgb_0_255": 5.9301,
+        "changed_pixel_ratio_0_1": 0.052563,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "light/1640x900/council/actual.png",
-          "sha256": "9a01967d176293ebf4c1140b583961efa6e368e2b243dc37f3c0655376de232b",
-          "bytes": 79656
+          "sha256": "9675e72607a208eeb30e457ce9327bf32cfdef0710d3347dcebeb0135ceea9f0",
+          "bytes": 79985
         },
         "reference": {
           "file": "light/1640x900/council/reference.png",
@@ -1321,8 +1321,8 @@
         },
         "comparison": {
           "file": "light/1640x900/council/comparison.png",
-          "sha256": "e05008a44e44a1c907d34a44ab06e73d67de174eb58998197a8578d9f5c6079f",
-          "bytes": 269944
+          "sha256": "612146a2bfe53de86a9fe5bde3dedd36b590375a73903e230623d9ae677e9382",
+          "bytes": 270530
         }
       }
     },
@@ -1618,16 +1618,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 7.3024,
-        "changed_pixel_ratio_0_1": 0.059251,
+        "mean_absolute_rgb_0_255": 7.231,
+        "changed_pixel_ratio_0_1": 0.058457,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "light/1640x900/debate/actual.png",
-          "sha256": "7ae16c3b5a890216f8195cf3054c2f6ea05dd6d39b6a2a5b47fda04f0121ac7e",
-          "bytes": 92594
+          "sha256": "ad2e4295712a80de672a7c8a21060675c5529aeb1bfa8b40308da156778070b4",
+          "bytes": 89498
         },
         "reference": {
           "file": "light/1640x900/debate/reference.png",
@@ -1636,8 +1636,8 @@
         },
         "comparison": {
           "file": "light/1640x900/debate/comparison.png",
-          "sha256": "87c23d2053d71d0965960df58a6f5fd25a070079bd7e4b3612e368a4bf9be7a9",
-          "bytes": 289260
+          "sha256": "b7fc12514e30906ea8ea2e74f46773af5066960d7382cde4313b3941f46d5839",
+          "bytes": 285500
         }
       }
     },
@@ -2066,16 +2066,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 6.7149,
-        "changed_pixel_ratio_0_1": 0.044957,
+        "mean_absolute_rgb_0_255": 6.7293,
+        "changed_pixel_ratio_0_1": 0.045094,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "light/1640x900/chat/actual.png",
-          "sha256": "47e4021487e0ad992fc4849641e1d53ee260e28e8297c265bba2cc795c90d51b",
-          "bytes": 74530
+          "sha256": "d09680e514fe3e6d571c190bc2904768bc68f7acd8401558c528ee272601dc0c",
+          "bytes": 74157
         },
         "reference": {
           "file": "light/1640x900/chat/reference.png",
@@ -2084,8 +2084,8 @@
         },
         "comparison": {
           "file": "light/1640x900/chat/comparison.png",
-          "sha256": "7f33442fd11c4985f8ab1d355294df4b4a6862b6798f830ba9b452894ec06e3d",
-          "bytes": 263892
+          "sha256": "4febd75c91c08271b03f0d6cce6ab4a440b123cabf95744dd83bddc0df7dfafd",
+          "bytes": 263247
         }
       }
     },
@@ -2381,16 +2381,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 8.9897,
-        "changed_pixel_ratio_0_1": 0.062698,
+        "mean_absolute_rgb_0_255": 9.0175,
+        "changed_pixel_ratio_0_1": 0.062985,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "light/1440x900/start/actual.png",
-          "sha256": "eb9c9e92e5113c7a6a0ab03c7945ae0b5d8371965e5f1ab9651de437641ca822",
-          "bytes": 75274
+          "sha256": "b9c221116c4e4177aff5e1ff7ba821426246637b3edadf402322d44614bc1403",
+          "bytes": 75579
         },
         "reference": {
           "file": "light/1440x900/start/reference.png",
@@ -2399,8 +2399,8 @@
         },
         "comparison": {
           "file": "light/1440x900/start/comparison.png",
-          "sha256": "4b03d79ebff9d54918ae0489a25c9d1e1a2aaf603551a3f9b10bd1f6b9f3de47",
-          "bytes": 258161
+          "sha256": "5bc5124d686a17ef0ab9657421930021e99c245703b44c2fcbf3190a3c3f5f9a",
+          "bytes": 258663
         }
       }
     },
@@ -2730,16 +2730,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 7.8796,
-        "changed_pixel_ratio_0_1": 0.050895,
+        "mean_absolute_rgb_0_255": 7.8856,
+        "changed_pixel_ratio_0_1": 0.050999,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "light/1440x900/harness/actual.png",
-          "sha256": "a53682250cd9c5bf85abe68eeabd8e3cd0042f7ae3587749187fc8a2638ffada",
-          "bytes": 71959
+          "sha256": "9f8414035fd2700af21c0955bc3f8366f8855dc959ff128a41289fe4d7a0f461",
+          "bytes": 71509
         },
         "reference": {
           "file": "light/1440x900/harness/reference.png",
@@ -2748,8 +2748,8 @@
         },
         "comparison": {
           "file": "light/1440x900/harness/comparison.png",
-          "sha256": "c523efc75f1c42161f8c74155fb7d94c5ce96329f1a08e9036a53cdd1fe5c157",
-          "bytes": 268080
+          "sha256": "7302459473c82bb84251f95949e9d7a17e9b88af334ba6391be43d28b62b27f2",
+          "bytes": 267708
         }
       }
     },
@@ -3052,16 +3052,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 6.789,
-        "changed_pixel_ratio_0_1": 0.06459,
+        "mean_absolute_rgb_0_255": 6.8028,
+        "changed_pixel_ratio_0_1": 0.064752,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "light/1440x900/hall/actual.png",
-          "sha256": "51f32168276dc77582fccb3cc4281536a5fb554f77e07552b9c02944e23a23b9",
-          "bytes": 94876
+          "sha256": "741c2e8984b06cfcc676df3262c1edd046a317fbd8cecc07f4463b5187b3e59b",
+          "bytes": 95233
         },
         "reference": {
           "file": "light/1440x900/hall/reference.png",
@@ -3070,8 +3070,8 @@
         },
         "comparison": {
           "file": "light/1440x900/hall/comparison.png",
-          "sha256": "9cf37055b1aa233f68c5a65a5ed5e04de524557bd12832618b623c7e556ced7d",
-          "bytes": 288781
+          "sha256": "ca6e6d97ae467cb768b9c0b019f8c9e74177e17a37676211d84e843d3907ec74",
+          "bytes": 289402
         }
       }
     },
@@ -3370,16 +3370,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 6.4316,
-        "changed_pixel_ratio_0_1": 0.057123,
+        "mean_absolute_rgb_0_255": 6.4686,
+        "changed_pixel_ratio_0_1": 0.057484,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "light/1440x900/council/actual.png",
-          "sha256": "a73ae7e181c96eb3d31a8d8956f8ac7f3aa5928d4537ec43a6b7c764f57a5be5",
-          "bytes": 78793
+          "sha256": "675558708d6c44bbd68526cac433bcdd6dca0e6ce2532c21d5e8092f1db33dc0",
+          "bytes": 79134
         },
         "reference": {
           "file": "light/1440x900/council/reference.png",
@@ -3388,8 +3388,8 @@
         },
         "comparison": {
           "file": "light/1440x900/council/comparison.png",
-          "sha256": "a9454f06212370d5d4f2aa5cabe952dee8134a53af1e7d7fefa6d6c1b71af482",
-          "bytes": 259350
+          "sha256": "8e373540103d256a74f966b7bf10ddbeee1364c58577413557b7733e54c15fba",
+          "bytes": 259984
         }
       }
     },
@@ -3569,7 +3569,7 @@
           },
           "#debateCriteriaDetails": {
             "x": 240,
-            "y": 499.97,
+            "y": 467.97,
             "width": 1160,
             "height": 40.75,
             "display": "block",
@@ -3685,16 +3685,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 8.0372,
-        "changed_pixel_ratio_0_1": 0.064444,
+        "mean_absolute_rgb_0_255": 7.8414,
+        "changed_pixel_ratio_0_1": 0.064573,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "light/1440x900/debate/actual.png",
-          "sha256": "a821dc4d9e3240c92d6362ce21bb52f4e10a58c7b93d361c475a9c815a799cc0",
-          "bytes": 92247
+          "sha256": "6216878b2021c30a2f698ab9d5b6b8f872d51e010472ca34596bacffcf772266",
+          "bytes": 90649
         },
         "reference": {
           "file": "light/1440x900/debate/reference.png",
@@ -3703,8 +3703,8 @@
         },
         "comparison": {
           "file": "light/1440x900/debate/comparison.png",
-          "sha256": "0d43d86c8a5dde9d8c9a0bc507a699cbff14777b2901b4b5dd0261b864e4056d",
-          "bytes": 279733
+          "sha256": "0018a13b45c52b919f7c98eda15c57bdc5aeaa142fb4a8a000415e44f32f15af",
+          "bytes": 277993
         }
       }
     },
@@ -4133,16 +4133,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 7.1137,
-        "changed_pixel_ratio_0_1": 0.049103,
+        "mean_absolute_rgb_0_255": 7.1453,
+        "changed_pixel_ratio_0_1": 0.049383,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "light/1440x900/chat/actual.png",
-          "sha256": "e8395a55b446a024bf09c523feec2923698fb0640f29511206dea4f6c8eb49cb",
-          "bytes": 71958
+          "sha256": "3f64a37d7fbb9508aaf6ab3999ee1939e730dcfb3aa081f3a4d455e7b46ce979",
+          "bytes": 71898
         },
         "reference": {
           "file": "light/1440x900/chat/reference.png",
@@ -4151,8 +4151,8 @@
         },
         "comparison": {
           "file": "light/1440x900/chat/comparison.png",
-          "sha256": "fb74cabd4bb301086f1ec4ebfc8173441b78af0b3669b4eeace1e6e7c1eccedb",
-          "bytes": 252342
+          "sha256": "7fc3cdc5f5e86438cc8a24f5650fe4b1fe26fd41bfca32a41cef37270bf82947",
+          "bytes": 252432
         }
       }
     },
@@ -4448,16 +4448,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 9.3689,
-        "changed_pixel_ratio_0_1": 0.067177,
+        "mean_absolute_rgb_0_255": 9.412,
+        "changed_pixel_ratio_0_1": 0.067606,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "light/1280x800/start/actual.png",
-          "sha256": "ebd7ea553127c69007d6becd2b3cb6e079e60a3fc96dbdaa1efda2a79fc4b45d",
-          "bytes": 69790
+          "sha256": "3cb170f46ef51d8c972a88d97cb9fcf43b9b9936d4065a5e16e892b4c0e76408",
+          "bytes": 70153
         },
         "reference": {
           "file": "light/1280x800/start/reference.png",
@@ -4466,8 +4466,8 @@
         },
         "comparison": {
           "file": "light/1280x800/start/comparison.png",
-          "sha256": "3f400c8e4724dd40e5f824d1ee5ec03f76827be439ed60be3b716ca30c5c4475",
-          "bytes": 220131
+          "sha256": "f3aca05995b421454b61624c07868e2ba03aabb998fbff129cd462e8e66ce614",
+          "bytes": 220684
         }
       }
     },
@@ -4797,16 +4797,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 8.2163,
-        "changed_pixel_ratio_0_1": 0.05737,
+        "mean_absolute_rgb_0_255": 8.2229,
+        "changed_pixel_ratio_0_1": 0.057503,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "light/1280x800/harness/actual.png",
-          "sha256": "bef2e552b049ecbf83c883854de22ee8fb346106ac1307a0d1b33a5b7fdb6e62",
-          "bytes": 69486
+          "sha256": "44ae48a9cf832a3e74a6f280a90a1adb0dacde4f7e63e797e895bf707cb15815",
+          "bytes": 69054
         },
         "reference": {
           "file": "light/1280x800/harness/reference.png",
@@ -4815,8 +4815,8 @@
         },
         "comparison": {
           "file": "light/1280x800/harness/comparison.png",
-          "sha256": "8b737636b6877d00460645a804d8fed4fe7f7e9650f3a21db4dead565a8f5cd6",
-          "bytes": 234730
+          "sha256": "4ce955918775dad32a7d18a795e6e5129d9f58b35adde8f509425fe7d74cdaa0",
+          "bytes": 234242
         }
       }
     },
@@ -5119,16 +5119,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 6.8613,
-        "changed_pixel_ratio_0_1": 0.065248,
+        "mean_absolute_rgb_0_255": 6.881,
+        "changed_pixel_ratio_0_1": 0.065467,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "light/1280x800/hall/actual.png",
-          "sha256": "2a6adc3639fd12c4bd3d662d63419a9153ef35aaab1b17f2c5159e75f6f10a08",
-          "bytes": 90026
+          "sha256": "b0b44d1820007fe3b9886af520e2d13f316202cd3189a8bbcfeb126de9328056",
+          "bytes": 90377
         },
         "reference": {
           "file": "light/1280x800/hall/reference.png",
@@ -5137,8 +5137,8 @@
         },
         "comparison": {
           "file": "light/1280x800/hall/comparison.png",
-          "sha256": "26bca63fd651cef5ae5037c2a244ccb644f83226f8e58e1ab0022afe045eb28e",
-          "bytes": 250266
+          "sha256": "b27424f27418e304370ba095d9db67fb8912d343a5377cdab4b25110f3412e3b",
+          "bytes": 250794
         }
       }
     },
@@ -5437,16 +5437,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 6.7203,
-        "changed_pixel_ratio_0_1": 0.061651,
+        "mean_absolute_rgb_0_255": 6.7674,
+        "changed_pixel_ratio_0_1": 0.062126,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "light/1280x800/council/actual.png",
-          "sha256": "3c04e581a3685e440786581b2d799723e09a5b84dbe58b9309773a02bbccec71",
-          "bytes": 76854
+          "sha256": "a5930151d1e9cdc27e2fd79141df581601466860a52507f175b0bd65537d9cb4",
+          "bytes": 77197
         },
         "reference": {
           "file": "light/1280x800/council/reference.png",
@@ -5455,8 +5455,8 @@
         },
         "comparison": {
           "file": "light/1280x800/council/comparison.png",
-          "sha256": "866f90c5d6d6aadd3022adf912196467afe75e1788733a0b2fa47ad29cb9178e",
-          "bytes": 225990
+          "sha256": "46b1b29f092e60c2487d265c951cfc2c7099df8e4dabe32c33b451d3492258d5",
+          "bytes": 226643
         }
       }
     },
@@ -5636,7 +5636,7 @@
           },
           "#debateCriteriaDetails": {
             "x": 240,
-            "y": 531.97,
+            "y": 467.97,
             "width": 1000,
             "height": 40.75,
             "display": "block",
@@ -5752,16 +5752,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 8.4155,
-        "changed_pixel_ratio_0_1": 0.066734,
+        "mean_absolute_rgb_0_255": 8.49,
+        "changed_pixel_ratio_0_1": 0.068371,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "light/1280x800/debate/actual.png",
-          "sha256": "d2f18e084467f90707c68b9594cae75909d426a073b1d7815f36aa134e5a83dc",
-          "bytes": 80382
+          "sha256": "35f31544058209a34d47840d8a7cbd1ca1c9bd49c5db91526fc0f76c078cd792",
+          "bytes": 77997
         },
         "reference": {
           "file": "light/1280x800/debate/reference.png",
@@ -5770,8 +5770,8 @@
         },
         "comparison": {
           "file": "light/1280x800/debate/comparison.png",
-          "sha256": "7ab28e38cd076981a824792c8d02594640a8f630b9ebe1ce9cea3556538e2fa8",
-          "bytes": 233002
+          "sha256": "1b4a960a655a22c36307277616a7f6da3ad9e308b5a7e5ad0e26966222111eb4",
+          "bytes": 230240
         }
       }
     },
@@ -6200,16 +6200,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 7.1562,
-        "changed_pixel_ratio_0_1": 0.054187,
+        "mean_absolute_rgb_0_255": 7.195,
+        "changed_pixel_ratio_0_1": 0.054584,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "light/1280x800/chat/actual.png",
-          "sha256": "d22d2372c0edbaf5111e42e6ba2ad7adcb0e10e34733d56dbc18fb4dbb9cd78a",
-          "bytes": 68010
+          "sha256": "58b325d71aa2a4556c4f6649b35b7cf1ddb5fd8690776ff799a3592518d9945e",
+          "bytes": 68594
         },
         "reference": {
           "file": "light/1280x800/chat/reference.png",
@@ -6218,8 +6218,8 @@
         },
         "comparison": {
           "file": "light/1280x800/chat/comparison.png",
-          "sha256": "9e80dfea67e1832f8c7dfc84e58996ae3118feadeebbf3ebbdec75ed704bbd3a",
-          "bytes": 217544
+          "sha256": "73482d6bc910a515c62b3a71a6e38d92acfce35a37c33e9090125b9b848d7c81",
+          "bytes": 218469
         }
       }
     },
@@ -6516,15 +6516,15 @@
       ],
       "pixel_difference": {
         "mean_absolute_rgb_0_255": 16.9862,
-        "changed_pixel_ratio_0_1": 0.135314,
+        "changed_pixel_ratio_0_1": 0.135317,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "light/390x844/start/actual.png",
-          "sha256": "854e4668dea2f9c08e552418b75764a705275f2fc327d1c8b0c2628119c6c7eb",
-          "bytes": 45836
+          "sha256": "2bf235bff6a1ecdef6983186e4b6bdf15375e3c9d1d6d205d88f58277ef9779c",
+          "bytes": 45803
         },
         "reference": {
           "file": "light/390x844/start/reference.png",
@@ -6533,8 +6533,8 @@
         },
         "comparison": {
           "file": "light/390x844/start/comparison.png",
-          "sha256": "bb1f11b6ee4fd6519ffc08bac3e334999f3324ca303eac09a59daba808aaf451",
-          "bytes": 138464
+          "sha256": "6f78b4a25f9426fc473d92650870ff257b9e48a5b8eefbe5f72135ccb0ea130f",
+          "bytes": 138361
         }
       }
     },
@@ -7703,7 +7703,7 @@
           },
           "#debateCriteriaDetails": {
             "x": 32,
-            "y": 764.16,
+            "y": 716.16,
             "width": 326,
             "height": 111.77,
             "display": "block",
@@ -7819,16 +7819,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 13.4223,
-        "changed_pixel_ratio_0_1": 0.114324,
+        "mean_absolute_rgb_0_255": 13.2526,
+        "changed_pixel_ratio_0_1": 0.111854,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "light/390x844/debate/actual.png",
-          "sha256": "7c50525b33bdcf38296fabc915ba0cd25f867bb50e439ae6bbabf313d0230b4b",
-          "bytes": 54360
+          "sha256": "5d7520645284c29f33e5002a6d4d0e16e417274e7fb91fcd1ce33dd4bb7fbc60",
+          "bytes": 52990
         },
         "reference": {
           "file": "light/390x844/debate/reference.png",
@@ -7837,8 +7837,8 @@
         },
         "comparison": {
           "file": "light/390x844/debate/comparison.png",
-          "sha256": "0e3cdc45314b1c9b39c487f4163916fb4b446a0da9b9ddc1bb0c7229ae35d986",
-          "bytes": 149259
+          "sha256": "0c0b7d116b42ae7a9ebe6469b4b9d7f8c076fff0aec126d6a68b1d808a0c51a4",
+          "bytes": 145922
         }
       }
     },
@@ -8267,16 +8267,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 12.7524,
-        "changed_pixel_ratio_0_1": 0.10833,
+        "mean_absolute_rgb_0_255": 12.648,
+        "changed_pixel_ratio_0_1": 0.107489,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "light/390x844/chat/actual.png",
-          "sha256": "fb162c268692de996a285a5b1401b336a4eb76d8fa2143fb156243013ba7e3b5",
-          "bytes": 50990
+          "sha256": "abbb7bb1d0b2f6f1bb5872b0e2f0e5467be55795f19a2f263b6e9136b589c706",
+          "bytes": 50538
         },
         "reference": {
           "file": "light/390x844/chat/reference.png",
@@ -8285,8 +8285,8 @@
         },
         "comparison": {
           "file": "light/390x844/chat/comparison.png",
-          "sha256": "425b6f5071718b8e6a414fa565d2dcf6029dc9c893583677f351d7bded6cf66f",
-          "bytes": 142004
+          "sha256": "9086c42930d9f9ed67b26218260a88bafeb4f09d00bb5b60fd8fef468ffd3b42",
+          "bytes": 141326
         }
       }
     },
@@ -8582,16 +8582,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 10.7303,
-        "changed_pixel_ratio_0_1": 0.056523,
+        "mean_absolute_rgb_0_255": 10.7507,
+        "changed_pixel_ratio_0_1": 0.05673,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "dark/1640x900/start/actual.png",
-          "sha256": "461343582d9aed06255b19d9c17f4eb95c53056d726e00a2bb8a346f5a71bded",
-          "bytes": 76865
+          "sha256": "8830000ada57de48abad72cdbb5b9e8a34803fc4b3e144e4b23750c888361807",
+          "bytes": 77203
         },
         "reference": {
           "file": "dark/1640x900/start/reference.png",
@@ -8600,8 +8600,8 @@
         },
         "comparison": {
           "file": "dark/1640x900/start/comparison.png",
-          "sha256": "788bacc1d5b16d7a1a0c173f9ffd2a9d5ef39a7794590f8e99827b1a5f010c00",
-          "bytes": 268898
+          "sha256": "58e2ae2cafc30b649b90b6e41949cae883632fce71ff68c0998fb49d1d33d047",
+          "bytes": 269519
         }
       }
     },
@@ -8931,16 +8931,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 10.8465,
-        "changed_pixel_ratio_0_1": 0.046957,
+        "mean_absolute_rgb_0_255": 10.8489,
+        "changed_pixel_ratio_0_1": 0.047015,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "dark/1640x900/harness/actual.png",
-          "sha256": "042da375b916251769afd1db31f65e38ff077512ccf9311048df51bb974e3ccb",
-          "bytes": 72907
+          "sha256": "5342028bea0c381c05f7fda4c9ddcce1405119927e81dc6680a0874f9657a52c",
+          "bytes": 72456
         },
         "reference": {
           "file": "dark/1640x900/harness/reference.png",
@@ -8949,8 +8949,8 @@
         },
         "comparison": {
           "file": "dark/1640x900/harness/comparison.png",
-          "sha256": "e38453e86177baac47e266b01991b907ce0c996f5cf366c22b86e115fe6d40d6",
-          "bytes": 278839
+          "sha256": "7ad679f803ee7ad731b48d2b1d516bfdd8ac0b598f0c1d046afdf2348b50dac7",
+          "bytes": 278353
         }
       }
     },
@@ -9253,16 +9253,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 7.3043,
-        "changed_pixel_ratio_0_1": 0.063352,
+        "mean_absolute_rgb_0_255": 7.3028,
+        "changed_pixel_ratio_0_1": 0.0634,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "dark/1640x900/hall/actual.png",
-          "sha256": "afdfb407db7122be665c927408223ffc8196c3334569ac39e8057524e853602a",
-          "bytes": 102594
+          "sha256": "e9ca2dcb77d388638c4bf2352bdaa2435f39700b6a5039557d1e4dfbc67318e7",
+          "bytes": 102982
         },
         "reference": {
           "file": "dark/1640x900/hall/reference.png",
@@ -9271,8 +9271,8 @@
         },
         "comparison": {
           "file": "dark/1640x900/hall/comparison.png",
-          "sha256": "a28559990fe1b848b61a03d6cd2e4a7817faea7ea33c696c5d0f7bfb2fbd8135",
-          "bytes": 307917
+          "sha256": "4a6c76ccfb5bd109a0580babf98592f7d60d1bae65011a65dfabe9bff9b58173",
+          "bytes": 308640
         }
       }
     },
@@ -9571,16 +9571,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 7.5339,
-        "changed_pixel_ratio_0_1": 0.052455,
+        "mean_absolute_rgb_0_255": 7.5625,
+        "changed_pixel_ratio_0_1": 0.052726,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "dark/1640x900/council/actual.png",
-          "sha256": "84f980c0a9f0b0aa61d67ced2bd5e841dc29915d9bd0aae76ccfa0cfe8d4bf83",
-          "bytes": 80829
+          "sha256": "f328a0ad515c817dab207e94f0c8fb6580837c7c769894c67f6d8c693496c049",
+          "bytes": 81140
         },
         "reference": {
           "file": "dark/1640x900/council/reference.png",
@@ -9589,8 +9589,8 @@
         },
         "comparison": {
           "file": "dark/1640x900/council/comparison.png",
-          "sha256": "4ded4a3b52072d63fc025f3bc76a329d5ea4bb1866efee0ddae2b3a0604abd50",
-          "bytes": 271479
+          "sha256": "f22546afc0ac4bb83fc0e1fb18d9afd30243379ebb8270e5000f0b9b515a6be2",
+          "bytes": 272085
         }
       }
     },
@@ -9886,16 +9886,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 9.5517,
-        "changed_pixel_ratio_0_1": 0.059332,
+        "mean_absolute_rgb_0_255": 9.4897,
+        "changed_pixel_ratio_0_1": 0.058612,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "dark/1640x900/debate/actual.png",
-          "sha256": "cce6e252ad7e8deda0ce36f3172b44d770a30532ac4a43385ee1034a22ba6b60",
-          "bytes": 93705
+          "sha256": "ed0d7f8c1cc3694052550ac780de23682d084115257332debc5a700b31d0fe7b",
+          "bytes": 90556
         },
         "reference": {
           "file": "dark/1640x900/debate/reference.png",
@@ -9904,8 +9904,8 @@
         },
         "comparison": {
           "file": "dark/1640x900/debate/comparison.png",
-          "sha256": "575f12f702fdf95c0086260e92d716f9625d1219f0673ab4b493284c2b9f4236",
-          "bytes": 290465
+          "sha256": "d00003cb47b499f435207428959574711449fbc8caec4c2b2db23b64cf166ca0",
+          "bytes": 286613
         }
       }
     },
@@ -10334,16 +10334,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 9.3559,
-        "changed_pixel_ratio_0_1": 0.045015,
+        "mean_absolute_rgb_0_255": 9.3724,
+        "changed_pixel_ratio_0_1": 0.045118,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "dark/1640x900/chat/actual.png",
-          "sha256": "baa670f0e5fb1e2bf9cbca44cef9eef43612b099043f95ff1d0f6764499bd204",
-          "bytes": 75267
+          "sha256": "b211e6ee6548521fb88943c3c9803c190aaaa2e3dafb9539d513b67bcba37cf7",
+          "bytes": 74854
         },
         "reference": {
           "file": "dark/1640x900/chat/reference.png",
@@ -10352,8 +10352,8 @@
         },
         "comparison": {
           "file": "dark/1640x900/chat/comparison.png",
-          "sha256": "6296b2f2b1f730822cb2b64703107635ca4923da9b8d4ad05694990e17aa8d61",
-          "bytes": 264888
+          "sha256": "cca76bd7624351d98ecddfeafd7ac4a5d71a75513d449de4d6d8de60d44adb9c",
+          "bytes": 264488
         }
       }
     },
@@ -10649,16 +10649,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 11.1472,
-        "changed_pixel_ratio_0_1": 0.06326,
+        "mean_absolute_rgb_0_255": 11.1704,
+        "changed_pixel_ratio_0_1": 0.063495,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "dark/1440x900/start/actual.png",
-          "sha256": "f9bb3491e9aeec2c10986c4f758300e2a05bbb7d4fe84158bacba4c0641860ee",
-          "bytes": 75954
+          "sha256": "9e2ea4adeb5cb64697cf91450455711e641287e25bf195a2884e6267b1825a7a",
+          "bytes": 76281
         },
         "reference": {
           "file": "dark/1440x900/start/reference.png",
@@ -10667,8 +10667,8 @@
         },
         "comparison": {
           "file": "dark/1440x900/start/comparison.png",
-          "sha256": "50462081c39131d4912a44f1eee81ec8c260f6acf783dd68b8248f738b2bff81",
-          "bytes": 259411
+          "sha256": "f311a9ec41060261e6de8b179aae1b5e56e8a5c967d59800d83b0e38063c2e26",
+          "bytes": 259884
         }
       }
     },
@@ -10998,16 +10998,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 10.9659,
-        "changed_pixel_ratio_0_1": 0.052552,
+        "mean_absolute_rgb_0_255": 10.9686,
+        "changed_pixel_ratio_0_1": 0.052618,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "dark/1440x900/harness/actual.png",
-          "sha256": "0715a332e5ac97078977bdfa4578d45977d656762285a5e9cc8fe3a91729ce8a",
-          "bytes": 72131
+          "sha256": "a0f1ba286fcf3a2d17042cf510475fb72011040523ef3dcf605f798dccd9bff5",
+          "bytes": 71671
         },
         "reference": {
           "file": "dark/1440x900/harness/reference.png",
@@ -11016,8 +11016,8 @@
         },
         "comparison": {
           "file": "dark/1440x900/harness/comparison.png",
-          "sha256": "905b686d3cfb2d1d23dbea5648ba157b8dac3e56e38052f4ef425d26c553670e",
-          "bytes": 268844
+          "sha256": "7d6c2bbf504d9d344cb1d228f12595cea1a0ae370a0e4411113ba09af12a66ad",
+          "bytes": 268415
         }
       }
     },
@@ -11320,16 +11320,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 7.4685,
-        "changed_pixel_ratio_0_1": 0.064904,
+        "mean_absolute_rgb_0_255": 7.4776,
+        "changed_pixel_ratio_0_1": 0.065024,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "dark/1440x900/hall/actual.png",
-          "sha256": "0ed3822f522bdc039064b54e6d81b10ae4fef93458225220b30681d4cb571ceb",
-          "bytes": 95776
+          "sha256": "3842051f92f3dc8e89faf56c7c1d69b1332bb26ed698eb8b748acffdc7d2e102",
+          "bytes": 96107
         },
         "reference": {
           "file": "dark/1440x900/hall/reference.png",
@@ -11338,8 +11338,8 @@
         },
         "comparison": {
           "file": "dark/1440x900/hall/comparison.png",
-          "sha256": "7069f2fd493ab84ca52345b1dac7cc6b6bf3b9f58b63420fe68f96a598589fd6",
-          "bytes": 290685
+          "sha256": "25c973c21657b8faa7ab7bd32bea9f17aef971fe6fc824dc81d163f87d9136a4",
+          "bytes": 291327
         }
       }
     },
@@ -11638,16 +11638,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 8.1026,
-        "changed_pixel_ratio_0_1": 0.057362,
+        "mean_absolute_rgb_0_255": 8.1352,
+        "changed_pixel_ratio_0_1": 0.057671,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "dark/1440x900/council/actual.png",
-          "sha256": "e8707cc5db6b1856e2c3199b8c1ca4f55b7aa0b1bae082094917612743d5afb1",
-          "bytes": 79986
+          "sha256": "de2161b975b0271f9a0ceaa85002484b9765f9a6240838e93d0abc2df70c1645",
+          "bytes": 80300
         },
         "reference": {
           "file": "dark/1440x900/council/reference.png",
@@ -11656,8 +11656,8 @@
         },
         "comparison": {
           "file": "dark/1440x900/council/comparison.png",
-          "sha256": "cfd4548f3ab0ae4dadb709846e96391ae3445e15e71b117a635557597397490d",
-          "bytes": 261203
+          "sha256": "3d93828d37724c37a8f383013ed59265a7cf46f2067c1294b4f5473314008733",
+          "bytes": 261738
         }
       }
     },
@@ -11837,7 +11837,7 @@
           },
           "#debateCriteriaDetails": {
             "x": 240,
-            "y": 499.97,
+            "y": 467.97,
             "width": 1160,
             "height": 40.75,
             "display": "block",
@@ -11953,16 +11953,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 10.4468,
-        "changed_pixel_ratio_0_1": 0.064538,
+        "mean_absolute_rgb_0_255": 10.1291,
+        "changed_pixel_ratio_0_1": 0.06475,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "dark/1440x900/debate/actual.png",
-          "sha256": "e83d8f32eb218788524b3412c7a8ad9a109fa58f31c48c6005a0c5c315c91214",
-          "bytes": 93285
+          "sha256": "7734d4a428c47be5e5519c502b181dcbbc6583482f8c0ddb8f85594f9c8264a0",
+          "bytes": 91786
         },
         "reference": {
           "file": "dark/1440x900/debate/reference.png",
@@ -11971,8 +11971,8 @@
         },
         "comparison": {
           "file": "dark/1440x900/debate/comparison.png",
-          "sha256": "a9aa74001244166b1fe5328eff95dd20cc83c68c44de52834c87fdee339e29eb",
-          "bytes": 280989
+          "sha256": "f8034ad7c7b6380ab7f4ee52a4e08795af2cc3b1e1ec9a7544a6230293325603",
+          "bytes": 279163
         }
       }
     },
@@ -12401,16 +12401,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 9.7571,
-        "changed_pixel_ratio_0_1": 0.049201,
+        "mean_absolute_rgb_0_255": 9.7906,
+        "changed_pixel_ratio_0_1": 0.049438,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "dark/1440x900/chat/actual.png",
-          "sha256": "c0782a8b799be17be98219be906c0696118a70175947c1b9b4c9924c83ffc929",
-          "bytes": 72646
+          "sha256": "606f468a132da9885a870c30c07816c0c03f5f91058bc55eef8a3e99539b8f20",
+          "bytes": 72652
         },
         "reference": {
           "file": "dark/1440x900/chat/reference.png",
@@ -12419,8 +12419,8 @@
         },
         "comparison": {
           "file": "dark/1440x900/chat/comparison.png",
-          "sha256": "6f8faa0009db62503674ad232c5ed7537015df84a8b30328a013b51d0292f0c6",
-          "bytes": 253632
+          "sha256": "f68dfd531fc333ee63c16e92d6a0c51916b62715afa182f1f07b356664b04c43",
+          "bytes": 253763
         }
       }
     },
@@ -12716,16 +12716,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 11.1674,
-        "changed_pixel_ratio_0_1": 0.067395,
+        "mean_absolute_rgb_0_255": 11.2051,
+        "changed_pixel_ratio_0_1": 0.067768,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "dark/1280x800/start/actual.png",
-          "sha256": "f3a4769138cb23d0f717798f8a49f85c038f91a3f705aa3b7d93257804fdaed7",
-          "bytes": 70597
+          "sha256": "49a851024d605072aeca7b8e9df5faa3fd4038c43584e1fa709d86b28fe591a2",
+          "bytes": 70922
         },
         "reference": {
           "file": "dark/1280x800/start/reference.png",
@@ -12734,8 +12734,8 @@
         },
         "comparison": {
           "file": "dark/1280x800/start/comparison.png",
-          "sha256": "2597838913a6b5dd4e2ef9a073aea8b01bb5f7c970373d5d08923c77d2e17f39",
-          "bytes": 221005
+          "sha256": "af22d944926bc4644ea60271a79a3900d02ab085a479f602da2e5b31d4c10c75",
+          "bytes": 221474
         }
       }
     },
@@ -13065,16 +13065,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 11.0792,
-        "changed_pixel_ratio_0_1": 0.05903,
+        "mean_absolute_rgb_0_255": 11.0815,
+        "changed_pixel_ratio_0_1": 0.059117,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "dark/1280x800/harness/actual.png",
-          "sha256": "44e79fe5bb23666e2eb273ea0712690bfb4ac4017a770f7fdcd89ec7f19a09ec",
-          "bytes": 69746
+          "sha256": "0da6399771ede554a8dbac842d6633a98a7f7d5cf4f143eca124a0f217c91e5e",
+          "bytes": 69327
         },
         "reference": {
           "file": "dark/1280x800/harness/reference.png",
@@ -13083,8 +13083,8 @@
         },
         "comparison": {
           "file": "dark/1280x800/harness/comparison.png",
-          "sha256": "91a45bee1cffe4c02ee221dbc41dd4c389c7e412cec557f581a3fa7ede739f49",
-          "bytes": 235097
+          "sha256": "0db4bd9948164c39f1f5df71a46643f4a7610428daea222fee08419338084cd1",
+          "bytes": 234567
         }
       }
     },
@@ -13387,16 +13387,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 7.4945,
-        "changed_pixel_ratio_0_1": 0.065829,
+        "mean_absolute_rgb_0_255": 7.5085,
+        "changed_pixel_ratio_0_1": 0.066001,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "dark/1280x800/hall/actual.png",
-          "sha256": "e61abce069740856c923e9a1362268523e96555c0962def3553ed79d8795f2fa",
-          "bytes": 91183
+          "sha256": "921d179e937ec6a2731fb1ca2f100cd17a42fbdc30400069e97256c6ecd0d3ff",
+          "bytes": 91502
         },
         "reference": {
           "file": "dark/1280x800/hall/reference.png",
@@ -13405,8 +13405,8 @@
         },
         "comparison": {
           "file": "dark/1280x800/hall/comparison.png",
-          "sha256": "cf683f6f521c7335b0f4d076a094deb82621dbe7d81978b7a5f6405281f3a5c1",
-          "bytes": 251831
+          "sha256": "059718af262947b3b1fb34c002ceae473674eb5c2aa61147b608829af31657a2",
+          "bytes": 252372
         }
       }
     },
@@ -13705,16 +13705,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 8.1965,
-        "changed_pixel_ratio_0_1": 0.062021,
+        "mean_absolute_rgb_0_255": 8.2378,
+        "changed_pixel_ratio_0_1": 0.062429,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "dark/1280x800/council/actual.png",
-          "sha256": "72adc3e35ef9fcdc62bdaa3843c60a990209fb6fe7d3e6e85968e0d3c58af0c2",
-          "bytes": 77954
+          "sha256": "66b72fe3b05477d266ca39d23d17a80dfd54f62a9e68f5889c58b6daa0817b45",
+          "bytes": 78296
         },
         "reference": {
           "file": "dark/1280x800/council/reference.png",
@@ -13723,8 +13723,8 @@
         },
         "comparison": {
           "file": "dark/1280x800/council/comparison.png",
-          "sha256": "acfe3e723313cedc59a3383440a47a00baddecfc749233621fc88ad0cc6b03f2",
-          "bytes": 227626
+          "sha256": "2faa453515b0f8066a3ece91710b80a3087a7b050c48c56a3931ad62e430e0e5",
+          "bytes": 228146
         }
       }
     },
@@ -13904,7 +13904,7 @@
           },
           "#debateCriteriaDetails": {
             "x": 240,
-            "y": 531.97,
+            "y": 467.97,
             "width": 1000,
             "height": 40.75,
             "display": "block",
@@ -14020,16 +14020,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 11.0245,
-        "changed_pixel_ratio_0_1": 0.066882,
+        "mean_absolute_rgb_0_255": 11.0737,
+        "changed_pixel_ratio_0_1": 0.068482,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "dark/1280x800/debate/actual.png",
-          "sha256": "f5b8400feaef4b3e71ee5a05e947c630edbd7f1744e4e59b28eb8bb740a0d13d",
-          "bytes": 81523
+          "sha256": "3cbdc09d611b0182184c30d7c1a1d7beba39d83242a5f958f8968e97c2c179e9",
+          "bytes": 79200
         },
         "reference": {
           "file": "dark/1280x800/debate/reference.png",
@@ -14038,8 +14038,8 @@
         },
         "comparison": {
           "file": "dark/1280x800/debate/comparison.png",
-          "sha256": "057d3c560e46b6f7e51b70fc15a1729ed6142db94b7eca0f3aa3a2b9d717155a",
-          "bytes": 234051
+          "sha256": "070105be97d1703f1f7c1d0b80cf927fdafcac26f90a20d06b7f7cd0a9c734dc",
+          "bytes": 231372
         }
       }
     },
@@ -14468,16 +14468,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 9.4491,
-        "changed_pixel_ratio_0_1": 0.054206,
+        "mean_absolute_rgb_0_255": 9.4823,
+        "changed_pixel_ratio_0_1": 0.054552,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "dark/1280x800/chat/actual.png",
-          "sha256": "f8e708d6fca86114a48c11fc7482be5b7488fdeed676fb7ac21f1631b362bc2d",
-          "bytes": 68793
+          "sha256": "d7c601fae98c64c7b1d0a5212bf83e35a92ce01c37e557083d8429f1752a8658",
+          "bytes": 69349
         },
         "reference": {
           "file": "dark/1280x800/chat/reference.png",
@@ -14486,8 +14486,8 @@
         },
         "comparison": {
           "file": "dark/1280x800/chat/comparison.png",
-          "sha256": "d6bf1d6cfb6472c90054ee0d5d97819360cf97c72f1bde612a8200ac49f339e2",
-          "bytes": 218600
+          "sha256": "4628cfc9bfa774335873c90c5b439311b48234a18f45b7f2aed99058e33c1e60",
+          "bytes": 219724
         }
       }
     },
@@ -14784,15 +14784,15 @@
       ],
       "pixel_difference": {
         "mean_absolute_rgb_0_255": 24.3968,
-        "changed_pixel_ratio_0_1": 0.308898,
+        "changed_pixel_ratio_0_1": 0.308901,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "dark/390x844/start/actual.png",
-          "sha256": "f17e07d632d2c9baaf46f666072cf374a63f8c0b2bb91d702ba5da1b355f7800",
-          "bytes": 46487
+          "sha256": "ed817ac9dd6a08363973ed18878fdd90e5fe35c6a54fb36e628525b8290f13ae",
+          "bytes": 46484
         },
         "reference": {
           "file": "dark/390x844/start/reference.png",
@@ -14801,8 +14801,8 @@
         },
         "comparison": {
           "file": "dark/390x844/start/comparison.png",
-          "sha256": "787e6e2557cc7eab6286911f97927db049ce89124643362f8fae3802f36711f5",
-          "bytes": 138574
+          "sha256": "81a083f595b4e255ad21ac6df245501bbfe75df2dee45bcb8063a7f361f25973",
+          "bytes": 138522
         }
       }
     },
@@ -15454,16 +15454,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 17.3491,
-        "changed_pixel_ratio_0_1": 0.112337,
+        "mean_absolute_rgb_0_255": 17.3504,
+        "changed_pixel_ratio_0_1": 0.112362,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "dark/390x844/hall/actual.png",
-          "sha256": "04bd74bbaa1f96fb8616a9e93a62b987572f75512c2426e67635e21040678b49",
-          "bytes": 46952
+          "sha256": "ae126cfb8b8f9afd8a771fd99ea73f96112e9b5ecd24aae029781ef681f32c04",
+          "bytes": 46793
         },
         "reference": {
           "file": "dark/390x844/hall/reference.png",
@@ -15472,8 +15472,8 @@
         },
         "comparison": {
           "file": "dark/390x844/hall/comparison.png",
-          "sha256": "f9441ead372c703117b302d6421a497275f2f434e1bbe92c1d7051956f2193e4",
-          "bytes": 143466
+          "sha256": "9deccec029c43746816d8f1a710dbf91673314b953da7704fe9971673de9e814",
+          "bytes": 143598
         }
       }
     },
@@ -15971,7 +15971,7 @@
           },
           "#debateCriteriaDetails": {
             "x": 32,
-            "y": 764.16,
+            "y": 716.16,
             "width": 326,
             "height": 111.77,
             "display": "block",
@@ -16087,16 +16087,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 17.3222,
-        "changed_pixel_ratio_0_1": 0.118022,
+        "mean_absolute_rgb_0_255": 17.2642,
+        "changed_pixel_ratio_0_1": 0.11574,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "dark/390x844/debate/actual.png",
-          "sha256": "b00349eace0f10ff5620f8f28f2489c82aa70ccbc437ce7ba207bde8a3e017a9",
-          "bytes": 55283
+          "sha256": "fd7136e03b9868020a5dd2a2e494a63f7839fb9d288f010f10b78a90e96eeecf",
+          "bytes": 53969
         },
         "reference": {
           "file": "dark/390x844/debate/reference.png",
@@ -16105,8 +16105,8 @@
         },
         "comparison": {
           "file": "dark/390x844/debate/comparison.png",
-          "sha256": "691dfa79bc48da00192a36b1b7d3b9d9839c1cc7dc5d6c86cecdcdf9a70320c4",
-          "bytes": 149773
+          "sha256": "2f6b8215b00340f9780554fbfeebaa22f63bcaa231774f211f7db84a37b69fca",
+          "bytes": 146436
         }
       }
     },
@@ -16535,16 +16535,16 @@
         }
       ],
       "pixel_difference": {
-        "mean_absolute_rgb_0_255": 16.3329,
-        "changed_pixel_ratio_0_1": 0.113252,
+        "mean_absolute_rgb_0_255": 16.2318,
+        "changed_pixel_ratio_0_1": 0.112444,
         "changed_channel_threshold": 24,
         "policy": "informational only; structural checks and human review decide, never a blanket pixel tolerance"
       },
       "images": {
         "actual": {
           "file": "dark/390x844/chat/actual.png",
-          "sha256": "ad1306e2d442ae6f87db2b928ab2c1654085479045e3426d05e9f6b557f4248b",
-          "bytes": 51558
+          "sha256": "c13baa994b0b8b94bf79ee113ea1e09807c4aadb7353b4e7239f42b6a05feb6d",
+          "bytes": 51087
         },
         "reference": {
           "file": "dark/390x844/chat/reference.png",
@@ -16553,8 +16553,8 @@
         },
         "comparison": {
           "file": "dark/390x844/chat/comparison.png",
-          "sha256": "33b89ce27bc7302227aab8763f0f85f862def794289346a1f2f1615d1ffa70e0",
-          "bytes": 142346
+          "sha256": "efdff16380eb61ac0087d983be42d6f565a0501d13cdaf923e6d0964d587cc5e",
+          "bytes": 141647
         }
       }
     }

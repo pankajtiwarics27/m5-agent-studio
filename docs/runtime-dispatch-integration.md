@@ -931,3 +931,26 @@ visual/15Compare passed, zero findings, demo/screenshot6/6 and approval pins
 unchanged. Live isolation remains unqualified/blocked. Full regression and fresh
 exact-head CI are pending at this chronological note; earlier5ed0809 results are
 not current-source validation. No acceptance or activation is claimed.
+
+### Integration with concurrent merged UI/P7 work
+
+Main advanced to5fb978b (merged PR258) while the f5a4d38 checkpoint was validating,
+creating generated-artifact conflicts and preventing a current PR CI run. Its
+partial local full run was deliberately stopped; it is **not** a passed regression.
+Merge main into the same assigned branch, preserve static/index.html and UI/P7
+changes exactly from main, and rebuild the native standalone plus affected source,
+preservation, backend and performance records rather than hand-editing conflicts.
+The combined standalone is4,272,345bytes; scope199/13 and docs259 files. Focused
+P7/native ownership/load/standalone tests:155 passed (11.17s). Both app/standalone
+smokes, source/preservation/performance, JavaScript and demo/screenshot checks pass.
+
+The inherited `P7-PARK-01` register in
+[parked P7 work](uiux-2-0-p7-parked.md) deliberately retires21 release-review tests
+and instructs retaining historical release-review artifacts, not regenerating
+current approval. A diagnostic regeneration exposed3 expected stale source/metric
+findings; restore those two artifacts exactly from main, as that register requires.
+Do not relabel old release evidence as current or silently unpark/change assertions.
+UIV2-30 --check remains deliberately blocked under that inherited owner decision;
+this is not a new waiver or fresh release acceptance. Live isolation remains
+unqualified/blocked. Full regression and new exact combined-head CI must be rerun;
+earlier source-only results do not validate the merged tree.

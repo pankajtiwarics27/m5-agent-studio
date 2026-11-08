@@ -1,4 +1,36 @@
-"""UIV2-30 release evidence, truthful scope and fail-closed handoff tests."""
+"""UIV2-30 release evidence, truthful scope and fail-closed handoff tests.
+
+RETIRED 2026-11-08 (owner decision on PR #258, option A). Parked, not deleted:
+the assertions and fixtures are intact below, so unblocking is one line.
+
+Why it cannot pass on any push, and no patch can fix it:
+
+  ``validate_evidence`` requires the committed release evidence to name a commit
+  whose *own* green CI run it cites (``ci.headSha == implementation_head``).
+  This module reads that evidence and runs on every push, and the scoped selector
+  includes it for any change to ``static/index.html``, to the evidence JSON, or to
+  even a docs file. So the test asserts "the evidence is current" while being the
+  thing that runs before the evidence can be current. The only way to satisfy it
+  inside one commit would be to write a ``ci.headSha`` for a run that never
+  existed, which is precisely the fabrication the contract exists to prevent.
+
+  It also hardcodes the previous run's heap triple (3375100 -> 3337896 ->
+  3342772), so legitimately regenerating the performance run fails it twice over.
+
+Unblock condition (then delete the skip below and re-run, on priority):
+
+  1. CI runs green on this branch; note that run's ``headSha``, which is the
+     implementation HEAD the evidence may cite.
+  2. ``python3 scripts/uiv2_release_review.py --import-evidence \\
+        --compare-run <compare.json> --visual-run <check-manifest.json> \\
+        --ci-run <ci.json>``
+  3. Regenerate ``product/M5_2_0_UIUX_V2_Visual_Fidelity_Roadmap.json`` from that
+     run's measured triples, then ``python3 scripts/uiv2_release_review.py``.
+
+The contract generator and its artifacts are deliberately left in place: this
+retires the blocking test, not UIV2-30's release review, which must still be
+re-run by hand after merge (tracked in docs/uiux-2-0-p7-parked.md).
+"""
 from __future__ import annotations
 
 import copy
@@ -12,6 +44,16 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "uiv2_release_review.py"
+
+pytestmark = pytest.mark.skip(
+    reason=(
+        "UIV2-30 release review retired on PR #258 (owner decision A): it requires the "
+        "committed evidence to cite a green CI run of its own implementation HEAD, while "
+        "running in that same commit's check. Parking, not deleting; see this module's "
+        "docstring for the one-line unblock and docs/uiux-2-0-p7-parked.md to track it."
+    )
+)
+
 spec = importlib.util.spec_from_file_location("uiv2_release_review", SCRIPT)
 assert spec and spec.loader
 contract = importlib.util.module_from_spec(spec)
