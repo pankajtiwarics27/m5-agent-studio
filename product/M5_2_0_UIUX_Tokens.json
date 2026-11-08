@@ -5,7 +5,7 @@
   "source": {
     "frontend": "static/index.html",
     "style_block": "#m5-redesign-system",
-    "style_block_sha256": "ad72e9f10f926908df8b7aed7fdc53bee316f8010d04f9a7125df30feb566bc9",
+    "style_block_sha256": "84a57ab041f254a3bedadc3e7684591d9d7e7c6abbe5ab44466632d696ab4da5",
     "superseded_blocks": [
       "the first <style> block declares an older palette that this one overrides; it is kept only so a stale rule cannot resolve to an undefined name"
     ]
@@ -40,9 +40,9 @@
     ]
   },
   "totals": {
-    "tokens": 56,
+    "tokens": 58,
     "groups": 8,
-    "references": 1631,
+    "references": 1635,
     "theme_overrides": 20,
     "density_overrides": 5,
     "contrast_pairs": 28,
@@ -119,7 +119,9 @@
       "mono",
       "header-height",
       "debate-cols",
-      "chat-column"
+      "chat-column",
+      "studio-nav-width",
+      "studio-nav-height"
     ]
   },
   "tokens": [
@@ -607,6 +609,22 @@
       "name": "--chat-column",
       "group": "shell",
       "value": "820px",
+      "theme_overrides": {},
+      "density_override": null,
+      "references": 1
+    },
+    {
+      "name": "--studio-nav-width",
+      "group": "shell",
+      "value": "200px",
+      "theme_overrides": {},
+      "density_override": null,
+      "references": 3
+    },
+    {
+      "name": "--studio-nav-height",
+      "group": "shell",
+      "value": "348px",
       "theme_overrides": {},
       "density_override": null,
       "references": 1

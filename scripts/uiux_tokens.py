@@ -70,7 +70,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
     "motion": ("ease-out", "dur-fast", "dur-slow", "dur-meter"),
     # `chat-column` (UIV2-18) is the width a conversation is read in; `debate-cols` is how many
     # answers Compare will draw. Both are measures of the shell, not of a component.
-    "shell": ("sans", "mono", "header-height", "debate-cols", "chat-column"),
+    "shell": ("sans", "mono", "header-height", "debate-cols", "chat-column", "studio-nav-width", "studio-nav-height"),
 }
 GROUP_OF = {f"--{name}": group for group, names in GROUPS.items() for name in names}
 

@@ -1,5 +1,7 @@
 /** Exercise the task-first layout against an isolated, synthetic demo only. */
 import assert from 'node:assert/strict';
+import { waitForHarnessSidebarLayout } from './sidebar_layout_ready.mjs';
+import { checkSidebarLayoutReadiness } from './sidebar_layout_ready_checks.mjs';
 import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -14,6 +16,7 @@ const browser = await (module.default || module).launch({ executablePath: proces
 const checks = [];
 function check(name, pass, detail) { assert(pass, `${name}: ${JSON.stringify(detail)}`); checks.push(name); }
 try {
+  await checkSidebarLayoutReadiness(browser, check);
   const page = await browser.newPage();
   const errors = [], external = [], mcpWrites = [], posts = [];
   const mcpFixture = { alias: 'ui-proof-server', name: 'Synthetic UI proof', category: 'local',
@@ -58,6 +61,45 @@ try {
   await page.waitForFunction(()=>document.querySelector('#harnessLeadModel').options.length>0);
   await page.waitForFunction(()=>document.getElementById('harnessWorkspaceInput').value.trim().length>0);
   check('header rehydrates after reload', (await caption()).text===`Workspace: ${savedWorkspace}` && await page.$eval('#harnessWorkspaceInput',n=>n.value.trim())===savedWorkspace, await caption());
+  // Shared navigation must not jump when switching into/out of Harness.
+  const navigationPosts = posts.length;
+  for (const theme of ['light', 'dark']) for (const compact of [false, true]) {
+    for (const width of [390, 799, 800, 820, 1279, 1280, 1568]) {
+      await page.setViewport({width, height: 900});
+      await page.evaluate(({theme, compact}) => { applyTheme(theme); applyDensity(compact); }, {theme, compact});
+      const navigation = async tab => {
+        await page.evaluate(tab => switchTab(tab), tab);
+        // Keep navigation snapshots frame-aligned, then require the real measured
+        // result for the desktop Harness session seam as well.
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        await waitForHarnessSidebarLayout(page);
+        return page.evaluate(() => {
+          const rail = document.querySelector('.mode-tabs');
+          const rect = n => { const b = n.getBoundingClientRect(); return [b.x,b.y,b.width,b.height].map(v=>Math.round(v*100)/100); };
+          const css = getComputedStyle(rail);
+          return {width: rect(rail)[2], padding: css.padding, gap: css.gap,
+            mainLeft: rect(document.getElementById('mainLayout'))[0] + parseFloat(getComputedStyle(document.getElementById('mainLayout')).paddingLeft),
+            buttons: [...rail.querySelectorAll('.mode-tab')].map(n=>({box:rect(n), justify:getComputedStyle(n).justifyContent, label:getComputedStyle(n.querySelector('span')).display}))};
+        });
+      };
+      const reference = await navigation('start');
+      for (const tab of ['harness', 'hall', 'council', 'debate', 'chat']) {
+        const actual = await navigation(tab);
+        check(`shared navigation ${tab}/${theme}/${compact}/${width}`,JSON.stringify(actual)===JSON.stringify(reference),{reference, actual});
+        if (tab==='harness' && width>=1280) {
+          const seam = await page.evaluate(() => {
+            const nav=document.querySelector('.mode-tabs').getBoundingClientRect();
+            const session=document.getElementById('harnessSessionsPanel').getBoundingClientRect();
+            const last=document.querySelector('.mode-tab:last-child').getBoundingClientRect();
+            return {navBottom:nav.bottom,sessionTop:session.top,lastBottom:last.bottom};
+          });
+          check(`sessions below full navigation ${theme}/${compact}/${width}`,Math.abs(seam.navBottom-seam.sessionTop)<1 && seam.lastBottom<=seam.navBottom,seam);
+        }
+      }
+    }
+  }
+  check('tab consistency makes no write/inference request',posts.length===navigationPosts,posts);
+  await page.evaluate(() => switchTab('harness'));
   await page.evaluate(path=>syncProjectDirInputs(path),longWorkspace);
   await page.evaluate(() => startFreshHarnessDraft());
   for (const theme of ['light', 'dark']) {
@@ -66,6 +108,9 @@ try {
         const height = width === 390 ? 844 : width === 1280 ? 720 : 900;
         await page.setViewport({ width, height });
         await page.evaluate(({ theme, compact }) => { applyTheme(theme); applyDensity(compact); }, { theme, compact });
+        // ResizeObserver delivers asynchronously, before paint but not necessarily
+        // before this next protocol evaluation after a breakpoint/density change.
+        await waitForHarnessSidebarLayout(page);
         const layout = await page.evaluate(() => {
           const rect = el => { const b = el.getBoundingClientRect(); return { left: b.left, right: b.right, top: b.top, bottom: b.bottom, width: b.width, height: b.height }; };
           const ids = ['harnessPromptInput', 'harnessRunBtn', 'harnessLeadModel', 'harnessPolicy', 'harnessWorkflowMode', 'harnessProjectSummary'];
