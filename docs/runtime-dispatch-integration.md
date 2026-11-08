@@ -78,3 +78,40 @@ is advanced. Tests1--7 acceptance is unchanged; test8 remains paused/unpassed.
   inventory addition. Broader/final checks will be recorded when executed.
 - Initial configured mypy passed for **72 sources**; no production/native
   qualification follows. No live native endpoint was contacted.
+
+### Follow-up checks and evidence refresh
+
+- The fence suite now has **59 passing tests**, adding private-DNS resolution
+  after explicit private-network opt-in, unknown/encoded GET paths, owned
+  composition containers, rejected boolean backend configuration, and existing
+  HTTP token/origin authorization in front of composed controls.
+- **496 combined fence/admission/chat-tool/request-fit/native-bridge tests** passed
+  before the three added HTTP authorization cases (one upstream warning).
+- Five disposable mutations were caught: common-dispatch bypass, control before
+  online probe, dropped resolved-private-IP guard, ignored cleanup confirmation,
+  and boolean backend installation. Mutation copies never changed working sources.
+- The first broad run finished **4,201 passed, 17 failed, 32 skipped, 1 warning**
+  in **791.96 seconds**. Failures were source-bound generated inventory/evidence
+  drift and a historical UI release test that compared its implementation pin to
+  all future HEAD changes. They are not reported as a clean full-suite run.
+- Regenerated affected inventories/authorization trace/preservation package through
+  their generators, preserving historical unbound approval and unchanged browser
+  assets. Fresh existing UIV2-29 backend safety execution passed **300 tests plus
+  16 isolation checks**; live container isolation remains unqualified/blocked.
+  Derived performance/release records were regenerated without replacing visual
+  evidence, CI records, approval references, source pins or acceptance ledgers.
+- The historical UI release test now audits **its recorded implementation range**
+  instead of forbidding every subsequent backend change forever. Its existing
+  current browser-source digest checks and historical visual/CI approval checks
+  remain intact. No screenshots were recaptured or newly approved.
+- Targeted repaired inventory/performance/release/fence suites: **248 passed**,
+  one upstream warning, before the three new HTTP cases. Existing app and
+  standalone isolated startup/auth/origin smoke checks passed. Ruff, configured
+  mypy (72 sources), ADR/docs, governance, deferred security-record consistency,
+  frontend syntax and baseline verification passed. Full history was fetched to
+  make the pinned baseline available in this initially shallow checkout.
+
+These are checkpoint results, not LC-08 completion, architecture acceptance or
+permission to activate/merge. Concrete executor, canonical consumption,
+coordinator-backed race tests and executor-level standalone consumption remain
+open as listed above.

@@ -1946,6 +1946,10 @@ class _PinnedAsyncHTTPTransport(httpx.AsyncBaseTransport):
         host = _normalize_dns_host(request.url.host)
         prior_pin = _OUTBOUND_DNS_PINS.get().get(host)
         await _validate_outbound_url(str(request.url), allow_private=bool(prior_pin and prior_pin[1]))
+        current_pin = _OUTBOUND_DNS_PINS.get().get(host)
+        _local_runtime_dispatch().guard_http(
+            request.method, str(request.url), resolved_addresses=current_pin[0] if current_pin else (),
+        )
         return await self._inner.handle_async_request(request)
 
     async def aclose(self) -> None:

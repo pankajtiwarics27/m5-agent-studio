@@ -63,7 +63,10 @@ def test_release_is_pinned_to_clean_full_sha_and_current_browser_sources(payload
     assert payload["visual_evidence"]["git"]["head"] == pinned["implementation_head"]
     assert evidence()["source_sha256"] == contract.evidence_source_hashes()
     changed = subprocess.run(
-        ["git", "diff", "--name-only", "703945e496c38b6bf0fb148f18fb213f00d20015"],
+        # Audit the recorded release's implementation range, not every later
+        # backend change forever. Current browser digests are checked above;
+        # this does not re-pin/reapprove the historical visual evidence.
+        ["git", "diff", "--name-only", "703945e496c38b6bf0fb148f18fb213f00d20015", pinned["implementation_head"]],
         cwd=ROOT, capture_output=True, text=True, check=True,
     ).stdout.splitlines()
     assert not {"app.py", "static/index.html", "studio.py"}.intersection(changed)

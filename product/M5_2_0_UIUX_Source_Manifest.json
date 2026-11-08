@@ -19,16 +19,16 @@
     {
       "path": "app.py",
       "role": "the FastAPI server the UI talks to; source of the route table",
-      "sha256": "72093aac706eecb56114658ebd5cfda2d93567d638222bbd116c24bd33149893",
-      "bytes": 1058021,
-      "lines": 22681
+      "sha256": "d6d8fffe23dd9561e73f4bbe3d9b11af5ddb670f3428940407b628091a1406b0",
+      "bytes": 1058238,
+      "lines": 22685
     },
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "9a30e861870c39155640377542a6f89981b39dee3d12d581cc9bee8a18e683f2",
-      "bytes": 3870059,
-      "lines": 82678
+      "sha256": "7b984444f964f9c0ff7493d14f7bd5a044556abdcbe382a042708dbf5fdd5073",
+      "bytes": 3870739,
+      "lines": 82696
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -96,9 +96,9 @@
     {
       "path": "scripts/uiux_authorization_trace.py",
       "role": "traces the authorization and state behind each state-changing call",
-      "sha256": "e217410b556e7e921b3faa2e2cbbdec71729b63aa46096952e048795bff688c2",
-      "bytes": 37169,
-      "lines": 765
+      "sha256": "89348780158e371b4790971ffce8bb5e866ba1345f37139f80c48d618d177fe1",
+      "bytes": 37331,
+      "lines": 766
     },
     {
       "path": "scripts/uiux_preservation_signoff.py",
@@ -571,7 +571,7 @@
   },
   "api": {
     "path": "app.py",
-    "sha256": "72093aac706eecb56114658ebd5cfda2d93567d638222bbd116c24bd33149893",
+    "sha256": "d6d8fffe23dd9561e73f4bbe3d9b11af5ddb670f3428940407b628091a1406b0",
     "route_count": 121,
     "by_method": {
       "DELETE": 7,

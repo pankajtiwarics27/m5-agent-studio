@@ -451,3 +451,82 @@ def test_static_entry_point_inventory_is_current_and_new_wire_sites_fail_closed(
         inventory(
             'async def bypass(client):\n await client.post(f"{OMLX_BASE}/v1/models/a/load")\n'
         )
+
+
+def test_resolved_private_hostname_cannot_bypass_http_fence_with_private_network_opt_in(
+    installed, monkeypatch
+):
+    import httpx
+
+    calls = []
+
+    async def validate(*a, **kw):
+        studio._OUTBOUND_DNS_PINS.set({"native.example": (("127.0.0.1",), True)})
+
+    async def native(*a, **kw):
+        calls.append("native")
+        raise AssertionError("must not be reached")
+
+    transport = object.__new__(studio._PinnedAsyncHTTPTransport)
+    transport._inner = SimpleNamespace(handle_async_request=native)
+    monkeypatch.setattr(studio, "_validate_outbound_url", validate)
+    with pytest.raises(rd.RuntimeDispatchDenied):
+        asyncio.run(
+            transport.handle_async_request(
+                httpx.Request("POST", "https://native.example/v1/chat/completions")
+            )
+        )
+    assert calls == []
+
+
+@pytest.mark.parametrize(
+    "path", ["/v1%2Ftokenize", "/debug/private-renderer", "/unknown"]
+)
+def test_known_runtime_unknown_get_or_encoded_counter_is_not_assumed_observation(path):
+    boundary = rd.RuntimeDispatchBoundary(
+        True, runtime_origins=("http://localhost:8000",)
+    )
+    with pytest.raises(rd.RuntimeDispatchDenied):
+        boundary.guard_http("GET", "http://localhost:8000" + path)
+
+
+def test_internal_configuration_cannot_accidentally_install_boolean_authority():
+    with pytest.raises(rd.RuntimeDispatchDenied):
+        rd.RuntimeDispatchBoundary(True, {"omlx": True})
+
+
+def test_composition_owns_alias_and_origin_containers():
+    origins = ["http://localhost:8000"]
+    aliases = {"lm": "lmstudio"}
+    boundary = rd.RuntimeDispatchBoundary(
+        True, provider_runtimes=aliases, runtime_origins=origins
+    )
+    origins.clear()
+    aliases.clear()
+    assert boundary.runtime_origins == ("http://localhost:8000",)
+    assert boundary.provider_runtimes == {"lm": "lmstudio"}
+
+
+@pytest.mark.parametrize("case", ["missing-token", "foreign-origin", "authorized"])
+def test_composed_control_still_passes_existing_http_auth_origin_boundary(
+    installed, tmp_path, monkeypatch, case
+):
+    from fastapi.testclient import TestClient
+
+    token = "fixture-token-not-a-secret-0123456789"
+    monkeypatch.setattr(studio, "DB_PATH", tmp_path / "auth.db")
+    monkeypatch.setattr(studio, "STUDIO_API_TOKEN", token)
+    monkeypatch.setattr(studio, "STUDIO_AUTH_DISABLED", False)
+    monkeypatch.setattr(studio, "STUDIO_HOST", "127.0.0.1")
+    monkeypatch.setattr(studio, "STUDIO_ALLOWED_HOSTS", {"testserver"})
+    monkeypatch.setattr(studio, "STUDIO_EXPENSIVE_REQUESTS_PER_MINUTE", 600)
+    headers = {} if case == "missing-token" else {"Authorization": "Bearer " + token}
+    if case == "foreign-origin":
+        headers["Origin"] = "https://untrusted.example"
+    with TestClient(studio.app) as client:
+        response = client.post("/api/models/model/load", headers=headers)
+    assert (
+        response.status_code
+        == {"missing-token": 401, "foreign-origin": 403, "authorized": 200}[case]
+    )
+    assert len(installed[1]["omlx"].calls) == int(case == "authorized")

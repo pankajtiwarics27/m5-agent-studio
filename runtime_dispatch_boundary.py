@@ -14,7 +14,7 @@ from collections.abc import AsyncIterator, Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Any, Literal, Protocol
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit
 
 
 _DISPATCH_CODES = frozenset(
@@ -159,6 +159,7 @@ class RuntimeDispatchBoundary:
             origin in {_dispatch_origin(u) for u in self.runtime_origins}
             or _dispatch_private(url)
             or provider.get("allow_private")
+            or provider.get("builtin_private_ok")
         ):
             # A generic local/proxy provider is not qualified cloud/native routing.
             raise RuntimeDispatchDenied("coordinated_backend_unavailable")
@@ -243,13 +244,18 @@ class RuntimeDispatchBoundary:
         if self.coordinated:
             raise RuntimeDispatchDenied("legacy_transport_blocked")
 
-    def guard_http(self, method: str, url: str) -> None:
+    def guard_http(
+        self, method: str, url: str, *, resolved_addresses: tuple[str, ...] = ()
+    ) -> None:
         if not self.coordinated:
             return
         parsed = urlsplit(url)
         origin = _dispatch_origin(url)
         known = origin in {_dispatch_origin(u) for u in self.runtime_origins}
-        path = parsed.path.lower().rstrip("/")
+        path = unquote(parsed.path).lower().rstrip("/")
+        private_pin = any(
+            not ipaddress.ip_address(ip).is_global for ip in resolved_addresses
+        )
         effect_path = any(
             s in path
             for s in (
@@ -268,7 +274,15 @@ class RuntimeDispatchBoundary:
         # Known runtime origins have no raw effect path. For unknown private/proxy
         # origins, forbid recognizable generation/tokenizer/control endpoints.
         # Metadata GETs (tags/ps/models) remain observations, not readiness proof.
-        if (known and method.upper() not in ("GET", "HEAD", "OPTIONS")) or (
-            effect_path and (known or _dispatch_private(url))
-        ):
+        observed_paths = {
+            "/v1/models",
+            "/api/tags",
+            "/api/ps",
+            "/api/version",
+            "/health",
+            "/healthz",
+        }
+        if (
+            known and not (method.upper() in ("GET", "HEAD") and path in observed_paths)
+        ) or (effect_path and (known or private_pin or _dispatch_private(url))):
             self.forbid_legacy()

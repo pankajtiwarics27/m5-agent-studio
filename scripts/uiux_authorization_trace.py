@@ -68,6 +68,7 @@ STATE_CHANGING = {"POST", "PUT", "PATCH", "DELETE"}
 SUBSYSTEM_ROLES: dict[str, tuple[str, str]] = {
     "workspace_paths": ("authority", "bounds explicit operator host-path browsing and confirmed folder creation with no-follow directory capabilities"),
     "execution_spine": ("authority", "admission decisions: whether a task may run, and against which budget"),
+    "runtime_dispatch_boundary": ("authority", "refuses legacy runtime bypasses in internal coordinated composition; does not issue native-operation authority"),
     "model_admission": ("authority", "decides whether a model may be loaded or used"),
     "resource_admission": ("authority", "decides whether the host can take another concurrent unit of work"),
     "scoped_grants": ("authority", "issues, narrows and revokes scoped capabilities for a session"),
