@@ -75,6 +75,13 @@ Run these in order once CI has been green on this branch at a known commit:
 `python3 scripts/uiv2_release_review.py --json` and read `decision`; while parked it
 reports `blocked` for the two bootstrap findings. That is expected, not a new defect.
 
+**Do not regenerate its committed artifacts while parked.**
+`product/M5_2_0_UIUX_V2_Release_Review.json` and `docs/uiv2-v2-release-review.md` are
+left exactly as they were produced at `dfa6647`, when their evidence was current. They
+are a historical record. Regenerating them now would overwrite that record with a
+`blocked` decision caused only by the parking, not by a real change in readiness. The
+generator's `--check` therefore fails by design while parked; nothing in CI runs it.
+
 ---
 
 ## What is *not* parked
