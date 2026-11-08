@@ -335,9 +335,15 @@ def test_declared_default_footprint_is_not_a_qualified_physical_upper_bound(tmp_
         with pytest.raises(sm.MemoryDenied,match='action_bound_mismatch'):
             memory.reserve_action('shared','tool',footprint(),sample(memory),
                                   bound=action_bound(footprint(200)),now_ms=1000)
-        lease = memory.reserve_action('shared','tool',footprint(),sample(memory),
-                                      bound=action_bound(footprint(),amount=500),now_ms=1000)
-        assert lease.peak_bytes == 500  # Reserve full qualified peak, not the 300 default.
+        with pytest.raises(sm.MemoryDenied,match='action_bound_mismatch'):
+            memory.reserve_action('shared','tool',footprint(),sample(memory),
+                                  bound=action_bound(footprint(),amount=500),now_ms=1000)
+        # The effective footprint must first declare the full qualified peak so
+        # legacy action-pool counters cannot silently reserve a smaller amount.
+        qualified = footprint(500)
+        lease = memory.reserve_action('shared','tool',qualified,sample(memory),
+                                      bound=action_bound(qualified),now_ms=1000)
+        assert lease.peak_bytes == 500
 
 
 def test_unsafe_pressure_observation_is_durable_and_old_favorable_sample_cannot_clear_it(tmp_path):

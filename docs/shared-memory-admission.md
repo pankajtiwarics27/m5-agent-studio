@@ -48,7 +48,10 @@ Actions accept the existing `execution_profiles.ResourceFootprint` and its
 `ResourceRequest`, but require a separate explicit `ActionMemoryBound` tied to the
 entire footprint digest. A declared 2-GiB subprocess footprint is **not proof**
 of an enforced host-process upper bound. No bound means denial. The reserved peak
-must be at least the declared footprint, and may be greater. Subprocess/mutation
+must equal the effective declared footprint. If qualification requires more than
+a default footprint, the future consumer must first rederive that footprint and
+acquire matching legacy action-pool capacity, not reserve fewer bytes in the
+legacy controller. This module never increases its capacity. Subprocess/mutation
 slot counters are not extra physical pools and are not added to action memory.
 No paths or tool arguments are stored in the action binding, only the footprint
 hash, counts and opaque qualification reference. References must not contain
@@ -137,7 +140,7 @@ readiness, session handoff completion or test8 pass is claimed.
 
 ## Local verification record
 
-Linux/Python 3.11: **559 passed across 24 focused suites in 39.71s**, including
+Linux/Python 3.11: **559 passed across 24 focused suites in 39.00s**, including
 40 new accounting tests and all 43 LC-02 tests. There was one upstream
 Starlette/httpx deprecation warning. Six deliberate mutations were caught:
 ignoring pending growth, treating pools independently, double-charging an

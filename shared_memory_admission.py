@@ -200,7 +200,7 @@ def _lease(row: sqlite3.Row) -> MemoryLease:
             raise MemoryDenied('memory_binding_invalid')
         digest = raw['footprint_digest']
         if (not isinstance(digest, str) or len(digest) != 64 or any(c not in '0123456789abcdef' for c in digest)
-                or raw['peak_bytes'] != row['peak_bytes'] or raw['memory_bytes'] > row['peak_bytes']):
+                or raw['peak_bytes'] != row['peak_bytes'] or raw['memory_bytes'] != row['peak_bytes']):
             raise MemoryDenied('memory_binding_invalid')
         ActionMemoryBound(digest, raw['peak_bytes'], raw['qualification_ref'])
         for name in ('memory_bytes', 'action_slots'):
@@ -372,7 +372,7 @@ class SharedMemoryAdmission:
         digest = hashlib.sha256(_json(footprint.to_mapping()).encode()).hexdigest()
         if not isinstance(bound, ActionMemoryBound):
             raise MemoryDenied('action_bound_unknown')
-        if bound.footprint_digest != digest or bound.peak_bytes < request.memory_bytes:
+        if bound.footprint_digest != digest or bound.peak_bytes != request.memory_bytes:
             raise MemoryDenied('action_bound_mismatch')
         # Subprocess/mutation slot counters are NOT additional physical pools.
         return bound.peak_bytes, _json({'footprint_digest': digest, 'memory_bytes': request.memory_bytes,
