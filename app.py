@@ -84,6 +84,7 @@ import workflow_state
 import edit_rollback
 import edit_transactions
 import execution_profiles
+import runtime_dispatch_boundary
 import model_admission
 import artifact_lineage
 import process_supervision
@@ -1737,6 +1738,27 @@ IS_MACOS = platform.system() == "Darwin"
 # created lazily so a configuration error surfaces on the first model request
 # instead of at import time, and so tests can install their own instance.
 
+# LC-08 composition is deliberately not exposed as a setting/route. Legacy is
+# the rollout default; installing a coordinated executor needs separate review.
+_LOCAL_RUNTIME_DISPATCH: runtime_dispatch_boundary.RuntimeDispatchBoundary | None = None
+
+
+def _local_runtime_dispatch() -> runtime_dispatch_boundary.RuntimeDispatchBoundary:
+    global _LOCAL_RUNTIME_DISPATCH
+    if _LOCAL_RUNTIME_DISPATCH is None:
+        _LOCAL_RUNTIME_DISPATCH = runtime_dispatch_boundary.RuntimeDispatchBoundary(
+            runtime_origins=(OMLX_BASE, OLLAMA_BASE),
+        )
+    return _LOCAL_RUNTIME_DISPATCH
+
+
+async def _coordinated_model_command(model: str, action: str) -> dict[str, Any]:
+    try:
+        return await _local_runtime_dispatch().command("omlx", model, action)
+    except runtime_dispatch_boundary.RuntimeDispatchDenied as exc:
+        raise HTTPException(status_code=503, detail=exc.to_mapping()) from None
+
+
 _HEAVY_MODEL_ADMISSION: model_admission.HeavyModelAdmission | None = None
 _HEAVY_MODEL_ADMISSION_LOCK = threading.Lock()
 
@@ -1792,6 +1814,10 @@ async def _heavy_model_slot(model_id: str) -> AsyncIterator[model_admission.Heav
 
 def _heavy_model_preflight(model_spec: str) -> None:
     """Refuse a local model request with ``429`` before a stream starts."""
+    if _local_runtime_dispatch().coordinated:
+        # Real shared-memory/native readiness belongs to the installed domain
+        # executor, never this legacy process-local estimate/slot.
+        return
     if not is_local_omlx_model(model_spec):
         return
     admission = _heavy_model_admission()
@@ -1916,6 +1942,7 @@ class _PinnedAsyncHTTPTransport(httpx.AsyncBaseTransport):
         pool._network_backend = _PinnedNetworkBackend()
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        _local_runtime_dispatch().guard_http(request.method, str(request.url))
         host = _normalize_dns_host(request.url.host)
         prior_pin = _OUTBOUND_DNS_PINS.get().get(host)
         await _validate_outbound_url(str(request.url), allow_private=bool(prior_pin and prior_pin[1]))
@@ -4330,6 +4357,8 @@ async def _stream_cloud_openai(
     native_finished = False
     usage_sent = False
 
+    if _local_runtime_dispatch().target("cloud", provider) is not None:
+        _local_runtime_dispatch().forbid_legacy()
     await _validate_outbound_url(provider["base_url"], allow_private=_is_builtin_local_gateway(provider.get("alias"), provider.get("base_url")) or bool(provider.get("builtin_private_ok")))
     async with client.stream("POST", f"{provider['base_url']}/chat/completions", headers=headers, json=body) as resp:
         _reject_redirect_response(resp, f"{provider['base_url']}/chat/completions")
@@ -4462,6 +4491,8 @@ async def _stream_cloud_anthropic(
     finish_reason = "stop"
     provider_alias = str(provider.get("alias") or "anthropic")
 
+    if _local_runtime_dispatch().target("cloud", provider) is not None:
+        _local_runtime_dispatch().forbid_legacy()
     await _validate_outbound_url(provider["base_url"], allow_private=_is_builtin_local_gateway(provider.get("alias"), provider.get("base_url")) or bool(provider.get("builtin_private_ok")))
     async with client.stream("POST", f"{provider['base_url']}/messages", headers=headers, json=body) as resp:
         _reject_redirect_response(resp, f"{provider['base_url']}/messages")
@@ -4646,6 +4677,7 @@ async def _stream_omlx_completion(
     reasoning_mode: str = "off",
 ) -> AsyncIterator[dict[str, Any]]:
     global _demo_loaded_model, _demo_loaded_at
+    _local_runtime_dispatch().forbid_legacy()
     mode_clean = (reasoning_mode or "off").lower().strip()
     think_on = mode_clean not in ("off", "none", "false", "")
 
@@ -4846,6 +4878,18 @@ async def stream_any_model(
     if _depth > 3:
         raise RuntimeError("Combo recursion depth exceeded")
     runtime_persistence.assert_no_active_write_transaction("model_inference")
+
+    dispatch = _local_runtime_dispatch()
+    if dispatch.coordinated:
+        coordinated_kind, coordinated_meta, coordinated_model = parse_model_route(model_spec)
+        native_runtime = dispatch.target(coordinated_kind, coordinated_meta)
+        if native_runtime is not None:
+            async for event in dispatch.stream(
+                native_runtime, coordinated_model, messages, tools=_CHAT_NATIVE_TOOLS.get(),
+                temperature=temperature, max_tokens=max_tokens, reasoning_mode=reasoning_mode,
+            ):
+                yield event
+            return
 
     # Strip any KV-cache, prompt-cache, or provider-opaque attributes before wire dispatch (M5-P4-02 AC 1).
     clean_messages = routing_policy.sanitize_messages_for_wire(messages)
@@ -5752,6 +5796,11 @@ async def _omlx_is_online(client: httpx.AsyncClient) -> bool:
 
 async def _unload_omlx_model(client: httpx.AsyncClient, model_id: str) -> None:
     global _demo_loaded_model
+    if _local_runtime_dispatch().coordinated:
+        result = await _coordinated_model_command(model_id, "unload")
+        if result["status"] != "confirmed":
+            raise HTTPException(status_code=503, detail={"code": "coordinated_cleanup_unconfirmed", "retryable": False})
+        return
     if not await _omlx_is_online(client):
         if _demo_loaded_model == model_id:
             _demo_loaded_model = None
@@ -5767,6 +5816,8 @@ async def _unload_omlx_model(client: httpx.AsyncClient, model_id: str) -> None:
 async def _unload_other_omlx_models(client: httpx.AsyncClient, keep_model_id: str) -> list[str]:
     """Proactively evict any other resident local oMLX models so `keep_model_id` has maximum 24GB unified RAM headroom."""
     unloaded: list[str] = []
+    if _local_runtime_dispatch().coordinated:
+        raise runtime_dispatch_boundary.RuntimeDispatchDenied("unowned_eviction_forbidden")
     if not await _omlx_is_online(client):
         return unloaded
     try:
@@ -5793,6 +5844,9 @@ async def api_models_admission() -> JSONResponse:
 @app.post("/api/models/unload-all")
 async def api_unload_all(request: Request) -> JSONResponse:
     global _demo_loaded_model
+    if _local_runtime_dispatch().coordinated:
+        result = await _coordinated_model_command("*", "unload_all")
+        return JSONResponse(result)
     client: httpx.AsyncClient = request.app.state.http
     if not await _omlx_is_online(client):
         _demo_loaded_model = None
@@ -5809,6 +5863,9 @@ async def api_unload_all(request: Request) -> JSONResponse:
 @app.post("/api/models/{model_id:path}/load")
 async def api_load_model(model_id: str, request: Request) -> JSONResponse:
     global _demo_loaded_model, _demo_loaded_at
+    if _local_runtime_dispatch().coordinated:
+        result = await _coordinated_model_command(model_id, "load")
+        return JSONResponse(result)
     client: httpx.AsyncClient = request.app.state.http
     if not await _omlx_is_online(client):
         _demo_loaded_model = model_id
@@ -5823,6 +5880,9 @@ async def api_load_model(model_id: str, request: Request) -> JSONResponse:
 @app.post("/api/models/{model_id:path}/unload")
 async def api_unload_model(model_id: str, request: Request) -> JSONResponse:
     global _demo_loaded_model
+    if _local_runtime_dispatch().coordinated:
+        result = await _coordinated_model_command(model_id, "unload")
+        return JSONResponse(result)
     client: httpx.AsyncClient = request.app.state.http
     if not await _omlx_is_online(client):
         if _demo_loaded_model == model_id:
@@ -5834,6 +5894,9 @@ async def api_unload_model(model_id: str, request: Request) -> JSONResponse:
 
 @app.post("/api/cache/clear-ssd")
 async def api_clear_ssd_cache(request: Request) -> JSONResponse:
+    if _local_runtime_dispatch().coordinated:
+        result = await _coordinated_model_command("*", "clear_cache")
+        return JSONResponse(result)
     client: httpx.AsyncClient = request.app.state.http
     if not await _omlx_is_online(client):
         return JSONResponse({"status": "ok", "total_deleted": 46, "demo": True})

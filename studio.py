@@ -1703,6 +1703,27 @@ IS_MACOS = platform.system() == "Darwin"
 # created lazily so a configuration error surfaces on the first model request
 # instead of at import time, and so tests can install their own instance.
 
+# LC-08 composition is deliberately not exposed as a setting/route. Legacy is
+# the rollout default; installing a coordinated executor needs separate review.
+_LOCAL_RUNTIME_DISPATCH: runtime_dispatch_boundary.RuntimeDispatchBoundary | None = None
+
+
+def _local_runtime_dispatch() -> runtime_dispatch_boundary.RuntimeDispatchBoundary:
+    global _LOCAL_RUNTIME_DISPATCH
+    if _LOCAL_RUNTIME_DISPATCH is None:
+        _LOCAL_RUNTIME_DISPATCH = runtime_dispatch_boundary.RuntimeDispatchBoundary(
+            runtime_origins=(OMLX_BASE, OLLAMA_BASE),
+        )
+    return _LOCAL_RUNTIME_DISPATCH
+
+
+async def _coordinated_model_command(model: str, action: str) -> dict[str, Any]:
+    try:
+        return await _local_runtime_dispatch().command("omlx", model, action)
+    except runtime_dispatch_boundary.RuntimeDispatchDenied as exc:
+        raise HTTPException(status_code=503, detail=exc.to_mapping()) from None
+
+
 _HEAVY_MODEL_ADMISSION: model_admission.HeavyModelAdmission | None = None
 _HEAVY_MODEL_ADMISSION_LOCK = threading.Lock()
 
@@ -1758,6 +1779,10 @@ async def _heavy_model_slot(model_id: str) -> AsyncIterator[model_admission.Heav
 
 def _heavy_model_preflight(model_spec: str) -> None:
     """Refuse a local model request with ``429`` before a stream starts."""
+    if _local_runtime_dispatch().coordinated:
+        # Real shared-memory/native readiness belongs to the installed domain
+        # executor, never this legacy process-local estimate/slot.
+        return
     if not is_local_omlx_model(model_spec):
         return
     admission = _heavy_model_admission()
@@ -1882,6 +1907,7 @@ class _PinnedAsyncHTTPTransport(httpx.AsyncBaseTransport):
         pool._network_backend = _PinnedNetworkBackend()
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        _local_runtime_dispatch().guard_http(request.method, str(request.url))
         host = _normalize_dns_host(request.url.host)
         prior_pin = _OUTBOUND_DNS_PINS.get().get(host)
         await _validate_outbound_url(str(request.url), allow_private=bool(prior_pin and prior_pin[1]))
@@ -22202,6 +22228,8 @@ async def _stream_cloud_openai(
     native_finished = False
     usage_sent = False
 
+    if _local_runtime_dispatch().target("cloud", provider) is not None:
+        _local_runtime_dispatch().forbid_legacy()
     await _validate_outbound_url(provider["base_url"], allow_private=_is_builtin_local_gateway(provider.get("alias"), provider.get("base_url")) or bool(provider.get("builtin_private_ok")))
     async with client.stream("POST", f"{provider['base_url']}/chat/completions", headers=headers, json=body) as resp:
         _reject_redirect_response(resp, f"{provider['base_url']}/chat/completions")
@@ -22334,6 +22362,8 @@ async def _stream_cloud_anthropic(
     finish_reason = "stop"
     provider_alias = str(provider.get("alias") or "anthropic")
 
+    if _local_runtime_dispatch().target("cloud", provider) is not None:
+        _local_runtime_dispatch().forbid_legacy()
     await _validate_outbound_url(provider["base_url"], allow_private=_is_builtin_local_gateway(provider.get("alias"), provider.get("base_url")) or bool(provider.get("builtin_private_ok")))
     async with client.stream("POST", f"{provider['base_url']}/messages", headers=headers, json=body) as resp:
         _reject_redirect_response(resp, f"{provider['base_url']}/messages")
@@ -22518,6 +22548,7 @@ async def _stream_omlx_completion(
     reasoning_mode: str = "off",
 ) -> AsyncIterator[dict[str, Any]]:
     global _demo_loaded_model, _demo_loaded_at
+    _local_runtime_dispatch().forbid_legacy()
     mode_clean = (reasoning_mode or "off").lower().strip()
     think_on = mode_clean not in ("off", "none", "false", "")
 
@@ -22718,6 +22749,18 @@ async def stream_any_model(
     if _depth > 3:
         raise RuntimeError("Combo recursion depth exceeded")
     runtime_persistence.assert_no_active_write_transaction("model_inference")
+
+    dispatch = _local_runtime_dispatch()
+    if dispatch.coordinated:
+        coordinated_kind, coordinated_meta, coordinated_model = parse_model_route(model_spec)
+        native_runtime = dispatch.target(coordinated_kind, coordinated_meta)
+        if native_runtime is not None:
+            async for event in dispatch.stream(
+                native_runtime, coordinated_model, messages, tools=_CHAT_NATIVE_TOOLS.get(),
+                temperature=temperature, max_tokens=max_tokens, reasoning_mode=reasoning_mode,
+            ):
+                yield event
+            return
 
     # Strip any KV-cache, prompt-cache, or provider-opaque attributes before wire dispatch (M5-P4-02 AC 1).
     clean_messages = routing_policy.sanitize_messages_for_wire(messages)
@@ -23624,6 +23667,11 @@ async def _omlx_is_online(client: httpx.AsyncClient) -> bool:
 
 async def _unload_omlx_model(client: httpx.AsyncClient, model_id: str) -> None:
     global _demo_loaded_model
+    if _local_runtime_dispatch().coordinated:
+        result = await _coordinated_model_command(model_id, "unload")
+        if result["status"] != "confirmed":
+            raise HTTPException(status_code=503, detail={"code": "coordinated_cleanup_unconfirmed", "retryable": False})
+        return
     if not await _omlx_is_online(client):
         if _demo_loaded_model == model_id:
             _demo_loaded_model = None
@@ -23639,6 +23687,8 @@ async def _unload_omlx_model(client: httpx.AsyncClient, model_id: str) -> None:
 async def _unload_other_omlx_models(client: httpx.AsyncClient, keep_model_id: str) -> list[str]:
     """Proactively evict any other resident local oMLX models so `keep_model_id` has maximum 24GB unified RAM headroom."""
     unloaded: list[str] = []
+    if _local_runtime_dispatch().coordinated:
+        raise runtime_dispatch_boundary.RuntimeDispatchDenied("unowned_eviction_forbidden")
     if not await _omlx_is_online(client):
         return unloaded
     try:
@@ -23665,6 +23715,9 @@ async def api_models_admission() -> JSONResponse:
 @app.post("/api/models/unload-all")
 async def api_unload_all(request: Request) -> JSONResponse:
     global _demo_loaded_model
+    if _local_runtime_dispatch().coordinated:
+        result = await _coordinated_model_command("*", "unload_all")
+        return JSONResponse(result)
     client: httpx.AsyncClient = request.app.state.http
     if not await _omlx_is_online(client):
         _demo_loaded_model = None
@@ -23681,6 +23734,9 @@ async def api_unload_all(request: Request) -> JSONResponse:
 @app.post("/api/models/{model_id:path}/load")
 async def api_load_model(model_id: str, request: Request) -> JSONResponse:
     global _demo_loaded_model, _demo_loaded_at
+    if _local_runtime_dispatch().coordinated:
+        result = await _coordinated_model_command(model_id, "load")
+        return JSONResponse(result)
     client: httpx.AsyncClient = request.app.state.http
     if not await _omlx_is_online(client):
         _demo_loaded_model = model_id
@@ -23695,6 +23751,9 @@ async def api_load_model(model_id: str, request: Request) -> JSONResponse:
 @app.post("/api/models/{model_id:path}/unload")
 async def api_unload_model(model_id: str, request: Request) -> JSONResponse:
     global _demo_loaded_model
+    if _local_runtime_dispatch().coordinated:
+        result = await _coordinated_model_command(model_id, "unload")
+        return JSONResponse(result)
     client: httpx.AsyncClient = request.app.state.http
     if not await _omlx_is_online(client):
         if _demo_loaded_model == model_id:
@@ -23706,6 +23765,9 @@ async def api_unload_model(model_id: str, request: Request) -> JSONResponse:
 
 @app.post("/api/cache/clear-ssd")
 async def api_clear_ssd_cache(request: Request) -> JSONResponse:
+    if _local_runtime_dispatch().coordinated:
+        result = await _coordinated_model_command("*", "clear_cache")
+        return JSONResponse(result)
     client: httpx.AsyncClient = request.app.state.http
     if not await _omlx_is_online(client):
         return JSONResponse({"status": "ok", "total_deleted": 46, "demo": True})
@@ -72685,6 +72747,282 @@ class HeavyModelAdmission:
         return self.snapshot()
 
 model_admission = sys.modules[__name__]
+
+"""LC-08 routing fence; no discovery, native I/O, qualification or activation.
+
+Legacy is the unchanged rollout default. Coordinated construction is an internal
+composition seam, not runtime/grant authority. No production backend is installed.
+Backend implementations must enforce LC-02--07 before native effects; the generic
+HTTP/provider escape hatches remain forbidden even when a backend is present.
+"""
+
+
+import ipaddress
+import json
+from collections.abc import AsyncIterator, Mapping
+from dataclasses import dataclass
+from types import MappingProxyType
+from typing import Any, Literal, Protocol
+from urllib.parse import urlsplit
+
+
+_DISPATCH_CODES = frozenset(
+    {
+        "coordinated_backend_unavailable",
+        "legacy_transport_blocked",
+        "coordinated_combo_unsupported",
+        "unowned_eviction_forbidden",
+        "invalid_dispatch_request",
+        "coordinated_execution_unavailable",
+    }
+)
+
+
+class RuntimeDispatchDenied(RuntimeError):
+    def __init__(self, code: str) -> None:
+        self.code = (
+            code if code in _DISPATCH_CODES else "coordinated_execution_unavailable"
+        )
+        super().__init__(self.code)
+
+    def to_mapping(self) -> dict[str, Any]:
+        return {"code": self.code, "retryable": False}
+
+
+def _dispatch_origin(url: str) -> tuple[str, str, int | None]:
+    try:
+        parsed = urlsplit(url)
+        if (
+            parsed.scheme not in ("http", "https")
+            or not parsed.hostname
+            or parsed.username
+            or parsed.password
+        ):
+            raise ValueError
+        return (
+            parsed.scheme,
+            parsed.hostname.lower().rstrip("."),
+            parsed.port or (443 if parsed.scheme == "https" else 80),
+        )
+    except (TypeError, ValueError):
+        raise RuntimeDispatchDenied("invalid_dispatch_request") from None
+
+
+def _dispatch_private(url: str) -> bool:
+    _, host, _ = _dispatch_origin(url)
+    if host == "localhost" or host.endswith(".localhost"):
+        return True
+    try:
+        return not ipaddress.ip_address(host).is_global
+    except ValueError:
+        return False  # Actual DNS/private authorization remains the pinned transport's job.
+
+
+@dataclass(frozen=True, slots=True)
+class RuntimeDispatchCall:
+    """Owned application input, NOT a prepared wire request or load authorization."""
+
+    runtime: str
+    model: str
+    action: Literal["infer", "load", "unload", "unload_all", "clear_cache"]
+    payload: bytes = b"{}"
+
+    def __post_init__(self) -> None:
+        if (
+            self.runtime not in ("omlx", "ollama", "lmstudio")
+            or not isinstance(self.model, str)
+            or not self.model
+            or len(self.model) > 512
+            or not self.model.isprintable()
+            or self.action
+            not in ("infer", "load", "unload", "unload_all", "clear_cache")
+            or not isinstance(self.payload, bytes)
+            or len(self.payload) > 4 * 1024 * 1024
+        ):
+            raise RuntimeDispatchDenied("invalid_dispatch_request")
+
+
+class CoordinatedDispatchBackend(Protocol):
+    """Trusted composition only. No generic HTTP client is passed to the backend.
+
+    A production implementation must own LC-02/03 coordination/admission, LC-04--06
+    qualified transports, LC-07 full final-wire preparation/count and independent
+    native terminality. Returning events is not a substitute for those proofs.
+    This protocol alone grants no native-operation authority.
+    """
+
+    def stream(self, call: RuntimeDispatchCall) -> AsyncIterator[dict[str, Any]]: ...
+    async def command(self, call: RuntimeDispatchCall) -> dict[str, Any]: ...
+
+
+@dataclass(frozen=True, slots=True)
+class RuntimeDispatchBoundary:
+    coordinated: bool = False
+    backends: Mapping[str, CoordinatedDispatchBackend] | None = None
+    # Installed composition binds provider aliases to native backends. Never infer
+    # LM Studio identity or native qualification just from a port/model name.
+    provider_runtimes: Mapping[str, str] | None = None
+    runtime_origins: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        if type(self.coordinated) is not bool:
+            raise RuntimeDispatchDenied("invalid_dispatch_request")
+        backends = dict(self.backends or {})
+        aliases = dict(self.provider_runtimes or {})
+        if set(backends) - {"omlx", "ollama", "lmstudio"} or any(
+            not isinstance(k, str) or not k or v not in ("omlx", "ollama", "lmstudio")
+            for k, v in aliases.items()
+        ):
+            raise RuntimeDispatchDenied("invalid_dispatch_request")
+        for backend in backends.values():
+            if not callable(getattr(backend, "stream", None)) or not callable(
+                getattr(backend, "command", None)
+            ):
+                raise RuntimeDispatchDenied("invalid_dispatch_request")
+        object.__setattr__(self, "runtime_origins", tuple(self.runtime_origins))
+        for url in self.runtime_origins:
+            _dispatch_origin(url)
+        object.__setattr__(self, "backends", MappingProxyType(backends))
+        object.__setattr__(self, "provider_runtimes", MappingProxyType(aliases))
+
+    def target(self, kind: str, provider: Mapping[str, Any] | None) -> str | None:
+        if not self.coordinated:
+            return None
+        if kind == "combo":
+            # Until a complete consent/fit-aware combo executor is installed, do
+            # not convert a local refusal/uncertain effect into another target.
+            raise RuntimeDispatchDenied("coordinated_combo_unsupported")
+        if kind == "omlx":
+            return "omlx"
+        if kind != "cloud" or provider is None:
+            raise RuntimeDispatchDenied("invalid_dispatch_request")
+        alias = str(provider.get("alias") or "")
+        assert self.provider_runtimes is not None
+        if alias in self.provider_runtimes:
+            return self.provider_runtimes[alias]
+        if alias == "ollama":
+            return "ollama"
+        url = str(provider.get("base_url") or "")
+        origin = _dispatch_origin(url)
+        if (
+            origin in {_dispatch_origin(u) for u in self.runtime_origins}
+            or _dispatch_private(url)
+            or provider.get("allow_private")
+        ):
+            # A generic local/proxy provider is not qualified cloud/native routing.
+            raise RuntimeDispatchDenied("coordinated_backend_unavailable")
+        return None
+
+    def _backend(self, runtime: str) -> CoordinatedDispatchBackend:
+        assert self.backends is not None
+        backend = self.backends.get(runtime)
+        if not self.coordinated or backend is None:
+            raise RuntimeDispatchDenied("coordinated_backend_unavailable")
+        return backend
+
+    async def stream(
+        self,
+        runtime: str,
+        model: str,
+        messages: object,
+        *,
+        tools: object,
+        temperature: float,
+        max_tokens: int,
+        reasoning_mode: str,
+    ) -> AsyncIterator[dict[str, Any]]:
+        backend = self._backend(runtime)
+        try:
+            # No sanitizer/compactor/cap/reasoning downgrade. Own one immutable
+            # copy of all supplied application input before an async boundary.
+            payload = json.dumps(
+                dict(
+                    messages=messages,
+                    tools=tools,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    reasoning_mode=reasoning_mode,
+                ),
+                ensure_ascii=False,
+                allow_nan=False,
+            ).encode()
+            call = RuntimeDispatchCall(runtime, model, "infer", payload)
+        except (ValueError, TypeError, UnicodeError, RecursionError):
+            raise RuntimeDispatchDenied("invalid_dispatch_request") from None
+        iterator = None
+        try:
+            iterator = backend.stream(call)
+            async for item in iterator:
+                yield item
+        except RuntimeDispatchDenied:
+            raise
+        except Exception:
+            # An unsupported/failed backend can never fall through to legacy I/O.
+            raise RuntimeDispatchDenied("coordinated_execution_unavailable") from None
+        finally:
+            close = getattr(iterator, "aclose", None)
+            if close is not None:
+                await (
+                    close()
+                )  # Cancellation/consumer close must reach the native bridge.
+
+    async def command(
+        self,
+        runtime: str,
+        model: str,
+        action: Literal["load", "unload", "unload_all", "clear_cache"],
+    ) -> dict[str, Any]:
+        backend = self._backend(runtime)
+        try:
+            result = await backend.command(RuntimeDispatchCall(runtime, model, action))
+            if (
+                not isinstance(result, dict)
+                or set(result) != {"status"}
+                or result["status"]
+                not in ("confirmed", "pending", "refused", "uncertain")
+            ):
+                raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+            return result
+        except RuntimeDispatchDenied:
+            raise
+        except Exception:
+            raise RuntimeDispatchDenied("coordinated_execution_unavailable") from None
+
+    def forbid_legacy(self) -> None:
+        if self.coordinated:
+            raise RuntimeDispatchDenied("legacy_transport_blocked")
+
+    def guard_http(self, method: str, url: str) -> None:
+        if not self.coordinated:
+            return
+        parsed = urlsplit(url)
+        origin = _dispatch_origin(url)
+        known = origin in {_dispatch_origin(u) for u in self.runtime_origins}
+        path = parsed.path.lower().rstrip("/")
+        effect_path = any(
+            s in path
+            for s in (
+                "/chat/completions",
+                "/completions",
+                "/messages",
+                "/generate",
+                "/tokenize",
+                "/count_tokens",
+                "/api/chat",
+                "/load",
+                "/unload",
+                "/admin/api",
+            )
+        )
+        # Known runtime origins have no raw effect path. For unknown private/proxy
+        # origins, forbid recognizable generation/tokenizer/control endpoints.
+        # Metadata GETs (tags/ps/models) remain observations, not readiness proof.
+        if (known and method.upper() not in ("GET", "HEAD", "OPTIONS")) or (
+            effect_path and (known or _dispatch_private(url))
+        ):
+            self.forbid_legacy()
+
+runtime_dispatch_boundary = sys.modules[__name__]
 
 """Explicit privacy, network, billing, portable handoff, and conservative model switching (AS-025, M5-P4-02).
 

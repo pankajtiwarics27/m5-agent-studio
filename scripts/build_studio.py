@@ -43,6 +43,7 @@ INLINED_MODULES = (
     "resource_admission",
     "execution_profiles",
     "model_admission",
+    "runtime_dispatch_boundary",
     "routing_policy",
     "security_release_gate",
     "evidence_lessons",
