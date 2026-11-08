@@ -644,3 +644,173 @@ startup-origin smokes passed. The standalone is 4,226,687 bytes; fresh backend
 safety302/16 and regenerated source/preservation/performance/release records report
 zero findings, with live isolation still unqualified/blocked. Full regression and
 exact-head CI are not inherited from `2172b4a` and remain pending here.
+
+## Concrete native release-step continuation (Ollama/LM Studio; still no command actor)
+
+The merged unload-only kernel checkpoint `c88a39c` completed **4583 passed /32
+skipped /one warning**, with PR CI42503114905 and push CI42503111157 green;
+PR257 comment6724660872 supersedes its chronological pre-full notes above.
+That evidence is historical and is not reused for the current source head.
+
+This continuation explicitly extends the two native permit intent unions to
+`ReleaseStep`, with a **separate** current release-operation gate. The new role
+is source drain/unload only: no target, inference body/count, acquire step,
+load/verify authority or request-fit shortcut is fabricated. Durable checks bind
+the active dispatched release goal, exact request/purpose/deadline, actual owned
+source/instance and dispatched source hold, owner epoch/generation, ready memory
+domain, and absence of active inference/control slots. Native configuration,
+current authorization, activity/ownership/late-effect exclusion, actual loaded
+profile records and native observed source/version/config remain required.
+Separate `release_drain` / `release_unload` receipt vocabulary prevents borrowing
+acquire receipts. ACK still cannot prove physical unload or release memory.
+
+`UnloadAdmission` validates pure native configuration readiness before queue or
+probe, without pretending the action is a load or constructing a fit profile.
+`QueuedUnloadRequest` captures the actual source reservation, native instance and
+generation, fencing replacement/residency races rather than evicting whatever
+later occupies the same name. `OllamaRelease` and `LmRelease` are distinct concrete
+jobs, rejected by the existing acquire driver. `advance_release` validates their
+actual bridge/coordinator/memory/qualification and consumes one real dispatched
+source stage. It reuses the native wire/profile/proof gates, then requires existing
+full-runtime physical absence/terminal proof, independently samples and settles
+the actual model hold, and only then calls the kernel's durable final barrier
+retirement. Proof/sample production is bounded; cancellation/errors preserve
+uncertainty/charges, with no polling, replay, implicit recovery or target load.
+
+After a native send, cancelled/expired intent may receive physical completion and
+zero settlement to retire its barrier safely. `ReleaseResult.retired` is **not**
+canonical API success: cancelled/expired request status remains unchanged. No
+canonical unload actor/plan is added; `NativeInferenceScheduler.command` still
+refuses unload. Existing load/inference actors retain their unexpected-release
+fences. oMLX unload-only permits, already-absent success policy, unload-all/cache,
+public HTTP redirection, producers, installed qualification and activation remain
+open. Existing oMLX source-to-target release remains a separate acquire flow.
+
+Initial evidence: **78 new offline tests**, **1002 passed /one upstream warning**
+in the combined18-module lifecycle/native/dispatch/fit/persistence suite (45.46s).
+The isolated standalone executes both actual native release bridge/driver paths,
+with fake installed/native facts and transports only. Final full regression and
+exact-head CI must be recorded separately after execution; no LC08/LC09 completion,
+review acceptance, hardware test8 retry, migration or merge is implied.
+
+Pre-full validation at the final source snapshot: Ruff and mypy75, scope mapping
+193 modules/13 areas, docs/ADR, fresh backend302/16, generated source/preservation/
+performance/release checks, baseline (after fetching missing shallow history),
+governance/deferred-security consistency, JavaScript, demo/screenshot manifest and
+both app/standalone startup/auth/origin smokes passed. Standalone4,242,427 bytes.
+Release review reports zero findings; live isolation remains unqualified/blocked.
+These are author-run checks, not native qualification or independent acceptance.
+
+## Optional native unload-command actor continuation (still dormant)
+
+The preceding release-step checkpoint `cd8683a` subsequently passed **4661 tests,
+32 skips,one warning**, with PR CI42506183587 and push CI42506129464 green.
+PR259 comment6725073022 supersedes its chronological pending-full notes. Those
+results do not validate the current continuation.
+
+`NativeUnloadPlan` is now an optional trusted composition seam on the existing
+native actor. No plan is installed by default. Explicit Ollama/LM Studio unload
+commands share the same bounded lock wait and actor lock as load/inference, then
+capture the actual current source hold/instance/generation through the real driver.
+Only the owned FIFO release intent is consumed, at most **drain then unload**;
+there is no polling, implicit target load or acquire-to-self. Wrong purpose claims
+are fenced rather than converted into release authority. The concrete existing
+release driver still requires native configuration/authorization/profile/activity,
+full-runtime physical proof and independently sampled actual model-memory zero
+settlement before durable final barrier retirement.
+
+Canonical `confirmed` is not a bridge ACK, a `ReleaseResult.retired` boolean, an
+empty observed runtime, or a completed row alone. The actor verifies the exact
+uncancelled/unexpired unload request, release operation/source/instance/epoch/
+generation, released actual source-model hold and unique durable `release_settled`
+receipt after barrier retirement. Historical completion stays valid if a different
+actor has already claimed a successor; the old callback cannot poison that work.
+Cancellation/expiry after send may retire resources safely but cannot become API
+success or poison released memory. Interruptions before real retirement preserve
+uncertainty, charged holds and explicit reconciliation. Lock-wait cancellation
+must neither enqueue work nor release another lock owner's lock.
+
+No default plan/qualifier/authorizer/native client/proof/sample producer, HTTP
+model-control redirection, settings/server change or activation is added. The
+existing HTTP model controls remain oMLX-specific/unredirected. Already-absent or
+unmatched source is refused, not fabricated success. oMLX unload-only,
+unload-all/cache, remaining canonical workflows and LC09 recovery/session/grant/
+budget completion remain open. Private schema staysv4; migration/reset and
+architecture/security acceptance are not introduced.
+
+Initial evidence: **83 new fake/offline tests;1085 passed,one upstream warning** in
+the combined19-module lifecycle/native/dispatch/fit/persistence suite (51.88s).
+Coverage includes both actors in the isolated private standalone bundle, same-
+actor load/inference ordering, independent-actor held-memory/FIFO races, false
+retirement/missing receipt, plan/readiness/factory/proof/sample failures,
+post-send cancel/expiry, lock interruption, wrong purposes and unsupported controls.
+Full regression and exact-head CI must be recorded separately after execution.
+
+Pre-full final-source checks: Ruff, mypy75, scopes194 modules/13 areas, docs/ADR,
+baseline/governance/deferred-security consistency, JavaScript, demo/screenshot
+manifest, both authenticated startup/origin smokes and fresh backend302/16 passed.
+The standalone is4,251,726 bytes; generated source/preservation/performance/release
+checks pass with zero findings and unchanged visual pins. Live isolation remains
+unqualified/blocked. Five disposable mutations caught skipped durable completion,
+ignored cancelled status, missing retirement receipt, bypassed lock acquisition and
+stranded pre-driver factory failures (two failures each). No source worktree was
+mutated by the fault harness. Full regression and exact-head CI remain pending
+at this chronological checkpoint; this is not independent acceptance/activation.
+
+## oMLX source-only unload-command continuation (dormant)
+
+The preceding optional Ollama/LM Studio actor checkpoint `da31140` passed **4744
+local tests,32 skips,one warning**, with PR CI42509113652 and push CI42509109538
+green. PR259 comment6725456811 supersedes its pre-full notes. Those results remain
+historical, not evidence for this new source snapshot.
+
+`OmlxUnloadAdmission` is a distinct source-only readiness type. It carries the
+LC04 native qualification and the **actual separately bound model-memory profile**,
+not a fabricated Ollama/LM profile, FitProfile, token count or target selector.
+Native runtime/profile/context/capability and fresh clock scope are checked before
+queue/probe; the driver independently checks the supplied clock, observation-age
+policy and exact runtime against its coordinator, plus actual resident/instance/
+source reservation. Blocking-load capability is deliberately not inferred or
+required for a source-only unload. No oMLX target load/inference is qualified.
+
+The oMLX permit/activity/observation intent union explicitly accepts `ReleaseStep`,
+with the separate current release-operation gate. Concrete `OmlxRelease` jobs
+compose on the existing optional unload actor and remain incompatible with the
+acquire driver. A native source-profile digest is durably recorded with an actual
+oMLX load send; release requires that original record to match the held source
+profile before drain and mutation. Missing/historical unmatched records refuse;
+no record repair, namespace deletion or reset is introduced. Source-only job
+profile and actual memory binding must also match exactly.
+
+Release send/ACK receipt vocabulary is disjoint from acquire. A 200 or 202
+unloading ACK only records pending work and is required before release confirmation;
+it never proves physical terminality or zero memory. Current authorization,
+quiescent native activity/helper visibility, pinned/helper/distributed/external/
+loading refusals, fresh native status and bound all-runtime absence/terminal proof
+remain mandatory. Physical completion retains the barrier until independent real
+source-hold attributed-zero settlement and durable final retirement. Post-send
+cancelled/expired cleanup may retire resources but cannot produce canonical success.
+Errors/cancellation retain charged uncertainty without polling or replay.
+
+No plan, transport, qualifier, authorizer, proof/sample producer or HTTP redirection
+is installed. oMLX load/inference on the generic actor, already-absent success,
+unload-all/cache, remaining canonical workflows, LC09 recovery and production
+activation remain open. Private schema staysv4; a reviewed populated migration is
+still absent. Existing oMLX HTTP controls remain unchanged/unredirected.
+
+Initial evidence: **45 new offline tests;1130 passed,one upstream warning** in the
+combined20-module lifecycle/native/dispatch/fit/persistence suite (52.21s), including
+real private standalone oMLX release composition. Facts/transports are synthetic,
+not installed/native hardware qualification. Full regression and exact-head CI
+must be recorded separately after execution, not inherited from earlier heads.
+
+Pre-full oMLX source-only checkpoint: all five disposable mutations were caught
+(original native profile record, owner clock, release ACK, native physical-proof
+version, actual source attributed zero), one failing test each; worktree source
+was not mutated. Ruff/mypy75, scope195/13, docs/ADR, baseline/governance/deferred
+security, JavaScript and both app/standalone auth/origin smokes passed. Bundle
+4,259,968bytes; fresh backend302/16, source64/6/121, preservation21 capabilities/
+272 controls/50 routes, performance21/21 and release7/7 with2200 visual/15Compare
+passed, zero findings. Demo/screenshot6/6 and visual pins unchanged. Live isolation
+remains unqualified/blocked; full regression and exact-head CI still pending at
+this chronological note. No activation/acceptance/merge is claimed.

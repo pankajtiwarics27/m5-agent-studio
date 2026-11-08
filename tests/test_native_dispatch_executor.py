@@ -662,6 +662,42 @@ with coord:
  memory.settle(model,release_sample(memory,now=1000),terminal=True,reference='actual-zero',now_ms=1000)
  assert coord.finish_unload(step,reference='barrier-retired',now_ms=1000)
  assert coord.snapshot('shared').state=='idle'
+from test_native_unload_steps import enqueue as native_release_enqueue,drained as native_release_drained,job as native_release_job
+async def native_release_steps():
+ for backend in ('ollama','lmstudio'):
+  b=fixture(pathlib.Path('native-release-'+backend),backend)
+  with b.coord:
+   assert await load_scheduler(b).command(load_call(b))=={'status':'confirmed'}
+   b.wire.calls.clear()
+   queued=native_release_enqueue(b)
+   step=await native_release_drained(b,queued)
+   result=await b.transition.advance_release(step,queued,native_release_job(b,step,queued))
+   assert type(result) is pkg.native_transition_driver.ReleaseResult and result.retired
+   assert b.memory.view('shared').committed_bytes==0 and b.coord.snapshot('shared').state=='idle'
+   assert len(b.driver.mutations(b))==1 and getattr(b,'count_calls',0)==0
+asyncio.run(native_release_steps())
+from test_native_unload_control import scheduler as unload_scheduler
+from test_native_unload_steps import call as unload_call
+async def native_unload_command():
+ for backend in ('ollama','lmstudio'):
+  b=fixture(pathlib.Path('native-unload-command-'+backend),backend)
+  with b.coord:
+   execute=unload_scheduler(b)
+   assert await execute.command(load_call(b))=={'status':'confirmed'}
+   b.wire.calls.clear()
+   assert await execute.command(unload_call(b))=={'status':'confirmed'}
+   assert b.memory.view('shared').committed_bytes==0 and b.coord.snapshot('shared').state=='idle'
+   assert len(b.driver.mutations(b))==1 and getattr(b,'count_calls',0)==0
+asyncio.run(native_unload_command())
+from test_omlx_unload_control import loaded as loaded_omlx,scheduler as omlx_unload_scheduler,call as omlx_unload_call
+async def native_omlx_unload_command():
+ env,lease=await loaded_omlx(pathlib.Path('native-omlx-unload-command'))
+ with env[0]:
+  execute=omlx_unload_scheduler(env,lease)
+  assert await execute.command(omlx_unload_call())=={'status':'confirmed'}
+  assert env[1].view('shared').committed_bytes==0 and env[0].snapshot('shared').state=='idle'
+  assert len(env[4].posts)==1 and not env[2].models
+asyncio.run(native_omlx_unload_command())
 print('isolated native executor and shared transaction guards passed')
 """.replace("REPO", repr(str(root)))
     env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}

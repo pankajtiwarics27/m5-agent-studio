@@ -17,6 +17,7 @@ import omlx_lifecycle as ox
 from model_lifecycle_coordinator import (
     LifecycleCoordinator,
     TransitionStep,
+    ReleaseStep,
     ReconciliationEvidence,
     _encode,
 )
@@ -34,6 +35,7 @@ from shared_memory_admission import (
     MemoryLease,
     MemorySample,
     ModelMemoryProfile,
+    _lease,
 )
 
 Qualification = ol.OllamaQualification | lm.LmQualification
@@ -159,6 +161,80 @@ class LoadAdmission:
 
 
 @dataclass(frozen=True, slots=True)
+class UnloadAdmission:
+    """Pure native source readiness. No load target, inference input or counter."""
+
+    call: RuntimeDispatchCall
+    native: Qualification
+
+    @property
+    def memory(self) -> ModelMemoryProfile:
+        return self.native.profile.memory
+
+    def validate(self, now: int) -> None:
+        q = self.native
+        if isinstance(q, ol.OllamaQualification):
+            ol.validate_qualification(q, now)
+            runtime = "ollama"
+        elif isinstance(q, lm.LmQualification):
+            lm.validate_qualification(q, now)
+            runtime = "lmstudio"
+        else:
+            raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+        if (
+            self.call.action != "unload"
+            or self.call.payload != b"{}"
+            or self.call.runtime != runtime
+            or q.runtime_id != runtime
+            or self.call.model != self.memory.target.artifact_id
+            or self.memory.target.runtime_id != runtime
+        ):
+            raise RuntimeDispatchDenied("invalid_dispatch_request")
+
+
+@dataclass(frozen=True, slots=True)
+class OmlxUnloadAdmission:
+    """Source-only LC04 readiness plus the ACTUAL separately bound model hold.
+
+    No synthetic native profile, FitProfile, tokenizer or target load is implied.
+    The driver independently verifies clock/policy/runtime against its owner.
+    """
+
+    call: RuntimeDispatchCall
+    native: ox.OmlxQualification
+    profile: ModelMemoryProfile
+    clock_id: str
+    max_age: float
+
+    @property
+    def memory(self) -> ModelMemoryProfile:
+        return self.profile
+
+    def validate(self, now: int) -> None:
+        ox.validate_unload_qualification(
+            self.native, self.profile, now, clock_id=self.clock_id, max_age=self.max_age
+        )
+        if (
+            self.call.action != "unload"
+            or self.call.payload != b"{}"
+            or self.call.runtime != "omlx"
+            or self.call.model != self.profile.target.artifact_id
+        ):
+            raise RuntimeDispatchDenied("invalid_dispatch_request")
+
+
+@dataclass(frozen=True, slots=True)
+class QueuedUnloadRequest:
+    admission: UnloadAdmission | OmlxUnloadAdmission
+    request_id: str
+    domain_id: str
+    deadline_ms: int
+    memory: MemoryLease
+    source_instance_id: str
+    source_generation: int
+
+
+@dataclass(frozen=True, slots=True)
 class QueuedLoadRequest:
     admission: LoadAdmission
     request_id: str
@@ -235,6 +311,28 @@ class LmTransition:
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class OllamaRelease(OllamaTransition):
+    """Explicit release job; NOT an acquire transition or public command plan."""
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class LmRelease(LmTransition):
+    """Actual LM source-instance release, with no replacement selector."""
+
+
+@dataclass(frozen=True, slots=True)
+class ReleaseResult:
+    """Stage/barrier result only, NEVER canonical API confirmation.
+
+    Even retired=True can describe physically proved cancelled/expired cleanup.
+    """
+
+    step: ReleaseStep
+    memory: MemoryLease | None
+    retired: bool
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class OmlxSourceTransition:
     """Owned oMLX source release only; NOT an oMLX load/inference qualification.
 
@@ -283,6 +381,14 @@ class OmlxSourceTransition:
                 return await proof(observation)
 
         return await self.bridge.confirm(self.permit, bounded)
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class OmlxRelease(OmlxSourceTransition):
+    """Explicit oMLX release; no oMLX target/inference/fit authority."""
+
+
+ReleaseJob = OllamaRelease | LmRelease | OmlxRelease
 
 
 TransitionJob = OllamaTransition | LmTransition | OmlxSourceTransition
@@ -396,6 +502,192 @@ class NativeTransitionDriver:
                 raise RuntimeDispatchDenied("coordinated_execution_unavailable")
             return QueuedLoadRequest(admission, request_id, domain_id, deadline_ms)
         except Exception:
+            raise RuntimeDispatchDenied("coordinated_execution_unavailable") from None
+
+    def enqueue_unload(
+        self,
+        admission: UnloadAdmission | OmlxUnloadAdmission,
+        request_id: str,
+        domain_id: str,
+        *,
+        deadline_ms: int,
+    ) -> QueuedUnloadRequest:
+        assert_no_active_write_transaction("native release readiness")
+        try:
+            if type(admission) not in (UnloadAdmission, OmlxUnloadAdmission):
+                raise RuntimeDispatchDenied("invalid_dispatch_request")
+            admission.validate(self._now())
+
+            def source(conn):
+                domain = self.coord._domain(conn, domain_id)
+                if isinstance(admission, OmlxUnloadAdmission):
+                    if (
+                        admission.clock_id != self.coord.observer_clock_id
+                        or admission.max_age != self.coord._max_observation_age
+                        or admission.native.runtime
+                        != self.coord._binding(
+                            domain, admission.profile.target.runtime_id
+                        )
+                    ):
+                        raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+                row = conn.execute(
+                    "SELECT * FROM memory_reservations WHERE domain=? AND kind='model' AND status='dispatched' AND owner_epoch=?",
+                    (domain_id, self.coord._epoch),
+                ).fetchone()
+                policy = conn.execute(
+                    "SELECT state FROM memory_domains WHERE domain=?", (domain_id,)
+                ).fetchone()
+                if (
+                    domain["state"] != "idle"
+                    or domain["operation_id"] is not None
+                    or domain["resident"] != _encode(admission.memory.target)
+                    or domain["resident_instance_id"] is None
+                    or row is None
+                    or decode(row["binding"].encode())["profile"]
+                    != asdict(admission.memory)
+                    or policy is None
+                    or policy["state"] != "ready"
+                ):
+                    raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+                return (
+                    _lease(row),
+                    str(domain["resident_instance_id"]),
+                    int(domain["generation"]),
+                )
+
+            held, instance, generation = self.coord._call(source, now_ms=self._now())
+            if (
+                self.coord.enqueue_unload(
+                    request_id,
+                    domain_id,
+                    admission.memory.target,
+                    deadline_ms=deadline_ms,
+                    now_ms=self._now(),
+                )
+                != "queued"
+            ):
+                raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+            return QueuedUnloadRequest(
+                admission,
+                request_id,
+                domain_id,
+                deadline_ms,
+                held,
+                instance,
+                generation,
+            )
+        except Exception:
+            raise RuntimeDispatchDenied("coordinated_execution_unavailable") from None
+
+    async def advance_release(
+        self, step: ReleaseStep, queued: QueuedUnloadRequest, job: ReleaseJob
+    ) -> ReleaseResult:
+        """Bounded concrete native release, physical proof, then real settlement.
+
+        No native retry, implicit recovery, public unload actor, or fabricated
+        target. Existing acquire jobs and generic callbacks cannot supply this.
+        """
+        assert_no_active_write_transaction("native release")
+        valid = False
+        held = None
+        try:
+            if type(queued) is not QueuedUnloadRequest or type(step) is not ReleaseStep:
+                raise RuntimeDispatchDenied("invalid_dispatch_request")
+
+            def current(conn):
+                if self.coord._active_release(conn, step, self._now()) is None:
+                    raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+                request = conn.execute(
+                    "SELECT deadline FROM requests WHERE id=?", (queued.request_id,)
+                ).fetchone()
+                row = self.memory._active(conn, queued.memory)
+                if (
+                    step.request_id != queued.request_id
+                    or step.domain_id != queued.domain_id
+                    or step.source != queued.admission.memory.target
+                    or step.source_instance_id != queued.source_instance_id
+                    or step.generation != queued.source_generation + 1
+                    or step.memory_id != queued.memory.lease_id
+                    or row["status"] != "dispatched"
+                    or request is None
+                    or request["deadline"] != queued.deadline_ms
+                    or queued.deadline_ms <= self._now()
+                    or decode(queued.memory.binding.encode())["profile"]
+                    != asdict(queued.admission.memory)
+                ):
+                    raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+
+            self.coord._call(current, now_ms=self._now())
+            valid, held = True, queued.memory
+            queued.admission.validate(self._now())
+            if type(job) not in (OllamaRelease, LmRelease, OmlxRelease):
+                raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+            if (
+                job.permit.qualification != queued.admission.native
+                or job.memory != held
+                or job.activity is None
+            ):
+                raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+            if isinstance(job, OmlxRelease):
+                if (
+                    not isinstance(job.bridge, ox.OmlxLifecycleBridge)
+                    or job.permit.step != step
+                    or type(queued.admission) is not OmlxUnloadAdmission
+                    or job.profile != queued.admission.memory
+                ):
+                    raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+                owner, owner_memory = job.bridge._coordinator, job.bridge._memory
+            else:
+                if job.permit.intent != step:
+                    raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+                if isinstance(job, OllamaRelease):
+                    if not isinstance(job.bridge, ol.OllamaLifecycleBridge):
+                        raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+                    owner = job.bridge.coordinator
+                else:
+                    if not isinstance(job.bridge, lm.LmStudioLifecycleBridge):
+                        raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+                    owner = job.bridge.coord
+                owner_memory = job.bridge.memory
+            if owner is not self.coord or owner_memory is not self.memory:
+                raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+            if step.kind == "drain":
+                if job._drain() is not True:
+                    raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+                return ReleaseResult(step, held, False)
+            if job.proof is None or job.sample is None:
+                raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+            if (
+                await job._send() != "pending_release_proof"
+                or await job._confirm() is not True
+            ):
+                raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+            assert_no_active_write_transaction("native release memory producer")
+            async with asyncio.timeout(5):
+                observed = await job.sample()
+            self.memory.settle(
+                held,
+                observed,
+                terminal=True,
+                reference="native_release_zero_verified",
+                now_ms=self._now(),
+            )
+            if not self.coord.finish_unload(
+                step, reference="native_release_retired", now_ms=self._now()
+            ):
+                raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+            return ReleaseResult(step, None, True)
+        except BaseException as exc:
+            if valid:
+                self.coord.mark_release_uncertain(
+                    step, reference="native_release_interrupted", now_ms=self._now()
+                )
+                if held is not None:
+                    self.memory.mark_uncertain(
+                        held, reference="native_release_interrupted", now_ms=self._now()
+                    )
+            if not isinstance(exc, Exception):
+                raise
             raise RuntimeDispatchDenied("coordinated_execution_unavailable") from None
 
     async def advance(

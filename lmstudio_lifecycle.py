@@ -32,6 +32,7 @@ from model_lifecycle_coordinator import (
     ReconciliationEvidence,
     RequestLease,
     TransitionStep,
+    ReleaseStep,
     _encode,
 )
 from runtime_persistence import assert_no_active_write_transaction
@@ -53,7 +54,7 @@ from lmstudio_protocol import (
     prepare_inference,
 )
 
-Intent = TransitionStep | RequestLease | LoadLease
+Intent = TransitionStep | RequestLease | LoadLease | ReleaseStep
 CAPABILITIES = (
     "native_v1",
     "authenticated_control",
@@ -139,7 +140,7 @@ class LmPermit:
 
     def __post_init__(self) -> None:
         if not isinstance(
-            self.intent, (TransitionStep, RequestLease, LoadLease)
+            self.intent, (TransitionStep, RequestLease, LoadLease, ReleaseStep)
         ) or not isinstance(self.qualification, LmQualification):
             raise LmStudioDenied("invalid_permit")
         integer(self.expires_ms, positive=True)
@@ -176,6 +177,8 @@ class LmObservation:
 
 
 def _target(intent: Intent) -> ModelTarget:
+    if isinstance(intent, ReleaseStep):
+        return intent.source
     if isinstance(intent, TransitionStep) and intent.kind in ("drain", "unload"):
         if intent.source is None:
             raise LmStudioDenied("source_missing")
@@ -197,6 +200,8 @@ def _stage(intent: Intent) -> str:
         if isinstance(intent, RequestLease)
         else "load_control"
         if isinstance(intent, LoadLease)
+        else "release_" + intent.kind
+        if isinstance(intent, ReleaseStep)
         else intent.kind
     )
 
@@ -314,6 +319,13 @@ class LmStudioLifecycleBridge:
             for r in decode(domain["bindings"])
         ):
             raise LmStudioDenied("runtime_not_coordinated_local_lmstudio")
+        if isinstance(intent, ReleaseStep):
+            if (
+                self.coord._active_release(conn, intent, now, finishing=finishing)
+                is None
+            ):
+                raise LmStudioDenied("release_intent_stale_or_busy")
+            return
         if isinstance(intent, TransitionStep):
             if (
                 self.coord._active_step(conn, intent, now) is None
@@ -535,13 +547,21 @@ class LmStudioLifecycleBridge:
         now: int,
     ) -> None:
         intent = permit.intent
-        if isinstance(intent, TransitionStep) and intent.kind == "unload":
+        if (
+            isinstance(intent, ReleaseStep)
+            or isinstance(intent, TransitionStep)
+            and intent.kind == "unload"
+        ):
             row = conn.execute(
                 "SELECT * FROM memory_reservations WHERE domain=? AND kind='model' AND status!='released'",
                 (intent.domain_id,),
             ).fetchone()
             if (
                 row is None
+                or (
+                    isinstance(intent, ReleaseStep)
+                    and (row["id"] != intent.memory_id or row["status"] != "dispatched")
+                )
                 or decode(row["binding"])["profile"]
                 != asdict(permit.qualification.profile.memory)
                 or self._load_record(conn, permit, row["work_id"])
@@ -631,7 +651,11 @@ class LmStudioLifecycleBridge:
     def _hold(self, permit: LmPermit, lease: MemoryLease | None) -> None:
         now = self._now()
         try:
-            if isinstance(permit.intent, TransitionStep):
+            if isinstance(permit.intent, ReleaseStep):
+                self.coord.mark_release_uncertain(
+                    permit.intent, reference="native_release_uncertain", now_ms=now
+                )
+            elif isinstance(permit.intent, TransitionStep):
                 self.coord.mark_uncertain(
                     permit.intent, reference="lmstudio_effect_uncertain", now_ms=now
                 )
@@ -651,13 +675,20 @@ class LmStudioLifecycleBridge:
 
     def drain(self, permit: LmPermit, activity: LmActivity) -> bool:
         if (
-            not isinstance(permit.intent, TransitionStep)
+            not isinstance(permit.intent, (TransitionStep, ReleaseStep))
             or permit.intent.kind != "drain"
         ):
             raise LmStudioDenied("drain_intent_required")
         now = self._now()
         self.coord._call(lambda conn: self._active(conn, permit, now), now_ms=now)
         self._activity(permit, activity, now)
+        if isinstance(permit.intent, ReleaseStep):
+            self.coord._call(
+                lambda conn: self._memory(conn, permit, None, None, now), now_ms=now
+            )
+            return self.coord.complete_release(
+                permit.intent, reference=activity.reference, now_ms=now
+            )
         return self.coord.complete_step(
             permit.intent, reference=activity.reference, now_ms=now
         )
@@ -671,7 +702,7 @@ class LmStudioLifecycleBridge:
         sample: MemorySample | None = None,
     ) -> str:
         intent = permit.intent
-        if not isinstance(intent, TransitionStep) or intent.kind not in (
+        if not isinstance(intent, (TransitionStep, ReleaseStep)) or intent.kind not in (
             "load",
             "unload",
         ):
@@ -703,14 +734,20 @@ class LmStudioLifecycleBridge:
             now = self._now()
 
             def ack(conn: sqlite3.Connection) -> None:
-                self._active(conn, permit, now)
+                self._active(
+                    conn, permit, now, finishing=isinstance(intent, ReleaseStep)
+                )
                 self._event(conn, permit, "ack", str(now))
                 if intent.kind == "load":
                     self._event(conn, permit, "instance", instance_id)
 
             self.coord._call(ack, now_ms=now)
-            if intent.kind == "load" and not self.coord.complete_step(
-                intent, reference="lmstudio_load_ack", now_ms=now
+            if (
+                isinstance(intent, TransitionStep)
+                and intent.kind == "load"
+                and not self.coord.complete_step(
+                    intent, reference="lmstudio_load_ack", now_ms=now
+                )
             ):
                 raise LmStudioDenied("lifecycle_intent_stale")
             return (
@@ -753,7 +790,7 @@ class LmStudioLifecycleBridge:
             raise LmStudioDenied("proof_scope_mismatch")
         if instance is not None and not any(
             x.instance_id == instance
-            and x.artifact_id == permit.intent.target.artifact_id
+            and x.artifact_id == _target(permit.intent).artifact_id
             and x.effective_context_tokens
             == permit.qualification.profile.memory.context_tokens
             for x in inv.instances
@@ -766,7 +803,7 @@ class LmStudioLifecycleBridge:
         produce: Callable[[LmObservation], Awaitable[ReconciliationEvidence]],
     ) -> bool:
         intent = permit.intent
-        if not isinstance(intent, TransitionStep) or intent.kind not in (
+        if not isinstance(intent, (TransitionStep, ReleaseStep)) or intent.kind not in (
             "verify",
             "unload",
         ):
@@ -774,8 +811,8 @@ class LmStudioLifecycleBridge:
         now = self._now()
 
         def check(conn: sqlite3.Connection) -> str | None:
-            self._active(conn, permit, now)
-            stage = "load" if intent.kind == "verify" else "unload"
+            self._active(conn, permit, now, finishing=isinstance(intent, ReleaseStep))
+            stage = "load" if intent.kind == "verify" else _stage(intent)
             if (
                 conn.execute(
                     "SELECT 1 FROM journal WHERE domain=? AND operation_id=? AND owner_epoch=? AND generation=? AND event=?",
@@ -809,8 +846,17 @@ class LmStudioLifecycleBridge:
             raise LmStudioDenied("proof_unavailable") from None
         self._proof(permit, observed, evidence, instance=instance)
         now = self._now()
-        self.coord._call(lambda conn: self._active(conn, permit, now), now_ms=now)
+        self.coord._call(
+            lambda conn: self._active(
+                conn, permit, now, finishing=isinstance(intent, ReleaseStep)
+            ),
+            now_ms=now,
+        )
         self._wire(permit, observed, now, instance)
+        if isinstance(intent, ReleaseStep):
+            return self.coord.complete_release(
+                intent, reference=observed.reference, now_ms=now, evidence=evidence
+            )
         return self.coord.complete_step(
             intent, reference=observed.reference, now_ms=now, evidence=evidence
         )

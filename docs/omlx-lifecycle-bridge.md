@@ -176,3 +176,30 @@ production to five seconds. It cannot load/verify an oMLX target or execute/coun
 its inference. ACK normalization is not release authority. See
 [runtime dispatch integration](runtime-dispatch-integration.md) for scope and
 remaining gates; no installed qualification, activation or hardware acceptance.
+
+## LC08 unload-only source role (dormant)
+
+`ReleaseStep` is now explicitly accepted for source-only drain/unload, behind its
+own current release-operation gate. This is not a target load/inference permit or
+a synthetic acquire-to-self. `OmlxUnloadAdmission` keeps LC04 qualification separate
+from the actual model-memory profile; owner clock/policy/runtime and exact source
+instance/hold/profile must match. No tokenizer, FitProfile, architecture-context
+inference or future-request fit is manufactured. Source unload does not require
+blocking-load qualification.
+
+An actual oMLX load send records a source profile digest alongside its durable
+send marker. Release drain/send require that original native record and actual
+current dispatched hold; missing/mismatched records refuse, without repair/reset.
+Source-only send/ACK markers are separate from acquire. Accepted 200/202 unload
+ACK must precede confirmation but is not terminality/physical absence or memory
+release. Existing authorization/activity/fresh-status/pinned/helper/distributed/
+external/loading gates and full-runtime scoped physical proof are retained.
+Independent source attribution-zero settlement and final durable retirement still
+precede canonical confirmation. Cancelled/expired post-send cleanup cannot become
+API success or poison a successor.
+
+A concrete `OmlxRelease` job can be explicitly composed on the shared optional
+unload actor. No default producer/client/qualifier, HTTP redirection, native
+activation, oMLX target/inference, unload-all/cache or already-absent success is
+implemented. Schema remainsv4; old missing native profile records are an explicit
+refusal/reconciliation issue, not permission to clear history or qualified holds.
