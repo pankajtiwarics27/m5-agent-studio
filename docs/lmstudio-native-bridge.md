@@ -205,3 +205,29 @@ including **148 new LC-06 cases**. Ruff, configured mypy (**69 modules**), docs
 (**252 files**), ADR validation, test scopes (**182 modules / 13 areas**) and
 `git diff --check` passed. Broader repository checks are recorded separately after
 execution; these counts are not full-suite, installed/hardware or review evidence.
+
+### Broader local verification at source commit `500830a`
+
+- Full local pytest: **3,997 passed, 32 skipped, 1 warning** in **791.26 seconds**.
+  Historical baseline objects were fetched before the run; baseline ancestry
+  validation passed. The warning is the upstream Starlette/httpx deprecation.
+  Skips are not passes or native/hardware/browser qualification.
+- Nine disposable unsafe source mutations were caught by the new suites:
+  accepting all 2xx ACKs, allowing JIT, bypassing the live authorizer, omitting
+  memory admission, permitting send replay, swapping the owned profile,
+  accepting wrong native-instance/config proof, changing request-fit digest
+  approval, and publishing tool packets before terminal proof. The original
+  checkout was not mutated; temporary files/logs are not committed.
+- Ruff, configured mypy (69 modules), docs (252 files), ADR, conservative scopes
+  (182 modules / 13 areas), tracked Python compilation, baseline, governance,
+  deferred-security-record consistency, UI source manifest, frontend syntax,
+  demo and screenshot-manifest validation passed. No new screenshot capture or
+  approval was performed; no security acceptance is implied.
+- Standalone, route matrix and subsystem inventory regenerated without drift;
+  roadmap generator check passed. Both isolated app and standalone loopback
+  startup/auth/origin smoke checks passed. This does not activate/integrate the
+  dormant modules into either served artifact.
+- The pushed source head's feature-branch CI completed successfully for Python
+  3.11/3.12/3.13 and browser safety. Supply-chain build/verify was not repeated
+  locally; the CI Python jobs include those checks. Current PR-head full CI is
+  a separate merge gate; no merge authorization is implied by these results.
