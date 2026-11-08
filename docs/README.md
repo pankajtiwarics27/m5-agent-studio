@@ -88,6 +88,7 @@ Model and provider: [`provider-adapters.md`](provider-adapters.md),
 [`performance-profiles.md`](performance-profiles.md),
 [`local-provider-adapters.md`](local-provider-adapters.md),
 [`local-runtime-lifecycle.md`](local-runtime-lifecycle.md),
+[`model-lifecycle-research-and-proposal.md`](model-lifecycle-research-and-proposal.md) (cross-runtime audit, published research, and unimplemented single-resident coordinator proposal),
 [`moneyprinter-turbo-integration.md`](moneyprinter-turbo-integration.md).
 
 Execution and policy: [`routing-consent-policy.md`](routing-consent-policy.md),
