@@ -610,6 +610,20 @@ async def scheduled():
    assert b.coord.snapshot('shared').active_requests==0
   finally:b.coord.close()
 asyncio.run(scheduled())
+from test_omlx_dispatch_integration import environment,scheduler as omlx_scheduler,source
+from pytest import MonkeyPatch
+async def omlx_source():
+ for backend in ('ollama','lmstudio'):
+  with MonkeyPatch.context() as patch:
+   env,b=environment(pathlib.Path('omlx-source-'+backend),patch,backend)
+   with b.coord:
+    await source.start_loaded(*env)
+    env[4].calls.clear()
+    result=await collect(omlx_scheduler(env,b).stream(admission(b).call))
+    assert result[-1]['type']=='usage' and b.count_calls==1
+    assert len(env[4].posts)==1 and env[4].posts[0].path.endswith('/unload')
+    assert 'omlx' not in env[2].models
+asyncio.run(omlx_source())
 print('isolated native executor and shared transaction guards passed')
 """.replace("REPO", repr(str(root)))
     env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}

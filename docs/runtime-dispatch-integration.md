@@ -417,7 +417,7 @@ mapping (188 modules/13 areas) passed; full regression and CI for this head are
 pending until executed. No installed native qualification follows from fake facts.
 
 **Remaining LC08 work:** explicit load/unload-only/unload-all/cache control
-orchestration and complete races, oMLX step consumption, remaining canonical
+orchestration and complete races, full oMLX target/inference support, remaining canonical
 workflow consumers, production composition readiness and integration with LC09
 session/grant/budget/recovery semantics. This is bounded inference composition,
 not a durable task scheduler or completion of those controls. Tests1–7 acceptance
@@ -432,3 +432,57 @@ origin smokes passed. A generator command exceeded the tool wait while its child
 continued; the child finished, its output was checked with zero findings, and the
 remaining checks were run separately, not concurrently rerun. No visual source
 approval/pin or acceptance ledger was advanced.
+
+
+### Source-only oMLX continuation (not oMLX inference support)
+
+`OmlxSourceTransition` now consumes the existing LC04 bridge for **drain/unload
+only**, allowing an already-owned oMLX resident to switch to an independently
+qualified Ollama or LM Studio target through the bounded inference scheduler.
+The driver's real-step, coordinator/memory owner, request/deadline and pre-source
+metadata-readiness gates remain mandatory. No model acquisition, counter, native
+inference or tokenization support is added for an oMLX target. No synthetic fit
+profile, instance identity or architectural context inference is introduced.
+
+LC04 has a different permit and qualification shape. The adapter binds its actual
+`step`, native qualification target/context and separately supplied immutable
+`ModelMemoryProfile` to the real active source reservation. Wrong owners, profiles,
+permits, unqualified/native-busy or helper-unknown sources refuse without target
+I/O. Required unload activity/proof/sample producers must be present before send.
+The bridge's `pending` response is only normalized to the driver's ACK vocabulary:
+HTTP 200/202, empty status or asynchronous unload acknowledgement cannot complete
+release. Independent all-runtime physical proof, then independently attributed
+zero memory settlement, are still separate mandatory gates. Proof production is
+bounded to five seconds; this is not an inference deadline or force-abort policy.
+
+Physical proof may advance the coordinator's unload stage before memory settlement
+fails. In that case the source reservation remains charged and the paused memory
+ledger prevents even a subsequently claimed target-load step from sending. No
+claim that these two independent stores advance atomically is made. Cancellation,
+hung/failed evidence and late effects retain uncertainty without polling/retry.
+
+Offline integration and isolated private-bundle tests exercise real dormant
+scheduler/driver/coordinator/memory/native/fit kernels with **fake installed facts**.
+The source fixture's prior lifecycle-only load is not an oMLX inference/counter
+qualification. No producer is installed, no native endpoint contacted, no setting
+changed and no architecture/security or hardware acceptance advanced. Explicit
+controls, oMLX targets/inference and remaining LC08 workflows stay open.
+
+The previous scheduler checkpoint at `59f1cea` completed **4361 passed, 32 skipped,
+one upstream warning**, plus green Python 3.11/3.12/3.13 and browser CI (run
+`42491137954`). Its durable result is PR257 comment `6723091816`. New-head full
+regression and CI results will be recorded separately after execution.
+
+Source-only pre-full-run evidence: **57 new oMLX composition tests** cover both
+targets, HTTP200/202 physical completion, absent target readiness, source scope /
+profile/memory mismatches, busy/unknown drains, incomplete/failed/hung proof,
+ACK-only refusal, pinned sources, live attribution, cancellation and no replay.
+The combined scheduler/driver/executor/fit/coordinator/native/fence run passed
+**612 tests**, one upstream warning. Both source-to-target combinations also ran
+in the isolated private standalone bundle. Ruff, mypy75, 189-module scope mapping,
+docs/ADR, app/standalone startup-auth-origin smokes and baseline checks passed.
+Fresh backend safety: **302 tests, 16 isolation checks**; live isolation remains
+unqualified/blocked. Regenerated preservation/performance/release evidence has
+zero findings, without changing visual approval pins or accepting architecture.
+Full regression / exact-head CI are pending at this commit, not inherited from
+the earlier scheduler checkpoint.

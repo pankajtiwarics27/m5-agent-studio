@@ -13,6 +13,7 @@ from dataclasses import asdict, dataclass
 
 import lmstudio_lifecycle as lm
 import ollama_lifecycle as ol
+import omlx_lifecycle as ox
 from model_lifecycle_coordinator import (
     LifecycleCoordinator,
     TransitionStep,
@@ -28,7 +29,12 @@ from request_fit import FitProfile, RequestFitDenied, request_components, decode
 from request_fit_admission import CounterQualification, validate_counter_metadata
 from runtime_dispatch_boundary import RuntimeDispatchCall, RuntimeDispatchDenied
 from runtime_persistence import assert_no_active_write_transaction
-from shared_memory_admission import SharedMemoryAdmission, MemoryLease, MemorySample
+from shared_memory_admission import (
+    SharedMemoryAdmission,
+    MemoryLease,
+    MemorySample,
+    ModelMemoryProfile,
+)
 
 Qualification = ol.OllamaQualification | lm.LmQualification
 
@@ -180,6 +186,60 @@ class LmTransition:
         return await self.bridge.confirm(self.permit, self.proof)
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class OmlxSourceTransition:
+    """Owned oMLX source release only; NOT an oMLX load/inference qualification.
+
+    LC04's qualification has no fit/memory profile. The separately supplied
+    model profile must match both that qualification and the actual reservation.
+    No tokenizer, allocated-context inference, or synthetic FitProfile is used.
+    """
+
+    bridge: ox.OmlxLifecycleBridge
+    permit: ox.OmlxPermit
+    profile: ModelMemoryProfile
+    activity: ox.OmlxActivity | None = None
+    memory: MemoryLease | None = None
+    sample: Callable[[], Awaitable[MemorySample]] | None = None
+    proof: Callable[[ox.OmlxObservation], Awaitable[ReconciliationEvidence]] | None = (
+        None
+    )
+
+    def _drain(self) -> bool:
+        if self.activity is None:
+            raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+        return self.bridge.drain(self.permit, self.activity)
+
+    async def _send(
+        self, *, lease: MemoryLease | None = None, sample: MemorySample | None = None
+    ) -> str:
+        if (
+            self.permit.step.kind != "unload"
+            or self.activity is None
+            or lease is not None
+            or sample is not None
+        ):
+            raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+        # Normalize the bridge's ACK vocabulary, not its physical authority.
+        if await self.bridge.send(self.permit, self.activity) != "pending":
+            raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+        return "pending_release_proof"
+
+    async def _confirm(self) -> bool:
+        if self.permit.step.kind != "unload" or self.proof is None:
+            raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+        proof = self.proof
+
+        async def bounded(observation: ox.OmlxObservation) -> ReconciliationEvidence:
+            async with asyncio.timeout(5):
+                return await proof(observation)
+
+        return await self.bridge.confirm(self.permit, bounded)
+
+
+TransitionJob = OllamaTransition | LmTransition | OmlxSourceTransition
+
+
 @dataclass(frozen=True, slots=True)
 class TransitionResult:
     """ONLY this stage completed, not a completed explicit load/unload command."""
@@ -233,7 +293,7 @@ class NativeTransitionDriver:
         self,
         step: TransitionStep,
         queued: QueuedColdRequest,
-        job: OllamaTransition | LmTransition,
+        job: TransitionJob,
     ) -> TransitionResult:
         assert_no_active_write_transaction("native transition")
         held = None
@@ -262,27 +322,41 @@ class NativeTransitionDriver:
             self.coord._call(current, now_ms=self._now())
             valid = True
             queued.admission.validate(self._now())
-            if (
-                type(job) not in (OllamaTransition, LmTransition)
-                or job.permit.intent != step
-            ):
+            if type(job) not in (OllamaTransition, LmTransition, OmlxSourceTransition):
                 raise RuntimeDispatchDenied("coordinated_execution_unavailable")
-            if (
-                isinstance(job, OllamaTransition)
-                and not isinstance(job.bridge, ol.OllamaLifecycleBridge)
-                or isinstance(job, LmTransition)
-                and not isinstance(job.bridge, lm.LmStudioLifecycleBridge)
-            ):
-                raise RuntimeDispatchDenied("coordinated_execution_unavailable")
-            coordinator = (
-                job.bridge.coordinator
-                if isinstance(job, OllamaTransition)
-                else job.bridge.coord
-            )
-            if coordinator is not self.coord or job.bridge.memory is not self.memory:
+            if isinstance(job, OmlxSourceTransition):
+                if (
+                    not isinstance(job.bridge, ox.OmlxLifecycleBridge)
+                    or step.kind not in ("drain", "unload")
+                    or job.permit.step != step
+                    or not isinstance(job.profile, ModelMemoryProfile)
+                    or job.profile.target != job.permit.qualification.target
+                    or job.profile.context_tokens
+                    != job.permit.qualification.context_tokens
+                ):
+                    raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+                coordinator, memory = job.bridge._coordinator, job.bridge._memory
+                profile = job.profile
+            else:
+                if (
+                    job.permit.intent != step
+                    or isinstance(job, OllamaTransition)
+                    and not isinstance(job.bridge, ol.OllamaLifecycleBridge)
+                    or isinstance(job, LmTransition)
+                    and not isinstance(job.bridge, lm.LmStudioLifecycleBridge)
+                ):
+                    raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+                coordinator = (
+                    job.bridge.coordinator
+                    if isinstance(job, OllamaTransition)
+                    else job.bridge.coord
+                )
+                memory = job.bridge.memory
+                profile = job.permit.qualification.profile.memory
+            if coordinator is not self.coord or memory is not self.memory:
                 raise RuntimeDispatchDenied("coordinated_execution_unavailable")
             subject = step.source if step.kind in ("drain", "unload") else step.target
-            if job.permit.qualification.profile.memory.target != subject:
+            if profile.target != subject:
                 raise RuntimeDispatchDenied("coordinated_execution_unavailable")
             if (
                 step.kind in ("load", "verify")
@@ -298,7 +372,7 @@ class NativeTransitionDriver:
                         existing.kind != "model"
                         or existing.domain_id != step.domain_id
                         or decode(existing.binding.encode())["profile"]
-                        != asdict(job.permit.qualification.profile.memory)
+                        != asdict(profile)
                     ):
                         raise RuntimeDispatchDenied("coordinated_execution_unavailable")
 
@@ -330,7 +404,12 @@ class NativeTransitionDriver:
                 ):
                     raise RuntimeDispatchDenied("coordinated_execution_unavailable")
             elif step.kind == "unload":
-                if held is None or job.activity is None or job.proof is None:
+                if (
+                    held is None
+                    or job.activity is None
+                    or job.proof is None
+                    or job.sample is None
+                ):
                     raise RuntimeDispatchDenied("coordinated_execution_unavailable")
                 if await job._send() != "pending_release_proof":
                     raise RuntimeDispatchDenied("coordinated_execution_unavailable")

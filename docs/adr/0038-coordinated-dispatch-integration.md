@@ -75,6 +75,16 @@ work instead of polling or stealing it; cancel only the actor's own unadmitted
 waiter. Interrupted stages/requests retain holds for explicit recovery. Keep the
 backend dormant and controls unavailable; in-memory waiters are not durable tasks.
 
+Extend concrete step consumption to an owned oMLX **source only**, using its LC04
+permit/qualification shape and the actual separately bound model memory profile.
+Refuse oMLX target load/verify jobs rather than inventing full-request/native
+inference qualification. Normalize only ACK vocabulary; retain independent
+physical confirmation and attributed-zero settlement, and bound proof production.
+If physical proof advances residency but settlement fails, the paused charged
+memory ledger independently blocks any later native target send. No polling or
+atomic cross-kernel completion is claimed. Keep this dormant and source-only in
+the private standalone bundle as well.
+
 ## Alternatives
 
 - Replace served routing immediately: would activate unqualified transports and

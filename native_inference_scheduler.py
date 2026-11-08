@@ -25,9 +25,8 @@ from native_dispatch_executor import (
 )
 from native_transition_driver import (
     ColdAdmission,
-    LmTransition,
     NativeTransitionDriver,
-    OllamaTransition,
+    TransitionJob,
 )
 from request_fit import RequestFitDenied, decode
 from runtime_dispatch_boundary import RuntimeDispatchCall, RuntimeDispatchDenied
@@ -46,9 +45,7 @@ class NativeInferencePlan:
     admission: ColdAdmission
     domain_id: str
     deadline_ms: int
-    transition: Callable[
-        [TransitionStep, MemoryLease | None], OllamaTransition | LmTransition
-    ]
+    transition: Callable[[TransitionStep, MemoryLease | None], TransitionJob]
     warm: Callable[[RequestLease, MemoryLease], Execution]
 
 

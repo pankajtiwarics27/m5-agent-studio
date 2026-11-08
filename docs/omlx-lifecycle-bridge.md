@@ -164,3 +164,15 @@ historical roadmap dashboard regenerated without drift. No UI capture changed.
 Full local suite has not been rerun for LC-04. New-head full Python 3.11/3.12/3.13
 and browser PR CI, independent review and installed qualification remain required,
 not inferred from prior PRs or these fake-only results.
+
+
+## LC08 source-only consumer
+
+The dormant `native_transition_driver.OmlxSourceTransition` now consumes this
+bridge for an already-owned source's drain/unload before switching to a qualified
+Ollama/LM Studio target. It binds the separate actual source memory profile,
+requires physical proof followed by attributed-zero settlement, and bounds proof
+production to five seconds. It cannot load/verify an oMLX target or execute/count
+its inference. ACK normalization is not release authority. See
+[runtime dispatch integration](runtime-dispatch-integration.md) for scope and
+remaining gates; no installed qualification, activation or hardware acceptance.
