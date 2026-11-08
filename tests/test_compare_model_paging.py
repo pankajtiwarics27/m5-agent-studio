@@ -22,7 +22,6 @@ returned the wrong count fails rather than merely differing from a string.
 from __future__ import annotations
 
 import json
-import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -58,14 +57,12 @@ def test_the_page_size_is_a_named_constant() -> None:
 
 
 def test_the_page_states_how_many_of_how_many() -> None:
-    html = _html()
     block = _js_block("function debateModelPageFooter", "function showAllDebateModels")
     assert "Showing ${DEBATE_MODEL_PAGE} of ${total} models" in block
     assert "Showing all ${total} models" in block
 
 
 def test_both_directions_have_a_control_with_a_reason() -> None:
-    html = _html()
     block = _js_block("function debateModelPageFooter", "function showAllDebateModels")
     assert 'id="debateShowAllModelsBtn"' in block
     assert 'id="debateFirstPageModelsBtn"' in block
@@ -76,7 +73,6 @@ def test_both_directions_have_a_control_with_a_reason() -> None:
 # ── a ticked row is never hidden ────────────────────────────────────────────────
 
 def test_collapsing_is_refused_while_a_chosen_model_is_past_the_page() -> None:
-    html = _html()
     block = _js_block("function debateModelPageFooter", "function showAllDebateModels")
     # The refusal branch exists, states the count, and offers no collapse control.
     assert "hiddenChecked" in block
@@ -87,7 +83,6 @@ def test_collapsing_is_refused_while_a_chosen_model_is_past_the_page() -> None:
 
 
 def test_opening_the_list_is_forced_when_a_selection_lives_past_it() -> None:
-    html = _html()
     block = _js_block("function renderDebateModelChecks", "function debateModelPageFooter")
     assert "outsidePage" in block
     assert "debateShowAllModels = true" in block
@@ -96,7 +91,6 @@ def test_opening_the_list_is_forced_when_a_selection_lives_past_it() -> None:
 # ── the restore bug ─────────────────────────────────────────────────────────────
 
 def test_the_restore_list_is_captured_once_not_nulled_inside_the_map() -> None:
-    html = _html()
     block = _js_block("function renderDebateModelChecks", "function debateModelPageFooter")
     # The old shape nulled it per row; the new shape reads it once.
     assert "const restore = firstInit && Array.isArray(debateRestoreModels)" in block
@@ -156,13 +150,12 @@ def test_the_old_shape_is_what_would_have_failed() -> None:
 
 def test_the_checkbox_value_is_still_the_raw_id() -> None:
     html = _html()
-    line = next(l for l in html.splitlines() if 'class="debate-m-chk"' in l)
+    line = next(line for line in html.splitlines() if 'class="debate-m-chk"' in line)
     assert 'value="${escapeHtml(it.id)}"' in line, line
 
 
 def test_the_footer_cannot_be_mistaken_for_a_model_row() -> None:
     """The footer is not a checkbox, so no selector that counts models can see it."""
-    html = _html()
     block = _js_block("function debateModelPageFooter", "function showAllDebateModels")
     assert "debate-m-chk" not in block.replace(
         'document.querySelectorAll(".debate-m-chk:checked")', ""
@@ -170,7 +163,6 @@ def test_the_footer_cannot_be_mistaken_for_a_model_row() -> None:
 
 
 def test_toggling_redraws_the_list_without_rebuilding_the_catalogue() -> None:
-    html = _html()
     block = _js_block("function redebateModelChecks", "async function refreshTelemetry")
     assert "syncUnifiedSelectors" not in block
     assert "renderDebateModelChecks" in block

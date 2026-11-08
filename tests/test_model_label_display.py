@@ -21,7 +21,6 @@ for a function name would pass on a function that returns `""`.
 from __future__ import annotations
 
 import json
-import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -100,14 +99,14 @@ def test_two_models_sharing_a_prefix_stay_distinguishable():
 
 def test_the_option_value_is_still_the_raw_id():
     html = _html()
-    line = next(l for l in html.splitlines() if "modelDisplayLabel(it.label, it.id)" in l)
+    line = next(line for line in html.splitlines() if "modelDisplayLabel(it.label, it.id)" in line)
     assert 'value="${escapeHtml(it.id)}"' in line, line
     assert 'title="${escapeHtml(it.label || it.id)}"' in line, line
 
 
 def test_the_unavailable_option_is_aliased_but_keeps_its_raw_value():
     html = _html()
-    line = next(l for l in html.splitlines() if "[Unavailable]" in l and "optgroup" in l)
+    line = next(line for line in html.splitlines() if "[Unavailable]" in line and "optgroup" in line)
     assert 'value="${escapeHtml(prevVal)}"' in line, line
     assert 'title="${escapeHtml(prevVal)}"' in line, line
     assert "modelDisplayLabel(prevVal, prevVal)" in line, line
@@ -128,7 +127,7 @@ def test_the_helper_is_not_duplicated():
 def test_the_compare_rows_use_the_same_alias_and_keep_the_raw_value():
     """Compare renders its own list; one model must not read two widths in two panes."""
     html = _html()
-    line = next(l for l in html.splitlines() if 'class="debate-m-chk"' in l)
+    line = next(line for line in html.splitlines() if 'class="debate-m-chk"' in line)
     assert 'value="${escapeHtml(it.id)}"' in line, line
     assert "modelDisplayLabel(it.label, it.id)" in line, line
     assert 'title="${escapeHtml(it.label || it.id)}"' in line, line
