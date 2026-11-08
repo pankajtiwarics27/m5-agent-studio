@@ -262,7 +262,7 @@
         "Retry",
         "Dismiss"
       ],
-      "line": 12320
+      "line": 12327
     },
     {
       "container": "chatState",
@@ -275,7 +275,7 @@
         "Back to Chat",
         "Open Harness"
       ],
-      "line": 12346
+      "line": 12353
     },
     {
       "container": "chatState",
@@ -288,7 +288,7 @@
         "Undo",
         "Dismiss"
       ],
-      "line": 12530
+      "line": 12537
     }
   ],
   "containers": [
@@ -353,7 +353,7 @@
       "handler": "installSkill"
     },
     {
-      "line": 14685,
+      "line": 14692,
       "handler": "openHarnessDiffModal"
     }
   ],
