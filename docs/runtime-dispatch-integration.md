@@ -240,3 +240,33 @@ implementation through `b90e86c` had already been pushed to draft PR256 before
 the connection failed. This validation does not close the remaining LC-08 cold
 orchestration/canonical-workflow work, qualify installed producers, authorize
 merge/native activation or resume test8.
+
+### Reconciliation with PR255 / main
+
+After publication of `859e1bd`, its Python 3.11/3.12/3.13 and browser-safety CI
+checks passed. GitHub access was restored and that commit was published, resolving
+the earlier connection/publication blocker. The subsequent owner merge request
+encountered conflicts with main's PR255 integration at
+`8425082`; the owner then authorized preparing a reconciled head, not merging a
+new head without fresh CI and approval.
+
+The reconciliation preserves main's Harness/frontend changes, release-evidence
+scope and release-review implementation/tests. No current-browser approval,
+historical implementation head or visual evidence was copied over from the
+older LC08 base. Conflicting generated JSON/docs were rebuilt using their
+existing generators against the combined sources rather than choosing stale
+values from either side. The standalone artifact was rebuilt with main's frontend
+and LC08's namespaced native kernels. No native executor, mode, setting, qualifier,
+producer or cold-control behavior was activated as part of conflict resolution.
+
+Before the reconciliation commit, focused fence/executor/request-fit/Council /
+release-review/source-manifest/authorization regression passed **345 tests**, one
+upstream warning. Fresh backend safety execution passed **302 tests and 16
+isolation checks**, with unprobed live isolation still unqualified/blocked. Ruff,
+mypy (73 sources), docs/ADR/scope/governance/security-record checks, baseline,
+frontend syntax, and app/standalone isolated startup/token/origin smokes passed.
+The main frontend, release-review code/tests, accepted release evidence and
+cross-tab/visual-roadmap references match `origin/main` exactly. Full combined
+regression and fresh CI for the reconciled head are pending at this checkpoint;
+pre-reconciliation green CI is not reused as proof for the new merge result.
+LC08 remains incomplete, test8 paused, and no merge is performed here.

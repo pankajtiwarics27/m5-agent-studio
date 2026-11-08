@@ -5510,7 +5510,7 @@
       "producer_from": "README",
       "index": null,
       "reviewed": true,
-      "note": "The durable log and the cursor discipline, re-taken from the fixed build: `pruned` shows the strip saying 9 events held over the retained floor seq 5-13 (#170, closed), and `replayed` the window a resync draws after the whole log is re-read.",
+      "note": "The durable log and the cursor discipline, re-taken from the fixed build: `pruned` shows this view holding 13 cached events, four of them outside the server's retained range seq 5-13 (#185 Option A), with the card count equal to the cache count (#170, closed); `replayed` shows the window a resync draws after the log is re-read.",
       "eye": [],
       "re_taken": false,
       "theme_claim": "dark",
@@ -5519,50 +5519,50 @@
         {
           "file": "harness-timeline/log-open.png",
           "name": "log-open.png",
-          "bytes": 175088,
-          "sha256": "72fb585dc9cb411592f0b7bf4e6383434fc2abb5189569cf1a323bc441c9895d",
+          "bytes": 99271,
+          "sha256": "6a8d66d563837a318c61bf5331bfa611363b10b59d48ee94154ffd7f27bb64fe",
           "width": 1440,
           "height": 900,
           "css_width": 1440,
           "theme": null,
           "theme_measured": "light",
-          "luminance": 0.9697
+          "luminance": 0.9773
         },
         {
           "file": "harness-timeline/pruned.png",
           "name": "pruned.png",
-          "bytes": 215949,
-          "sha256": "7fe76f104a718ac46a37f1efc325174d21789efd46d036cfaa6b028acbb8ad30",
+          "bytes": 134320,
+          "sha256": "a4953557a5f3046fa610bae2aba9007aeb86f09be31d851ffe56e1c6bc01b27c",
           "width": 1440,
           "height": 900,
           "css_width": 1440,
           "theme": null,
           "theme_measured": "light",
-          "luminance": 0.9678
+          "luminance": 0.9765
         },
         {
           "file": "harness-timeline/replayed.png",
           "name": "replayed.png",
-          "bytes": 210305,
-          "sha256": "917616cced725727a2cb976d08293d837dcfe5420ff426c58c63da2938a4197f",
+          "bytes": 133648,
+          "sha256": "eb40fbae37dc9443fdfa48166cde370a1dcce0464b2f831b0bde4a3c35929bb6",
           "width": 1440,
           "height": 900,
           "css_width": 1440,
           "theme": null,
           "theme_measured": "light",
-          "luminance": 0.9682
+          "luminance": 0.9771
         },
         {
           "file": "harness-timeline/short-window.png",
           "name": "short-window.png",
-          "bytes": 143918,
-          "sha256": "44aeb18642a06d79410788e3c594adf95238d000546d9ef1e17f14e789abdfa4",
+          "bytes": 90813,
+          "sha256": "5aa97194ca06bc3e93aeecfe8bee1b578a37aed40886da166471f625a9f64642",
           "width": 1440,
           "height": 560,
           "css_width": 1440,
           "theme": null,
           "theme_measured": "light",
-          "luminance": 0.9658
+          "luminance": 0.9767
         }
       ]
     },

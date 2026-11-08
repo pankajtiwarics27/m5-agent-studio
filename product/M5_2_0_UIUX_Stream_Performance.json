@@ -114,7 +114,7 @@
       "detail": ""
     },
     {
-      "check": "the pane says how much of the log is not on screen, and where to read it",
+      "check": "the pane says how much of this view's cache is not on screen, and how to re-read the log",
       "ok": true,
       "detail": ""
     },
@@ -140,6 +140,11 @@
     },
     {
       "check": "a re-read of the log drops the drawn window, so nothing is appended over a log it never saw",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "the append is refused when a re-read restores cards before the drawn head",
       "ok": true,
       "detail": ""
     },
@@ -244,7 +249,7 @@
       "detail": ""
     }
   ],
-  "check_count": 40,
+  "check_count": 41,
   "findings": [],
   "status": "clean"
 }

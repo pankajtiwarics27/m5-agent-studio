@@ -57,16 +57,27 @@ def test_committed_contract_and_handoff_are_exactly_generated(payload: dict) -> 
 
 def test_release_is_pinned_to_clean_full_sha_and_current_browser_sources(payload: dict) -> None:
     pinned = payload["pinned_release"]
+    recorded = evidence()
     assert contract._is_commit(pinned["implementation_head"])
     assert pinned["dirty"] is False
-    assert pinned["static_sha256"] == contract.sha256(contract.STATIC_PATH)
+    if recorded["review_scope"] == contract.REVIEW_SCOPE_INTEGRATED:
+        expected = contract.evidence_source_hashes_at_commit(contract.UIV2_30_INTEGRATED_HEAD)
+        assert pinned["implementation_head"] == contract.UIV2_30_INTEGRATED_HEAD
+        assert pinned["current_browser_sources"] is False
+        assert pinned["post_handoff_evidence"] == "pending-clean-implementation-and-ci"
+    else:
+        assert recorded["review_scope"] == contract.REVIEW_SCOPE_CURRENT
+        expected = contract.evidence_source_hashes()
+        assert pinned["current_browser_sources"] is True
+        assert pinned["post_handoff_evidence"] == "current"
+    assert pinned["static_sha256"] == expected["static/index.html"]
     assert payload["visual_evidence"]["git"]["head"] == pinned["implementation_head"]
-    assert evidence()["source_sha256"] == contract.evidence_source_hashes()
+    assert recorded["source_sha256"] == expected == contract.evidence_source_hashes_at_commit(pinned["implementation_head"])
+    # Judge UIV2-30 by its own integrated source range. A follow-up either has fresh current
+    # evidence or is explicitly pending; neither state may make the historical story claim that
+    # it changed the runtime itself.
     changed = subprocess.run(
-        # Audit the recorded release's implementation range, not every later
-        # backend change forever. Current browser digests are checked above;
-        # this does not re-pin/reapprove the historical visual evidence.
-        ["git", "diff", "--name-only", "703945e496c38b6bf0fb148f18fb213f00d20015", pinned["implementation_head"]],
+        ["git", "diff", "--name-only", "703945e496c38b6bf0fb148f18fb213f00d20015", "c01d01bd0a02c9617c7b08524f24be7f3fa3eddd"],
         cwd=ROOT, capture_output=True, text=True, check=True,
     ).stdout.splitlines()
     assert not {"app.py", "static/index.html", "studio.py"}.intersection(changed)
@@ -110,6 +121,17 @@ def test_ci_evidence_contains_every_required_successful_job(payload: dict) -> No
     assert all(row["conclusion"] == "success" and row["status"] == "completed" for row in ci["jobs"])
 
 
+def test_issue_185_cannot_close_from_the_historical_scope(payload: dict) -> None:
+    correction = next(row for row in payload["corrections"] if row["id"] == "issue-185-harness-view-cache-wording")
+    if evidence()["review_scope"] == contract.REVIEW_SCOPE_INTEGRATED:
+        assert correction["status"] == "implementation-complete-evidence-refresh-pending"
+        assert "must not be closed" in correction["detail"]
+        assert "**Post-handoff #185 evidence is still pending.**" in contract.render_doc(payload)
+    else:
+        assert correction["status"] == "resolved-post-handoff"
+        assert payload["pinned_release"]["current_browser_sources"] is True
+
+
 def test_ci_teardown_failure_is_disclosed_and_process_group_cleanup_is_fixed(payload: dict) -> None:
     correction = next(row for row in payload["corrections"] if row["id"] == "uiv2-30-fixture-process-group")
     assert correction["status"] == "corrected"
@@ -128,11 +150,11 @@ def test_ci_teardown_failure_is_disclosed_and_process_group_cleanup_is_fixed(pay
 def test_uiv2_29_final_summary_uses_actual_metrics_not_flat_transcription(payload: dict) -> None:
     memory = payload["measured_performance"]["memory"]
     nodes = [memory[key]["Nodes"] for key in ("baseline", "after_cycle_1", "after_cycle_2")]
-    assert nodes == [8505, 8484, 8505]
+    assert nodes == [8481, 8481, 8481]
     tracking = next(story for story in roadmap()["stories"] if story["id"] == "UIV2-29")["tracking"]
     final = next(row for row in tracking["tests_executed"] if row.startswith("Final full-window timing"))
-    assert "8505 -> 8484 -> 8505" in final
-    assert "3373868 -> 3309948 -> 3329676" in final
+    assert "8481 -> 8481 -> 8481" in final
+    assert "3375100 -> 3337896 -> 3342772" in final
     assert "flat at 8481" not in " ".join(tracking["acceptance_evidence"])
     assert contract.roadmap_findings(roadmap()) == []
 
@@ -228,6 +250,20 @@ def test_release_evidence_rejects_stale_sources_dirty_tree_and_missing_captures(
     fonts = evidence()
     fonts["visual"]["browser"]["fonts"] = {}
     assert any("font" in error for error in contract.validate_evidence(fonts))
+
+
+def test_release_evidence_rejects_scope_relabeling_and_wrong_integrated_head() -> None:
+    relabeled = copy.deepcopy(evidence())
+    relabeled["review_scope"] = (
+        contract.REVIEW_SCOPE_CURRENT
+        if evidence()["review_scope"] == contract.REVIEW_SCOPE_INTEGRATED
+        else contract.REVIEW_SCOPE_INTEGRATED
+    )
+    assert contract.validate_evidence(relabeled)
+    wrong_head = copy.deepcopy(evidence())
+    wrong_head["review_scope"] = contract.REVIEW_SCOPE_INTEGRATED
+    wrong_head["visual"]["git"]["head"] = "0" * 40
+    assert any("integrated" in error or "cannot read" in error for error in contract.validate_evidence(wrong_head))
 
 
 def test_release_evidence_rejects_lost_approval_failed_visual_or_ci() -> None:

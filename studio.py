@@ -14567,6 +14567,9 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     if (Number(rendered && rendered.decisions) !== Number(shown && shown.decisions)) return null;
     const incoming = Array.isArray(shown && shown.seqs) ? shown.seqs : [];
     if (incoming.length < drawn.length) return null;
+    // A re-read can bring back events before the drawn head. That is a rebuild, not a tail
+    // append: accepting it would update the bookkeeping without drawing the earlier cards.
+    if (incoming.length && incoming[0] < drawn[0]) return null;
     // The card that was drawn last has to still be on screen: it anchors the run the reader has.
     const tail = incoming.indexOf(drawn[drawn.length - 1]);
     if (tail < 0) return null;
@@ -17332,34 +17335,46 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     const first = count ? Number(events[0].seq) || 0 : 0;
     const last = count ? Number(events[count - 1].seq) || 0 : 0;
     const pruned = retained > 1 ? retained - 1 : 0;
+    const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+    // #185 / Option A: every headline number belongs to this bounded view, never to the
+    // durable log. The server's latest seq is only a last-reported comparison, not a claim
+    // that the log still contains that many events.
+    const viewCount = latest && count < latest
+      ? `this view holds ${count} of the ${latest} events last reported`
+      : `this view holds ${plural(count, "cached event")}`;
+    const outside = latest && retained
+      ? events.filter((ev) => {
+        const seq = Number(ev.seq) || 0;
+        return seq < retained || seq > latest;
+      }).length
+      : 0;
     // "following" needs somewhere to follow from: a zero cursor is an empty view, not a
     // live one, and saying "following from seq 0" would be a lie about a pane with no log.
     const following = Boolean(harnessEventStreamAbort) && !harnessRunActive && harnessCursor > 0;
-    const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
     let mode = "idle";
     let text = "";
     if (!activeHarnessId) {
       text = "";
     } else if (harnessRunActive) {
       mode = "live";
-      text = `a run is in flight: the trajectory is what it sends, and ${plural(count, "event")} are held in the log`;
+      text = `a run is in flight: the trajectory is what it sends, and ${viewCount}`;
     } else if (tele.reason) {
       // The log did not resume, so the view is the snapshot's: say that before the numbers.
       mode = pruned ? "pruned" : "replay";
-      text = `the log did not resume (${tele.reason}), so this view is the snapshot's: task state and ${plural(count, "event")}, seq ${first}-${last}`;
+      text = `the log did not resume (${tele.reason}), so this view is the snapshot's: task state and ${viewCount}, seq ${first}-${last}`;
     } else if (following) {
       mode = "live";
-      text = `following the log from seq ${harnessCursor} · ${plural(count, "event")} held`;
+      text = `following the log from seq ${harnessCursor} · ${viewCount}`;
     } else {
       mode = pruned ? "pruned" : "idle";
-      text = `${plural(count, "event")} held, seq ${first}-${last} · cursor ${harnessCursor}${latest ? ` of ${latest}` : ""}`;
+      text = `${viewCount}, seq ${first}-${last} · cursor ${harnessCursor}${latest ? ` of ${latest}` : ""}`;
     }
     // A pruned log is the more important fact than whether it is live: say it in colour.
     if (pruned && mode !== "replay") mode = "pruned";
     if (pruned) text += ` · ${plural(pruned, "earlier event")} pruned, retained from seq ${retained}`;
-    // What this view holds against what the log last reported as its newest: the only
-    // honest way to say "there is more" without claiming what the missing events are.
-    if (latest && count < latest) text += ` · this view holds ${count} of the ${latest} events last reported`;
+    // A cache can also be older than the server's retained window. Never let its extra
+    // entries masquerade as the log's current contents.
+    if (outside) text += ` · ${plural(outside, "cached event")} outside the log's reported retained range seq ${retained}-${latest}`;
     if (tele.reloads) text += ` · replayed ${plural(tele.reloads, "time")}`;
     // UIV2-09: a kind filter and a waiting approval are said in the same line as the
     // counts, so the strip never presents a narrowed view or a gated run as plain.
@@ -17374,6 +17389,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
       first,
       last,
       pruned,
+      outside,
       latest,
       retained,
       cursor: harnessCursor,
@@ -18258,10 +18274,11 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     return { dropped: plan.dropped, appended };
   }
 
-  // The pane says how much of the log is not on screen, in the same words whether the note is drawn
-  // for the first time or updated in place as the window slides.
+  // The pane says how much of this view's cache is not on screen, in the same words whether
+  // the note is drawn for the first time or updated in place as the window slides. The total
+  // is not the durable log's size.
   function harnessWindowNoteText(showing, total) {
-    return `Showing the newest ${showing} of ${total} events on screen; Replay re-reads the whole log from the server.`;
+    return `Showing the newest ${showing} of ${total} events in this view's cache; Replay re-reads the server's log into this view.`;
   }
 
   function harnessWindowNoteHtml(showing, total) {
@@ -18294,7 +18311,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
 
   // UIV2-09: the log can be filtered by kind from the strip, so a long run can be read
   // for one thing at a time. The filter narrows only what is drawn - the cache, the cursor
-  // and the strip's count still describe the whole retained log.
+  // and the strip's count still describe this view's whole cache, not the durable log's size.
   const HARNESS_EVENT_FILTERS = { all: "All", tool: "Tools", approval: "Approvals", error: "Errors", system: "System" };
   let harnessEventFilter = "all";
   function harnessEventMatchesFilter(ev, filter) {

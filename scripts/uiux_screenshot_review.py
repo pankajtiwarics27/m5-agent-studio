@@ -273,8 +273,9 @@ REVIEWS: dict[str, dict[str, object]] = {
         "story": "UIUX-P3-02",
         "note": (
             "The durable log and the cursor discipline, re-taken from the fixed build: `pruned` shows "
-            "the strip saying 9 events held over the retained floor seq 5-13 (#170, closed), and "
-            "`replayed` the window a resync draws after the whole log is re-read."
+            "this view holding 13 cached events, four of them outside the server's retained range "
+            "seq 5-13 (#185 Option A), with the card count equal to the cache count (#170, closed); "
+            "`replayed` shows the window a resync draws after the log is re-read."
         ),
         "eye": [],
         "re_taken": False,

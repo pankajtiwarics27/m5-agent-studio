@@ -12,9 +12,9 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "49c18ae49d90e6c2b0ebfb0c3f26988d61433596e211acd06994f37d92c4eead",
-      "bytes": 1047309,
-      "lines": 17903
+      "sha256": "3033a0211ca3739298e1e751d0fe89c68edf97b1fa66645a63307a158f2eca97",
+      "bytes": 1048182,
+      "lines": 17920
     },
     {
       "path": "app.py",
@@ -26,9 +26,9 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "9a53b7155ac5b8071643fdd43a15f383a6e565118f66578f2f2257d2a21bafd7",
-      "bytes": 4158401,
-      "lines": 82965
+      "sha256": "1d6446f6c2636bcdd614c7715579f39c5ba5c7161d327d0fed044d23d155c91b",
+      "bytes": 4159274,
+      "lines": 82982
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -418,9 +418,9 @@
     {
       "path": "scripts/uiux_screenshot_review.py",
       "role": "traces every committed capture to the script that made it and checks that the theme in its name is the theme in its pixels",
-      "sha256": "53b9fda8e38d3dc866282d3d4516397d4606160dacfd0f18f04bf92f45cd46fc",
-      "bytes": 82616,
-      "lines": 1519
+      "sha256": "92c8ba67684914df01539d3eb4d0ccf8e4355edc43166a91f6b489648b339720",
+      "bytes": 82719,
+      "lines": 1520
     },
     {
       "path": "tests/test_uiux_screenshot_review.py",
@@ -460,8 +460,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "49c18ae49d90e6c2b0ebfb0c3f26988d61433596e211acd06994f37d92c4eead",
-    "lines": 17903,
+    "sha256": "3033a0211ca3739298e1e751d0fe89c68edf97b1fa66645a63307a158f2eca97",
+    "lines": 17920,
     "tab_count": 6,
     "tabs": [
       {

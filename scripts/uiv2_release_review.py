@@ -54,6 +54,9 @@ EVIDENCE_SOURCES = (
     "scripts/compare_continuity_walk.mjs",
     "scripts/uiux_v2_cross_tab_reference_walk.mjs",
 )
+UIV2_30_INTEGRATED_HEAD = "c01d01bd0a02c9617c7b08524f24be7f3fa3eddd"
+REVIEW_SCOPE_INTEGRATED = "uiv2-30-integrated"
+REVIEW_SCOPE_CURRENT = "current-browser-sources"
 LOCAL_CHECKS = (
     ("performance-safety", "scripts/uiv2_performance_safety.py", "--check"),
     ("accessibility", "scripts/uiv2_accessibility_adversarial.py", "--check"),
@@ -91,6 +94,21 @@ def read_json(path: Path) -> dict[str, Any]:
 
 def evidence_source_hashes() -> dict[str, str]:
     return {name: sha256(ROOT / name) for name in EVIDENCE_SOURCES}
+
+
+def evidence_source_hashes_at_commit(head: str) -> dict[str, str]:
+    """Bind evidence to executable content in its implementation commit, not a later JSON edit."""
+    if not _is_commit(head):
+        raise ValueError("implementation HEAD is not a full commit SHA")
+    hashes = {}
+    for name in EVIDENCE_SOURCES:
+        completed = subprocess.run(
+            ["git", "show", f"{head}:{name}"], cwd=ROOT, capture_output=True, check=False, timeout=30,
+        )
+        if completed.returncode:
+            raise ValueError(f"cannot read {name} at implementation HEAD {head}")
+        hashes[name] = hashlib.sha256(completed.stdout).hexdigest()
+    return hashes
 
 
 def cross_tab_fingerprint(payload: dict[str, Any]) -> str:
@@ -207,6 +225,7 @@ def import_evidence(compare_path: Path, visual_path: Path, ci_path: Path) -> dic
         "schema_version": 1,
         "document_type": "m5_uiv2_release_evidence",
         "story": STORY,
+        "review_scope": REVIEW_SCOPE_CURRENT,
         "recorded_at": datetime.now(timezone.utc).isoformat(),
         "source_sha256": evidence_source_hashes(),
         "compare": {
@@ -260,8 +279,17 @@ def validate_evidence(payload: Any, hashes: dict[str, str] | None = None) -> lis
     errors = []
     if payload.get("story") != STORY or not payload.get("recorded_at"):
         errors.append("release evidence story/recorded_at is missing")
-    if payload.get("source_sha256") != (hashes if hashes is not None else evidence_source_hashes()):
-        errors.append("release evidence is stale for the browser sources")
+    scope = payload.get("review_scope", REVIEW_SCOPE_CURRENT)
+    if scope not in {REVIEW_SCOPE_INTEGRATED, REVIEW_SCOPE_CURRENT}:
+        errors.append("release evidence review_scope is unknown")
+    if hashes is not None:
+        expected_hashes = hashes
+    elif scope == REVIEW_SCOPE_INTEGRATED:
+        expected_hashes = evidence_source_hashes_at_commit(UIV2_30_INTEGRATED_HEAD)
+    else:
+        expected_hashes = evidence_source_hashes()
+    if payload.get("source_sha256") != expected_hashes:
+        errors.append("release evidence is stale for its declared browser-source scope")
     compare = payload.get("compare", {})
     if (compare.get("checks"), compare.get("passed"), compare.get("failed")) != (15, 15, 0):
         errors.append("release Compare evidence must be 15/15")
@@ -283,6 +311,16 @@ def validate_evidence(payload: Any, hashes: dict[str, str] | None = None) -> lis
     git = visual.get("git", {})
     if not _is_commit(git.get("head")) or git.get("dirty") is not False:
         errors.append("release visual evidence must be clean and source-pinned")
+    if scope == REVIEW_SCOPE_INTEGRATED and git.get("head") != UIV2_30_INTEGRATED_HEAD:
+        errors.append("integrated-scope evidence does not pin the UIV2-30 implementation HEAD")
+    if _is_commit(git.get("head")):
+        try:
+            implementation_hashes = evidence_source_hashes_at_commit(str(git["head"]))
+        except ValueError as exc:
+            errors.append(str(exc))
+        else:
+            if payload.get("source_sha256") != implementation_hashes:
+                errors.append("release evidence source hashes do not match its implementation HEAD")
     if visual.get("external_provider_calls") is not False or not visual.get("browser", {}).get("version"):
         errors.append("release visual environment/provider accounting is missing")
     if len(visual.get("browser", {}).get("fonts", {})) != 3:
@@ -464,6 +502,9 @@ def build() -> dict[str, Any]:
     ]
     visual = evidence["visual"]
     ci = evidence["ci"]
+    review_scope = evidence.get("review_scope", REVIEW_SCOPE_CURRENT)
+    current_source_match = evidence.get("source_sha256") == evidence_source_hashes()
+    followup_evidence_current = review_scope == REVIEW_SCOPE_CURRENT and current_source_match
     statuses = [story["tracking"]["status"] for story in roadmap["stories"]]
     memory = performance["metrics"]["harness"]["memory"]
     steady = performance["metrics"]["harness"]["steady"]
@@ -486,8 +527,11 @@ def build() -> dict[str, Any]:
             "implementation_head": visual["git"]["head"],
             "dirty": visual["git"]["dirty"],
             "static_sha256": evidence["source_sha256"]["static/index.html"],
+            "review_scope": review_scope,
+            "current_browser_sources": followup_evidence_current,
+            "post_handoff_evidence": "current" if followup_evidence_current else "pending-clean-implementation-and-ci",
             "evidence_recorded_at": evidence["recorded_at"],
-            "note": "The evidence commit may contain only later release docs/tracker changes; executable browser sources are bound by digest.",
+            "note": "The evidence commit may contain only later release docs/tracker changes; executable browser sources are bound by digest and verified inside the implementation commit.",
         },
         "program_state": {
             "total": 30,
@@ -547,6 +591,15 @@ def build() -> dict[str, Any]:
                 "id": "uiv2-30-generated-source-manifest",
                 "status": "corrected",
                 "detail": "PR CI run 42459934879 passed Browser safety but failed all three Python jobs because the preservation helper edit had not been propagated through the UI source manifest, preservation signoff and release gate. Those owner artifacts were regenerated in dependency order; source-manifest, signoff, release-gate and release-review tests then passed, including the historical ancestry check after restoring the shallow clone's history.",
+            },
+            {
+                "id": "issue-185-harness-view-cache-wording",
+                "status": "resolved-post-handoff" if followup_evidence_current else "implementation-complete-evidence-refresh-pending",
+                "detail": (
+                    "Issue #185 chose Option A after the V2 handoff: Harness headline counts now name this view/cache on streaming, replay, pruned, stalled and idle paths. The owning walk covers a cache smaller than the log and a cache retaining server-pruned events, keeps count == cards, and regenerates its captures. This wording-only follow-up changes no backend API, session, workspace or authorization behavior; current evidence is refreshed at the follow-up implementation SHA."
+                    if followup_evidence_current else
+                    "Issue #185 chose Option A after the V2 handoff: Harness headline counts now name this view/cache on streaming, replay, pruned, stalled and idle paths. The owning 22-check walk covers both cache/log directions, keeps count == cards, and regenerates its captures; the current UIV2-28/29 source contracts are refreshed. This review remains explicitly pinned to UIV2-30's integrated evidence while the follow-up's clean implementation browser runs and matching green CI are pending. Issue #185 must not be closed from this historical-scope review."
+                ),
             },
         ],
         "follow_ups": [
@@ -631,12 +684,20 @@ def render_doc(payload: dict[str, Any]) -> str:
         "| --- | --- |",
         f"| Implementation HEAD | `{pinned['implementation_head']}` (dirty=`{str(pinned['dirty']).lower()}`) |",
         f"| Frontend SHA-256 | `{pinned['static_sha256']}` |",
+        f"| Evidence scope | `{pinned['review_scope']}`; current-browser-sources=`{str(pinned['current_browser_sources']).lower()}` |",
+        f"| Post-handoff #185 evidence | `{pinned['post_handoff_evidence']}` |",
         f"| Roadmap at generation | {state['done']}/30 done, {state['in_progress']} in progress, {state['blocked']} blocked |",
         f"| Critical CI | [`{payload['critical_ci']['headSha']}`]({payload['critical_ci']['url']}) — {payload['critical_ci']['conclusion']} |",
         f"| Local executed checks | {payload['totals']['local_checks_passed']}/{payload['totals']['local_checks']} exit 0 |",
         f"| Production release | `{payload['security_release']['release_decision']}`; release_ready=`{str(payload['security_release']['release_ready']).lower()}` |",
         "",
-        "The imported implementation HEAD and critical CI HEAD must match. A later evidence/tracker commit may differ only as the recorded handoff revision; executable browser sources remain pinned by SHA-256 and final PR CI must pass separately.",
+        "The imported implementation HEAD and critical CI HEAD must match. A later evidence/tracker commit may differ only as the recorded handoff revision; executable browser sources remain pinned by SHA-256 and final PR CI must pass separately. The source digests are also read back from the implementation commit, so a JSON-only relabeling cannot make an old run current.",
+        "",
+        (
+            "Post-handoff #185 has current clean implementation and matching CI evidence."
+            if pinned["current_browser_sources"] else
+            "**Post-handoff #185 evidence is still pending.** This is a valid historical UIV2-30 review, not proof that #185 is ready to close. Fresh clean implementation browser runs and matching green CI are required before the evidence scope can become `current-browser-sources`."
+        ),
         "",
         "### Production blockers preserved",
         "",
@@ -648,6 +709,7 @@ def render_doc(payload: dict[str, Any]) -> str:
         "- UIV2-26 established the explicit owner-approved 48-variant structural visual baseline; UIV2-27 mapped all 21 preservation rows to executed provers.",
         "- UIV2-28 measured keyboard, contrast, zoom, reduced-motion and nested-scroll recovery; UIV2-29 added real-SSE, post-GC memory, layout and backend safety gates.",
         "- UIV2-30 changes release documentation and verification only. It does not change `app.py`, `static/index.html`, `studio.py`, API payloads, sessions or workspace data.",
+        "- Post-handoff #185 is a separate wording-only Harness follow-up: its current evidence names view/cache bounds explicitly and changes no backend API, session, workspace or authorization behavior.",
         "",
         "## Actual screenshot and recovery proof",
         "",

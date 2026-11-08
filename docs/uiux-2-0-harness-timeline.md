@@ -28,7 +28,7 @@ It arrives hidden, states its count, and opens into the record itself:
 
 ```
 ▾ Session log   13 events                         [Jump to latest ↓] [Replay log] [Resync]
-following the log from seq 13 · 13 events held · replayed 2 times
+following the log from seq 13 · this view holds 13 cached events · replayed 2 times
 
   #1   session/init             standard policy · direct /tmp/project · lead Qwen3.8-27B   04:55:16
   #2   security/policy_revision standard -> plan (revision 2)                             04:55:19
@@ -40,16 +40,17 @@ prose:
 
 | State | What it says |
 |---|---|
-| `live` | `following the log from seq N · M events held` — the stream is filling the view |
-| a run in flight | `a run is in flight: the trajectory is what it sends, and M events are held in the log` |
-| idle | `M events held, seq A-B · cursor N of L` — the log was read, and the stream is not open |
-| `replay` | `the log did not resume (reason), so this view is the snapshot's: task state and M events, seq A-B` |
-| `pruned` | `… · K earlier events pruned, retained from seq R` and `· this view holds N of the M events last reported` |
+| `live` | `following the log from seq N · this view holds M cached events` — the stream is filling the view |
+| a run in flight | `a run is in flight: the trajectory is what it sends, and this view holds M cached events` |
+| idle | `this view holds M cached events, seq A-B · cursor N of L` — the log was read, and the stream is not open |
+| `replay` | `the log did not resume (reason), so this view is the snapshot's: task state and this view holds M cached events, seq A-B` |
+| `pruned` | `this view holds N of the M events last reported … · K earlier events pruned, retained from seq R` |
+| cache older than the log | `K cached events outside the log's reported retained range seq R-L` — those entries are view-only |
 
-Those last two are the honest states. A gap in the log is not silently smoothed over into a normal read,
-and a view that holds fewer events than the log last reported says so instead of implying it has
-everything. Pruning wins the colour over every other state, because a missing event matters more than
-whether the view is live.
+#185 chose Option A: every headline number names this view. A gap in the log is not silently smoothed
+over into a normal read, a smaller cache says how many last-reported events it actually holds, and entries
+that outlived a server prune are called view-only. Pruning wins the colour over every other state, because
+a missing event matters more than whether the view is live.
 
 ## One row per event, and a row that points
 
@@ -115,14 +116,14 @@ strip reads through already existed; this story added no endpoint.
 
 ## Checks and limits
 
-- the strip is a view of what the browser holds, not a second log: it never invents an event, and `this view holds N of the M events last reported` is the widest claim it makes about events it cannot see.
+- the strip is a view of what the browser holds, not a second log: it never invents an event; `this view holds N of the M events last reported` scopes a smaller cache, and cached entries beyond the server's reported retained range are explicitly view-only.
 - the recorded-event card is a fallback, not a design for every type: the eighteen types with a card keep it, and the twenty-five without one are described by `harnessEventSummary()` in the reader's terms rather than printed as JSON.
 - Replay re-reads the log and rebuilds the trajectory; it does not re-run the task, replay tool effects, or roll the workspace back - a durable log records what happened, not a way to undo it.
 - the strip is capped at 45% of the pane and its list at `min(168px, 22vh)`, because the record explains the trajectory and must not replace it; in a window too short for both, the strip keeps its line and the trajectory keeps its floor.
 - pressing Jump to latest focuses the newest card, so a keyboard reader arrives where a mouse reader does; it does not mark that card, because nothing was pointed at.
 - the pruned and failed-resume states are exercised from the log state the pane derives, because the demo instance's log is never pruned: the walk builds those states from the events the server really returned and says so in its step names.
 
-`--check` re-derives 103 checks from the source and fails on any of them. `node scripts/harness_timeline_walk.mjs` drives the same surface in a real browser against a seeded demo instance: it creates a session through the API (which is what writes `session/init`), changes the policy
+`--check` re-derives 105 checks from the source and fails on any of them. `node scripts/harness_timeline_walk.mjs` drives the same surface in a real browser against a seeded demo instance: it creates a session through the API (which is what writes `session/init`), changes the policy
 twelve times (which is what writes `security/policy_revision`), and watches the strip, the rows and the
 cards agree about all thirteen — then replays the log twice, scrolls up, resizes the window, and
 photographs the states in [`media/harness-timeline/`](media/harness-timeline/README.md).

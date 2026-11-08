@@ -10,14 +10,18 @@ The first decision covers only merge/handoff of the UI/UX V2 program. It is not 
 
 | Field | Verified value |
 | --- | --- |
-| Implementation HEAD | `c01d01bd0a02c9617c7b08524f24be7f3fa3eddd` (dirty=`false`) |
-| Frontend SHA-256 | `49c18ae49d90e6c2b0ebfb0c3f26988d61433596e211acd06994f37d92c4eead` |
+| Implementation HEAD | `dfa6647a45d19d75e731799a2e21450ea3399673` (dirty=`false`) |
+| Frontend SHA-256 | `3033a0211ca3739298e1e751d0fe89c68edf97b1fa66645a63307a158f2eca97` |
+| Evidence scope | `current-browser-sources`; current-browser-sources=`true` |
+| Post-handoff #185 evidence | `current` |
 | Roadmap at generation | 30/30 done, 0 in progress, 0 blocked |
-| Critical CI | [`c01d01bd0a02c9617c7b08524f24be7f3fa3eddd`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42461591225) — success |
+| Critical CI | [`dfa6647a45d19d75e731799a2e21450ea3399673`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42475581227) — success |
 | Local executed checks | 7/7 exit 0 |
 | Production release | `release-blocked`; release_ready=`false` |
 
-The imported implementation HEAD and critical CI HEAD must match. A later evidence/tracker commit may differ only as the recorded handoff revision; executable browser sources remain pinned by SHA-256 and final PR CI must pass separately.
+The imported implementation HEAD and critical CI HEAD must match. A later evidence/tracker commit may differ only as the recorded handoff revision; executable browser sources remain pinned by SHA-256 and final PR CI must pass separately. The source digests are also read back from the implementation commit, so a JSON-only relabeling cannot make an old run current.
+
+Post-handoff #185 has current clean implementation and matching CI evidence.
 
 ### Production blockers preserved
 
@@ -29,26 +33,27 @@ The imported implementation HEAD and critical CI HEAD must match. A later eviden
 - UIV2-26 established the explicit owner-approved 48-variant structural visual baseline; UIV2-27 mapped all 21 preservation rows to executed provers.
 - UIV2-28 measured keyboard, contrast, zoom, reduced-motion and nested-scroll recovery; UIV2-29 added real-SSE, post-GC memory, layout and backend safety gates.
 - UIV2-30 changes release documentation and verification only. It does not change `app.py`, `static/index.html`, `studio.py`, API payloads, sessions or workspace data.
+- Post-handoff #185 is a separate wording-only Harness follow-up: its current evidence names view/cache bounds explicitly and changes no backend API, session, workspace or authorization behavior.
 
 ## Actual screenshot and recovery proof
 
 | Evidence | Actual result | Binding |
 | --- | --- | --- |
-| Approved structural matrix | 2200/2200 checks; 48 variants / 144 PNGs | manifest `c821e40fe67b58455dee3f3f7654e307023413163212d37c504d5b3f6c973d8f` |
+| Approved structural matrix | 2200/2200 checks; 48 variants / 144 PNGs | manifest `bf3db7b76fc2f2e4d6b2a96eeec50057ccb94099dcd9812773dfe9ba6c57f328` |
 | Human approval | approved-check | `user:Arena sidebar-243-recaptured-approval=approve; unchanged source55dff2b7c73f2064c7a649ceb1edfa9a9052d5a7; candidate7186910f9c46979e6320a6e2fa84f53e84067159f2b4d92ea5e03a6b59f884b8; visual baseline only, not merge authorization` |
-| Compare restore/export continuity | 15/15 checks; six PNGs | run `b3130ffc8d83ed525e521b8d81509e5ef9af3f2c3377b32c470cf4c47b011537` |
+| Compare restore/export continuity | 15/15 checks; six PNGs | run `8d95ce3b2711c103cd439cda5f3b97642250a3d20295e3f6947e34110977b803` |
 | Browser / fonts | HeadlessChrome/153.0.8010.0 | three font digests recorded in the release evidence |
 
-Local review manifests: `/tmp/uiv2-30-final3-visual/check-manifest.json` and `/tmp/uiv2-30-final3-compare.json`. PNGs are not committed; their hashes, source digests and actual outcomes are. Approval is structural fidelity, not pixel identity or self-certification.
+Local review manifests: `/tmp/issue185-final-visual/check-manifest.json` and `/tmp/issue185-final-compare/compare.json`. PNGs are not committed; their hashes, source digests and actual outcomes are. Approval is structural fidelity, not pixel identity or self-certification.
 
 ### Compare captures
 
-- `compare-record-forgotten.png` — `74c7533c116807725e8aa35b873cad2649d2c9f3a59fe5ac8156a47e20e29ba4` (15664 bytes)
-- `compare-record-light.png` — `ded342c7f802f91e5b5f745981c6736c9f7e738c61d7785bca256bd483308f43` (40129 bytes)
-- `compare-record-live.png` — `26cf3387bb6200d02cd18c92096d5f281b2da1cfb1a3ee87cf6e1760817f9287` (65017 bytes)
-- `compare-record-narrow.png` — `ed579086e006d7ebef41493c9f48d080571c9781d0cbe4118af4cec355bfaed0` (60025 bytes)
-- `compare-record-restored.png` — `ab18fd5180959527688f4044b23e5752a02da54b61ae4426337336d85c0a0b32` (49265 bytes)
-- `compare-record-server.png` — `fa348c73e7446920a87873a5fa9b8426a1db9d72c65aa28721e6756a0744980a` (17110 bytes)
+- `compare-record-forgotten.png` — `a364a2db933642b86eb2636ba1f8e7efc49193f6b5b681d1fce7e1497738c67c` (19952 bytes)
+- `compare-record-light.png` — `d929b762d00ac7fc2aa83094d5c0c36c2d6f9c930b5079ca11d085aca9105224` (59077 bytes)
+- `compare-record-live.png` — `c7324a16e5cfae29dca203e39a13d25ec18080264dc26260ca9061ee27612c66` (93879 bytes)
+- `compare-record-narrow.png` — `af7997476afdf02e2aeedf07c16d7f39b44a0d18f7913c57910c64350371a26a` (72972 bytes)
+- `compare-record-restored.png` — `de4835cc0b9eca6934ed5b755bd9e84076c1fceab44cf3a3ca45d469cfbe8b98` (70359 bytes)
+- `compare-record-server.png` — `72c87b58a0cd4c1bc046a0fd7808d39aa34fe2a377a1829ba459be208f94a9a1` (22094 bytes)
 
 ## Critical checks that actually ran
 
@@ -64,10 +69,10 @@ Local review manifests: `/tmp/uiv2-30-final3-visual/check-manifest.json` and `/t
 
 CI jobs in the imported merged-release run:
 
-- **test (3.13)** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42461591225/job/128671832983))
-- **test (3.12)** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42461591225/job/128671833141))
-- **Browser safety regressions** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42461591225/job/128671833169))
-- **test (3.11)** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42461591225/job/128671833202))
+- **test (3.11)** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42475581227/job/128716081696))
+- **Browser safety regressions** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42475581227/job/128716081864))
+- **test (3.12)** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42475581227/job/128716081892))
+- **test (3.13)** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42475581227/job/128716082064))
 
 The older 40-story UI/UX gate remains separately owned by `scripts/uiux_release_gate.py`; this review requires its committed 37/37 checks and 7/7 gates and also runs it during final verification. It does not pretend that artifact generation is a full browser or three-interpreter test run.
 
@@ -77,11 +82,11 @@ Environment: `linux` / `x64`, 2 CPUs, `HeadlessChrome/153.0.8010.0`; disposable 
 
 | Metric | Actual | Gate/scope |
 | --- | ---: | --- |
-| Fast real SSE | 58 schedules in 491.9ms = 117.91/s | at least 50/s, complete reply retained |
-| Full-window frame | mean 3.10ms; p95 7.00ms; max 10.70ms | unchanged mean ≤4ms |
-| Post-GC nodes | 8505 → 8484 → 8505 | no repeated-cycle growth beyond the declared budget |
-| Post-GC JS heap | 3373868 → 3309948 → 3329676 bytes | repeated-cycle plateau, not zero allocation |
-| Backend safety | 300 tests; 16 isolation checks | zero failures |
+| Fast real SSE | 58 schedules in 331.1ms = 175.17/s | at least 50/s, complete reply retained |
+| Full-window frame | mean 1.77ms; p95 2.70ms; max 3.40ms | unchanged mean ≤4ms |
+| Post-GC nodes | 8481 → 8481 → 8481 | no repeated-cycle growth beyond the declared budget |
+| Post-GC JS heap | 3375100 → 3337896 → 3342772 bytes | repeated-cycle plateau, not zero allocation |
+| Backend safety | 302 tests; 16 isolation checks | zero failures |
 | Local container isolation | unqualified; blocked (fail closed) | live probes not requested; not advertised as qualified |
 
 ## Corrections and resolved historical defects
@@ -93,6 +98,7 @@ Environment: `linux` / `x64`, 2 CPUs, `HeadlessChrome/153.0.8010.0`; disposable 
 | compare-restore-history | verified-resolved | Historical UIV2-16/17 restore-crash notes are not current behavior: the boot-order guard is present and this review's real Compare continuity walk passed 15/15 with six captures. |
 | uiv2-30-fixture-process-group | corrected | PR CI run 42458307474 exposed a Python 3.12 fixture-teardown race; the duplicate push run 42458278773 at the same SHA passed all four jobs, but the failure was not waived. preservation_suite.stop_server now retains the process-group id after parent exit, escalates surviving descendants to SIGKILL and waits for group exit, with synchronized graceful and SIGTERM-ignoring grandchild regressions. |
 | uiv2-30-generated-source-manifest | corrected | PR CI run 42459934879 passed Browser safety but failed all three Python jobs because the preservation helper edit had not been propagated through the UI source manifest, preservation signoff and release gate. Those owner artifacts were regenerated in dependency order; source-manifest, signoff, release-gate and release-review tests then passed, including the historical ancestry check after restoring the shallow clone's history. |
+| issue-185-harness-view-cache-wording | resolved-post-handoff | Issue #185 chose Option A after the V2 handoff: Harness headline counts now name this view/cache on streaming, replay, pruned, stalled and idle paths. The owning walk covers a cache smaller than the log and a cache retaining server-pruned events, keeps count == cards, and regenerates its captures. This wording-only follow-up changes no backend API, session, workspace or authorization behavior; current evidence is refreshed at the follow-up implementation SHA. |
 
 ## Open follow-ups and evidence limits
 

@@ -117,6 +117,8 @@
     "honesty": {
       "states_the_source_live": true,
       "states_the_count_and_range": true,
+      "every_headline_names_this_view": true,
+      "cache_beyond_the_log_is_view_only": true,
       "states_the_cursor": true,
       "says_when_the_log_did_not_resume": true,
       "says_what_is_pruned": true,
@@ -313,12 +315,12 @@
     "event_types_with_a_card": 16,
     "event_types_described_by_name": 23,
     "event_types_with_only_the_generic_preview": 20,
-    "checks": 103,
+    "checks": 105,
     "findings": 0
   },
   "findings": [],
   "limits": [
-    "the strip is a view of what the browser holds, not a second log: it never invents an event, and `this view holds N of the M events last reported` is the widest claim it makes about events it cannot see",
+    "the strip is a view of what the browser holds, not a second log: it never invents an event; `this view holds N of the M events last reported` scopes a smaller cache, and cached entries beyond the server's reported retained range are explicitly view-only",
     "the recorded-event card is a fallback, not a design for every type: the eighteen types with a card keep it, and the twenty-five without one are described by `harnessEventSummary()` in the reader's terms rather than printed as JSON",
     "Replay re-reads the log and rebuilds the trajectory; it does not re-run the task, replay tool effects, or roll the workspace back - a durable log records what happened, not a way to undo it",
     "the strip is capped at 45% of the pane and its list at `min(168px, 22vh)`, because the record explains the trajectory and must not replace it; in a window too short for both, the strip keeps its line and the trajectory keeps its floor",
