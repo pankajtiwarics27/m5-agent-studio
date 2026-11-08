@@ -14482,6 +14482,22 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
     // in seq order in practice - the cache keeps its keys ascending and the server pages in order -
     // so insertion order is seq order and the keys only need a walk, not a sort. Sorting them every
     // render made drawing the newest 300 cards cost the length of a 5,000-event log.
+    // The hot render passes the already ordered cache with no left-hand side. Validate that common
+    // case in one pass and return it directly instead of allocating a Map, a key array and a second
+    // event array for every animation frame. Anything invalid, duplicated or out of order falls
+    // through to the general sequence-keyed merge below; none of its ordering semantics change.
+    if (!(existing || []).length) {
+      const normalized = [];
+      let ordered = true;
+      let previous = -Infinity;
+      for (const ev of incoming || []) {
+        const seq = Number(ev && ev.seq);
+        if (!Number.isInteger(seq) || seq <= 0 || seq <= previous) { ordered = false; break; }
+        normalized.push(ev);
+        previous = seq;
+      }
+      if (ordered) return normalized;
+    }
     const bySeq = new Map();
     let ascending = true;
     let last = -Infinity;
@@ -17351,12 +17367,14 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
     host.dataset.mode = state.mode;
     const count = document.getElementById("harnessTimelineCount");
     if (count) {
+      let countText;
       if (harnessEventFilter === "all") {
-        count.textContent = `${state.count} event${state.count === 1 ? "" : "s"}`;
+        countText = `${state.count} event${state.count === 1 ? "" : "s"}`;
       } else {
         const filtered = harnessCachedEvents().filter((ev) => harnessEventMatchesFilter(ev, harnessEventFilter)).length;
-        count.textContent = `${filtered} of ${state.count} events · ${HARNESS_EVENT_FILTERS[harnessEventFilter] || harnessEventFilter}`;
+        countText = `${filtered} of ${state.count} events · ${HARNESS_EVENT_FILTERS[harnessEventFilter] || harnessEventFilter}`;
       }
+      if (count.textContent !== countText) count.textContent = countText;
     }
     const line = document.getElementById("harnessTimelineState");
     if (line) {
@@ -17493,7 +17511,10 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
       harnessCachedSnapshot = null;
     }
     if (!harnessCachedSnapshot) harnessCachedSnapshot = harnessEventOrder.map(seq => harnessEventCache.get(seq));
-    return harnessCachedSnapshot.slice();
+    // Read-only snapshot: every caller renders, filters or scans it without mutation. Returning the
+    // stable array avoids copying all 5,000 retained events again for the stream and timeline in
+    // every frame. Any cache write clears the snapshot above/below before the next read.
+    return harnessCachedSnapshot;
   }
 
   function harnessRememberEvents(events) {
@@ -17501,9 +17522,19 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
       const seq = Number(ev && ev.seq);
       if (!Number.isInteger(seq) || seq <= 0) continue;
       if (!harnessEventCache.has(seq)) {
+        const previousLength = harnessEventOrder.length;
+        const appendToSnapshot = Boolean(harnessCachedSnapshot)
+          && harnessCachedSnapshot.length === previousLength
+          && (!previousLength || seq > harnessEventOrder[previousLength - 1]);
         harnessEventCache.set(seq, ev);
         harnessNoteSeq(seq);
-        harnessCachedSnapshot = null;
+        // Ordered live arrivals can extend the read-only snapshot in place. An out-of-order page
+        // still invalidates it, because inserting one event into the middle by index would merely
+        // replace one whole-cache rebuild with another and make dedupe reasoning harder.
+        if (harnessCachedSnapshot) {
+          if (appendToSnapshot) harnessCachedSnapshot.push(ev);
+          else harnessCachedSnapshot = null;
+        }
       }
       if (seq > harnessCursor) harnessCursor = seq;
     }
@@ -17513,7 +17544,15 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
       if (harnessEventOrder.length !== harnessEventCache.size) harnessEventOrder = [...harnessEventCache.keys()].sort((a, b) => a - b);
       const dropped = harnessEventOrder.splice(0, harnessEventOrder.length - HARNESS_CACHE_LIMIT);
       for (const seq of dropped) harnessEventCache.delete(seq);
-      harnessCachedSnapshot = null;
+      if (harnessCachedSnapshot) {
+        // The ordered-append path above has exactly the same retained window as the order and Map.
+        // Prune its head once rather than discarding it and mapping all 5,000 survivors next frame.
+        if (harnessCachedSnapshot.length === dropped.length + HARNESS_CACHE_LIMIT) {
+          harnessCachedSnapshot.splice(0, dropped.length);
+        } else {
+          harnessCachedSnapshot = null;
+        }
+      }
     }
   }
 
@@ -18202,8 +18241,11 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
     const stream = document.getElementById("harnessStream");
     const note = document.getElementById("harnessWindowNote");
     if (showing < total) {
-      if (note) note.textContent = harnessWindowNoteText(showing, total);
-      else if (stream) stream.insertAdjacentHTML("afterbegin", harnessWindowNoteHtml(showing, total));
+      const text = harnessWindowNoteText(showing, total);
+      // A steady 300/5000 window keeps the same note as its cursor advances. Rewriting identical
+      // text invalidated layout on every high-frequency frame without telling the reader anything.
+      if (note && note.textContent !== text) note.textContent = text;
+      else if (!note && stream) stream.insertAdjacentHTML("afterbegin", harnessWindowNoteHtml(showing, total));
     } else if (note) {
       note.remove();
     }
@@ -18263,7 +18305,12 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
 
   function renderStoredHarnessEvents(events) {
     const stream = document.getElementById("harnessStream");
-    const ordered = harnessMergeEvents([], events || []);
+    const supplied = events || [];
+    // harnessCachedEvents() is already a validated, deduplicated, ascending snapshot. Other callers
+    // still go through the general merge, including replayed or out-of-order server pages.
+    const ordered = supplied === harnessCachedSnapshot && harnessCachedSnapshot
+      ? supplied
+      : harnessMergeEvents([], supplied);
     // UIV2-09: a kind filter narrows what is drawn, never what is held, and a filtered
     // view always redraws in full (the incremental append assumes the whole log is shown).
     const visible = harnessEventFilter === "all" ? ordered : ordered.filter((ev) => harnessEventMatchesFilter(ev, harnessEventFilter));
@@ -18275,11 +18322,9 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
       renderHarnessTimeline();
       return;
     }
-    // Where the reader is, and which cards they opened: a frame that arrives while they
-    // are reading must not move them, and must not shut the cards they opened.
+    // Where the reader is: a frame that arrives while they are reading must not move them.
     const pinned = harnessStreamNearBottom(stream);
     const previousTop = stream ? stream.scrollTop : 0;
-    const openDetails = stream ? Array.from(stream.querySelectorAll("details")).map((d, i) => (d.open ? i : -1)).filter(i => i >= 0) : [];
     const decisions = {};
     for (const ev of ordered) {
       if (ev.type === "approval/decision" && ev.approval_id) decisions[ev.approval_id] = ev.decision || "";
@@ -18335,6 +18380,9 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
       renderHarnessTimeline();
       return;
     }
+    // Only a full rebuild can close a card the reader opened. The incremental path leaves every
+    // retained card untouched, so querying all 300 disclosure states there was pure per-frame cost.
+    const openDetails = stream ? Array.from(stream.querySelectorAll("details")).map((d, i) => (d.open ? i : -1)).filter(i => i >= 0) : [];
     const htmlParts = [];
     if (Number(streamState.retained_from_seq || 0) > 1) {
       htmlParts.push(`<div class="mono" style="font-size:11px; color:var(--text-faint);">Earlier events were pruned; showing the retained log from seq ${escapeHtml(String(streamState.retained_from_seq))}. Task status above is authoritative.</div>`);
