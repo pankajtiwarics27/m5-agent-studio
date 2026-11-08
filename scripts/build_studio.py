@@ -70,6 +70,7 @@ NATIVE_MODULES = (
     "request_fit_admission",
     "native_dispatch_executor",
     "native_transition_driver",
+    "native_inference_scheduler",
 )
 
 

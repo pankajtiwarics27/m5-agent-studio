@@ -555,7 +555,7 @@ def test_standalone_native_namespaces_execute_real_kernels_without_repo_module_i
     code = """import sys,pathlib,importlib.abc,asyncio
 root=pathlib.Path(REPO)
 sys.path[:]=[p for p in sys.path if pathlib.Path(p or '.').resolve()!=root]
-public={'local_runtime_lifecycle','model_lifecycle_coordinator','shared_memory_admission','omlx_lifecycle','ollama_protocol','ollama_lifecycle','lmstudio_protocol','lmstudio_lifecycle','request_fit','request_fit_admission','native_dispatch_executor','native_transition_driver'}
+public={'local_runtime_lifecycle','model_lifecycle_coordinator','shared_memory_admission','omlx_lifecycle','ollama_protocol','ollama_lifecycle','lmstudio_protocol','lmstudio_lifecycle','request_fit','request_fit_admission','native_dispatch_executor','native_transition_driver','native_inference_scheduler'}
 class NoSiblingFallback(importlib.abc.MetaPathFinder):
  def find_spec(self,fullname,path=None,target=None):
   if fullname in public:raise AssertionError('standalone sibling import: '+fullname)
@@ -600,6 +600,16 @@ async def cold():
    assert b.memory.view('shared').committed_bytes==600
   finally:b.coord.close()
 asyncio.run(cold())
+from test_native_inference_scheduler import scheduler
+async def scheduled():
+ for backend in ('ollama','lmstudio'):
+  b=fixture(pathlib.Path('scheduled-'+backend),backend)
+  try:
+   result=await collect(scheduler(b).stream(admission(b).call))
+   assert result[-1]['type']=='usage' and b.count_calls==1
+   assert b.coord.snapshot('shared').active_requests==0
+  finally:b.coord.close()
+asyncio.run(scheduled())
 print('isolated native executor and shared transaction guards passed')
 """.replace("REPO", repr(str(root)))
     env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}

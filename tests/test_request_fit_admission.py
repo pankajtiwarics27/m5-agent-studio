@@ -90,7 +90,8 @@ def harness(b, req, memory_lease, prepared, *, version="fake-v1"):
         assert (
             b.coord._call(
                 lambda conn: conn.execute(
-                    "SELECT reference FROM journal WHERE event='request_fit_count_sent'"
+                    "SELECT reference FROM journal WHERE event='request_fit_count_sent' AND operation_id=?",
+                    (p.lease.lease_id,),
                 ).fetchone()[0]
             )
             == p.body_digest

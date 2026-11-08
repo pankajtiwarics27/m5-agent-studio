@@ -66,6 +66,15 @@ before target load. Return typed stage completion, not a successful whole-contro
 ACK. Keep this dormant and namespaced in standalone; no actor/producers are
 installed and unload-only controls are not fabricated from a fake target.
 
+Compose a bounded inference backend from a concrete cold-step driver and admitted
+warm executor, with full immutable call/profile/counter matching at handoff.
+Serialize one actor through terminal completion/close; bound in-memory lock waiting
+but never add inference output/time caps. Fence coordinator claims optionally to
+the FIFO request in the same SQL write, not a racy pre-query. Refuse foreign/pending
+work instead of polling or stealing it; cancel only the actor's own unadmitted
+waiter. Interrupted stages/requests retain holds for explicit recovery. Keep the
+backend dormant and controls unavailable; in-memory waiters are not durable tasks.
+
 ## Alternatives
 
 - Replace served routing immediately: would activate unqualified transports and

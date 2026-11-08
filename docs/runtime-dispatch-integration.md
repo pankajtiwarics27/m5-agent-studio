@@ -346,3 +346,89 @@ Full history was fetched; pinned baseline verification and the regenerated relea
 review then passed with zero findings. Docs/ADR and app/standalone isolated
 startup/token/origin smoke checks passed. No historical evidence/approval was
 replaced to bypass the shallow-checkout failure.
+
+## Bounded inference scheduling and cold-to-warm handoff
+
+At `f099531`, the preceding driver checkpoint passed **4,325 local tests** with
+32 opt-in/browser skips and one upstream warning. Python 3.11/3.12/3.13 and browser
+CI passed; three disposable safety mutations were caught. These are prior-head
+results, not validation of the scheduler changes below.
+
+`native_inference_scheduler.py` now composes cold steps and warm exact-fit/native
+inference as an internal `CoordinatedDispatchBackend`-compatible consumer. No
+backend/actor instance is installed by default, no settings/mode change occurs,
+and its explicit `command` remains unavailable.
+
+- A trusted synchronous plan supplies immutable `ColdAdmission`, domain/deadline,
+  concrete transition-job and admitted warm-job factories. The actor never mints
+  native permits, qualifiers, counters or physical observations. It rejects plans
+  for a different owned call or warm handoffs with a different request lease,
+  memory, native qualification, fit profile or counter qualification.
+- One actor serializes its streams until native terminal completion or consumer
+  close. Lock waiting is bounded by the request deadline and at most 60 seconds;
+  it adds no inference timeout/output cap. Waiting actors are in-memory, not a
+  durable session queue. Cancellation/deadline before entry does not enqueue or
+  cancel the active owner. Readiness is repeated after waiting and at each stage.
+- `LifecycleCoordinator.claim_next` gains optional internal `request_id` fencing,
+  backward compatible with existing callers. FIFO request selection and matching
+  are checked in the same write as claim; it never skips an earlier waiter or
+  advances an existing operation for a different target. A pre-query followed by
+  an unfenced claim would race with cancellation/other consumers and is rejected
+  as an alternative. This fence is not native-operation authority.
+- The actor takes at most drain/unload/load/verify/request, without polling,
+  background execution, pending-operation replay or automatic retry. Busy behind
+  unrelated work it refuses and cancels only its own queued waiter. Other actors,
+  threads and controls remain subject to the actual coordinator/memory gates, not
+  just the in-process lock.
+- Source memory must be actually dispatched, match the native target and remain
+  held through physical confirmation and attributed-zero settlement. Target peak
+  reservation/verification yields a real admitted instance/request lease before
+  invoking the existing warm executor. Same-target sequential requests reuse
+  actual warm memory rather than issuing another load.
+- Every intermediate native iterator is explicitly closed on consumer close.
+  Incomplete admitted work retains domain/memory uncertainty, never fabricated
+  terminality, release or retry. A close after independently verified terminal
+  usage does not poison warm residency. Failures after step claim but before a
+  job producer returns also require reconciliation rather than stranding/replaying
+  the stage. Even a fully counted context refusal conservatively retains the
+  admitted request/model hold for explicit recovery; this actor does not invent
+  a general cancellation/recovery policy.
+
+The existing native gateway is exercised through actual common dispatch, the
+scheduler, real dormant cold/warm/fit/bridge kernels and explicit fake native
+producers, in both response modes. No generic HTTP client or fallback path reaches
+the actor. The private standalone bundle and its isolated no-sibling-fallback test
+now also exercise complete scheduled cold-to-warm inference for both providers.
+Packaging, types and scoped tests include the scheduler.
+
+The fake count fixture's journal assertion is now scoped to the counted lease,
+not the first count anywhere in the database. This preserves the once-only marker
+check while allowing multiple actual queued/request histories in the same domain.
+
+Initial scheduler evidence: **34 new scheduler tests** and **2 new coordinator
+claim-fence tests**, including concurrency, cross-runtime switching, waiter cancel
+and deadline, interrupted active close, verified-terminal close, foreign queue /
+cancelled-target operations, unsupported plans/controls, warm-handoff refusal,
+producer failure and oversize exact-count refusal without retry/trimming/model
+substitution. The final combined scheduler/coordinator/cold/warm/fit/bridge/fence
+run passed **573 tests**, one upstream warning, including the final exact-fit
+refusal and post-wait expiry cases. Ruff, mypy75 and scope
+mapping (188 modules/13 areas) passed; full regression and CI for this head are
+pending until executed. No installed native qualification follows from fake facts.
+
+**Remaining LC08 work:** explicit load/unload-only/unload-all/cache control
+orchestration and complete races, oMLX step consumption, remaining canonical
+workflow consumers, production composition readiness and integration with LC09
+session/grant/budget/recovery semantics. This is bounded inference composition,
+not a durable task scheduler or completion of those controls. Tests1–7 acceptance
+and paused/unpassed test8 are unchanged; no merge or native activation authorized.
+
+
+Scheduler pre-full-run checks: freshly executed backend safety passed **302 tests
+and 16 isolation checks**, with live container isolation still unqualified/blocked.
+Regenerated source manifest, preservation/performance/release records have no
+findings. Ruff, mypy75, docs/ADR and both isolated app/standalone startup/token /
+origin smokes passed. A generator command exceeded the tool wait while its child
+continued; the child finished, its output was checked with zero findings, and the
+remaining checks were run separately, not concurrently rerun. No visual source
+approval/pin or acceptance ledger was advanced.

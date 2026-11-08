@@ -492,17 +492,34 @@ class LifecycleCoordinator:
             return str(row["status"])
         return self._call(cancel, now_ms=now_ms)
 
-    def claim_next(self, domain_id: str, *, now_ms: int, step_timeout_ms: int = 60_000) -> TransitionStep | RequestLease | None:
+    def claim_next(self, domain_id: str, *, now_ms: int, step_timeout_ms: int = 60_000, request_id: str | None = None) -> TransitionStep | RequestLease | None:
+        """Claim one domain stage/request; optionally fence to the FIFO waiter.
+
+        request_id is an internal consumer fence, not authority. It never skips
+        another queued owner or advances an operation for a different target.
+        Native permits and independent completion evidence are still required.
+        """
+        if request_id is not None:
+            _label(request_id)
         _integer(step_timeout_ms, positive=True)
         _integer(now_ms)
         _integer(now_ms + step_timeout_ms)
         def claim(conn: sqlite3.Connection) -> TransitionStep | RequestLease | None:
             domain = self._domain(conn, domain_id)
             conn.execute("UPDATE requests SET status='expired' WHERE domain=? AND status='queued' AND deadline<=?", (domain_id, now_ms))
+            # Optional consumer fence: select/check FIFO ownership in the SAME
+            # write transaction as claim, not a racy pre-query in an app actor.
+            head = None
+            if request_id is not None:
+                head = conn.execute("SELECT * FROM requests WHERE domain=? AND status='queued' ORDER BY seq LIMIT 1", (domain_id,)).fetchone()
+                if head is None or head["id"] != request_id:
+                    return None
             if domain["state"] == "reconciling":
                 return None
             if domain["operation_id"] is not None:
                 operation = conn.execute("SELECT * FROM operations WHERE id=?", (domain["operation_id"],)).fetchone()
+                if head is not None and operation["target"] != head["target"]:
+                    return None
                 if operation["dispatched"]:
                     if now_ms >= operation["deadline"]:
                         self._uncertain(conn, domain_id, operation["id"], "step_timeout")

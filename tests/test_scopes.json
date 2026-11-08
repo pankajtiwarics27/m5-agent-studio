@@ -85,6 +85,7 @@
       "test_runtime_dispatch*.py",
       "test_native_dispatch*.py",
       "test_native_transition*.py",
+      "test_native_inference*.py",
       "test_chat_tool_protocol.py",
       "test_api_provider_contracts.py",
       "test_benchmark_*.py",
@@ -180,6 +181,7 @@
     "runtime_dispatch_boundary.py",
     "native_dispatch_executor.py",
     "native_transition_driver.py",
+    "native_inference_scheduler.py",
     "omlx_lifecycle.py",
     "ollama_lifecycle.py",
     "ollama_protocol.py",
@@ -205,6 +207,7 @@
     "poetry.lock"
   ],
   "source_areas": {
+    "native_inference_scheduler.py": ["models.providers", "storage.history", "security.execution"],
     "native_transition_driver.py": ["models.providers", "storage.history", "security.execution"],
     "native_dispatch_executor.py": ["models.providers", "storage.history", "security.execution"],
     "scripts/runtime_dispatch_inventory.py": ["models.providers", "security.execution"],
