@@ -263,3 +263,20 @@ released. A bare HTTP ACK or an empty/stale list cannot confirm the command.
 See [LC08 integration](runtime-dispatch-integration.md) for composition, races and
 limits. No future full-request fit, native activation, new HTTP route, settings
 change, installed qualification or architecture/security acceptance is implied.
+
+## Explicit release-step role (dormant LC08 continuation)
+
+The native permit now explicitly accepts a distinct `ReleaseStep`, for source
+**drain/unload only**, with its own current durable release gate and receipt
+prefix. It has no replacement target and cannot authorize load/verify, inference,
+counting or load-control completion. Before effects the queued unload request must
+be live and match the actual current source/instance and dispatched source hold;
+current native qualification/authorization, owned quiescent activity and actual
+loaded-profile records still apply. Native unload ACK is not terminal/absence or
+zero-attribution evidence. All-runtime physical proof precedes independent real
+memory settlement and final kernel barrier retirement. Post-send cancelled/expired
+cleanup retains its cancelled/expired request status, never API success.
+
+This is concrete bridge/step-driver support, **not** an installed unload command
+actor, HTTP redirection, native qualifier, transport/sample/evidence producer or
+production activation. No polling/replay or already-absent success is implemented.

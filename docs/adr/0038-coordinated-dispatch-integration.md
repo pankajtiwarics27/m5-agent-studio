@@ -124,6 +124,18 @@ existing actors fence it without native calls. This foundation is not an unload
 consumer, already-absent success policy, unload-all/cache, LC09 recovery, default
 producer or production activation.
 
+Extend only the Ollama/LM Studio native permit unions explicitly for source-only
+ReleaseStep, with a separate durable release gate and disjoint receipt prefixes.
+Retain all native qualification, loaded-profile, ownership/activity and observed
+version/config checks. Add pure UnloadAdmission and source-bound queued intent,
+plus distinct concrete release jobs consumed by a bounded step driver. Physical
+proof must precede independently sampled real source-hold zero settlement and
+final barrier retirement. After send, cancelled/expired cleanup may retire resources
+but cannot complete a command. A stage/barrier ReleaseResult is not canonical
+confirmation. Keep the public/actor unload command, oMLX unload-only permits,
+already-absent policy, unload-all/cache, native producers and activation unavailable.
+No schema change or implicit recovery/migration is introduced by this continuation.
+
 ## Alternatives
 
 - Replace served routing immediately: would activate unqualified transports and

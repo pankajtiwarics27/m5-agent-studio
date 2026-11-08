@@ -644,3 +644,59 @@ startup-origin smokes passed. The standalone is 4,226,687 bytes; fresh backend
 safety302/16 and regenerated source/preservation/performance/release records report
 zero findings, with live isolation still unqualified/blocked. Full regression and
 exact-head CI are not inherited from `2172b4a` and remain pending here.
+
+## Concrete native release-step continuation (Ollama/LM Studio; still no command actor)
+
+The merged unload-only kernel checkpoint `c88a39c` completed **4583 passed /32
+skipped /one warning**, with PR CI42503114905 and push CI42503111157 green;
+PR257 comment6724660872 supersedes its chronological pre-full notes above.
+That evidence is historical and is not reused for the current source head.
+
+This continuation explicitly extends the two native permit intent unions to
+`ReleaseStep`, with a **separate** current release-operation gate. The new role
+is source drain/unload only: no target, inference body/count, acquire step,
+load/verify authority or request-fit shortcut is fabricated. Durable checks bind
+the active dispatched release goal, exact request/purpose/deadline, actual owned
+source/instance and dispatched source hold, owner epoch/generation, ready memory
+domain, and absence of active inference/control slots. Native configuration,
+current authorization, activity/ownership/late-effect exclusion, actual loaded
+profile records and native observed source/version/config remain required.
+Separate `release_drain` / `release_unload` receipt vocabulary prevents borrowing
+acquire receipts. ACK still cannot prove physical unload or release memory.
+
+`UnloadAdmission` validates pure native configuration readiness before queue or
+probe, without pretending the action is a load or constructing a fit profile.
+`QueuedUnloadRequest` captures the actual source reservation, native instance and
+generation, fencing replacement/residency races rather than evicting whatever
+later occupies the same name. `OllamaRelease` and `LmRelease` are distinct concrete
+jobs, rejected by the existing acquire driver. `advance_release` validates their
+actual bridge/coordinator/memory/qualification and consumes one real dispatched
+source stage. It reuses the native wire/profile/proof gates, then requires existing
+full-runtime physical absence/terminal proof, independently samples and settles
+the actual model hold, and only then calls the kernel's durable final barrier
+retirement. Proof/sample production is bounded; cancellation/errors preserve
+uncertainty/charges, with no polling, replay, implicit recovery or target load.
+
+After a native send, cancelled/expired intent may receive physical completion and
+zero settlement to retire its barrier safely. `ReleaseResult.retired` is **not**
+canonical API success: cancelled/expired request status remains unchanged. No
+canonical unload actor/plan is added; `NativeInferenceScheduler.command` still
+refuses unload. Existing load/inference actors retain their unexpected-release
+fences. oMLX unload-only permits, already-absent success policy, unload-all/cache,
+public HTTP redirection, producers, installed qualification and activation remain
+open. Existing oMLX source-to-target release remains a separate acquire flow.
+
+Initial evidence: **78 new offline tests**, **1002 passed /one upstream warning**
+in the combined18-module lifecycle/native/dispatch/fit/persistence suite (45.46s).
+The isolated standalone executes both actual native release bridge/driver paths,
+with fake installed/native facts and transports only. Final full regression and
+exact-head CI must be recorded separately after execution; no LC08/LC09 completion,
+review acceptance, hardware test8 retry, migration or merge is implied.
+
+Pre-full validation at the final source snapshot: Ruff and mypy75, scope mapping
+193 modules/13 areas, docs/ADR, fresh backend302/16, generated source/preservation/
+performance/release checks, baseline (after fetching missing shallow history),
+governance/deferred-security consistency, JavaScript, demo/screenshot manifest and
+both app/standalone startup/auth/origin smokes passed. Standalone4,242,427 bytes.
+Release review reports zero findings; live isolation remains unqualified/blocked.
+These are author-run checks, not native qualification or independent acceptance.

@@ -331,3 +331,25 @@ completion, retained barrier, real memory settlement and final retirement throug
 its own namespaced coordinator/memory kernels. Native unload command consumers,
 unload-all/cache, already-absent success policy, routes/settings, default producers,
 installed qualification and production activation remain **unimplemented**.
+
+### Native release gate continuation (no schema change or command activation)
+
+Ollama and LM Studio now explicitly support `ReleaseStep` as source-only native
+permit intent; oMLX unload-only still refuses. `_active_release` is separate from
+`_active_step`: it checks exact current dispatched release stage and request,
+source/instance/hold, epoch/generation, ready memory state and empty admitted slots.
+Before effects, request cancellation/expiry denies. Only an acknowledged already-
+sent stage may use the native finishing path after cancellation/expiry, and the
+final request status still cannot become completed. Native receipt prefixes are
+disjoint from acquire-stage receipts. Inference, load-control and acquire checks
+are not relaxed or repurposed.
+
+The concrete step consumer captures the real source hold/instance/generation,
+validates actual native loaded-profile records before completing drain, confirms
+full-runtime physical absence, independently settles the exact model reservation,
+then invokes `finish_unload`. Its `ReleaseResult.retired` denotes only barrier
+retirement, including cancelled/expired cleanup; it is not canonical `confirmed`.
+Native step support does not install an unload command actor or HTTP route.
+Private schema remains v4; prior-version preservation/refusal and the absent
+reviewed backup/migration gate remain unchanged. See the
+[integration continuation](runtime-dispatch-integration.md#concrete-native-release-step-continuation-ollamalm-studio-still-no-command-actor).

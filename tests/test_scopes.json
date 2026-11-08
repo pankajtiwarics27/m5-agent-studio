@@ -87,6 +87,7 @@
       "test_native_transition*.py",
       "test_native_inference*.py",
       "test_native_load*.py",
+      "test_native_unload*.py",
       "test_chat_tool_protocol.py",
       "test_api_provider_contracts.py",
       "test_benchmark_*.py",
