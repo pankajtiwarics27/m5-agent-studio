@@ -59,16 +59,16 @@ through `setStatus()`, so the state, the tone and the label cannot disagree.
 | `#pipelineWorkspaceState` | `info` | no | 3698 |
 | (unnamed) | `warn` | no | 7231 |
 | (unnamed) | `warn` | no | 7329 |
-| (unnamed) | `neutral` | no | 11194 |
-| (unnamed) | `busy` | no | 11195 |
-| (unnamed) | `ok` | no | 11196 |
-| (unnamed) | `warn` | no | 11197 |
-| (unnamed) | `warn` | no | 11198 |
-| (unnamed) | `warn` | no | 11199 |
-| (unnamed) | `danger` | no | 11200 |
-| (unnamed) | `warn` | no | 11201 |
-| (unnamed) | `warn` | no | 11202 |
-| (unnamed) | `neutral` | no | 11203 |
+| (unnamed) | `neutral` | no | 11201 |
+| (unnamed) | `busy` | no | 11202 |
+| (unnamed) | `ok` | no | 11203 |
+| (unnamed) | `warn` | no | 11204 |
+| (unnamed) | `warn` | no | 11205 |
+| (unnamed) | `warn` | no | 11206 |
+| (unnamed) | `danger` | no | 11207 |
+| (unnamed) | `warn` | no | 11208 |
+| (unnamed) | `warn` | no | 11209 |
+| (unnamed) | `neutral` | no | 11210 |
 
 ## Writers
 

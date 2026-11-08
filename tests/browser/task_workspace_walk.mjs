@@ -15,7 +15,7 @@ const checks = [];
 function check(name, pass, detail) { assert(pass, `${name}: ${JSON.stringify(detail)}`); checks.push(name); }
 try {
   const page = await browser.newPage();
-  const errors = [], external = [], mcpWrites = [];
+  const errors = [], external = [], mcpWrites = [], posts = [];
   const mcpFixture = { alias: 'ui-proof-server', name: 'Synthetic UI proof', category: 'local',
     transport: 'stdio', command: 'synthetic-not-executed', args: [], enabled: true,
     active_tool_count: 7, tools: [], approval_policy: 'always_ask' };
@@ -25,6 +25,7 @@ try {
   page.on('request', request => {
     if (new URL(request.url()).origin !== base.origin) { external.push(request.url()); return request.abort(); }
     const path = new URL(request.url()).pathname;
+    if (request.method()==='POST') posts.push(path);
     if (fixtureMcpActive && path === '/api/mcp/servers/ui-proof-server' && request.method() === 'PATCH') {
       const payload = JSON.parse(request.postData()); mcpWrites.push(payload);
       if (refuseMcp) return request.respond({status: 403, contentType: 'application/json', body: JSON.stringify({detail: 'Synthetic permission refusal: server state kept'})});
@@ -39,6 +40,25 @@ try {
   await page.setViewport({ width: 1568, height: 900 });
   await page.goto(base.href, { waitUntil: 'networkidle0' });
   await page.waitForFunction(() => document.querySelector('#harnessLeadModel').options.length > 0);
+  const savedWorkspace = await page.$eval('#harnessWorkspaceInput', n=>n.value.trim());
+  const caption = () => page.$eval('.workspace-caption', n=>({text:n.textContent,title:n.title,children:n.children.length}));
+  check('header hydrates from workspace', (await caption()).text===`Workspace: ${savedWorkspace}`,await caption());
+  const beforePosts = posts.length;
+  const longWorkspace = '/host/'+'nested-'.repeat(60)+'<img src=x onerror=alert(1)>';
+  for (const path of ['/host/alpha/Developer','/host/beta/Developer','/',longWorkspace]) {
+    await page.evaluate(path=>syncProjectDirInputs(path),path);
+    const label = await caption();
+    check(`header follows draft ${path.slice(0,30)}`,label.text===`Workspace: ${path}` && label.title===path && label.children===0,label);
+  }
+  await page.$eval('#harnessWorkspaceInput',n=>{n.value='';n.dispatchEvent(new Event('change'));});
+  check('empty header does not retain a stale path',(await caption()).text==='Workspace: not selected',await caption());
+  check('header rendering makes no write/inference request',posts.length===beforePosts,posts);
+  // Draft display is not a save: reload must hydrate the actual saved default again.
+  await page.reload({waitUntil:'networkidle0'});
+  await page.waitForFunction(()=>document.querySelector('#harnessLeadModel').options.length>0);
+  await page.waitForFunction(()=>document.getElementById('harnessWorkspaceInput').value.trim().length>0);
+  check('header rehydrates after reload', (await caption()).text===`Workspace: ${savedWorkspace}` && await page.$eval('#harnessWorkspaceInput',n=>n.value.trim())===savedWorkspace, await caption());
+  await page.evaluate(path=>syncProjectDirInputs(path),longWorkspace);
   await page.evaluate(() => startFreshHarnessDraft());
   for (const theme of ['light', 'dark']) {
     for (const compact of [false, true]) {
@@ -59,9 +79,11 @@ try {
             actionRow: rect(document.querySelector('.task-composer-actions')),
             settingsControl: rect(document.querySelector('#harnessTaskSettings > summary')),
             side: rect(document.getElementById('harnessSessionsPanel')),
-            nav: rect(document.querySelector('.mode-tabs')) };
+            nav: rect(document.querySelector('.mode-tabs')), caption: rect(document.querySelector('.workspace-caption')),
+            captionDisplay:getComputedStyle(document.querySelector('.workspace-caption')).display, toolsBox:rect(document.getElementById('studioTools')) };
         });
         check(`composer ${theme}/${compact}/${width}`, layout.boxes.every(b => b.width > 0 && b.left >= -1 && b.right <= width + 1 && b.top >= 0 && b.bottom <= height), layout);
+        check(`header fits ${theme}/${compact}/${width}`, width<800 ? layout.captionDisplay==='none' : layout.caption.width>0 && layout.caption.left>=0 && layout.caption.right<=layout.toolsBox.left && layout.pageOverflow<=1, layout);
         check(`secondary chrome ${theme}/${compact}/${width}`, layout.inspector === 'none' && !layout.tools && !layout.settings && layout.disabled && layout.pageOverflow <= 1, layout);
         check(`uniform controls ${theme}/${compact}/${width}`, [...layout.controls, layout.settingsControl].every(b => Math.abs(b.height - (compact ? 32 : 44)) < 1), layout);
         check(`readable workflow ${theme}/${compact}/${width}`, layout.controls.find(b => b.id === 'harnessWorkflowMode').width >= 80, layout);

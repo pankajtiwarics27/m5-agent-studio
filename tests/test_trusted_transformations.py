@@ -608,8 +608,29 @@ def test_measured_benefit_ab_evaluation_and_optional_disable_controls(tmp_path: 
         tmp_root=tmp_path / "ab",
     )
     stored = reg.record_ab_report(report, enforce_gate=True)
-    assert stored["ab_gate_passed"] is True
-    assert reg.get_config()["ab_gate_open"] is True
+    # Real wall-clock measurements may legitimately close the gate on a loaded
+    # runner. Assert the measured policy outcome, not unconditional qualification.
+    assert len(report["scenarios"]) == 3
+    for scenario in report["scenarios"]:
+        assert scenario["trial_counts"] == {
+            "baseline_strict_taint": 3, "qualified_transform": 3,
+        }
+        assert scenario["unauthorized_relaxations"] == 0
+        assert scenario["overhead_gate_enforced"] is scenario["expect_blocking_lift"]
+        lift = scenario["deltas"]["verified_completion_rate"]
+        assert lift > 0 if scenario["expect_blocking_lift"] else lift >= 0
+        assert scenario["deltas"]["total_tokens_median"] <= 0
+        within_allowance = (
+            not scenario["overhead_gate_enforced"]
+            or scenario["qualified_transform"]["transform_overhead_ms_median"]
+            <= scenario["overhead_allowance_ms"]
+        )
+        assert scenario["overhead_within_allowance"] is within_allowance
+        assert scenario["benefit_justifies_cost"] is within_allowance
+    expected_gate = all(s["benefit_justifies_cost"] for s in report["scenarios"])
+    assert stored["ab_gate_passed"] is expected_gate
+    assert reg.get_config()["ab_gate_open"] is expected_gate
+    assert reg.get_config()["effective_enabled"] is expected_gate
     assert stored["overall"]["unauthorized_relaxations"] == 0
     assert stored["overall"]["verified_completion_rate_delta"] > 0.5
     assert stored["overall"]["qualified_tokens_median"] < stored["overall"]["baseline_tokens_median"]
@@ -621,7 +642,8 @@ def test_measured_benefit_ab_evaluation_and_optional_disable_controls(tmp_path: 
 def test_http_endpoints_and_standalone_studio_bundle_parity(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """End-to-end HTTP control-plane verification and standalone studio.py bundle parity."""
+    """HTTP control-plane verification, independent of runner benchmark latency."""
+    _stub_ab_measurements(monkeypatch, studio)
     store_dir = tmp_path / "harness_store"
     store_dir.mkdir(parents=True, exist_ok=True)
     monkeypatch.setattr(studio, "HARNESS_STORE_DIR", store_dir)
@@ -640,9 +662,8 @@ def test_http_endpoints_and_standalone_studio_bundle_parity(
         if studio.STUDIO_API_TOKEN and not studio.STUDIO_AUTH_DISABLED:
             headers["Authorization"] = f"Bearer {studio.STUDIO_API_TOKEN}"
 
-        # Match the three paired trials used by the measured-benefit unit test. With two
-        # trials, one CI scheduler/cold-I/O outlier is averaged into the median; three retain
-        # the same overhead gate while making the sample robust to a single pause.
+        # Only benchmark measurements are controlled; HTTP handling, report gating,
+        # persistence, execution, authority checks, redaction and revocation stay real.
         r_eval = tc.post(
             "/api/harness/transformations/evaluate",
             json={"runs_per_variant": 3, "persist_summary": True},
@@ -863,3 +884,114 @@ def test_the_adversarial_scenario_does_not_gate_on_synthetic_baseline_overhead()
     assert report["overhead_gate_enforced"] is False
     assert report["overhead_within_allowance"] is True
     assert report["benefit_justifies_cost"] is True
+
+
+def _stub_ab_measurements(
+    monkeypatch: pytest.MonkeyPatch, app_module,
+) -> dict[str, float]:
+    """Supply explicitly synthetic measurements, using the real comparison policy."""
+    measurements = {"overhead_ms": 10.0}
+
+    def run_suite(*, runs_per_variant, security_generation, tmp_root):
+        scenario_id = "blocking_ci_test_report_verification"
+        runs = []
+        for trial in range(runs_per_variant):
+            runs.extend([
+                _ab_run(
+                    f"b{trial}", "baseline_strict_taint", verified=False,
+                    tokens=620, latency_ms=40.608, scenario_id=scenario_id,
+                ),
+                _ab_run(
+                    f"q{trial}", "qualified_transform", verified=True,
+                    tokens=340, latency_ms=100.5828,
+                    overhead_ms=measurements["overhead_ms"], scenario_id=scenario_id,
+                ),
+            ])
+        namespace = app_module.trusted_transformations
+        scenario = namespace.compare_transformation_ab_runs(scenario_id, runs)
+        return {
+            "schema_version": namespace.TT_SCHEMA_VERSION,
+            "overall": {"suite_id": "test-only-controlled-measurements"},
+            "scenarios": [scenario],
+        }
+
+    monkeypatch.setattr(
+        app_module.trusted_transformations, "run_builtin_transformation_ab_suite", run_suite,
+    )
+    return measurements
+
+
+@pytest.mark.parametrize("app_module", [modular_app, studio], ids=["modular", "standalone"])
+@pytest.mark.parametrize("overhead_ms,expected_gate", [
+    (49.9999, True), (50.0, True), (50.6023, False),
+])
+def test_http_ab_gate_respects_measured_boundary_and_persistence(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, app_module,
+    overhead_ms: float, expected_gate: bool,
+) -> None:
+    """Replay the CI rejection and both sides of the unchanged 50 ms boundary."""
+    store_dir = tmp_path / "harness_store"
+    for module in (modular_app, studio):
+        monkeypatch.setattr(module, "HARNESS_STORE_DIR", store_dir)
+        monkeypatch.setattr(module, "DB_PATH", tmp_path / f"{module.__name__}.db")
+    monkeypatch.setattr(app_module, "_TRUSTED_TRANSFORMATION_REGISTRY", None)
+    monkeypatch.setattr(app_module, "_EVIDENCE_LESSON_STORE", None)
+    monkeypatch.setattr(app_module, "_SCOPED_GRANT_STORE", None)
+    measurements = _stub_ab_measurements(monkeypatch, app_module)
+
+    with TestClient(app_module.app, base_url="http://127.0.0.1:8787") as tc:
+        headers = {}
+        if app_module.STUDIO_API_TOKEN and not app_module.STUDIO_AUTH_DISABLED:
+            headers["Authorization"] = f"Bearer {app_module.STUDIO_API_TOKEN}"
+
+        def evaluate(persist):
+            response = tc.post(
+                "/api/harness/transformations/evaluate",
+                json={"runs_per_variant": 3, "persist_summary": persist}, headers=headers,
+            )
+            assert response.status_code == 200, response.text
+            return response.json()
+
+        # Start open: an excessive measured cost must close an already-open gate.
+        initial = evaluate(True)
+        assert initial["ab_gate_passed"] is True
+        assert initial["config"]["effective_enabled"] is True
+        measurements["overhead_ms"] = overhead_ms
+        preview = evaluate(False)
+        assert preview["ab_gate_passed"] is expected_gate
+        assert preview["config"]["ab_gate_open"] is True
+        registry = app_module.get_trusted_transformation_registry()
+        assert registry.latest_ab_report()["report_sha256"] == initial["report_sha256"]
+
+        stored = evaluate(True)
+        scenario = stored["scenarios"][0]
+        assert scenario["baseline_strict_taint"]["latency_ms_median"] == 40.608
+        assert scenario["qualified_transform"]["latency_ms_median"] == 100.5828
+        assert scenario["qualified_transform"]["transform_overhead_ms_median"] == overhead_ms
+        assert scenario["overhead_allowance_ms"] == 50.0
+        assert scenario["overhead_gate_enforced"] is True
+        assert scenario["unauthorized_relaxations"] == 0
+        assert scenario["overhead_within_allowance"] is expected_gate
+        assert scenario["benefit_justifies_cost"] is expected_gate
+        assert stored["ab_gate_passed"] is expected_gate
+        assert stored["config"]["ab_gate_open"] is expected_gate
+        assert stored["config"]["effective_enabled"] is expected_gate
+
+        # Read a fresh registry from disk, not just the in-memory API result.
+        reopened = app_module.trusted_transformations.TrustedTransformationRegistry(store_dir)
+        assert reopened.latest_ab_report()["report_sha256"] == stored["report_sha256"]
+        assert reopened.latest_ab_report()["ab_gate_passed"] is expected_gate
+        assert reopened.get_config()["effective_enabled"] is expected_gate
+        if not expected_gate:
+            denied = tc.post(
+                "/api/harness/transformations/execute",
+                json={
+                    "transform_id": "diagnostic_log_sanitizer_v1",
+                    "input_json": {"source": "ci.log", "lines": ["test"]},
+                    "record_source_if_missing": True,
+                    "requested_operation": "diagnostic_read",
+                    "workflow_kind": "ci_triage", "task_id": "over-budget-gate",
+                }, headers=headers,
+            )
+            assert denied.status_code == 409, denied.text
+            assert denied.json()["detail"]["code"] == "ab_benefit_gate_closed"
