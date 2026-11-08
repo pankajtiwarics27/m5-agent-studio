@@ -166,6 +166,7 @@
     ]
   },
   "full_suite_paths": [
+    "model_lifecycle_coordinator.py",
     "app.py",
     "studio.py",
     "pyproject.toml",
@@ -186,6 +187,7 @@
     "poetry.lock"
   ],
   "source_areas": {
+    "model_lifecycle_coordinator.py": ["models.providers", "storage.history"],
     "scripts/check_lifecycle_feasibility.py": [
       "models.providers"
     ],
