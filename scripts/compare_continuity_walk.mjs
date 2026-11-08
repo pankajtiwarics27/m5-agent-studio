@@ -271,11 +271,14 @@ async function runCompare(page, args, { stopAfterMs = 0 } = {}) {
   }
   for (let attempt = 0; attempt < 400; attempt += 1) {
     await sleep(args.settleMs);
-    const state = await readRecord(page);
+    // Sample liveness before the record. If debate_done lands between two evaluations, an older
+    // record followed by a newer not-busy sample would otherwise return run 0 and stored=false;
+    // the screenshot a moment later would show the final run id and kept copy instead.
     const busy = await page.evaluate(() => {
       const button = document.getElementById("debateRunBtn");
       return Boolean(button && button.disabled && document.getElementById("debateStopBtn").style.display !== "none");
     });
+    const state = await readRecord(page);
     if (!busy && state.cards.length && state.cards.every((card) => card.status !== "running")) return state;
   }
   return readRecord(page);

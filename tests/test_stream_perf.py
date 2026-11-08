@@ -245,10 +245,18 @@ def test_a_render_that_draws_the_whole_log_is_a_finding(sources):
 
 def test_a_note_that_does_not_say_where_the_rest_is_is_a_finding(sources):
     def mute(html: str) -> str:
-        return swap(html, "Replay re-reads the whole log from the server.", "The rest is elsewhere.")
+        return swap(html, "Replay re-reads the server's log into this view.", "The rest is elsewhere.")
 
     report = sources(html_transform=mute)
-    assert "the pane says how much of the log is not on screen, and where to read it" in failing(report)
+    assert "the pane says how much of this view's cache is not on screen, and how to re-read the log" in failing(report)
+
+
+def test_a_window_note_that_calls_the_cache_the_log_is_a_finding(sources):
+    def ambiguous(html: str) -> str:
+        return swap(html, "events in this view's cache", "events in the durable log")
+
+    report = sources(html_transform=ambiguous)
+    assert "the pane says how much of this view's cache is not on screen, and how to re-read the log" in failing(report)
 
 
 def test_a_note_that_is_never_updated_is_a_finding(sources):
@@ -282,6 +290,14 @@ def test_an_append_that_ignores_approval_state_is_a_finding(sources):
 
     report = sources(html_transform=blind)
     assert "the append is refused when approval state moved, because those cards are already drawn" in failing(report)
+
+
+def test_an_append_that_counts_restored_earlier_cards_without_drawing_them_is_a_finding(sources):
+    def blind(html: str) -> str:
+        return swap(html, "    if (incoming.length && incoming[0] < drawn[0]) return null;\n", "")
+
+    report = sources(html_transform=blind)
+    assert "the append is refused when a re-read restores cards before the drawn head" in failing(report)
 
 
 def test_an_append_that_swallows_an_approval_event_is_a_finding(sources):

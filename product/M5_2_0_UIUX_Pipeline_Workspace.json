@@ -6,7 +6,7 @@
   "source": {
     "frontend": {
       "path": "static/index.html",
-      "sha256": "49c18ae49d90e6c2b0ebfb0c3f26988d61433596e211acd06994f37d92c4eead"
+      "sha256": "3033a0211ca3739298e1e751d0fe89c68edf97b1fa66645a63307a158f2eca97"
     },
     "backend": {
       "path": "app.py",

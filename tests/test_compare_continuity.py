@@ -140,6 +140,14 @@ def test_the_doc_is_generated_by_the_inventory(payload: dict):
     assert stored["check_count"] == payload["check_count"]
 
 
+def test_the_walk_samples_liveness_before_taking_the_final_record():
+    """A final frame between the two browser reads must not pair a stale record with not-busy."""
+    walk = WALK.read_text(encoding="utf-8")
+    run = walk.split("async function runCompare", 1)[1].split("async function run(args)", 1)[0]
+    loop = run.split("for (let attempt = 0; attempt < 400;", 1)[1]
+    assert loop.index("const busy = await page.evaluate") < loop.index("const state = await readRecord(page)")
+
+
 # ── rules that must keep looking ────────────────────────────────────────────
 
 

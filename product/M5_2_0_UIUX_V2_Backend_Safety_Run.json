@@ -1,13 +1,13 @@
 {
   "story": "UIV2-29",
   "kind": "backend-safety-run",
-  "generated_at": "2026-11-08T05:53:46.615019+00:00",
+  "generated_at": "2026-11-08T09:57:16.123104+00:00",
   "git": {
-    "head": "a133647e3e62ab7c6937a4103346fd306c9c428a",
-    "dirty": false
+    "head": "01f1fa2a4cc20203b158d9a5a2ba2b8161c39bda",
+    "dirty": true
   },
   "source_sha256": {
-    "static/index.html": "49c18ae49d90e6c2b0ebfb0c3f26988d61433596e211acd06994f37d92c4eead",
+    "static/index.html": "3033a0211ca3739298e1e751d0fe89c68edf97b1fa66645a63307a158f2eca97",
     "app.py": "61fc096c3a1530cb371bf9029e5e80499732aede5deff61d23d81b19df1afac4",
     "task_events.py": "59ab9597bed3a497de995cf775354c5b6dff57a4009c19e232e33d0f6b8d31d7",
     "scoped_grants.py": "b14f49e39a684f7a6c18b681ed68622b0bdbaa98ce7ba1c0dc2f37d2dfcd83ec",
@@ -16,8 +16,8 @@
     "side_effect_ledger.py": "8e3d201df3d86ca3f92e9ee20845b342cd63a80d24be62aa0ccb5efeb7c83d25",
     "sandbox_boundary.py": "b4961f5642d1079e66c4dd1c77293c74797bd4da6082b58c56aa84af0f307a27",
     "scripts/isolation_smoke.py": "603991e03b5cb1200784631287351d4cecc7c71217f4cfc5a8bfcffa6405274e",
-    "tests/test_stream_perf.py": "d225981f5c0b3f353d6b06f02244ec694feb9531cd14e954af08e0049c5ba38a",
-    "tests/test_task_events.py": "181764fcb58e220026298727621c62d00c440e0ab0d07e401ed48900b624d942",
+    "tests/test_stream_perf.py": "f08da202638bdb75ff03995eff15b9f9a213e1c8b458a3a23f06d1dcd328e040",
+    "tests/test_task_events.py": "6aca7a3f041e634b9d651b62ef942b1b5ed5073068a05461a6ddb7308e068df2",
     "tests/test_harness_permissions.py": "5287db2a26b3b229df34f18b5e1fd537552388640868402039f2167d1f73daeb",
     "tests/test_scoped_grants.py": "c97903d7361fa4e060bebba9b35585e0374905021ad16ad9bb969f0e735e77df",
     "tests/test_harness_recovery.py": "b8bd6d6d0808e80c028ae086f261b616457e0384f87830f8c3e79f0de7e53c12",
@@ -59,21 +59,21 @@
   ],
   "pytest": {
     "exit_code": 0,
-    "passed": 300,
+    "passed": 302,
     "seconds": null,
     "output_tail": [
-      "........................................................................ [ 24%]",
-      "........................................................................ [ 48%]",
-      "........................................................................ [ 72%]",
-      "........................................................................ [ 96%]",
-      "............                                                             [100%]",
+      "........................................................................ [ 23%]",
+      "........................................................................ [ 47%]",
+      "........................................................................ [ 71%]",
+      "........................................................................ [ 95%]",
+      "..............                                                           [100%]",
       "=============================== warnings summary ===============================",
       ".venv/lib/python3.11/site-packages/fastapi/testclient.py:1",
       "  /home/user/m5-agent-studio/.venv/lib/python3.11/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.",
       "    from starlette.testclient import TestClient as TestClient  # noqa",
       "",
       "-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html",
-      "300 passed, 1 warning in 112.09s (0:01:52)"
+      "302 passed, 1 warning in 71.51s (0:01:11)"
     ]
   },
   "isolation": {
@@ -99,7 +99,7 @@
       "  [PASS] no new privileges — --security-opt=no-new-privileges",
       "  [PASS] no implicit image pull — --pull=never",
       "  [PASS] resource limits — --pids-limit=128 --memory=2g --cpus=2",
-      "  [PASS] single workspace bind mount — type=bind,source=/tmp/m5-browser/tmp/m5-isolation-smoke-6r18tslc,target=/workspace",
+      "  [PASS] single workspace bind mount — type=bind,source=/tmp/m5-isolation-smoke-cgttrczn,target=/workspace",
       "",
       "== 3. Skill-code execution gates (app._run_skill_script) ==",
       "  [PASS] default-off skill-code denial — PermissionError",
@@ -155,10 +155,10 @@
       "scripts/isolation_smoke.py"
     ]
   },
-  "duration_seconds": 114.131,
+  "duration_seconds": 72.626,
   "totals": {
     "test_modules": 13,
-    "tests_passed": 300,
+    "tests_passed": 302,
     "failed": 0,
     "isolation_pass_checks": 16
   }

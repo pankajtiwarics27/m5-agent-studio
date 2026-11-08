@@ -29,9 +29,9 @@
  *   7. Replay re-reads the log from its first retained event and rebuilds the view from it
  *      with no duplicates, and the strip counts the replays;
  *   8. a frame that lands while the reader is scrolled up does not move them;
- *   9. the strip says when the log holds more than the view shows, when earlier events
- *      were pruned, and when the view came from a re-read rather than the stream;
- *  10. no page error occurs and the strip survives a 900px viewport.
+ *  9. every strip count names this view, both when the cache is smaller than the log and
+ *     when it still holds entries the server pruned; replay and failed resume stay honest;
+ * 10. no page error occurs and the strip survives a 900px viewport.
  */
 import { existsSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
@@ -249,7 +249,7 @@ async function run(args) {
       "the log strip is present for a session and states the count, the seq range and the cursor",
       first.hidden === false
         && first.count === "1 event"
-        && /^1 event held, seq 1-1 · cursor 1 of 1$/.test(first.state),
+        && /^this view holds 1 cached event, seq 1-1 · cursor 1 of 1$/.test(first.state),
       `count="${first.count}" state="${first.state}"`,
     );
     record(
@@ -317,8 +317,11 @@ async function run(args) {
       `held=${grown.held} rows=${grown.rows.length} cards=${grown.cards.length}`,
     );
     record(
-      "the strip names the live source while the stream is filling the view",
-      grown.mode === "live" && /following the log from seq 13/.test(grown.state),
+      "the strip names the live source and scopes its count to this view",
+      grown.mode === "live"
+        && /following the log from seq 13/.test(grown.state)
+        && /this view holds 13 cached events/.test(grown.state)
+        && !/13 events (?:are )?held in the log/.test(grown.state),
       `mode=${grown.mode} state="${grown.state}"`,
     );
     record(
@@ -373,7 +376,9 @@ async function run(args) {
     record(
       "Replay re-reads the log from its first retained event and rebuilds the view from it",
       replayed.firstPass && replayed.firstPass.before === 13 && replayed.firstPass.after === 13
-        && replayed.once.cards === 13 && replayed.once.state.text.includes("replayed 1 time"),
+        && replayed.once.cards === 13
+        && replayed.once.state.text.includes("this view holds 13 cached events")
+        && replayed.once.state.text.includes("replayed 1 time"),
       `before=${replayed.before} after=${replayed.firstPass ? replayed.firstPass.after : "null"} cards=${replayed.once.cards} state="${replayed.once.state.text}"`,
     );
     record(
@@ -464,20 +469,33 @@ async function run(args) {
       renderHarnessTimeline();
       out.stalledDom = { mode: document.getElementById("harnessTimeline").dataset.mode, text: document.getElementById("harnessTimelineState").textContent.trim() };
       harnessLogTelemetry.reason = "";
+      // (d) the opposite direction: this view still holds seq 1..13 although the server
+      // now retains only seq 5..13. Those four older cache entries are view-only history;
+      // presenting all thirteen as the server's current log would be the reverse lie.
+      harnessEventCache = new Map(held.map((ev) => [Number(ev.seq), ev]));
+      harnessEventOrder = held.map((ev) => Number(ev.seq));
+      harnessCachedSnapshot = null;
+      harnessSnapshot = { ...(savedSnapshot || {}), event_stream: { latest_seq: 13, retained_from_seq: retainedFloor } };
+      out.cacheBeyondLog = harnessLogState();
+      renderStoredHarnessEvents(harnessCachedEvents());
+      out.cacheBeyondLogDom = {
+        text: document.getElementById("harnessTimelineState").textContent.trim(),
+        cards: [...document.querySelectorAll("#harnessStream .h-event")].map((card) => Number(card.dataset.seq)),
+      };
       harnessSnapshot = savedSnapshot;
       return out;
     });
     record(
-      "the strip says how many events this view holds of the number last reported",
-      /0 events held/.test(honest.ahead.text)
-        && /this view holds 0 of the 13 events last reported/.test(honest.ahead.text)
-        && !/following the log/.test(honest.ahead.text),
+      "a cache smaller than the log says what this view holds, never what the log holds",
+      /^this view holds 0 of the 13 events last reported/.test(honest.ahead.text)
+        && !/following the log/.test(honest.ahead.text)
+        && !/\b0 (?:cached )?events? (?:are )?held in the log\b/.test(honest.ahead.text),
       honest.aheadDom,
     );
     record(
       "a pruned log is shown from its retained floor, and the strip says how much is gone",
       honest.pruned.mode === "pruned"
-        && /\b9 events held\b/.test(honest.pruned.text)
+        && /this view holds 9 of the 13 events last reported/.test(honest.pruned.text)
         && honest.pruned.first === 5 && honest.pruned.last === 13
         && /4 earlier events pruned, retained from seq 5/.test(honest.pruned.text)
         && honest.prunedDom.mode === "pruned"
@@ -489,9 +507,20 @@ async function run(args) {
       "when the log does not resume, the strip says so and names the reason",
       honest.stalled.mode === "pruned"
         && /^the log did not resume \(events_pruned\), so this view is the snapshot's/.test(honest.stalled.text)
+        && /this view holds 9 of the 13 events last reported/.test(honest.stalled.text)
         && honest.stalledDom.mode === honest.stalled.mode
         && honest.stalledDom.text === honest.stalled.text,
       honest.stalledDom.text,
+    );
+    record(
+      "a cache holding events the log pruned calls them view-only, never current log entries",
+      honest.cacheBeyondLog.outside === 4
+        && /this view holds 13 cached events/.test(honest.cacheBeyondLog.text)
+        && /4 cached events outside the log's reported retained range seq 5-13/.test(honest.cacheBeyondLog.text)
+        && !/13 (?:cached )?events? (?:are )?held in the log/.test(honest.cacheBeyondLog.text)
+        && honest.cacheBeyondLogDom.text === honest.cacheBeyondLog.text
+        && honest.cacheBeyondLogDom.cards.length === honest.cacheBeyondLog.count,
+      `${honest.cacheBeyondLogDom.text} cards=${honest.cacheBeyondLogDom.cards.length}`,
     );
     await shoot(page, "pruned");
 
@@ -502,7 +531,8 @@ async function run(args) {
     });
     record(
       "a resync restores every event from the server without duplicating one",
-      reread.state.count === 13 && reread.cards === 13 && reread.state.first === 1 && reread.state.last === 13,
+      reread.state.count === 13 && reread.cards === 13 && reread.state.first === 1 && reread.state.last === 13
+        && /this view holds 13 cached events/.test(reread.state.text),
       `count=${reread.state.count} cards=${reread.cards} seq ${reread.state.first}-${reread.state.last} state="${reread.state.text}"`,
     );
     await page.setViewport({ width: 900, height: 800, deviceScaleFactor: 1 });
