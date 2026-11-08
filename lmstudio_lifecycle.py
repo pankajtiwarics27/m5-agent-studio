@@ -190,6 +190,33 @@ def _stage(intent: Intent) -> str:
     return "infer" if isinstance(intent, RequestLease) else intent.kind
 
 
+def validate_qualification(q: LmQualification, now: int) -> None:
+    """Pure installed metadata check, shared by pre-disruption and send gates."""
+    integer(now)
+    if (
+        not isinstance(q, LmQualification)
+        or q.source_pin != SOURCE_PIN
+        or now >= q.expires_ms
+    ):
+        raise LmStudioDenied("native_qualification_mismatch")
+    if re.fullmatch(r"\d+\.\d+\.\d+", q.version) is None or tuple(
+        map(int, q.version.split("."))
+    ) < (0, 4, 0):
+        raise LmStudioDenied("native_version_unsupported")
+    caps = {c.name: c for c in q.capabilities if isinstance(c, CapabilityEvidence)}
+    if len(caps) != len(q.capabilities) or any(
+        name not in caps
+        or caps[name].state_for_installed_scope(
+            runtime_id=q.runtime_id,
+            runtime_version=q.version,
+            profile_fingerprint=q.profile.memory.target.profile_fingerprint,
+        )
+        != "supported"
+        for name in CAPABILITIES
+    ):
+        raise LmStudioDenied("capability_unqualified")
+
+
 class LmStudioLifecycleBridge:
     def __init__(
         self,
@@ -248,18 +275,7 @@ class LmStudioLifecycleBridge:
             or q.runtime_id != _target(permit.intent).runtime_id
         ):
             raise LmStudioDenied("qualification_mismatch")
-        caps = {c.name: c for c in q.capabilities if isinstance(c, CapabilityEvidence)}
-        if len(caps) != len(q.capabilities) or any(
-            name not in caps
-            or caps[name].state_for_installed_scope(
-                runtime_id=q.runtime_id,
-                runtime_version=q.version,
-                profile_fingerprint=q.profile.memory.target.profile_fingerprint,
-            )
-            != "supported"
-            for name in CAPABILITIES
-        ):
-            raise LmStudioDenied("capability_unqualified")
+        validate_qualification(q, now)
         try:
             approved = self.authorize(permit) if self.authorize is not None else False
         except Exception:

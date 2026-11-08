@@ -270,3 +270,79 @@ cross-tab/visual-roadmap references match `origin/main` exactly. Full combined
 regression and fresh CI for the reconciled head are pending at this checkpoint;
 pre-reconciliation green CI is not reused as proof for the new merge result.
 LC08 remains incomplete, test8 paused, and no merge is performed here.
+
+## LC08 continuation after PR256: bounded cold-step consumption
+
+PR256 merged the previous dormant checkpoint as `324aea4f05fa9f1af49852a92b2d807395424703`.
+Its reconciled head `4355c43` passed 4,280 local tests (32 skipped, one upstream
+warning) and Python 3.11/3.12/3.13 plus browser-safety CI. That approval was
+consumed by the merge, not carried forward to this continuation branch.
+
+`native_transition_driver.py` adds an internal bounded **cold inference step
+consumer**, not a polling scheduler, completed explicit-control route, native
+producer or activation switch:
+
+- `ColdAdmission` derives the full feature inventory from the owned application
+  input, matches the immutable native/fit profile and generation settings, and
+  checks installed-scoped native and non-loading counter metadata. LM Studio
+  additionally requires qualified reasoning-off, matching counter/native process
+  identity/version and text-only history. No fake instance ID is serialized and
+  no count is inferred before LM Studio has an actual admitted instance.
+- `enqueue` validates readiness **before** queue/generation/probe/native effects.
+  Unknown or loading counters, incomplete template coverage, expired native
+  qualifications, unapproved profile/output/reasoning changes all refuse. Shared
+  pure native qualification checks are reused by existing bridge send gates.
+  `request_fit.request_components` shares the pure feature classifier with final
+  preparation; it is explicitly not body validation, a count or fit approval.
+- Each `advance` requires the real currently dispatched coordinator step, matching
+  live queued request/domain/target/deadline, the exact concrete native job and
+  permit, shared coordinator/memory identity, and repeated target readiness.
+  Source drain/unload uses the source bridge/profile; target load/verify uses the
+  approved target qualification. All sample/proof producers run outside writes.
+- Load reserves the actual target peak, refreshes the memory sample, and uses the
+  concrete native bridge's once-only send marker. ACK merely advances to verify.
+  Verify uses the bridge's all-runtime/instance/profile/ownership terminal proof.
+- Unload ACK does **not** release or settle anything. Native all-runtime physical
+  confirmation must finish first; LC03 then independently requires terminality
+  and attributed zero for the original model lease before settlement. Only then
+  can target reservation/load proceed. Interrupted/invalid stages retain holds,
+  mark uncertainty where still owned, and do not replay, infer release or retry.
+- `TransitionResult` records only completion of that one stage, never a generic
+  `status=confirmed` that a workflow/control endpoint could mistake for the whole
+  operation being done. Warm exact-body preparation, LC07 count/fit and native
+  inference still run separately after a real request lease/instance is admitted.
+
+Packaging, mypy/scopes and the private standalone module bundle include the new
+module. The isolated artifact test now blocks its public sibling fallback and
+executes both providers' cold load/verify with real dormant kernels and fake
+producers, as well as the prior warm inference checks. No default actor, policy
+permit, memory observation, counter, native transport or backend is installed.
+
+Initial cold driver evidence: **45 new tests passed**. Combined cold/warm executor,
+request-fit, concrete native bridge and routing-fence regression: **494 passed**,
+one upstream Starlette/httpx warning. Tests include
+empty-domain cold load through warm exact-fit/native inference, both directions
+of cross-runtime switching with an active-request/queued-load race, source ACK
+held behind independent physical proof/zero attribution, malformed/unqualified
+readiness with no queue/probe/source changes, replay/cancellation/authority/expiry,
+and retained memory after failed proof. Native/installed/count/physical facts are
+explicit fakes, never hardware qualification. Ruff, mypy (74 sources) and scope
+mapping (187 test modules/13 areas) passed. Full regression/CI for this new head
+remain to be recorded when executed.
+
+**Still open:** app-level cold scheduling/lease-to-warm-executor composition;
+explicit load, unload-only, unload-all/cache controls and their races; oMLX step
+consumption; cancellation/recovery orchestration and remaining canonical workflow
+consumers. The current coordinator models source-to-target transitions, not a
+completed unload-only control API. This driver deliberately does not invent such
+an API or fake a target to force eviction. No story closure, native activation,
+architecture/security acceptance, settings changes, merge permission or test8
+resumption follows from these tests.
+
+
+Continuation environment/checkpoint notes: the fresh checkout initially lacked
+full Git history, so baseline and historical release-evidence reads were blocked.
+Full history was fetched; pinned baseline verification and the regenerated release
+review then passed with zero findings. Docs/ADR and app/standalone isolated
+startup/token/origin smoke checks passed. No historical evidence/approval was
+replaced to bypass the shallow-checkout failure.

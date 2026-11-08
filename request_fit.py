@@ -377,6 +377,53 @@ def _conversation(messages: object, wire: Wire) -> tuple[set[str], set[str]]:
     return features, components
 
 
+def request_components(
+    value: dict[str, Any], wire: Wire
+) -> tuple[frozenset[str], frozenset[str]]:
+    """Pure feature inventory, NOT final-body validation, counting or authority.
+
+    Also used before a cold request has an exact native instance selector. Final
+    prepare_request still validates the complete immutable provider wire/body.
+    """
+    features, components = _conversation(value.get("messages"), wire)
+    if "tools" in value:
+        if not isinstance(value["tools"], list):
+            raise RequestFitDenied("invalid_request")
+        names: set[str] = set()
+        for tool in value["tools"]:
+            if (
+                not isinstance(tool, dict)
+                or set(tool) != {"type", "function"}
+                or tool.get("type") != "function"
+                or not isinstance(tool.get("function"), dict)
+                or set(tool["function"]) - {"name", "description", "parameters"}
+            ):
+                raise RequestFitDenied("invalid_request")
+            fn = tool["function"]
+            name = reference(fn.get("name"))
+            if (
+                name in names
+                or not isinstance(fn.get("parameters", {}), dict)
+                or ("description" in fn and not isinstance(fn["description"], str))
+            ):
+                raise RequestFitDenied("invalid_request")
+            names.add(name)
+        if value["tools"]:
+            features.add("tools")
+            components.add("tool_definitions")
+    if any(
+        k in value
+        for k in (
+            "think",
+            "thinking_budget",
+            "reasoning_effort",
+            "chat_template_kwargs",
+        )
+    ):
+        features.add("reasoning")
+    return frozenset(features), frozenset(components)
+
+
 def prepare_request(
     lease: RequestLease,
     profile: FitProfile,
@@ -476,42 +523,8 @@ def prepare_request(
         )
     ):
         raise RequestFitDenied("output_budget_unknown")
-    features, components = _conversation(value.get("messages"), profile.wire)
-    if "tools" in value:
-        if not isinstance(value["tools"], list):
-            raise RequestFitDenied("invalid_request")
-        names: set[str] = set()
-        for tool in value["tools"]:
-            if (
-                not isinstance(tool, dict)
-                or set(tool) != {"type", "function"}
-                or tool.get("type") != "function"
-                or not isinstance(tool.get("function"), dict)
-                or set(tool["function"]) - {"name", "description", "parameters"}
-            ):
-                raise RequestFitDenied("invalid_request")
-            fn = tool["function"]
-            name = reference(fn.get("name"))
-            if (
-                name in names
-                or not isinstance(fn.get("parameters", {}), dict)
-                or ("description" in fn and not isinstance(fn["description"], str))
-            ):
-                raise RequestFitDenied("invalid_request")
-            names.add(name)
-        if value["tools"]:
-            features.add("tools")
-            components.add("tool_definitions")
-    if any(
-        k in value
-        for k in (
-            "think",
-            "thinking_budget",
-            "reasoning_effort",
-            "chat_template_kwargs",
-        )
-    ):
-        features.add("reasoning")
+    feature_set, component_set = request_components(value, profile.wire)
+    features, components = set(feature_set), set(component_set)
     if not isinstance(notes, tuple) or any(
         not isinstance(n, AssemblyNote) or n.message_index >= len(value["messages"])
         for n in notes

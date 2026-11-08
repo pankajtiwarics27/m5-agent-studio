@@ -84,6 +84,7 @@
       "test_request_fit*.py",
       "test_runtime_dispatch*.py",
       "test_native_dispatch*.py",
+      "test_native_transition*.py",
       "test_chat_tool_protocol.py",
       "test_api_provider_contracts.py",
       "test_benchmark_*.py",
@@ -178,6 +179,7 @@
     "request_fit_admission.py",
     "runtime_dispatch_boundary.py",
     "native_dispatch_executor.py",
+    "native_transition_driver.py",
     "omlx_lifecycle.py",
     "ollama_lifecycle.py",
     "ollama_protocol.py",
@@ -203,6 +205,7 @@
     "poetry.lock"
   ],
   "source_areas": {
+    "native_transition_driver.py": ["models.providers", "storage.history", "security.execution"],
     "native_dispatch_executor.py": ["models.providers", "storage.history", "security.execution"],
     "scripts/runtime_dispatch_inventory.py": ["models.providers", "security.execution"],
     "runtime_dispatch_boundary.py": ["models.providers", "security.execution"],

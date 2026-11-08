@@ -56,6 +56,16 @@ ContextVar and exception identities. Register modules before execution; do not
 replace public module names. Isolated artifact tests block sibling fallbacks and
 exercise both warm kernels with fake facts, not installed native qualification.
 
+Propose a separate bounded cold-step consumer with readiness before enqueue and
+again at every native stage. Share pure native qualification and complete-input
+feature classification with the existing send/fit paths; do not serialize a
+provisional LM Studio instance or call metadata readiness a token fit. Consume
+only real coordinator steps and concrete native bridge permits. Source physical
+confirmation and LC03 attributed-zero settlement are separate, both mandatory,
+before target load. Return typed stage completion, not a successful whole-control
+ACK. Keep this dormant and namespaced in standalone; no actor/producers are
+installed and unload-only controls are not fabricated from a fake target.
+
 ## Alternatives
 
 - Replace served routing immediately: would activate unqualified transports and
@@ -71,8 +81,10 @@ exercise both warm kernels with fake facts, not installed native qualification.
 LC-08 remains incomplete: cold acquisition/control orchestration, pre-disruption
 metadata gates, remaining all-path canonical consumption and complete cross-runtime
 cold-control races still need implementation/proof. The warm executor is not a
-production producer or cold-load controller. Current races cover duplicate count
-and queued-control blocking while an admitted native stream is active only.
+production producer or cold scheduler. The continuation step driver adds real
+cold source-to-target bridge/memory consumption and both-direction cross-runtime
+release/race tests with fake facts; app scheduling, full controls and remaining
+workflow consumption are still open.
 Coordinated combos, unqualified private/proxy providers and unowned evictions
 currently refuse. Legacy behavior remains served by default, so no cross-runtime
 guarantee is claimed for it. Static inventory cannot prove dynamic/native

@@ -555,7 +555,7 @@ def test_standalone_native_namespaces_execute_real_kernels_without_repo_module_i
     code = """import sys,pathlib,importlib.abc,asyncio
 root=pathlib.Path(REPO)
 sys.path[:]=[p for p in sys.path if pathlib.Path(p or '.').resolve()!=root]
-public={'local_runtime_lifecycle','model_lifecycle_coordinator','shared_memory_admission','omlx_lifecycle','ollama_protocol','ollama_lifecycle','lmstudio_protocol','lmstudio_lifecycle','request_fit','request_fit_admission','native_dispatch_executor'}
+public={'local_runtime_lifecycle','model_lifecycle_coordinator','shared_memory_admission','omlx_lifecycle','ollama_protocol','ollama_lifecycle','lmstudio_protocol','lmstudio_lifecycle','request_fit','request_fit_admission','native_dispatch_executor','native_transition_driver'}
 class NoSiblingFallback(importlib.abc.MetaPathFinder):
  def find_spec(self,fullname,path=None,target=None):
   if fullname in public:raise AssertionError('standalone sibling import: '+fullname)
@@ -589,6 +589,17 @@ async def run():
    assert b.coord.snapshot('shared').active_requests==0
   finally:b.coord.close()
 asyncio.run(run())
+from test_native_transition_driver import fixture,admission,loaded
+async def cold():
+ for backend in ('ollama','lmstudio'):
+  b=fixture(pathlib.Path('cold-'+backend),backend)
+  try:
+   queued=b.transition.enqueue(admission(b),'isolated-cold','shared',deadline_ms=100000)
+   req,mem=await loaded(b,queued)
+   assert req.target.runtime_id==backend and mem.kind=='model'
+   assert b.memory.view('shared').committed_bytes==600
+  finally:b.coord.close()
+asyncio.run(cold())
 print('isolated native executor and shared transaction guards passed')
 """.replace("REPO", repr(str(root)))
     env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}
