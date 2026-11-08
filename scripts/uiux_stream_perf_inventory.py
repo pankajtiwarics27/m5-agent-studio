@@ -292,7 +292,9 @@ def build_inventory() -> dict:
         "the note is updated as the window slides, so it never counts cards it is not showing",
         ("harnessUpdateWindowNote(shown.length, ordered.length);" in render_stream
             or "harnessUpdateWindowNote(shown.length, visible.length);" in render_stream)
-        and "note.textContent = harnessWindowNoteText(showing, total);" in note_updater
+        and "const text = harnessWindowNoteText(showing, total);" in note_updater
+        and "note.textContent !== text" in note_updater
+        and "note.textContent = text;" in note_updater
         and 'insertAdjacentHTML("afterbegin"' in note_updater,
         "the note is written once and left to drift",
     )

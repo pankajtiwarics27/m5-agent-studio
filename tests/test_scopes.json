@@ -69,8 +69,9 @@
       "test_terminology.py",
       "test_ui_disclosure.py",
       "test_uiv2_accessibility_adversarial.py",
+      "test_uiv2_performance_safety.py",
       "test_uiv2_cross_tab_reference.py",
-    "test_uiux_accessible_overlays.py",
+      "test_uiux_accessible_overlays.py",
       "test_uiux_chat_composer.py",
       "test_uiux_interaction_polish.py",
       "test_uiux_tokens.py"
@@ -123,7 +124,8 @@
       "test_single_agent_vertical_slice.py",
       "test_trusted_transformations.py",
       "test_worker_leases_and_fencing.py",
-      "test_workspace_*.py"
+      "test_workspace_*.py",
+      "test_uiv2_performance_safety.py"
     ],
     "security.network": [
       "test_pinned_transport.py",
@@ -185,7 +187,10 @@
     "scripts/check_lifecycle_feasibility.py": [
       "models.providers"
     ],
-    "workspace_paths.py": ["ui.harness", "security.execution"],
+    "workspace_paths.py": [
+      "ui.harness",
+      "security.execution"
+    ],
     "onboarding_preflight.py": [
       "ui.start"
     ],

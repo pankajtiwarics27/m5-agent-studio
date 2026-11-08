@@ -1,0 +1,4 @@
+# Browser PNGs and raw manifests are review evidence, not release inputs.
+# The small source-bound run record and capture digests live under product/.
+*
+!.gitignore

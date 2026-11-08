@@ -231,8 +231,10 @@ def read_frontend(html: str, server: str) -> dict:
             "keeps_the_trajectory_room": "min-height: 96px" in html.split(".harness-stream {", 1)[-1][:220],
             "hidden_is_not_displayed": ".harness-timeline-actions .btn[hidden] { display: none; }" in html,
             "written_only_on_change": 'line.textContent !== state.text' in render
+            and "count.textContent !== countText" in render
             and "signature !== harnessTimelineSignature" in render,
-            "count_is_rewritten": "count.textContent = `" in render,
+            "count_is_rewritten": "countText = `${state.count}" in render
+            and "count.textContent = countText" in render,
             "rows_carry_seq_and_type": 'data-seq="${seq}"' in render and 'data-type="${escapeHtml(type)}"' in render,
             "row_is_a_button": 'class="harness-timeline-row"' in render and "<button" in render,
             "row_names_its_target": "Show seq ${seq} in the trajectory" in render,

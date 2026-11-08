@@ -173,6 +173,7 @@ measurements without trusting them).
 · [`uiux-coordination-ledger-drift-followup.md`](uiux-coordination-ledger-drift-followup.md) (reconciled UI/UX phase summaries and status-walk token-exposure follow-up)
 · [`uiv2-v2-accessibility-adversarial.md`](uiv2-v2-accessibility-adversarial.md) (source-bound UIV2-28 keyboard, measured-contrast, 200% zoom, reduced-motion and nested-scroll recovery contract)
 · [`uiv2-v2-accessibility-adversarial-evidence.md`](uiv2-v2-accessibility-adversarial-evidence.md) (executed before/after, full visual-matrix and preservation evidence, with explicit approval status)
+· [`uiv2-v2-performance-safety.md`](uiv2-v2-performance-safety.md) (source-bound UIV2-29 real-SSE, frame-budget, post-GC DOM/heap, layout-stability, authorization, recovery, ledger, fencing and fail-closed isolation evidence)
 
 ## M5 2.0 ground-truth evidence (2026-10-30)
 

@@ -113,7 +113,7 @@ jobs:
   browser-safety:
     name: Browser safety regressions
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -144,6 +144,10 @@ jobs:
             echo "M5_REQUIRE_BROWSER_TESTS=1"
           } >> "$GITHUB_ENV"
           LD_LIBRARY_PATH="$RUNNER_TEMP/m5-browser/libs/lib" "$chrome" --version
+      - name: Run UIV2-29 backend authorization, recovery, ledger, fencing and isolation gate
+        run: |
+          python scripts/uiv2_performance_safety.py --run-backend \
+            --backend-output "${RUNNER_TEMP:-/tmp}/uiv2-29-backend-safety.json"
       - name: Run browser-backed screenshot, keyboard and adversarial refusal regressions
         # Failing tests are echoed as check annotations, as the test job does: this job
         # has no other readable output when its log is not reachable from where it is
@@ -175,6 +179,15 @@ jobs:
             --screenshots "${RUNNER_TEMP:-/tmp}/uiv2-28-responsive"
           node scripts/uiv2_accessibility_adversarial_walk.mjs \
             --screenshots "${RUNNER_TEMP:-/tmp}/uiv2-28-accessibility" \
+            --timeout-ms 60000
+        env:
+          STUDIO_PYTHON: python
+      - name: Run UIV2-29 stream performance, bounded memory and layout gates
+        run: |
+          node scripts/stream_perf_walk.mjs \
+            --screenshots "${RUNNER_TEMP:-/tmp}/uiv2-29-stream-legacy"
+          node scripts/uiv2_performance_safety_walk.mjs \
+            --screenshots "${RUNNER_TEMP:-/tmp}/uiv2-29-performance" \
             --timeout-ms 60000
         env:
           STUDIO_PYTHON: python
