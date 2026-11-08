@@ -762,22 +762,25 @@ class LifecycleCoordinator:
         A consumer must separately enforce installed qualification and LC03.
         """
         _label(reference)
-        def finish(conn: sqlite3.Connection) -> bool:
-            request = self._active_lease(conn, lease, "load")
-            if request is None:
-                return False
-            domain = self._domain(conn, lease.domain_id)
-            if domain["state"] != "idle" or domain["operation_id"] is not None:
-                return False
-            instance = self._verify_evidence(domain, evidence, lease.target, now_ms, "load_control", scope_id=lease.lease_id)
-            if instance != lease.instance_id:
-                raise CoordinatorError("target_unverified")
-            status = "cancelled" if request["cancel_requested"] else "expired" if request["deadline"] <= now_ms else "completed"
-            conn.execute("UPDATE leases SET status='released' WHERE id=?", (lease.lease_id,))
-            conn.execute("UPDATE requests SET status=? WHERE id=?", (status, lease.request_id))
-            self._event(conn, lease.domain_id, "load_finished", ref=reference)
-            return True
-        return self._call(finish, now_ms=now_ms)
+        return self._call(lambda conn: self._finish_load(conn, lease, evidence, reference=reference, now_ms=now_ms), now_ms=now_ms)
+
+    def _finish_load(self, conn: sqlite3.Connection, lease: LoadLease, evidence: ReconciliationEvidence, *, reference: str, now_ms: int) -> bool:
+        """Internal atomic seam; native/memory consumer owns this SAME write."""
+        _label(reference)
+        request = self._active_lease(conn, lease, "load")
+        if request is None:
+            return False
+        domain = self._domain(conn, lease.domain_id)
+        if domain["state"] != "idle" or domain["operation_id"] is not None:
+            return False
+        instance = self._verify_evidence(domain, evidence, lease.target, now_ms, "load_control", scope_id=lease.lease_id)
+        if instance != lease.instance_id:
+            raise CoordinatorError("target_unverified")
+        status = "cancelled" if request["cancel_requested"] else "expired" if request["deadline"] <= now_ms else "completed"
+        conn.execute("UPDATE leases SET status='released' WHERE id=?", (lease.lease_id,))
+        conn.execute("UPDATE requests SET status=? WHERE id=?", (status, lease.request_id))
+        self._event(conn, lease.domain_id, "load_finished", ref=reference)
+        return True
 
     def evidence_scope(self, domain_id: str) -> EvidenceScope:
         """Scope for a NEW observation; not a proof generator or acceptance."""

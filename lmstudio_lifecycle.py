@@ -27,6 +27,7 @@ from typing import (
 from local_runtime_lifecycle import CapabilityEvidence, ObservationStamp
 from model_lifecycle_coordinator import (
     LifecycleCoordinator,
+    LoadLease,
     ModelTarget,
     ReconciliationEvidence,
     RequestLease,
@@ -52,7 +53,7 @@ from lmstudio_protocol import (
     prepare_inference,
 )
 
-Intent = TransitionStep | RequestLease
+Intent = TransitionStep | RequestLease | LoadLease
 CAPABILITIES = (
     "native_v1",
     "authenticated_control",
@@ -138,7 +139,7 @@ class LmPermit:
 
     def __post_init__(self) -> None:
         if not isinstance(
-            self.intent, (TransitionStep, RequestLease)
+            self.intent, (TransitionStep, RequestLease, LoadLease)
         ) or not isinstance(self.qualification, LmQualification):
             raise LmStudioDenied("invalid_permit")
         integer(self.expires_ms, positive=True)
@@ -183,11 +184,21 @@ def _target(intent: Intent) -> ModelTarget:
 
 
 def _key(intent: Intent) -> str:
-    return intent.lease_id if isinstance(intent, RequestLease) else intent.operation_id
+    return (
+        intent.lease_id
+        if isinstance(intent, (RequestLease, LoadLease))
+        else intent.operation_id
+    )
 
 
 def _stage(intent: Intent) -> str:
-    return "infer" if isinstance(intent, RequestLease) else intent.kind
+    return (
+        "infer"
+        if isinstance(intent, RequestLease)
+        else "load_control"
+        if isinstance(intent, LoadLease)
+        else intent.kind
+    )
 
 
 def validate_qualification(q: LmQualification, now: int) -> None:
@@ -324,7 +335,8 @@ class LmStudioLifecycleBridge:
             or request is None
             or row["status"] != "active"
             or request["status"] != "admitted"
-            or request["purpose"] != "inference"
+            or request["purpose"]
+            != ("load" if type(intent) is LoadLease else "inference")
             or row["request_id"] != intent.request_id
             or row["domain"] != intent.domain_id
             or request["domain"] != intent.domain_id
@@ -355,7 +367,7 @@ class LmStudioLifecycleBridge:
         intent = permit.intent
         instance = (
             intent.instance_id
-            if isinstance(intent, RequestLease)
+            if isinstance(intent, (RequestLease, LoadLease))
             else intent.source_instance_id
             if intent.kind in ("drain", "unload")
             else None
@@ -580,7 +592,7 @@ class LmStudioLifecycleBridge:
             self._activity(permit, activity, now)
             instance = (
                 intent.instance_id
-                if isinstance(intent, RequestLease)
+                if isinstance(intent, (RequestLease, LoadLease))
                 else intent.source_instance_id
                 if intent.kind == "unload"
                 else None
@@ -622,6 +634,10 @@ class LmStudioLifecycleBridge:
             if isinstance(permit.intent, TransitionStep):
                 self.coord.mark_uncertain(
                     permit.intent, reference="lmstudio_effect_uncertain", now_ms=now
+                )
+            elif isinstance(permit.intent, LoadLease):
+                self.coord.mark_load_uncertain(
+                    permit.intent, reference="native_load_uncertain", now_ms=now
                 )
             else:
                 self.coord.mark_request_uncertain(
@@ -704,6 +720,46 @@ class LmStudioLifecycleBridge:
             self._hold(permit, lease)
             raise
 
+    def _proof(
+        self,
+        permit: LmPermit,
+        observed: LmObservation,
+        evidence: ReconciliationEvidence,
+        *,
+        instance: str | None,
+    ) -> None:
+        if (
+            not isinstance(evidence, ReconciliationEvidence)
+            or evidence.reference != observed.reference
+            or evidence.clock_id != observed.stamp.clock_id
+        ):
+            raise LmStudioDenied("proof_scope_mismatch")
+        inv = next(
+            (
+                x
+                for x in evidence.inventories
+                if x.runtime.runtime_id == permit.qualification.runtime_id
+            ),
+            None,
+        )
+        if (
+            inv is None
+            or inv.runtime_version != permit.qualification.version
+            or inv.stamp.clock_id != observed.stamp.clock_id
+            or inv.stamp.observed_at is None
+            or observed.stamp.observed_at is None
+            or inv.stamp.observed_at < observed.stamp.observed_at
+        ):
+            raise LmStudioDenied("proof_scope_mismatch")
+        if instance is not None and not any(
+            x.instance_id == instance
+            and x.artifact_id == permit.intent.target.artifact_id
+            and x.effective_context_tokens
+            == permit.qualification.profile.memory.context_tokens
+            for x in inv.instances
+        ):
+            raise LmStudioDenied("proof_instance_config_mismatch")
+
     async def confirm(
         self,
         permit: LmPermit,
@@ -751,43 +807,69 @@ class LmStudioLifecycleBridge:
             raise
         except Exception:
             raise LmStudioDenied("proof_unavailable") from None
-        if (
-            not isinstance(evidence, ReconciliationEvidence)
-            or evidence.reference != observed.reference
-            or evidence.clock_id != observed.stamp.clock_id
-        ):
-            raise LmStudioDenied("proof_scope_mismatch")
-        inv = next(
-            (
-                x
-                for x in evidence.inventories
-                if x.runtime.runtime_id == permit.qualification.runtime_id
-            ),
-            None,
-        )
-        if (
-            inv is None
-            or inv.runtime_version != permit.qualification.version
-            or inv.stamp.clock_id != observed.stamp.clock_id
-            or inv.stamp.observed_at is None
-            or observed.stamp.observed_at is None
-            or inv.stamp.observed_at < observed.stamp.observed_at
-        ):
-            raise LmStudioDenied("proof_scope_mismatch")
-        if instance is not None and not any(
-            x.instance_id == instance
-            and x.artifact_id == intent.target.artifact_id
-            and x.effective_context_tokens
-            == permit.qualification.profile.memory.context_tokens
-            for x in inv.instances
-        ):
-            raise LmStudioDenied("proof_instance_config_mismatch")
+        self._proof(permit, observed, evidence, instance=instance)
         now = self._now()
         self.coord._call(lambda conn: self._active(conn, permit, now), now_ms=now)
         self._wire(permit, observed, now, instance)
         return self.coord.complete_step(
             intent, reference=observed.reference, now_ms=now, evidence=evidence
         )
+
+    async def confirm_load(
+        self,
+        permit: LmPermit,
+        *,
+        lease: MemoryLease,
+        sample: Callable[[], Awaitable[MemorySample]],
+        produce: Callable[[LmObservation], Awaitable[ReconciliationEvidence]],
+    ) -> bool:
+        """Fresh real control-slot/native/profile/memory proof, never inference.
+
+        Final current authority, model budget and slot completion share one write.
+        Native observations/proof/sample production remain outside transactions.
+        """
+        intent = permit.intent
+        if type(intent) is not LoadLease or lease.domain_id != intent.domain_id:
+            raise LmStudioDenied("load_control_intent_required")
+
+        def current(conn: sqlite3.Connection, measured: MemorySample) -> None:
+            self._active(conn, permit, self._now())
+            self.memory._admitted_model(
+                conn, lease, permit.qualification.profile.memory, measured, self._now()
+            )
+            if self._load_record(conn, permit, lease.work_id) != intent.instance_id:
+                raise LmStudioDenied("loaded_instance_mismatch")
+
+        async def measured() -> MemorySample:
+            assert_no_active_write_transaction("native load memory producer")
+            async with asyncio.timeout(5):
+                return await sample()
+
+        before = await measured()
+        self.coord._call(lambda conn: current(conn, before), now_ms=self._now())
+        observed = await self.observe()
+        self._wire(permit, observed, self._now(), intent.instance_id)
+        after = await measured()
+        assert_no_active_write_transaction("native load proof producer")
+        try:
+            async with asyncio.timeout(5):
+                evidence = await produce(observed)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            raise LmStudioDenied("load_control_proof_unavailable") from None
+        instance = intent.instance_id
+        self._proof(permit, observed, evidence, instance=instance)
+        now = self._now()
+        self._wire(permit, observed, self._now(), intent.instance_id)
+
+        def finish(conn: sqlite3.Connection) -> bool:
+            current(conn, after)
+            return self.coord._finish_load(
+                conn, intent, evidence, reference=observed.reference, now_ms=now
+            )
+
+        return self.coord._call(finish, now_ms=now)
 
     async def infer(
         self,

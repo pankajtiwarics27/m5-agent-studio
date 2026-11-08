@@ -3,7 +3,8 @@
 One server-composed backend serializes its requests through terminal native
 completion/consumer close. The coordinator remains the domain authority across
 other backends/threads; this actor never steals another FIFO request or polls a
-pending native operation. Explicit controls deliberately remain unavailable.
+pending native operation. Only explicitly composed load controls are supported;
+unload-only/all/cache controls remain unavailable.
 """
 
 from __future__ import annotations
@@ -30,6 +31,10 @@ from native_dispatch_executor import (
 )
 from native_transition_driver import (
     ColdAdmission,
+    LoadAdmission,
+    LoadCompletion,
+    LmLoadCompletion,
+    OllamaLoadCompletion,
     NativeTransitionDriver,
     TransitionJob,
 )
@@ -54,17 +59,159 @@ class NativeInferencePlan:
     warm: Callable[[RequestLease, MemoryLease], Execution]
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class NativeLoadPlan:
+    """Trusted explicit-load composition; no inference body/counter or defaults."""
+
+    admission: LoadAdmission
+    domain_id: str
+    deadline_ms: int
+    transition: Callable[[TransitionStep, MemoryLease | None], TransitionJob]
+    completion: Callable[[LoadLease, MemoryLease], LoadCompletion]
+
+
 class NativeInferenceScheduler:
     def __init__(
         self,
         driver: NativeTransitionDriver,
         plan: Callable[[RuntimeDispatchCall], NativeInferencePlan] | None = None,
+        *,
+        load_plan: Callable[[RuntimeDispatchCall], NativeLoadPlan] | None = None,
     ):
-        self.driver, self.plan = driver, plan
+        self.driver, self.plan, self.load_plan = driver, plan, load_plan
         self._lock = asyncio.Lock()
 
     async def command(self, call: RuntimeDispatchCall) -> dict[str, Any]:
-        raise RuntimeDispatchDenied("coordinated_backend_unavailable")
+        assert_no_active_write_transaction("native load scheduler")
+        if call.action != "load" or self.load_plan is None:
+            raise RuntimeDispatchDenied("coordinated_backend_unavailable")
+        queued = None
+        control = None
+        memory = None
+        locked = False
+        try:
+            plan = self.load_plan(call)
+            if (
+                type(plan) is not NativeLoadPlan
+                or type(plan.admission) is not LoadAdmission
+                or plan.admission.call != call
+            ):
+                raise RuntimeDispatchDenied("invalid_dispatch_request")
+            plan.admission.validate(self.driver._now())
+            wait = min(60.0, (plan.deadline_ms - self.driver._now()) / 1000)
+            if wait <= 0:
+                raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+            async with asyncio.timeout(wait):
+                await self._lock.acquire()
+            locked = True
+            queued = self.driver.enqueue_load(
+                plan.admission,
+                "native-load-" + uuid4().hex,
+                plan.domain_id,
+                deadline_ms=plan.deadline_ms,
+            )
+            for _ in range(5):
+                plan.admission.validate(self.driver._now())
+                item = self.driver.coord.claim_next(
+                    plan.domain_id,
+                    now_ms=self.driver._now(),
+                    request_id=queued.request_id,
+                )
+                if isinstance(item, LoadLease):
+                    control = item
+                    memory = self._memory(plan.domain_id, item.target)
+                    assert_no_active_write_transaction(
+                        "native load completion producer"
+                    )
+                    job = plan.completion(item, memory)
+                    if (
+                        type(job) not in (OllamaLoadCompletion, LmLoadCompletion)
+                        or job.permit.intent != item
+                        or job.memory != memory
+                        or job.permit.qualification != plan.admission.native
+                    ):
+                        raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+                    owner = (
+                        job.bridge.coordinator
+                        if isinstance(job, OllamaLoadCompletion)
+                        else job.bridge.coord
+                    )
+                    if (
+                        owner is not self.driver.coord
+                        or job.bridge.memory is not self.driver.memory
+                    ):
+                        raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+                    if await job.complete() is not True:
+                        raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+                    row = self.driver.coord._call(
+                        lambda conn: conn.execute(
+                            "SELECT status,purpose,deadline,cancel_requested FROM requests WHERE id=?",
+                            (item.request_id,),
+                        ).fetchone(),
+                        now_ms=self.driver._now(),
+                    )
+                    if (
+                        row is None
+                        or row["status"] != "completed"
+                        or row["purpose"] != "load"
+                        or row["cancel_requested"]
+                        or row["deadline"] <= self.driver._now()
+                    ):
+                        raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+                    return {"status": "confirmed"}
+                if not isinstance(item, TransitionStep):
+                    raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+                if item.kind in ("drain", "unload"):
+                    memory = self._memory(plan.domain_id, item.source)
+                elif item.kind == "load":
+                    memory = None
+                elif memory is None:
+                    raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+                assert_no_active_write_transaction("native load step producer")
+                try:
+                    result = await self.driver.advance(
+                        item, queued, plan.transition(item, memory)
+                    )
+                except BaseException:
+                    self.driver.coord.mark_uncertain(
+                        item,
+                        reference="native_load_stage_interrupted",
+                        now_ms=self.driver._now(),
+                    )
+                    if memory is not None:
+                        self.driver.memory.mark_uncertain(
+                            memory,
+                            reference="native_load_stage_interrupted",
+                            now_ms=self.driver._now(),
+                        )
+                    raise
+                memory = result.memory
+            raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+        except RuntimeDispatchDenied:
+            raise
+        except Exception:
+            raise RuntimeDispatchDenied("coordinated_execution_unavailable") from None
+        finally:
+            try:
+                if control is not None:
+                    changed = self.driver.coord.mark_load_uncertain(
+                        control,
+                        reference="native_load_control_interrupted",
+                        now_ms=self.driver._now(),
+                    )
+                    if changed and memory is not None:
+                        self.driver.memory.mark_uncertain(
+                            memory,
+                            reference="native_load_control_interrupted",
+                            now_ms=self.driver._now(),
+                        )
+                elif queued is not None:
+                    self.driver.coord.cancel(
+                        queued.request_id, now_ms=self.driver._now()
+                    )
+            finally:
+                if locked:
+                    self._lock.release()
 
     def _memory(self, domain: str, target: ModelTarget | None) -> MemoryLease:
         if target is None:

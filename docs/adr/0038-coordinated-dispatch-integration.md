@@ -96,6 +96,19 @@ v3 adds the closed purpose field; preserve/refuse v1/v2, with no automatic
 populated migration or namespace clearing. A reviewed backup/migration remains an
 activation gate; the active application database is unchanged.
 
+Compose an optional native explicit-load plan on the inference actor, sharing its
+lock but retaining coordinator/memory authority across independent actors. Use
+pure native load configuration readiness (no fake inference input/count) and real
+load-purpose queue/stages/admission. Extend native permits explicitly to LoadLease
+for read-only model confirmation, never inference/send. Reuse native observation /
+proof validation, actual native load-profile records, and fresh all-runtime owned
+instance/context evidence. Check current dispatched model memory/budget/sample
+revision in the same final write as control-slot completion. Canonical confirmed
+requires the actual completed uncancelled/unexpired load row. Keep all producers
+uninstalled; oMLX targets and unload/all/cache commands still refuse. Do not
+redirect the existing oMLX HTTP model-control route or infer future request fit
+from model residency. This is partial LC08 integration, not activation/review.
+
 ## Alternatives
 
 - Replace served routing immediately: would activate unqualified transports and

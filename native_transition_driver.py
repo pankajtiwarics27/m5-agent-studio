@@ -48,6 +48,10 @@ class ColdAdmission:
     native: Qualification
     counter: CounterQualification | None
 
+    @property
+    def memory(self) -> ModelMemoryProfile:
+        return self.profile.memory
+
     def validate(self, now: int) -> None:
         inputs = application_input(self.call)
         q = self.native
@@ -116,6 +120,50 @@ class ColdAdmission:
         validate_counter_metadata(
             self.profile, self.counter, features=features, now_ms=now
         )
+
+
+@dataclass(frozen=True, slots=True)
+class LoadAdmission:
+    """Pure explicit-load configuration readiness, not fit for future inference.
+
+    There is no inference input, synthetic FitProfile or tokenizer/count call.
+    Native installed load/profile qualification is still mandatory before disruption.
+    """
+
+    call: RuntimeDispatchCall
+    native: Qualification
+
+    @property
+    def memory(self) -> ModelMemoryProfile:
+        return self.native.profile.memory
+
+    def validate(self, now: int) -> None:
+        q = self.native
+        if isinstance(q, ol.OllamaQualification):
+            ol.validate_qualification(q, now)
+            runtime = "ollama"
+        elif isinstance(q, lm.LmQualification):
+            lm.validate_qualification(q, now)
+            runtime = "lmstudio"
+        else:
+            raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+        if (
+            self.call.action != "load"
+            or self.call.payload != b"{}"
+            or self.call.runtime != runtime
+            or q.runtime_id != runtime
+            or self.call.model != self.memory.target.artifact_id
+            or self.memory.target.runtime_id != runtime
+        ):
+            raise RuntimeDispatchDenied("invalid_dispatch_request")
+
+
+@dataclass(frozen=True, slots=True)
+class QueuedLoadRequest:
+    admission: LoadAdmission
+    request_id: str
+    domain_id: str
+    deadline_ms: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -240,6 +288,41 @@ class OmlxSourceTransition:
 TransitionJob = OllamaTransition | LmTransition | OmlxSourceTransition
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class OllamaLoadCompletion:
+    bridge: ol.OllamaLifecycleBridge
+    permit: ol.OllamaPermit
+    memory: MemoryLease
+    sample: Callable[[], Awaitable[MemorySample]]
+    proof: Callable[[ol.OllamaObservation], Awaitable[ReconciliationEvidence]]
+
+    async def complete(self) -> bool:
+        if not isinstance(self.bridge, ol.OllamaLifecycleBridge):
+            raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+        return await self.bridge.confirm_load(
+            self.permit, lease=self.memory, sample=self.sample, produce=self.proof
+        )
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class LmLoadCompletion:
+    bridge: lm.LmStudioLifecycleBridge
+    permit: lm.LmPermit
+    memory: MemoryLease
+    sample: Callable[[], Awaitable[MemorySample]]
+    proof: Callable[[lm.LmObservation], Awaitable[ReconciliationEvidence]]
+
+    async def complete(self) -> bool:
+        if not isinstance(self.bridge, lm.LmStudioLifecycleBridge):
+            raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+        return await self.bridge.confirm_load(
+            self.permit, lease=self.memory, sample=self.sample, produce=self.proof
+        )
+
+
+LoadCompletion = OllamaLoadCompletion | LmLoadCompletion
+
+
 @dataclass(frozen=True, slots=True)
 class TransitionResult:
     """ONLY this stage completed, not a completed explicit load/unload command."""
@@ -289,16 +372,46 @@ class NativeTransitionDriver:
         except Exception:
             raise RuntimeDispatchDenied("coordinated_execution_unavailable") from None
 
+    def enqueue_load(
+        self,
+        admission: LoadAdmission,
+        request_id: str,
+        domain_id: str,
+        *,
+        deadline_ms: int,
+    ) -> QueuedLoadRequest:
+        assert_no_active_write_transaction("native load readiness")
+        try:
+            if type(admission) is not LoadAdmission:
+                raise RuntimeDispatchDenied("invalid_dispatch_request")
+            admission.validate(self._now())
+            status = self.coord.enqueue_load(
+                request_id,
+                domain_id,
+                admission.memory.target,
+                deadline_ms=deadline_ms,
+                now_ms=self._now(),
+            )
+            if status != "queued":
+                raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+            return QueuedLoadRequest(admission, request_id, domain_id, deadline_ms)
+        except Exception:
+            raise RuntimeDispatchDenied("coordinated_execution_unavailable") from None
+
     async def advance(
         self,
         step: TransitionStep,
-        queued: QueuedColdRequest,
+        queued: QueuedColdRequest | QueuedLoadRequest,
         job: TransitionJob,
     ) -> TransitionResult:
         assert_no_active_write_transaction("native transition")
         held = None
         valid = False
         try:
+            if type(queued) not in (QueuedColdRequest, QueuedLoadRequest):
+                raise RuntimeDispatchDenied("invalid_dispatch_request")
+            purpose = "load" if type(queued) is QueuedLoadRequest else "inference"
+
             # Check the actual dispatched step before accepting any supplied job.
             def current(conn):
                 if self.coord._active_step(conn, step, self._now()) is None:
@@ -309,14 +422,14 @@ class NativeTransitionDriver:
                 if (
                     row is None
                     or row["status"] != "queued"
-                    or row["purpose"] != "inference"
+                    or row["purpose"] != purpose
                     or row["cancel_requested"]
                     or row["domain"] != step.domain_id
                     or queued.domain_id != step.domain_id
                     or row["deadline"] != queued.deadline_ms
                     or row["deadline"] <= self._now()
-                    or row["target"] != _encode(queued.admission.profile.memory.target)
-                    or step.target != queued.admission.profile.memory.target
+                    or row["target"] != _encode(queued.admission.memory.target)
+                    or step.target != queued.admission.memory.target
                 ):
                     raise RuntimeDispatchDenied("coordinated_execution_unavailable")
 
@@ -395,7 +508,7 @@ class NativeTransitionDriver:
                     raise RuntimeDispatchDenied("coordinated_execution_unavailable")
                 held = self.memory.reserve_model(
                     step,
-                    queued.admission.profile.memory,
+                    queued.admission.memory,
                     await sample(),
                     now_ms=self._now(),
                 )

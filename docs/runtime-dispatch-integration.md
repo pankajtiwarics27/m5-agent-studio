@@ -506,8 +506,8 @@ uncertain rather than stranding or executing it. Private standalone checks cover
 both target providers' distinct control slot and proof-based completion, with
 explicit fake facts and unchanged charged model memory.
 
-**Scope remains foundation-only.** `NativeInferenceScheduler.command` still
-refuses; no native load-command orchestrator, oMLX target support, unload-only,
+**At foundation checkpoint `3c1f055`, scope was foundation-only.** Commands still
+refused at that head; no native load-command orchestrator, oMLX target support, unload-only,
 unload-all or cache implementation is claimed. Older private v1/v2 journals are
 preserved/refused; a reviewed populated migration is absent and blocks activation.
 No active app database, settings, hardware acceptance or review status changes.
@@ -520,3 +520,79 @@ regression and exact-head CI will be recorded separately after execution.
 The preceding source-only oMLX head `1426970` finished **4418 passed / 32 skipped /
 one warning** and green full Python3.11/3.12/3.13 + browser CI in run42494036883.
 GitHub access was restored and final evidence was posted as PR257 comment6723486722.
+
+
+### Dormant explicit native load consumer (Ollama / LM Studio only)
+
+`NativeLoadPlan` is an optional, separately composed plan on the same
+`NativeInferenceScheduler`. Without it, commands still refuse. Only `load` is
+supported; unload-only, unload-all and cache controls remain unavailable. No
+production plan/qualifier/transport/proof/sample producer or public setting is
+installed. The existing model-control HTTP route remains oMLX-specific; it is
+**not** silently redirected to an Ollama/LM Studio model. oMLX targets still refuse.
+
+`LoadAdmission` validates the immutable empty-options load call against pure
+installed native configuration/profile qualification before enqueue/probe/source
+disruption, after lock waiting and at each stage. It does not create a synthetic
+FitProfile, inference request, instance selector or token count. No inference
+input exists for this command: confirmed model residency is **not** assurance that
+a future full request fits. Future inference still reconstructs/counts its entire
+unchanged input under the existing native/LC07 gates.
+
+The consumer uses real `QueuedLoadRequest` purpose, at most five actual FIFO-fenced
+claims (drain/unload/load/verify/load slot), existing concrete native transitions,
+and the real dispatched model memory. Source physical release and independent
+attributed-zero settlement still precede target reservation. The inference driver
+continues to reject a load row passed as `QueuedColdRequest`; purpose cannot be
+relabeled to get inference authority. Source-only oMLX release is supported, but
+its qualification does not become target/inference qualification.
+
+The final concrete `OllamaLoadCompletion` / `LmLoadCompletion` carries an actual
+`LoadLease` native permit, actual model memory and independent proof/sample
+producers. Both native bridges explicitly accept that permit only for read-only
+load confirmation; native infer/send methods still require their original types.
+Qualification, current control lease, native load-profile record and installed
+runtime/catalog/instance/context checks precede and follow independent proof.
+Native observation/physical proof validation is shared with existing confirmation,
+not weakened or replaced by an ACK. Producer calls run outside transactions and
+are bounded to five seconds. No native inference timeout/cap is added here.
+
+Fresh model binding/status, combined model/action budget, pressure/headroom and
+memory sample revision are checked in the **same final write** as proof-based load
+slot completion. A tool reservation arriving during proof invalidates the earlier
+sample and cannot produce a confirmed response. This atomic seam does not settle
+model memory. Canonical `confirmed` requires a completed uncancelled/unexpired
+load row after native completion, never a raw bridge ACK or boolean alone.
+
+Controls and inference on the same actor share the lock through native terminality;
+lock waiting stays bounded by request deadline / sixty seconds. Independent
+actors, queues and tool reservations remain governed by actual coordinator/memory
+transactions, not just that lock. Cancellation, expired readiness, late proof,
+factory failures, missing/bad authority and incomplete completion retain uncertain
+holds rather than replaying, polling, releasing memory or force-aborting a stream.
+A successfully proved/released control does not poison the still-loaded model.
+
+Pre-full-run evidence: **73 new offline tests**; initial combined run **760 passed,
+one upstream warning**. The final shared native-proof refactor passed **246**
+consumer/native tests. Cases cover cold/warm reuse and later full-fit inference,
+control/inference races in both orders, independent actors, both Ollama/LM Studio
+switching directions, owned oMLX source release, pressure, late tool reservation,
+proof/instance/profile/version/scope mismatches, expiry/cancel, foreign FIFO,
+generic bridge refusal, unsupported controls and oMLX target refusal. Both native
+load consumers also run in the isolated private standalone bundle. Full regression
+and exact-head CI will be recorded after execution, not inherited from older heads.
+
+The preceding foundation head `3c1f055` completed **4453 passed / 32 skipped / one
+warning** and full PR CI42496980469 plus push CI42496974814 all green. Durable
+results: PR257 comment6723850924. LC08, production composition, full controls,
+remaining canonical workflows and LC09 recovery/session/grant/budget integration
+remain incomplete. No activation, settings/HTTP API change, native qualification,
+merge, architecture/security acceptance or hardware test8 retry is authorized.
+
+After the shared native-proof refactor and final bundle rebuild, the complete
+combined suite again passed **760 tests**, one upstream warning. Final scoped
+mapping is 191 modules/13 areas; Ruff, mypy75, docs/ADR, both startup-auth-origin
+smokes and fresh backend safety302/16 passed. Applicable source, preservation,
+performance and release records were regenerated with zero findings; standalone
+is 4,214,158 bytes. No visual approval/pin was changed. Full/CI remain pending at
+this chronological checkpoint until separately executed.

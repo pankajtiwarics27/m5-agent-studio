@@ -638,6 +638,18 @@ async def explicit_load_kernel():
    assert b.coord.finish_load(control,b.fleet.evidence(b.coord,b.now),reference='fake-load-proof',now_ms=b.now)
    assert b.count_calls==1 and b.memory.view('shared').committed_bytes==600
 asyncio.run(explicit_load_kernel())
+from test_native_load_control import scheduler as load_scheduler,call as load_call
+async def native_load_command():
+ for backend in ('ollama','lmstudio'):
+  b=fixture(pathlib.Path('native-load-'+backend),backend)
+  with b.coord:
+   execute=load_scheduler(b)
+   assert await execute.command(load_call(b))=={'status':'confirmed'}
+   assert await execute.command(load_call(b))=={'status':'confirmed'}
+   assert len(b.driver.mutations(b))==1 and getattr(b,'count_calls',0)==0
+   assert (await collect(execute.stream(admission(b).call)))[-1]['type']=='usage'
+   assert b.count_calls==1 and b.memory.view('shared').committed_bytes==600
+asyncio.run(native_load_command())
 print('isolated native executor and shared transaction guards passed')
 """.replace("REPO", repr(str(root)))
     env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}

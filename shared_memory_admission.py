@@ -396,6 +396,16 @@ class SharedMemoryAdmission:
             raise MemoryDenied('memory_lease_fenced')
         return row
 
+    def _admitted_model(self, conn: sqlite3.Connection, lease: MemoryLease, profile: ModelMemoryProfile, sample: MemorySample, now_ms: int) -> None:
+        """Current full model binding/budget; no settlement or new authority."""
+        row = self._active(conn, lease)
+        if lease.kind != 'model' or row['status'] != 'dispatched' or json.loads(lease.binding).get('profile') != asdict(profile):
+            raise MemoryDenied('model_memory_mismatch')
+        view = self._view(conn, lease.domain_id)
+        self._ready(conn, view)
+        attributed = self._validate(view, sample, now_ms, admission=True)
+        self._fits(view, sample, attributed, 0)
+
     def dispatch(self, lease: MemoryLease, sample: MemorySample, *, now_ms: int) -> bool:
         """Persist before any external effect; repeated dispatch never means replay."""
         return self._admission_call(lambda conn: self._dispatch(conn, lease, sample, now_ms), sample, now_ms)

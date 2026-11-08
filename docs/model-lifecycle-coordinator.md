@@ -271,5 +271,13 @@ Schema v3 adds `requests.purpose` with a closed `inference|load` constraint. The
 active Studio history schema remains separately v3; application IDs/namespaces
 are distinct. No namespace deletion, implicit migration, hold reset, native
 activation, command implementation or architecture acceptance is authorized.
-Unload-only/unload-all/cache semantics and concrete load-control orchestration
-remain open. No oMLX target/inference qualification is added.
+Unload-only/unload-all/cache semantics remain open. A dormant concrete Ollama /
+LM Studio load consumer is now described in the [integration record](runtime-dispatch-integration.md),
+without default producers or activation. No oMLX target/inference qualification is added.
+
+
+The internal `_finish_load` seam lets the concrete native consumer check the actual
+admitted model memory/sample/budget and finish the load slot in **one write**.
+The standalone `finish_load` kernel API still establishes only its documented
+proof-based slot completion, not installed qualification or LC03 authority.
+No schema change beyond the preceding v3 purpose discriminator is introduced.
