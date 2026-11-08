@@ -54,8 +54,9 @@
             "markup_controls": 272,
             "pane_controls": 110,
             "chrome_controls": 162,
-            "script_rendered_controls": 72,
+            "script_rendered_controls": 74,
             "script_rendered_by_function": {
+              "debateModelPageFooter": 2,
               "ensureStageCardMounted": 1,
               "hallClearScopeNoteHtml": 2,
               "harnessEvidenceChangeHtml": 1,
@@ -67,6 +68,7 @@
               "renderActiveHall": 3,
               "renderCommandPaletteList": 1,
               "renderDebateCriteria": 3,
+              "renderDebateModelChecks": 1,
               "renderDebateRecord": 4,
               "renderDeliberationEvidence": 1,
               "renderHallVerdict": 1,
@@ -85,8 +87,7 @@
               "renderOpenContextDocs": 3,
               "renderProvidersModal": 3,
               "renderTelemetry": 1,
-              "saveMcpServer": 1,
-              "syncUnifiedSelectors": 1
+              "saveMcpServer": 1
             }
           }
         }
@@ -217,7 +218,7 @@
             "markup_controls": 272,
             "chrome_controls": 162,
             "pane_controls": 110,
-            "script_rendered_controls": 72,
+            "script_rendered_controls": 74,
             "routes": 121,
             "routes_with_resolved_or_possible_caller": 74,
             "routes_no_caller_observed": 47,
@@ -251,7 +252,7 @@
           "totals": {
             "tokens": 58,
             "groups": 8,
-            "references": 1635,
+            "references": 1637,
             "theme_overrides": 20,
             "density_overrides": 5,
             "contrast_pairs": 28,
@@ -1149,7 +1150,7 @@
     "routes": 121,
     "markup_controls": 272,
     "chrome_controls": 162,
-    "script_rendered_controls": 72,
+    "script_rendered_controls": 74,
     "capabilities": 21,
     "e2e_rows": 21,
     "e2e_findings": 0,
