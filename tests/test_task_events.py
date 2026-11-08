@@ -477,6 +477,8 @@ const out = vm.runInContext(`
     emptyButBehind: harnessEventGap({ events: [], next_cursor: 3, latest_seq: 6, retained_from_seq: 1, snapshot_required: false }, 3),
     merged: harnessMergeEvents([ev(2), ev(1)], [ev(2), ev(3), { seq: 'bad' }, null]),
     dedupeReplay: harnessMergeEvents([ev(1), ev(2)], [ev(2), ev(2)]),
+    orderedCache: harnessMergeEvents([], [ev(1), ev(2), ev(3)]),
+    unorderedCache: harnessMergeEvents([], [ev(2), ev(1), ev(2), { seq: 'bad' }, null]),
     cursorOf: harnessEventCursor([ev(4), { seq: 'x' }, ev(9)]),
     // #169: a window drawn for one session must not answer for another. Every session's log
     // starts at seq 1, so the seq lists below are identical and only the session differs.
@@ -563,6 +565,8 @@ def test_frontend_gap_predicate_requires_snapshot_resync_and_merges_without_dupl
     assert out["emptyButBehind"] == {"gap": True, "reason": "missing_events"}
     assert [ev["seq"] for ev in out["merged"]] == [1, 2, 3]  # type: ignore[index]
     assert [ev["seq"] for ev in out["dedupeReplay"]] == [1, 2]  # type: ignore[index]
+    assert [ev["seq"] for ev in out["orderedCache"]] == [1, 2, 3]  # type: ignore[index]
+    assert [ev["seq"] for ev in out["unorderedCache"]] == [1, 2]  # type: ignore[index]
     assert out["cursorOf"] == 9
     # UIUX-P1-03: harnessStatusBadge() returns a status tone, not a colour class -
     # setStatus() takes the tone and the label together so the two cannot drift.
@@ -586,8 +590,10 @@ def test_frontend_reload_and_resync_paths_use_the_durable_endpoints() -> None:
     # Run lifecycle: a finished turn re-renders from the durable log.
     assert 'setHarnessRunActive(false)' in source
     assert 'setHarnessRunActive(true)' in source
-    # Rendering is sequence-keyed, so a replayed record cannot render twice.
-    assert "harnessMergeEvents([], events || [])" in source
+    # Rendering is sequence-keyed, so a replayed record cannot render twice. The cache's validated
+    # snapshot may skip the merge, while every other caller still goes through it.
+    assert "supplied === harnessCachedSnapshot" in source
+    assert ": harnessMergeEvents([], supplied);" in source
     # Expired approvals are not offered as actionable buttons.
     assert 'livePending' in source
 

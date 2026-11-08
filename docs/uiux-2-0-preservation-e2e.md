@@ -6,7 +6,7 @@ executed by [`scripts/preservation_suite.py`](../scripts/preservation_suite.py).
 
 * 21 of 21 matrix rows mapped, 73 provers, 0 findings
 * 42 walk checks, 14 pytest nodes, 13 route probes, 4 wired controls
-* 18 walks prove a row; 28 more are listed with the reason they do not
+* 18 walks prove a row; 29 more are listed with the reason they do not
 
 ## What this page is, and is not
 
@@ -118,6 +118,7 @@ than succeed. That is what "existing endpoint and permission semantics" means in
 | `uiux_interaction_polish_walk.mjs` | the supplemental P5-05 evidence walk measures hover/focus parity and captures 72 screenshots; it proves presentation, not a capability the matrix enumerates |
 | `uiux_v2_cross_tab_reference_walk.mjs` | the cross-tab reference gate (UIV2-26) proves the shared visual contract over the existing six panes at four viewports in light and dark, with keyboard selection, live/reference DOM assertions, authored differences and a separately human-approved structural baseline; it adds no capability beyond the matrix's existing six-tab controls |
 | `uiv2_accessibility_adversarial_walk.mjs` | the UIV2-28 accessibility adversarial walk proves measured contrast, DOM names, real Tab traversal, reduced motion, all 48 viewport/theme/pane rows at 200%, and exact modal focus/scroll recovery over the existing six panes; it adds no capability beyond the matrix's controls |
+| `uiv2_performance_safety_walk.mjs` | the UIV2-29 performance walk proves real high-frequency SSE, bounded post-GC DOM/heap, stable shell geometry and authorization refusals over the existing Chat and Harness controls; synthetic Harness events exercise rendering only and create no capability or execution path beyond the matrix |
 | `uiv2_preservation_visual_walk.mjs` | the UIV2-27 long-conclusion visual walk proves real route-created content at four viewports in light and dark: independent body scrolling, keyboard disclosure and resize, sticky geometry, shared-overlay focus, narrow composer reachability, and page overflow; these are state/layout proofs for the Council capability already enumerated by the matrix |
 
 ## The last recorded run
