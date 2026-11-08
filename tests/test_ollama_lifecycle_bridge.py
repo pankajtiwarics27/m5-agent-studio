@@ -182,6 +182,9 @@ def setup(tmp_path, *, authorize=True):
         b.wire,
         clock_ms=lambda: b.now,
         authorize=(lambda permit: b.authorized) if authorize else None,
+        admit_request=lambda *args: (
+            True
+        ),  # explicit fake fit assumption; not a real counter
     )
     return b
 
