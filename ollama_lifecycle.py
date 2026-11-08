@@ -303,6 +303,7 @@ class OllamaLifecycleBridge:
             or request is None
             or lease["status"] != "active"
             or request["status"] != "admitted"
+            or request["purpose"] != "inference"
             or lease["request_id"] != intent.request_id
             or lease["domain"] != intent.domain_id
             or request["domain"] != intent.domain_id

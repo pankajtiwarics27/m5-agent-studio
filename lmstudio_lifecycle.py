@@ -324,6 +324,7 @@ class LmStudioLifecycleBridge:
             or request is None
             or row["status"] != "active"
             or request["status"] != "admitted"
+            or request["purpose"] != "inference"
             or row["request_id"] != intent.request_id
             or row["domain"] != intent.domain_id
             or request["domain"] != intent.domain_id

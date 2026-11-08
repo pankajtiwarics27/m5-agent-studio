@@ -271,6 +271,7 @@ class RequestFitAdmission:
             or request is None
             or row["status"] != "active"
             or request["status"] != "admitted"
+            or request["purpose"] != "inference"
             or row["request_id"] != lease.request_id
             or row["domain"] != lease.domain_id
             or request["domain"] != lease.domain_id

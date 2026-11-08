@@ -61,7 +61,7 @@ cleanup. No transaction spans an external effect. A claimed intent is returned
 only after its dispatch record commits. Callers must not retry the physical
 operation merely because they did not receive/complete that intent.
 
-The dormant namespace now uses application-tagged **schema v2**;
+The dormant namespace now uses application-tagged **schema v3**;
 [LC-03](shared-memory-admission.md) adds combined model/action accounting. Tables are
 owner metadata, domain bindings/residency, requests, request leases, operations,
 a sequenced metadata-only journal, memory policy and memory reservations. Journal entries retain owner epoch and
@@ -71,14 +71,14 @@ URLs with authentication, and model output are not collected by the module.
 Callers must supply opaque reference IDs, never hide raw content in a label.
 
 This is not the active `studio_history.db`; Studio's runtime schema remains v3.
-No migration runs on startup or import. First creation applies the private v2
+No migration runs on startup or import. First creation applies the private v3
 DDL/version tag atomically. An interrupted initialization leaves an unrecognized
 journal and fails on reopen rather than silently treating it as empty. Existing
 future/foreign/unversioned/corrupt/incomplete or semantically malformed journals
 are rejected without repair/downgrade. A future upgrade from a populated private
-schema requires a separately reviewed backup/migration; v1 is preserved and refused, not silently upgraded or recreated. A reviewed
-populated v1-to-v2 migration is not implemented and blocks activation for existing
-v1 journals. Never clear this database to unblock a model.
+schema requires a separately reviewed backup/migration; v1/v2 are preserved and
+refused, not silently upgraded or recreated. A populated v1/v2-to-v3 migration is
+not implemented and blocks activation for those existing journals. Never clear this database to unblock a model.
 
 This storage separation is a **proposed** implementation choice, not acceptance
 of ADR-0031/0032. It avoids coupling machine-wide ownership to a session-selected
@@ -228,3 +228,48 @@ document is indexed here without rewriting accepted UI/onboarding evidence.
 Full new-head Python 3.11/3.12/3.13 and browser PR CI is still required, not claimed
 from this focused run. No live model, owner hardware or independent security
 review was performed, and no runtime capability was certified.
+
+
+## LC08 explicit-load intent foundation (not a native command consumer)
+
+`enqueue_load` persists a distinct `load` purpose in the same bounded FIFO as
+inference. Existing `enqueue` remains inference-only; idempotency includes purpose,
+so the same request ID cannot be relabelled. Native transition stages stay the
+same. Only after matching verified residency can `claim_next` return a `LoadLease`
+for the actual native instance. It is deliberately **not** a `RequestLease` or
+its subclass, and does not authorize inference, token counting or native effects.
+
+Both kinds share the one-active-slot constraint, blocking overlapping control /
+inference admission across independent consumers. The historical internal
+`snapshot.active_requests` field counts these exclusive admitted slots, not a
+native stream counter. Native activity still requires separate qualified proof.
+
+`finish_load` requires new complete, reachable, fresh, quiescent all-runtime
+terminal/headroom and owned-instance evidence matching the existing exact target
+and native instance. The `load_control` scope binds epoch, generation and this
+unique **load lease ID** in `EvidenceScope.operation_id`, preventing evidence
+reuse between same-model controls. An ACK, earlier load/verify proof or a warm
+name match alone cannot finish the slot. No implicit reload or count occurs.
+This kernel does not establish installed context/profile qualification or LC03
+settlement: a future concrete command consumer must check those independently.
+
+Cancelled or deadline-expired admitted controls retain their slot until physical
+terminality is proven. A successful `finish_load` means the slot was released;
+its durable request status is `cancelled`/`expired`, not `completed`, in those cases.
+It is **not** a canonical API `confirmed` response. Model residency and model
+memory remain held. `mark_load_uncertain` fences interrupted work for explicit
+reconciliation. Restart interrupts admitted controls without replaying them and
+preserves queued purpose; old epochs/leases cannot complete new-owner work.
+
+SQL purpose fences in fit admission and both inference bridges reject a load
+slot even if a trusted caller rewraps its fields as a `RequestLease`. Inference
+cold-step consumption rejects load-purpose rows; a miswired warm scheduler holds
+its unexpected load slot uncertain instead of treating it as inference. The
+private standalone bundle exercises the same distinct-slot/proof completion.
+
+Schema v3 adds `requests.purpose` with a closed `inference|load` constraint. The
+active Studio history schema remains separately v3; application IDs/namespaces
+are distinct. No namespace deletion, implicit migration, hold reset, native
+activation, command implementation or architecture acceptance is authorized.
+Unload-only/unload-all/cache semantics and concrete load-control orchestration
+remain open. No oMLX target/inference qualification is added.

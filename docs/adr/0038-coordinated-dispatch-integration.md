@@ -85,6 +85,17 @@ memory ledger independently blocks any later native target send. No polling or
 atomic cross-kernel completion is claimed. Keep this dormant and source-only in
 the private standalone bundle as well.
 
+Introduce distinct durable explicit-load intent before implementing its native
+command consumer. Keep load slots separate from inference types and guard their
+SQL purpose in the native/fit kernels, including rewrapped field-identical leases.
+Use the existing single FIFO/exclusive-slot constraint; require load-lease-scoped
+all-runtime native terminal proof for slot completion without fabricated inference
+or token counts. Cancellation/expiry are not native terminality or a completed
+control. Keep model memory held and commands unavailable. Proposed private schema
+v3 adds the closed purpose field; preserve/refuse v1/v2, with no automatic
+populated migration or namespace clearing. A reviewed backup/migration remains an
+activation gate; the active application database is unchanged.
+
 ## Alternatives
 
 - Replace served routing immediately: would activate unqualified transports and

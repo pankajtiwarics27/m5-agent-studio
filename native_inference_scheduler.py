@@ -15,7 +15,12 @@ from dataclasses import asdict, dataclass
 from typing import Any, cast
 from uuid import uuid4
 
-from model_lifecycle_coordinator import ModelTarget, RequestLease, TransitionStep
+from model_lifecycle_coordinator import (
+    LoadLease,
+    ModelTarget,
+    RequestLease,
+    TransitionStep,
+)
 from native_dispatch_executor import (
     Execution,
     NativeDispatchExecutor,
@@ -151,6 +156,16 @@ class NativeInferenceScheduler:
                     if terminal is None or terminal["status"] != "released":
                         raise RuntimeDispatchDenied("coordinated_execution_unavailable")
                     return
+                if not isinstance(item, TransitionStep):
+                    # A miswired producer must not turn a durable load slot
+                    # into inference or strand it as apparently ready work.
+                    if isinstance(item, LoadLease):
+                        self.driver.coord.mark_load_uncertain(
+                            item,
+                            reference="native_scheduler_wrong_purpose",
+                            now_ms=self.driver._now(),
+                        )
+                    raise RuntimeDispatchDenied("coordinated_execution_unavailable")
                 if item.kind in ("drain", "unload"):
                     memory = self._memory(plan.domain_id, item.source)
                 elif item.kind == "load":

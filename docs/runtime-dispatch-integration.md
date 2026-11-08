@@ -486,3 +486,37 @@ unqualified/blocked. Regenerated preservation/performance/release evidence has
 zero findings, without changing visual approval pins or accepting architecture.
 Full regression / exact-head CI are pending at this commit, not inherited from
 the earlier scheduler checkpoint.
+
+
+### Explicit-load intent foundation (not command integration)
+
+The coordinator now offers `enqueue_load`, a separately typed `LoadLease`, and
+lease-scoped proof-based `finish_load` / `mark_load_uncertain`. Purpose is durable
+and part of idempotency in private schema v3. Mixed load/inference work shares the
+same FIFO and exclusive slot; no inference lease/count is fabricated to finish a
+load. Fresh complete all-runtime native terminal and exact owned-instance proof
+is still required even for an already-warm target. Slot completion does not settle
+model memory or establish full inference fit; cancelled/expired controls do not
+become completed commands. See the [coordinator contract](model-lifecycle-coordinator.md).
+
+Fit admission, both native inference bridges and cold inference steps now fence
+on durable inference purpose. Rewrapping a load slot's fields as `RequestLease`
+cannot count/send. An unexpectedly miswired warm scheduler marks its load slot
+uncertain rather than stranding or executing it. Private standalone checks cover
+both target providers' distinct control slot and proof-based completion, with
+explicit fake facts and unchanged charged model memory.
+
+**Scope remains foundation-only.** `NativeInferenceScheduler.command` still
+refuses; no native load-command orchestrator, oMLX target support, unload-only,
+unload-all or cache implementation is claimed. Older private v1/v2 journals are
+preserved/refused; a reviewed populated migration is absent and blocks activation.
+No active app database, settings, hardware acceptance or review status changes.
+
+Pre-full-run evidence: **35 new offline tests**, and **687 combined** real dormant
+coordinator/memory/native/fit/cold/warm/scheduler/fence tests passed, one upstream
+warning. Ruff, mypy75, scope190/13 and isolated private-bundle tests passed. Full
+regression and exact-head CI will be recorded separately after execution.
+
+The preceding source-only oMLX head `1426970` finished **4418 passed / 32 skipped /
+one warning** and green full Python3.11/3.12/3.13 + browser CI in run42494036883.
+GitHub access was restored and final evidence was posted as PR257 comment6723486722.

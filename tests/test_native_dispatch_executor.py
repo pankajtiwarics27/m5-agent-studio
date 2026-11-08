@@ -624,6 +624,20 @@ async def omlx_source():
     assert len(env[4].posts)==1 and env[4].posts[0].path.endswith('/unload')
     assert 'omlx' not in env[2].models
 asyncio.run(omlx_source())
+from test_model_lifecycle_controls import load_reservation
+async def explicit_load_kernel():
+ for backend in ('ollama','lmstudio'):
+  b=fixture(pathlib.Path('load-control-'+backend),backend)
+  with b.coord:
+   result=await collect(scheduler(b).stream(admission(b).call))
+   assert result[-1]['type']=='usage' and b.count_calls==1
+   b.now+=1
+   control=load_reservation(b.coord,b.fleet,target=b.q.profile.memory.target,now=b.now)
+   assert type(control) is pkg.model_lifecycle_coordinator.LoadLease
+   assert not isinstance(control,pkg.model_lifecycle_coordinator.RequestLease)
+   assert b.coord.finish_load(control,b.fleet.evidence(b.coord,b.now),reference='fake-load-proof',now_ms=b.now)
+   assert b.count_calls==1 and b.memory.view('shared').committed_bytes==600
+asyncio.run(explicit_load_kernel())
 print('isolated native executor and shared transaction guards passed')
 """.replace("REPO", repr(str(root)))
     env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}

@@ -309,6 +309,7 @@ class NativeTransitionDriver:
                 if (
                     row is None
                     or row["status"] != "queued"
+                    or row["purpose"] != "inference"
                     or row["cancel_requested"]
                     or row["domain"] != step.domain_id
                     or queued.domain_id != step.domain_id

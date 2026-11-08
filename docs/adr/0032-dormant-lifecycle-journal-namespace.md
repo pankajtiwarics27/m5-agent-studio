@@ -87,3 +87,11 @@ acceptance state is changed. Test8 remains paused.
 journals to v2 for model/action memory reservations. Existing v1 journals are
 preserved and refused; no populated migration or architectural acceptance is
 implied. The original proposal and its not-reviewed status remain unchanged.
+
+
+## LC08 explicit-load purpose follow-up proposal
+
+[ADR-0038](0038-coordinated-dispatch-integration.md) proposes schema v3 with a
+closed durable request-purpose discriminator and separately typed load slots.
+Old v1/v2 journals remain byte-preserved and refused; no populated migration,
+activation or architecture acceptance is implied. Do not clear an old namespace.
