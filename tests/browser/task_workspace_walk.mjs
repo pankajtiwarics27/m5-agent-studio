@@ -1,5 +1,7 @@
 /** Exercise the task-first layout against an isolated, synthetic demo only. */
 import assert from 'node:assert/strict';
+import { waitForHarnessSidebarLayout } from './sidebar_layout_ready.mjs';
+import { checkSidebarLayoutReadiness } from './sidebar_layout_ready_checks.mjs';
 import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -14,6 +16,7 @@ const browser = await (module.default || module).launch({ executablePath: proces
 const checks = [];
 function check(name, pass, detail) { assert(pass, `${name}: ${JSON.stringify(detail)}`); checks.push(name); }
 try {
+  await checkSidebarLayoutReadiness(browser, check);
   const page = await browser.newPage();
   const errors = [], external = [], mcpWrites = [], posts = [];
   const mcpFixture = { alias: 'ui-proof-server', name: 'Synthetic UI proof', category: 'local',
@@ -66,8 +69,10 @@ try {
       await page.evaluate(({theme, compact}) => { applyTheme(theme); applyDensity(compact); }, {theme, compact});
       const navigation = async tab => {
         await page.evaluate(tab => switchTab(tab), tab);
-        // Let density/font/viewport layout and the session-position observer settle.
+        // Keep navigation snapshots frame-aligned, then require the real measured
+        // result for the desktop Harness session seam as well.
         await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        await waitForHarnessSidebarLayout(page);
         return page.evaluate(() => {
           const rail = document.querySelector('.mode-tabs');
           const rect = n => { const b = n.getBoundingClientRect(); return [b.x,b.y,b.width,b.height].map(v=>Math.round(v*100)/100); };
@@ -103,6 +108,9 @@ try {
         const height = width === 390 ? 844 : width === 1280 ? 720 : 900;
         await page.setViewport({ width, height });
         await page.evaluate(({ theme, compact }) => { applyTheme(theme); applyDensity(compact); }, { theme, compact });
+        // ResizeObserver delivers asynchronously, before paint but not necessarily
+        // before this next protocol evaluation after a breakpoint/density change.
+        await waitForHarnessSidebarLayout(page);
         const layout = await page.evaluate(() => {
           const rect = el => { const b = el.getBoundingClientRect(); return { left: b.left, right: b.right, top: b.top, bottom: b.bottom, width: b.width, height: b.height }; };
           const ids = ['harnessPromptInput', 'harnessRunBtn', 'harnessLeadModel', 'harnessPolicy', 'harnessWorkflowMode', 'harnessProjectSummary'];

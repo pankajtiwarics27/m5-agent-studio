@@ -79,3 +79,38 @@ has not changed since the reviewed source commit.
 This is visual baseline approval only. Independent security sign-off remains
 unchanged/deferred. New exact-head Python3.11/3.12/3.13 and browser CI remain
 required; PR #244 remains unmerged and no merge authorization is inferred.
+
+
+## CI resize-observer synchronization correction
+
+The expanded traceback for PR run42447643574/job128632494378 establishes why
+the task-workspace browser walk failed after visual approval. At1280px the
+navigation occupied y=56..437 (381px high), but the session panel started at100px:
+it still used the previous44px mobile navigation measurement. The composer loop
+read geometry immediately after resizing/changing density, before the native
+ResizeObserver delivered the new measurement. The production observer delivers
+during rendering; the protocol evaluation is not itself a rendering barrier.
+
+This correction is test-only. Before desktop Harness geometry is sampled, a
+bounded requestAnimationFrame-polled condition waits for the CSS measurement to
+match actual navigation height and the session panel to meet the navigation
+bottom. The original alignment, equal-width and non-overlap assertions remain
+unchanged. Missing/broken delivery still times out with measured DOM diagnostics;
+no arbitrary sleep, blind CI rerun, relaxed tolerance, layout mutation, skip or
+new production behavior is introduced. Existing navigation frame alignment is
+retained, and narrow-screen drawers/other panes keep their independent checks.
+
+A deterministic browser regression holds a real native observer callback. It
+recreates exactly sideTop=100/navBottom=437, proves that the original non-overlap
+assertion rejects those coordinates, verifies that readiness stays pending and
+does not overwrite the44px measurement, then explicitly releases the callback.
+The wait only completes after the genuine381px measurement puts the panel at437.
+A permanently undelivered measurement must time out without altering geometry.
+The fixture is serverless, makes no requests and tests both narrow breakpoints
+and another pane. An author negative probe replacing the wait with an immediate
+return was rejected deterministically; the real focused browser test passes.
+
+HTML, standalone, backend, approved visual signatures and independent security
+sign-off remain unchanged by this correction. The existing owner visual approval
+is not reinterpreted or refreshed. Full browser/visual checks and new exact-head
+multi-version CI are recorded in PR #244; no new merge permission is inferred.
