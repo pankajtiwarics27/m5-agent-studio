@@ -24,7 +24,7 @@ from local_runtime_lifecycle import ModelInstanceObservation, ObservationStamp, 
 if os.name == "posix":
     import fcntl
 
-_SCHEMA = 1
+_SCHEMA = 2
 _APPLICATION_ID = 0x4D354C43
 _MAX_INTEGER = 2**63 - 1
 _T = TypeVar("_T")
@@ -205,6 +205,10 @@ def _initialize_schema(conn: sqlite3.Connection) -> None:
         "CREATE TABLE leases(id TEXT PRIMARY KEY, request_id TEXT UNIQUE NOT NULL REFERENCES requests(id), domain TEXT NOT NULL REFERENCES domains(id), generation INTEGER NOT NULL, owner_epoch INTEGER NOT NULL, status TEXT NOT NULL CHECK(status IN ('active','released','interrupted')))",
         "CREATE UNIQUE INDEX one_active_request ON leases(domain) WHERE status='active'",
         "CREATE TABLE journal(seq INTEGER PRIMARY KEY AUTOINCREMENT, domain TEXT, operation_id TEXT, event TEXT NOT NULL, reference TEXT, owner_epoch INTEGER NOT NULL, generation INTEGER NOT NULL)",
+        "CREATE TABLE memory_domains(domain TEXT PRIMARY KEY REFERENCES domains(id), limit_bytes INTEGER NOT NULL CHECK(limit_bytes>0), reserve_bytes INTEGER NOT NULL CHECK(reserve_bytes>0), revision INTEGER NOT NULL CHECK(revision>=0), state TEXT NOT NULL CHECK(state IN ('reconciling','ready','paused')), policy_ref TEXT NOT NULL)",
+        "CREATE UNIQUE INDEX one_shared_memory_domain ON memory_domains((1))",
+        "CREATE TABLE memory_reservations(id TEXT PRIMARY KEY, domain TEXT NOT NULL REFERENCES memory_domains(domain), work_id TEXT NOT NULL, kind TEXT NOT NULL CHECK(kind IN ('model','action')), peak_bytes INTEGER NOT NULL CHECK(peak_bytes>0), binding TEXT NOT NULL, owner_epoch INTEGER NOT NULL, status TEXT NOT NULL CHECK(status IN ('reserved','dispatched','uncertain','released')), UNIQUE(domain,work_id))",
+        "CREATE UNIQUE INDEX one_memory_model ON memory_reservations(domain) WHERE kind='model' AND status!='released'",
     )
     for statement in statements:
         conn.execute(statement)
@@ -324,6 +328,23 @@ class LifecycleCoordinator:
                 if _decode(row["target"]) is None:
                     raise CoordinatorError("journal_invalid")
                 _integer(row["deadline"])
+            for memory_domain in conn.execute("SELECT * FROM memory_domains"):
+                for name in ("limit_bytes", "reserve_bytes"):
+                    _integer(memory_domain[name], positive=True)
+                _integer(memory_domain["revision"])
+                _label(memory_domain["policy_ref"])
+            for reservation in conn.execute("SELECT * FROM memory_reservations"):
+                for name in ("id", "work_id"):
+                    _label(reservation[name])
+                _integer(reservation["peak_bytes"], positive=True)
+                _integer(reservation["owner_epoch"], positive=True)
+                from shared_memory_admission import MemoryDenied, _lease
+                try:
+                    _lease(reservation)
+                except MemoryDenied:
+                    raise CoordinatorError("journal_invalid") from None
+                if reservation["owner_epoch"] > owner["epoch"]:
+                    raise CoordinatorError("journal_invalid")
         runtime_persistence.run_read(self._storage, self.database, preflight)
 
         def claim(conn: sqlite3.Connection) -> None:
@@ -331,6 +352,10 @@ class LifecycleCoordinator:
             _integer(epoch, positive=True)
             conn.execute("UPDATE owner SET epoch=? WHERE singleton=1", (epoch,))
             conn.execute("UPDATE domains SET state='reconciling'")
+            for memory_domain in conn.execute("SELECT revision FROM memory_domains"):
+                _integer(memory_domain["revision"] + 1)
+            conn.execute("UPDATE memory_domains SET state='reconciling',revision=revision+1")
+            conn.execute("UPDATE memory_reservations SET status='uncertain' WHERE status!='released'")
             conn.execute("UPDATE operations SET status='uncertain' WHERE status='active'")
             conn.execute("UPDATE leases SET status='interrupted' WHERE status='active'")
             conn.execute("UPDATE requests SET status='interrupted' WHERE status='admitted'")

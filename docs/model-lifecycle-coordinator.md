@@ -61,22 +61,24 @@ cleanup. No transaction spans an external effect. A claimed intent is returned
 only after its dispatch record commits. Callers must not retry the physical
 operation merely because they did not receive/complete that intent.
 
-The dormant namespace uses its own application-tagged **schema v1**. Tables are
+The dormant namespace now uses application-tagged **schema v2**;
+[LC-03](shared-memory-admission.md) adds combined model/action accounting. Tables are
 owner metadata, domain bindings/residency, requests, request leases, operations,
-and a sequenced metadata-only journal. Journal entries retain owner epoch and
+a sequenced metadata-only journal, memory policy and memory reservations. Journal entries retain owner epoch and
 domain generation. Model references/digests, profile IDs, opaque evidence refs,
 stages and counters are stored; prompts, tool arguments/results, credentials,
 URLs with authentication, and model output are not collected by the module.
 Callers must supply opaque reference IDs, never hide raw content in a label.
 
 This is not the active `studio_history.db`; Studio's runtime schema remains v3.
-No migration runs on startup or import. First creation applies the private v1
+No migration runs on startup or import. First creation applies the private v2
 DDL/version tag atomically. An interrupted initialization leaves an unrecognized
 journal and fails on reopen rather than silently treating it as empty. Existing
 future/foreign/unversioned/corrupt/incomplete or semantically malformed journals
 are rejected without repair/downgrade. A future upgrade from a populated private
-schema requires a separately reviewed backup/migration; this release has no old
-private-schema version to migrate. Never clear this database to unblock a model.
+schema requires a separately reviewed backup/migration; v1 is preserved and refused, not silently upgraded or recreated. A reviewed
+populated v1-to-v2 migration is not implemented and blocks activation for existing
+v1 journals. Never clear this database to unblock a model.
 
 This storage separation is a **proposed** implementation choice, not acceptance
 of ADR-0031/0032. It avoids coupling machine-wide ownership to a session-selected
@@ -210,7 +212,7 @@ hardware acceptance are still unimplemented release gates. These tests do not
 claim OOM prevention, engine fault immunity, production exclusivity or task-quality
 parity. ADRs remain proposed and independent security acceptance remains unsigned.
 
-### Local verification record
+### LC-02 local verification record (before LC-03)
 
 On Linux/Python 3.11: **519 passed across 23 focused suites in 36.46s**, including
 43 coordinator tests, with one upstream Starlette/httpx deprecation warning.
