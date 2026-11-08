@@ -171,6 +171,7 @@ measurements without trusting them).
 · [`uiv2-v2-accessibility-adversarial.md`](uiv2-v2-accessibility-adversarial.md) (source-bound UIV2-28 keyboard, measured-contrast, 200% zoom, reduced-motion and nested-scroll recovery contract)
 · [`uiv2-v2-accessibility-adversarial-evidence.md`](uiv2-v2-accessibility-adversarial-evidence.md) (executed before/after, full visual-matrix and preservation evidence, with explicit approval status)
 · [`uiv2-v2-performance-safety.md`](uiv2-v2-performance-safety.md) (source-bound UIV2-29 real-SSE, frame-budget, post-GC DOM/heap, layout-stability, authorization, recovery, ledger, fencing and fail-closed isolation evidence)
+· [`uiv2-v2-release-review.md`](uiv2-v2-release-review.md) (generated UIV2-30 final SHA, approved screenshot/CI evidence, truthful README scope, corrections, remaining defects, rollback and exact agent handoff; UI handoff is distinct from the production security release)
 
 ## M5 2.0 ground-truth evidence (2026-10-30)
 

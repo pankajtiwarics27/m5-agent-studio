@@ -17,7 +17,7 @@
   ],
   "totals": {
     "pages": 5,
-    "links": 24,
+    "links": 26,
     "commands": 47,
     "claims": 7,
     "claims_verified": 7,
@@ -106,6 +106,18 @@
       "page": "README.md",
       "target": "docs/supported-hardware.md",
       "resolved": "docs/supported-hardware.md",
+      "resolves": true
+    },
+    {
+      "page": "README.md",
+      "target": "docs/uiv2-v2-release-review.md",
+      "resolved": "docs/uiv2-v2-release-review.md",
+      "resolves": true
+    },
+    {
+      "page": "README.md",
+      "target": "scripts/security_release_gate.py",
+      "resolved": "scripts/security_release_gate.py",
       "resolves": true
     },
     {

@@ -1,0 +1,195 @@
+{
+  "schema_version": 1,
+  "document_type": "m5_uiv2_release_evidence",
+  "story": "UIV2-30",
+  "recorded_at": "2026-11-08T07:01:53.677025+00:00",
+  "source_sha256": {
+    "static/index.html": "49c18ae49d90e6c2b0ebfb0c3f26988d61433596e211acd06994f37d92c4eead",
+    "scripts/compare_continuity_walk.mjs": "222ae7d944b984d344de450cc64a6191d0d67582d51bda52c8fab4259d523654",
+    "scripts/uiux_v2_cross_tab_reference_walk.mjs": "f84f40cbd9007909f272f851dcee94d45d9e2ef5b7e1eb0d9e5da3c26e5cb81a"
+  },
+  "compare": {
+    "run": "/tmp/uiv2-30-compare-baseline.json",
+    "run_sha256": "24b943d96b306ef858a77fbe8e7174025f1de2ca823129d733ffc5146388a56a",
+    "script": "scripts/compare_continuity_walk.mjs",
+    "checks": 15,
+    "passed": 15,
+    "failed": 0,
+    "captures": [
+      {
+        "path": "compare-record-forgotten.png",
+        "sha256": "a364a2db933642b86eb2636ba1f8e7efc49193f6b5b681d1fce7e1497738c67c",
+        "bytes": 19952
+      },
+      {
+        "path": "compare-record-light.png",
+        "sha256": "11bd48230f31393374dd14bc538e7c23dc191d7ef6d2acc26b8b40f981d5da85",
+        "bytes": 58959
+      },
+      {
+        "path": "compare-record-live.png",
+        "sha256": "20af43c30c89e25f88717305383ddaea8d3ba5dd650a6161317db9c822020671",
+        "bytes": 94076
+      },
+      {
+        "path": "compare-record-narrow.png",
+        "sha256": "af7997476afdf02e2aeedf07c16d7f39b44a0d18f7913c57910c64350371a26a",
+        "bytes": 72972
+      },
+      {
+        "path": "compare-record-restored.png",
+        "sha256": "35622c5bfad71f896ea6c1b9c4effae5b261fb09e42e0ce7891283b939b6b7d4",
+        "bytes": 70372
+      },
+      {
+        "path": "compare-record-server.png",
+        "sha256": "72c87b58a0cd4c1bc046a0fd7808d39aa34fe2a377a1829ba459be208f94a9a1",
+        "bytes": 22094
+      }
+    ]
+  },
+  "visual": {
+    "run": "/tmp/uiv2-30-visual-baseline/check-manifest.json",
+    "manifest_sha256": "3b4674791cc4b05b94c7dd2b39092e00fe05cdd31578eef43b87ed5dc0788e08",
+    "git": {
+      "head": "703945e496c38b6bf0fb148f18fb213f00d20015",
+      "dirty": false
+    },
+    "contract_sha256": "caf0e5543c6e644eae4a12a6db0ed38a169ad361a96af75cdb04cbfa0f4c2435",
+    "wireframe_sha256": "f1232a0ea81fccbfb343f6f16d8f8878edbcc20a478a96dbea8b45a44cba8a17",
+    "approval": {
+      "status": "approved-check",
+      "reference": "user:Arena sidebar-243-recaptured-approval=approve; unchanged source55dff2b7c73f2064c7a649ceb1edfa9a9052d5a7; candidate7186910f9c46979e6320a6e2fa84f53e84067159f2b4d92ea5e03a6b59f884b8; visual baseline only, not merge authorization",
+      "candidate": {
+        "manifest": "docs/media/cross-tab-reference-uiv2-26/sidebar-243-candidate/candidate-manifest.json",
+        "manifest_sha256": "7186910f9c46979e6320a6e2fa84f53e84067159f2b4d92ea5e03a6b59f884b8",
+        "git_head": "55dff2b7c73f2064c7a649ceb1edfa9a9052d5a7"
+      }
+    },
+    "matrix": {
+      "panes": [
+        "start",
+        "harness",
+        "hall",
+        "council",
+        "debate",
+        "chat"
+      ],
+      "viewports": [
+        "1640x900",
+        "1440x900",
+        "1280x800",
+        "390x844"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "keys": [
+        "light/1640x900/start",
+        "light/1640x900/harness",
+        "light/1640x900/hall",
+        "light/1640x900/council",
+        "light/1640x900/debate",
+        "light/1640x900/chat",
+        "light/1440x900/start",
+        "light/1440x900/harness",
+        "light/1440x900/hall",
+        "light/1440x900/council",
+        "light/1440x900/debate",
+        "light/1440x900/chat",
+        "light/1280x800/start",
+        "light/1280x800/harness",
+        "light/1280x800/hall",
+        "light/1280x800/council",
+        "light/1280x800/debate",
+        "light/1280x800/chat",
+        "light/390x844/start",
+        "light/390x844/harness",
+        "light/390x844/hall",
+        "light/390x844/council",
+        "light/390x844/debate",
+        "light/390x844/chat",
+        "dark/1640x900/start",
+        "dark/1640x900/harness",
+        "dark/1640x900/hall",
+        "dark/1640x900/council",
+        "dark/1640x900/debate",
+        "dark/1640x900/chat",
+        "dark/1440x900/start",
+        "dark/1440x900/harness",
+        "dark/1440x900/hall",
+        "dark/1440x900/council",
+        "dark/1440x900/debate",
+        "dark/1440x900/chat",
+        "dark/1280x800/start",
+        "dark/1280x800/harness",
+        "dark/1280x800/hall",
+        "dark/1280x800/council",
+        "dark/1280x800/debate",
+        "dark/1280x800/chat",
+        "dark/390x844/start",
+        "dark/390x844/harness",
+        "dark/390x844/hall",
+        "dark/390x844/council",
+        "dark/390x844/debate",
+        "dark/390x844/chat"
+      ],
+      "live_captures": 48,
+      "reference_captures": 48,
+      "annotated_comparisons": 48,
+      "total_pngs_per_run": 144,
+      "device_scale_factor": 1,
+      "pixel_policy": "measure and annotate; no pixel pass/fail tolerance"
+    },
+    "checks": {
+      "total": 2200,
+      "passed": 2200,
+      "failed": 0
+    },
+    "capture_records": 48,
+    "browser": {
+      "version": "HeadlessChrome/153.0.8010.0",
+      "fonts": {
+        "OpenSans-Regular.ttf": "c53aceea2dcf5b4098099c0c4d0a061d17e178a049317b42a422b1a9f7f8eb59",
+        "OpenSans-Bold.ttf": "27da758f4dcac9a65abe914c13b463b42982b9909bc65713424099f4810bd1e6",
+        "OpenSans-Italic.ttf": "93bc1bb6abf4e6b7c75d7131714061d5b57cc478abcabe4cb3519bb38fb917aa"
+      }
+    },
+    "external_provider_calls": false
+  },
+  "ci": {
+    "headSha": "703945e496c38b6bf0fb148f18fb213f00d20015",
+    "status": "completed",
+    "conclusion": "success",
+    "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42454692827",
+    "createdAt": "2026-11-08T06:25:36Z",
+    "updatedAt": "2026-11-08T06:37:04Z",
+    "jobs": [
+      {
+        "name": "test (3.13)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42454692827/job/128651103483"
+      },
+      {
+        "name": "test (3.11)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42454692827/job/128651103579"
+      },
+      {
+        "name": "Browser safety regressions",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42454692827/job/128651103624"
+      },
+      {
+        "name": "test (3.12)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42454692827/job/128651103685"
+      }
+    ]
+  }
+}

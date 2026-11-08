@@ -1,0 +1,5 @@
+# Raw release-review captures are local evidence; committed JSON binds their hashes.
+*.png
+*-manifest.json
+candidate-manifest.json
+check-manifest.json

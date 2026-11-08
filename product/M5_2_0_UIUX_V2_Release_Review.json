@@ -1,0 +1,489 @@
+{
+  "schema_version": 1,
+  "document_type": "m5_uiv2_release_review",
+  "story": "UIV2-30",
+  "generated_by": "scripts/uiv2_release_review.py",
+  "regenerate_with": "python3 scripts/uiv2_release_review.py",
+  "check_with": "python3 scripts/uiv2_release_review.py --check",
+  "statement": "UI/UX V2 handoff is evidence-gated; this review never grants production security approval or container-isolation qualification.",
+  "decision": {
+    "uiux_v2_handoff": "ready",
+    "production_security_release": "release-blocked",
+    "scope": "merge/handoff of the 30-story UI/UX V2 program only; tagging/publishing a production release remains under scripts/security_release_gate.py and scripts/release.py"
+  },
+  "pinned_release": {
+    "implementation_head": "703945e496c38b6bf0fb148f18fb213f00d20015",
+    "dirty": false,
+    "static_sha256": "49c18ae49d90e6c2b0ebfb0c3f26988d61433596e211acd06994f37d92c4eead",
+    "evidence_recorded_at": "2026-11-08T07:01:53.677025+00:00",
+    "note": "The evidence commit may contain only later release docs/tracker changes; executable browser sources are bound by digest."
+  },
+  "program_state": {
+    "total": 30,
+    "done": 29,
+    "in_progress": 1,
+    "blocked": 0,
+    "not_started": 0,
+    "percent_complete": 97
+  },
+  "critical_ci": {
+    "headSha": "703945e496c38b6bf0fb148f18fb213f00d20015",
+    "status": "completed",
+    "conclusion": "success",
+    "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42454692827",
+    "createdAt": "2026-11-08T06:25:36Z",
+    "updatedAt": "2026-11-08T06:37:04Z",
+    "jobs": [
+      {
+        "name": "test (3.13)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42454692827/job/128651103483"
+      },
+      {
+        "name": "test (3.11)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42454692827/job/128651103579"
+      },
+      {
+        "name": "Browser safety regressions",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42454692827/job/128651103624"
+      },
+      {
+        "name": "test (3.12)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42454692827/job/128651103685"
+      }
+    ]
+  },
+  "local_checks": [
+    {
+      "name": "performance-safety",
+      "command": "python3 scripts/uiv2_performance_safety.py --check",
+      "exit_code": 0,
+      "failure_output": null
+    },
+    {
+      "name": "accessibility",
+      "command": "python3 scripts/uiv2_accessibility_adversarial.py --check",
+      "exit_code": 0,
+      "failure_output": null
+    },
+    {
+      "name": "approved-visual-contract",
+      "command": "python3 scripts/uiux_v2_cross_tab_reference.py --check",
+      "exit_code": 0,
+      "failure_output": null
+    },
+    {
+      "name": "preservation-map",
+      "command": "python3 scripts/uiux_preservation_e2e.py --check",
+      "exit_code": 0,
+      "failure_output": null
+    },
+    {
+      "name": "readme-onboarding",
+      "command": "python3 scripts/uiux_docs_verification.py --check",
+      "exit_code": 0,
+      "failure_output": null
+    },
+    {
+      "name": "documentation-links",
+      "command": "python3 scripts/validate_docs.py",
+      "exit_code": 0,
+      "failure_output": null
+    },
+    {
+      "name": "production-security-gate",
+      "command": "python3 scripts/security_release_gate.py --json",
+      "exit_code": 0,
+      "failure_output": null
+    }
+  ],
+  "security_release": {
+    "release_ready": false,
+    "release_decision": "release-blocked",
+    "gate_invariants_satisfied": true,
+    "blocking_reasons": [
+      "security_signoff_not_signed: AS-031 independent human security review is state='deferred', decision='pending' (release blocked until signed 'accepted' by an independent human reviewer)."
+    ],
+    "container_isolation_qualified": true
+  },
+  "visual_evidence": {
+    "run": "/tmp/uiv2-30-visual-baseline/check-manifest.json",
+    "manifest_sha256": "3b4674791cc4b05b94c7dd2b39092e00fe05cdd31578eef43b87ed5dc0788e08",
+    "git": {
+      "head": "703945e496c38b6bf0fb148f18fb213f00d20015",
+      "dirty": false
+    },
+    "contract_sha256": "caf0e5543c6e644eae4a12a6db0ed38a169ad361a96af75cdb04cbfa0f4c2435",
+    "wireframe_sha256": "f1232a0ea81fccbfb343f6f16d8f8878edbcc20a478a96dbea8b45a44cba8a17",
+    "approval": {
+      "status": "approved-check",
+      "reference": "user:Arena sidebar-243-recaptured-approval=approve; unchanged source55dff2b7c73f2064c7a649ceb1edfa9a9052d5a7; candidate7186910f9c46979e6320a6e2fa84f53e84067159f2b4d92ea5e03a6b59f884b8; visual baseline only, not merge authorization",
+      "candidate": {
+        "manifest": "docs/media/cross-tab-reference-uiv2-26/sidebar-243-candidate/candidate-manifest.json",
+        "manifest_sha256": "7186910f9c46979e6320a6e2fa84f53e84067159f2b4d92ea5e03a6b59f884b8",
+        "git_head": "55dff2b7c73f2064c7a649ceb1edfa9a9052d5a7"
+      }
+    },
+    "matrix": {
+      "panes": [
+        "start",
+        "harness",
+        "hall",
+        "council",
+        "debate",
+        "chat"
+      ],
+      "viewports": [
+        "1640x900",
+        "1440x900",
+        "1280x800",
+        "390x844"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "keys": [
+        "light/1640x900/start",
+        "light/1640x900/harness",
+        "light/1640x900/hall",
+        "light/1640x900/council",
+        "light/1640x900/debate",
+        "light/1640x900/chat",
+        "light/1440x900/start",
+        "light/1440x900/harness",
+        "light/1440x900/hall",
+        "light/1440x900/council",
+        "light/1440x900/debate",
+        "light/1440x900/chat",
+        "light/1280x800/start",
+        "light/1280x800/harness",
+        "light/1280x800/hall",
+        "light/1280x800/council",
+        "light/1280x800/debate",
+        "light/1280x800/chat",
+        "light/390x844/start",
+        "light/390x844/harness",
+        "light/390x844/hall",
+        "light/390x844/council",
+        "light/390x844/debate",
+        "light/390x844/chat",
+        "dark/1640x900/start",
+        "dark/1640x900/harness",
+        "dark/1640x900/hall",
+        "dark/1640x900/council",
+        "dark/1640x900/debate",
+        "dark/1640x900/chat",
+        "dark/1440x900/start",
+        "dark/1440x900/harness",
+        "dark/1440x900/hall",
+        "dark/1440x900/council",
+        "dark/1440x900/debate",
+        "dark/1440x900/chat",
+        "dark/1280x800/start",
+        "dark/1280x800/harness",
+        "dark/1280x800/hall",
+        "dark/1280x800/council",
+        "dark/1280x800/debate",
+        "dark/1280x800/chat",
+        "dark/390x844/start",
+        "dark/390x844/harness",
+        "dark/390x844/hall",
+        "dark/390x844/council",
+        "dark/390x844/debate",
+        "dark/390x844/chat"
+      ],
+      "live_captures": 48,
+      "reference_captures": 48,
+      "annotated_comparisons": 48,
+      "total_pngs_per_run": 144,
+      "device_scale_factor": 1,
+      "pixel_policy": "measure and annotate; no pixel pass/fail tolerance"
+    },
+    "checks": {
+      "total": 2200,
+      "passed": 2200,
+      "failed": 0
+    },
+    "capture_records": 48,
+    "browser": {
+      "version": "HeadlessChrome/153.0.8010.0",
+      "fonts": {
+        "OpenSans-Regular.ttf": "c53aceea2dcf5b4098099c0c4d0a061d17e178a049317b42a422b1a9f7f8eb59",
+        "OpenSans-Bold.ttf": "27da758f4dcac9a65abe914c13b463b42982b9909bc65713424099f4810bd1e6",
+        "OpenSans-Italic.ttf": "93bc1bb6abf4e6b7c75d7131714061d5b57cc478abcabe4cb3519bb38fb917aa"
+      }
+    },
+    "external_provider_calls": false
+  },
+  "compare_recovery": {
+    "run": "/tmp/uiv2-30-compare-baseline.json",
+    "run_sha256": "24b943d96b306ef858a77fbe8e7174025f1de2ca823129d733ffc5146388a56a",
+    "script": "scripts/compare_continuity_walk.mjs",
+    "checks": 15,
+    "passed": 15,
+    "failed": 0,
+    "captures": [
+      {
+        "path": "compare-record-forgotten.png",
+        "sha256": "a364a2db933642b86eb2636ba1f8e7efc49193f6b5b681d1fce7e1497738c67c",
+        "bytes": 19952
+      },
+      {
+        "path": "compare-record-light.png",
+        "sha256": "11bd48230f31393374dd14bc538e7c23dc191d7ef6d2acc26b8b40f981d5da85",
+        "bytes": 58959
+      },
+      {
+        "path": "compare-record-live.png",
+        "sha256": "20af43c30c89e25f88717305383ddaea8d3ba5dd650a6161317db9c822020671",
+        "bytes": 94076
+      },
+      {
+        "path": "compare-record-narrow.png",
+        "sha256": "af7997476afdf02e2aeedf07c16d7f39b44a0d18f7913c57910c64350371a26a",
+        "bytes": 72972
+      },
+      {
+        "path": "compare-record-restored.png",
+        "sha256": "35622c5bfad71f896ea6c1b9c4effae5b261fb09e42e0ce7891283b939b6b7d4",
+        "bytes": 70372
+      },
+      {
+        "path": "compare-record-server.png",
+        "sha256": "72c87b58a0cd4c1bc046a0fd7808d39aa34fe2a377a1829ba459be208f94a9a1",
+        "bytes": 22094
+      }
+    ]
+  },
+  "measured_performance": {
+    "environment": {
+      "node": "v22.22.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpu_count": 2,
+      "cpu_model": "Intel(R) Xeon(R) Processor @ 2.60GHz",
+      "chrome_version": "HeadlessChrome/153.0.8010.0",
+      "chrome_headless": true,
+      "python": "Python 3.11.2",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36",
+      "fixture": "council_readiness_seed.py; real loopback app and SSE provider",
+      "memory_method": "CDP Performance.getMetrics after HeapProfiler.collectGarbage",
+      "layout_method": "PerformanceObserver layout-shift plus shell getBoundingClientRect before/after"
+    },
+    "fast_sse": {
+      "model": "Gemma-4-21B-REAP-4bit",
+      "elapsed_ms": 491.90000000037253,
+      "renders": 23,
+      "schedules": 58,
+      "model_tokens": 58,
+      "sse_per_second": 117.91,
+      "complete_chars": 330
+    },
+    "steady_frame": {
+      "calls": 20,
+      "mean_ms": 3.099999999953434,
+      "p95_ms": 7,
+      "max_ms": 10.700000000186265,
+      "cards": 300
+    },
+    "memory": {
+      "baseline": {
+        "Nodes": 8505,
+        "Documents": 2,
+        "JSEventListeners": 334,
+        "JSHeapUsedSize": 3373868,
+        "JSHeapTotalSize": 4456448,
+        "LayoutCount": 1,
+        "RecalcStyleCount": 3
+      },
+      "after_cycle_1": {
+        "Nodes": 8484,
+        "Documents": 2,
+        "JSEventListeners": 334,
+        "JSHeapUsedSize": 3309948,
+        "JSHeapTotalSize": 4165632,
+        "LayoutCount": 123,
+        "RecalcStyleCount": 245
+      },
+      "after_cycle_2": {
+        "Nodes": 8505,
+        "Documents": 2,
+        "JSEventListeners": 334,
+        "JSHeapUsedSize": 3329676,
+        "JSHeapTotalSize": 3903488,
+        "LayoutCount": 246,
+        "RecalcStyleCount": 488
+      },
+      "cycle_1": {
+        "elapsed_ms": 4137.200000000186,
+        "cursor": 18000,
+        "cached": 5000,
+        "cards": 300,
+        "nodes": 1147,
+        "last": 18000
+      },
+      "cycle_2": {
+        "elapsed_ms": 4173.9000000003725,
+        "cursor": 30000,
+        "cached": 5000,
+        "cards": 300,
+        "nodes": 1147,
+        "last": 30000
+      },
+      "collection": "CDP HeapProfiler.collectGarbage before every Performance.getMetrics sample"
+    },
+    "backend_tests": {
+      "test_modules": 13,
+      "tests_passed": 300,
+      "failed": 0,
+      "isolation_pass_checks": 16
+    },
+    "local_isolation": {
+      "exit_code": 0,
+      "status": "unqualified",
+      "dependent_execution": "blocked (fail closed)",
+      "checks_failed": 0,
+      "pass_count": 16,
+      "live_probes": "not requested; container isolation is not claimed",
+      "output": [
+        "M5-P0-04 isolation smoke test",
+        "",
+        "== 1. Environment fingerprint and runtime availability ==",
+        "  platform: Linux-6.1.158+-x86_64-with-glibc2.36",
+        "  machine: x86_64  python: 3.11.2  cpus: 2",
+        "  memory_total: 4034452 kB",
+        "  runtime_available: no ('docker' not on PATH)",
+        "",
+        "== 2. Sandbox invocation invariants (as constructed by app._sandbox_command) ==",
+        "  [PASS] no network — --network=none",
+        "  [PASS] read-only container root — --read-only",
+        "  [PASS] all capabilities dropped — --cap-drop=ALL",
+        "  [PASS] no new privileges — --security-opt=no-new-privileges",
+        "  [PASS] no implicit image pull — --pull=never",
+        "  [PASS] resource limits — --pids-limit=128 --memory=2g --cpus=2",
+        "  [PASS] single workspace bind mount — type=bind,source=/tmp/m5-browser/tmp/m5-isolation-smoke-6r18tslc,target=/workspace",
+        "",
+        "== 3. Skill-code execution gates (app._run_skill_script) ==",
+        "  [PASS] default-off skill-code denial — PermissionError",
+        "  [PASS] execution-disabled denial — PermissionError",
+        "  [PASS] host-mode-without-opt-in denial — PermissionError",
+        "  [PASS] sandbox-mode fails closed, no host fallback — RuntimeError; host spawns: none",
+        "",
+        "== 4. Filesystem confinement denials (sandbox_boundary.confined_path) ==",
+        "  [PASS] inside-workspace path resolves",
+        "  [PASS] traversal denied",
+        "  [PASS] absolute outside-workspace denied",
+        "  [PASS] NUL-byte path denied",
+        "  [PASS] symlink escape denied",
+        "",
+        "== 5-6. Live container probes (outside-workspace access, direct network) ==",
+        "  SKIPPED: pass --live with a working container runtime to observe these denials.",
+        "",
+        "== Summary ==",
+        "  checks_failed: 0",
+        "  isolation_status: unqualified",
+        "  dependent_execution: blocked (fail closed)",
+        "  note: container-level isolation is UNQUALIFIED here; do not advertise it."
+      ]
+    }
+  },
+  "readme_claims": [
+    {
+      "claim": "Quickstart and documentation links resolve",
+      "evidence": "scripts/uiux_docs_verification.py --check and scripts/validate_docs.py",
+      "verified": true
+    },
+    {
+      "claim": "UI/UX V2 review is scoped to merge/handoff, not production security approval",
+      "evidence": "scripts/security_release_gate.py --json remains release-blocked",
+      "verified": true
+    },
+    {
+      "claim": "Visual conformity is structural, not a pixel-perfect or self-approved claim",
+      "evidence": "user:Arena sidebar-243-recaptured-approval=approve; unchanged source55dff2b7c73f2064c7a649ceb1edfa9a9052d5a7; candidate7186910f9c46979e6320a6e2fa84f53e84067159f2b4d92ea5e03a6b59f884b8; visual baseline only, not merge authorization",
+      "verified": true
+    },
+    {
+      "claim": "No new runtime behavior is asserted by UIV2-30",
+      "evidence": "static/index.html and both browser walks match the imported source digests",
+      "verified": true
+    }
+  ],
+  "corrections": [
+    {
+      "id": "uiv2-29-node-transcription",
+      "status": "corrected",
+      "detail": "The roadmap previously copied flat 8481 nodes into the final summary; the actual committed run is 8505 -> 8484 -> 8505. The run remained within its no-growth budget; only the summary was wrong."
+    },
+    {
+      "id": "uiv2-26-pending-ci",
+      "status": "closed",
+      "detail": "The trusted-transformation mitigation is no longer pending: the merged 703945e CI run passed all three Python versions and Browser safety regressions."
+    },
+    {
+      "id": "compare-restore-history",
+      "status": "verified-resolved",
+      "detail": "Historical UIV2-16/17 restore-crash notes are not current behavior: the boot-order guard is present and this review's real Compare continuity walk passed 15/15 with six captures."
+    }
+  ],
+  "follow_ups": [
+    {
+      "id": "chat-post-tool-empty-completion",
+      "severity": "high-follow-up",
+      "status": "open-pre-existing",
+      "detail": "A provider that ends after a tool call without producing text can still reach done with an empty reply. Do not claim that provider-failure case is recovered; give it a dedicated backend/streaming regression story.",
+      "evidence": "UIV2-20 tracking and app.py final_text/done path"
+    },
+    {
+      "id": "clipboard-rejection-parity",
+      "severity": "medium-follow-up",
+      "status": "open-pre-existing",
+      "detail": "Pipeline copyStageMarkdown and some other non-Chat copy helpers do not all handle clipboard promise rejection with Chat's user-visible parity.",
+      "evidence": "UIV2-20 tracking and static/index.html copy helpers"
+    },
+    {
+      "id": "mcp-activity-volatility",
+      "severity": "low-follow-up",
+      "status": "open-documented-limitation",
+      "detail": "MCP Activity is an in-memory twelve-entry view, not durable per-call audit; failed connection tests and sync-note presentation are not represented uniformly.",
+      "evidence": "UIV2-21/22 tracking and MCP_ACTIVITY_CAP = 12"
+    },
+    {
+      "id": "visual-evidence-scope",
+      "severity": "evidence-limitation",
+      "status": "accepted-not-a-waiver",
+      "detail": "Approval covers 48 structural comparisons, not pixel identity or every conceivable application state. Raw UIV2-30 PNGs are local review evidence; committed JSON binds their manifests and hashes.",
+      "evidence": "product/M5_2_0_UIUX_V2_Cross_Tab_Approval.json human_approval.scope"
+    }
+  ],
+  "rollback": {
+    "story": "Revert the UIV2-30 PR merge commit. This removes the release contract, importer, README pointers and corrected release notes without deleting sessions, database state, MCP secrets or workspaces.",
+    "runtime": "UIV2-30 changes no frontend or backend runtime source. Rolling it back does not roll back UIV2-29 or any earlier approved UI behavior.",
+    "whole_program": "Do not git reset or discard user data to roll back the V2 program. Revert individual story merge commits in reverse order with their owning evidence gates and reviewer approval."
+  },
+  "next_work": [
+    "Production release: obtain the independent AS-031 human security signoff and satisfy scripts/security_release_gate.py --enforce plus artifact-signing requirements; this agent cannot sign it.",
+    "Runtime follow-up: reproduce and fix the empty post-tool Chat completion with an executed provider-failure stream, then prove no duplicate tool execution or false successful reply.",
+    "UX follow-ups: bring non-Chat clipboard rejection handling to parity and decide whether MCP Activity needs durable audit rather than expanding the in-memory label.",
+    "Roadmap: UIV2-30 is the final V2 story. Start no UIV2-31 by implication; write a new scoped roadmap for any follow-up work."
+  ],
+  "totals": {
+    "local_checks": 7,
+    "local_checks_passed": 7,
+    "ci_jobs": 4,
+    "visual_checks": 2200,
+    "visual_captures": 48,
+    "compare_checks": 15,
+    "compare_captures": 6,
+    "findings": 0
+  },
+  "findings": []
+}
