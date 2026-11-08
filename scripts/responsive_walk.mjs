@@ -197,6 +197,21 @@ const AUDIT = (pane, targetMin) => {
     }
     return false;
   };
+  // Chromium can report layout boxes for explicitly displayed descendants of a
+  // closed native <details>. They are not rendered or tabbable, so measuring them
+  // as clipped controls produces a false positive. The disclosure summary itself
+  // remains visible and is still measured.
+  const hiddenByClosedDetails = (el) => {
+    let node = el.parentElement;
+    while (node) {
+      if (node.tagName === "DETAILS" && !node.open) {
+        const summary = [...node.children].find((child) => child.tagName === "SUMMARY");
+        if (!summary || !summary.contains(el)) return true;
+      }
+      node = node.parentElement;
+    }
+    return false;
+  };
   const describe = (el) => ({
     tag: el.tagName.toLowerCase(),
     id: el.id || "",
@@ -209,7 +224,7 @@ const AUDIT = (pane, targetMin) => {
   const scrollers = new Set();
   const SELECTOR = "button, a[href], input:not([type=hidden]), select, textarea, summary, [role='button'], [tabindex='0']";
   for (const el of document.querySelectorAll(SELECTOR)) {
-    if (!visible(el)) continue;
+    if (!visible(el) || hiddenByClosedDetails(el) || el.closest("[inert]")) continue;
     const rect = el.getBoundingClientRect();
     const label = el.closest("label");
     const labelRect = label ? label.getBoundingClientRect() : null;
@@ -379,19 +394,28 @@ async function run(args) {
       await page.goto(args.baseUrl, { waitUntil: "domcontentloaded", timeout: args.timeoutMs });
       await sleep(args.settleMs * 5);
       const rail = await page.evaluate(() => {
+        const railEl = document.querySelector(".mode-tabs");
+        const scrollable = railEl.scrollWidth > railEl.clientWidth + 1 &&
+          ["auto", "scroll"].includes(getComputedStyle(railEl).overflowX);
         const tabs = [...document.querySelectorAll(".mode-tab[role='tab']")];
+        const boxes = tabs.map((tab) => {
+          const rect = tab.getBoundingClientRect();
+          return {
+            large: rect.width >= 24 && rect.height >= 24,
+            onScreen: rect.left >= -1 && rect.right <= window.innerWidth + 1,
+          };
+        });
         return {
           count: tabs.length,
-          onScreen: tabs.filter((tab) => {
-            const rect = tab.getBoundingClientRect();
-            return rect.width >= 24 && rect.height >= 24 && rect.left >= -1 && rect.right <= window.innerWidth + 1;
-          }).length,
+          onScreen: boxes.filter((box) => box.large && box.onScreen).length,
+          reachable: boxes.filter((box) => box.large && (box.onScreen || scrollable)).length,
+          scrollable,
         };
       });
       record(
         "at 360px all six panes are still on the rail and big enough to hit",
-        rail.count === 6 && rail.onScreen === 6,
-        `tabs=${rail.count} on-screen-and-large-enough=${rail.onScreen}`,
+        rail.count === 6 && rail.reachable === 6,
+        `tabs=${rail.count} on-screen=${rail.onScreen} reachable-by-scroll=${rail.reachable - rail.onScreen} scrollable=${rail.scrollable}`,
       );
 
       await page.evaluate(() => switchTab("debate"));
@@ -427,8 +451,13 @@ async function run(args) {
         `active=${afterTap.pane} selected=${afterTap.selected}`,
       );
 
-      await page.evaluate(() => switchTab("harness"));
+      await page.evaluate(() => {
+        switchTab("harness");
+        startFreshHarnessDraft();
+      });
       await sleep(args.settleMs * 3);
+      await page.tap(".harness-examples > summary");
+      await page.waitForFunction(() => document.querySelector(".harness-examples")?.open === true);
       const cardBefore = await page.evaluate(() => (document.getElementById("harnessPromptInput") || {}).value || "");
       const card = await page.$(".starter-card[data-key-activate]");
       if (card) await card.tap();

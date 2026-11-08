@@ -358,3 +358,28 @@ record changes in this CI correction; no retry loop or skip is added. Local
 verification:15 trusted-transformation tests plus the exact checkout-isolation
 case pass (16 total); Ruff, mypy62 and frontend syntax pass. Full multi-version
 CI remains required before merge; manual owner test6 is still pending.
+
+
+### Merge integration with accessibility updates
+
+The owner authorized merging PR #241 after the original eight checks passed.
+GitHub then refused the merge because PR #242 had advanced main to06067b6 and
+conflicted with generated inventories/evidence. Main was merged into the existing
+workspace-header branch without rebasing or force-pushing. Canonical HTML merged
+cleanly, retaining the selected-path caption and all new accessibility fixes;
+standalone output and the conflicting inventories were regenerated through their
+owning scripts, not resolved by choosing stale generated contents.
+
+Fresh combined-source checks:204 focused regressions (including all13 checkout
+store-isolation cases and the accessibility contract),36 mandatory browser tests
+with no skips,120/120 accessibility checks with62 captures,48 approved visual
+variants with2200/2200 checks,15/15 keyboard and27/27 responsive checks. All37
+release artifact checks and7 gates pass with0 findings. Ruff/mypy62, docs235,
+frontend syntax, scope-map171 and both startup/auth smokes pass. The latest
+accessibility run was imported through its validated evidence importer; its
+source digests bind the combined HTML. Existing human visual approval and the
+independent security sign-off are preserved byte-for-byte from main; no new
+human acceptance is asserted. The additional old-head local full-suite run was
+stopped before changing its shared working tree; it is not claimed as complete.
+Fresh exact-head multi-version/browser CI is required after this integration.
+Owner manual test6 remains pending; merge authorization does not complete it.

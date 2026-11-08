@@ -544,7 +544,7 @@
     "route_provers": 13,
     "control_provers": 4,
     "walks": 18,
-    "support_walks": 27,
+    "support_walks": 28,
     "findings": 0
   },
   "walks": [
@@ -606,6 +606,7 @@
     "terminology_walk.mjs": "the vocabulary walk (P5-01) proves the same states say the same words",
     "uiux_interaction_polish_walk.mjs": "the supplemental P5-05 evidence walk measures hover/focus parity and captures 72 screenshots; it proves presentation, not a capability the matrix enumerates",
     "uiux_v2_cross_tab_reference_walk.mjs": "the cross-tab reference gate (UIV2-26) proves the shared visual contract over the existing six panes at four viewports in light and dark, with keyboard selection, live/reference DOM assertions, authored differences and a separately human-approved structural baseline; it adds no capability beyond the matrix's existing six-tab controls",
+    "uiv2_accessibility_adversarial_walk.mjs": "the UIV2-28 accessibility adversarial walk proves measured contrast, DOM names, real Tab traversal, reduced motion, all 48 viewport/theme/pane rows at 200%, and exact modal focus/scroll recovery over the existing six panes; it adds no capability beyond the matrix's controls",
     "uiv2_preservation_visual_walk.mjs": "the UIV2-27 long-conclusion visual walk proves real route-created content at four viewports in light and dark: independent body scrolling, keyboard disclosure and resize, sticky geometry, shared-overlay focus, narrow composer reachability, and page overflow; these are state/layout proofs for the Council capability already enumerated by the matrix"
   },
   "pytest_nodes": [
@@ -626,8 +627,8 @@
   ],
   "last_run": {
     "recorded": true,
-    "commit": "f90f943",
-    "seconds": 426.0,
+    "commit": "adbce75",
+    "seconds": 446.0,
     "totals": {
       "rows": 21,
       "passed_rows": 21,

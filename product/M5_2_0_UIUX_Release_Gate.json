@@ -251,7 +251,7 @@
           "totals": {
             "tokens": 56,
             "groups": 8,
-            "references": 1629,
+            "references": 1631,
             "theme_overrides": 20,
             "density_overrides": 5,
             "contrast_pairs": 28,
@@ -853,7 +853,7 @@
             "route_provers": 13,
             "control_provers": 4,
             "walks": 18,
-            "support_walks": 27,
+            "support_walks": 28,
             "findings": 0
           }
         }

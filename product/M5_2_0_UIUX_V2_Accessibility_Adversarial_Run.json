@@ -1,0 +1,1579 @@
+{
+  "story": "UIV2-28",
+  "git": {
+    "head": "4cc919590b46da23611707573f7d5af16fb5661f",
+    "dirty": true
+  },
+  "source_sha256": {
+    "static/index.html": "9bab78f92142ad451705d51e92d5e0de467c51fdce932a2b6b74d583c30df617",
+    "scripts/uiv2_accessibility_adversarial_walk.mjs": "831d65473af6d28d3e77294420fa49130addb5c02d132b433d0141ded525e0c7"
+  },
+  "generated_at": "2026-11-08T02:40:25.410Z",
+  "method": {
+    "contrast": "WCAG 2 relative luminance on computed solid backgrounds",
+    "zoom": "half CSS viewport with deviceScaleFactor=2",
+    "reducedMotion": "prefers-reduced-motion: reduce"
+  },
+  "totals": {
+    "checks": 120,
+    "passed": 120,
+    "failed": 0,
+    "captures": 62
+  },
+  "checks": [
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "start",
+      "step": "all visible text meets its WCAG contrast floor with no unmeasured background",
+      "passed": true,
+      "detail": "35 pairs, lowest=4.95:1, failures=0"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "start",
+      "step": "all tabbable controls have accessible names and no positive tabindex",
+      "passed": true,
+      "detail": "10 pane stops; unnamed=[]; positive=0"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "start",
+      "step": "reduced motion disables non-essential animation, transition and smooth scrolling",
+      "passed": true,
+      "detail": "[]"
+    },
+    {
+      "group": "keyboard",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "start",
+      "step": "Tab traverses the pane and leaves it without a focus loop",
+      "passed": true,
+      "detail": "stops=10 visited=9 required=9 final=10 dynamic=2 left=true repeated=none"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "harness",
+      "step": "all visible text meets its WCAG contrast floor with no unmeasured background",
+      "passed": true,
+      "detail": "23 pairs, lowest=4.95:1, failures=0"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "harness",
+      "step": "all tabbable controls have accessible names and no positive tabindex",
+      "passed": true,
+      "detail": "11 pane stops; unnamed=[]; positive=0"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "harness",
+      "step": "reduced motion disables non-essential animation, transition and smooth scrolling",
+      "passed": true,
+      "detail": "[]"
+    },
+    {
+      "group": "keyboard",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "harness",
+      "step": "Tab traverses the pane and leaves it without a focus loop",
+      "passed": true,
+      "detail": "stops=11 visited=11 required=10 final=11 dynamic=1 left=true repeated=none"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "hall",
+      "step": "all visible text meets its WCAG contrast floor with no unmeasured background",
+      "passed": true,
+      "detail": "55 pairs, lowest=4.95:1, failures=0"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "hall",
+      "step": "all tabbable controls have accessible names and no positive tabindex",
+      "passed": true,
+      "detail": "16 pane stops; unnamed=[]; positive=0"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "hall",
+      "step": "reduced motion disables non-essential animation, transition and smooth scrolling",
+      "passed": true,
+      "detail": "[]"
+    },
+    {
+      "group": "keyboard",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "hall",
+      "step": "Tab traverses the pane and leaves it without a focus loop",
+      "passed": true,
+      "detail": "stops=16 visited=15 required=15 final=16 dynamic=0 left=true repeated=none"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "council",
+      "step": "all visible text meets its WCAG contrast floor with no unmeasured background",
+      "passed": true,
+      "detail": "53 pairs, lowest=4.95:1, failures=0"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "council",
+      "step": "all tabbable controls have accessible names and no positive tabindex",
+      "passed": true,
+      "detail": "6 pane stops; unnamed=[]; positive=0"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "council",
+      "step": "reduced motion disables non-essential animation, transition and smooth scrolling",
+      "passed": true,
+      "detail": "[]"
+    },
+    {
+      "group": "keyboard",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "council",
+      "step": "Tab traverses the pane and leaves it without a focus loop",
+      "passed": true,
+      "detail": "stops=10 visited=5 required=5 final=6 dynamic=0 left=true repeated=none"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "debate",
+      "step": "all visible text meets its WCAG contrast floor with no unmeasured background",
+      "passed": true,
+      "detail": "34 pairs, lowest=4.95:1, failures=0"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "debate",
+      "step": "all tabbable controls have accessible names and no positive tabindex",
+      "passed": true,
+      "detail": "14 pane stops; unnamed=[]; positive=0"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "debate",
+      "step": "reduced motion disables non-essential animation, transition and smooth scrolling",
+      "passed": true,
+      "detail": "[]"
+    },
+    {
+      "group": "keyboard",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "debate",
+      "step": "Tab traverses the pane and leaves it without a focus loop",
+      "passed": true,
+      "detail": "stops=14 visited=13 required=13 final=14 dynamic=0 left=true repeated=none"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "chat",
+      "step": "all visible text meets its WCAG contrast floor with no unmeasured background",
+      "passed": true,
+      "detail": "24 pairs, lowest=4.95:1, failures=0"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "chat",
+      "step": "all tabbable controls have accessible names and no positive tabindex",
+      "passed": true,
+      "detail": "9 pane stops; unnamed=[]; positive=0"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "chat",
+      "step": "reduced motion disables non-essential animation, transition and smooth scrolling",
+      "passed": true,
+      "detail": "[]"
+    },
+    {
+      "group": "keyboard",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "chat",
+      "step": "Tab traverses the pane and leaves it without a focus loop",
+      "passed": true,
+      "detail": "stops=9 visited=9 required=8 final=9 dynamic=1 left=true repeated=none"
+    },
+    {
+      "group": "browser",
+      "viewport": "1440x900",
+      "theme": "light",
+      "step": "no page or outbound-request error occurred",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "start",
+      "step": "all visible text meets its WCAG contrast floor with no unmeasured background",
+      "passed": true,
+      "detail": "35 pairs, lowest=5.58:1, failures=0"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "start",
+      "step": "all tabbable controls have accessible names and no positive tabindex",
+      "passed": true,
+      "detail": "10 pane stops; unnamed=[]; positive=0"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "start",
+      "step": "reduced motion disables non-essential animation, transition and smooth scrolling",
+      "passed": true,
+      "detail": "[]"
+    },
+    {
+      "group": "keyboard",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "start",
+      "step": "Tab traverses the pane and leaves it without a focus loop",
+      "passed": true,
+      "detail": "stops=10 visited=9 required=9 final=10 dynamic=0 left=true repeated=none"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "harness",
+      "step": "all visible text meets its WCAG contrast floor with no unmeasured background",
+      "passed": true,
+      "detail": "23 pairs, lowest=5.58:1, failures=0"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "harness",
+      "step": "all tabbable controls have accessible names and no positive tabindex",
+      "passed": true,
+      "detail": "11 pane stops; unnamed=[]; positive=0"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "harness",
+      "step": "reduced motion disables non-essential animation, transition and smooth scrolling",
+      "passed": true,
+      "detail": "[]"
+    },
+    {
+      "group": "keyboard",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "harness",
+      "step": "Tab traverses the pane and leaves it without a focus loop",
+      "passed": true,
+      "detail": "stops=11 visited=11 required=10 final=11 dynamic=1 left=true repeated=none"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "hall",
+      "step": "all visible text meets its WCAG contrast floor with no unmeasured background",
+      "passed": true,
+      "detail": "55 pairs, lowest=5.58:1, failures=0"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "hall",
+      "step": "all tabbable controls have accessible names and no positive tabindex",
+      "passed": true,
+      "detail": "16 pane stops; unnamed=[]; positive=0"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "hall",
+      "step": "reduced motion disables non-essential animation, transition and smooth scrolling",
+      "passed": true,
+      "detail": "[]"
+    },
+    {
+      "group": "keyboard",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "hall",
+      "step": "Tab traverses the pane and leaves it without a focus loop",
+      "passed": true,
+      "detail": "stops=16 visited=15 required=15 final=16 dynamic=0 left=true repeated=none"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "council",
+      "step": "all visible text meets its WCAG contrast floor with no unmeasured background",
+      "passed": true,
+      "detail": "53 pairs, lowest=5.58:1, failures=0"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "council",
+      "step": "all tabbable controls have accessible names and no positive tabindex",
+      "passed": true,
+      "detail": "6 pane stops; unnamed=[]; positive=0"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "council",
+      "step": "reduced motion disables non-essential animation, transition and smooth scrolling",
+      "passed": true,
+      "detail": "[]"
+    },
+    {
+      "group": "keyboard",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "council",
+      "step": "Tab traverses the pane and leaves it without a focus loop",
+      "passed": true,
+      "detail": "stops=10 visited=5 required=5 final=6 dynamic=0 left=true repeated=none"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "debate",
+      "step": "all visible text meets its WCAG contrast floor with no unmeasured background",
+      "passed": true,
+      "detail": "34 pairs, lowest=5.58:1, failures=0"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "debate",
+      "step": "all tabbable controls have accessible names and no positive tabindex",
+      "passed": true,
+      "detail": "14 pane stops; unnamed=[]; positive=0"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "debate",
+      "step": "reduced motion disables non-essential animation, transition and smooth scrolling",
+      "passed": true,
+      "detail": "[]"
+    },
+    {
+      "group": "keyboard",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "debate",
+      "step": "Tab traverses the pane and leaves it without a focus loop",
+      "passed": true,
+      "detail": "stops=14 visited=13 required=13 final=14 dynamic=0 left=true repeated=none"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "chat",
+      "step": "all visible text meets its WCAG contrast floor with no unmeasured background",
+      "passed": true,
+      "detail": "24 pairs, lowest=5.58:1, failures=0"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "chat",
+      "step": "all tabbable controls have accessible names and no positive tabindex",
+      "passed": true,
+      "detail": "9 pane stops; unnamed=[]; positive=0"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "chat",
+      "step": "reduced motion disables non-essential animation, transition and smooth scrolling",
+      "passed": true,
+      "detail": "[]"
+    },
+    {
+      "group": "keyboard",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "chat",
+      "step": "Tab traverses the pane and leaves it without a focus loop",
+      "passed": true,
+      "detail": "stops=9 visited=9 required=8 final=9 dynamic=1 left=true repeated=none"
+    },
+    {
+      "group": "browser",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "step": "no page or outbound-request error occurred",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1640x900",
+      "theme": "light",
+      "pane": "start",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1640x900",
+      "theme": "light",
+      "pane": "harness",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1640x900",
+      "theme": "light",
+      "pane": "hall",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1640x900",
+      "theme": "light",
+      "pane": "council",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1640x900",
+      "theme": "light",
+      "pane": "debate",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1640x900",
+      "theme": "light",
+      "pane": "chat",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "browser",
+      "viewport": "1640x900",
+      "theme": "light",
+      "step": "no page or outbound-request error occurred at 200%",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1640x900",
+      "theme": "dark",
+      "pane": "start",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1640x900",
+      "theme": "dark",
+      "pane": "harness",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1640x900",
+      "theme": "dark",
+      "pane": "hall",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1640x900",
+      "theme": "dark",
+      "pane": "council",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1640x900",
+      "theme": "dark",
+      "pane": "debate",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1640x900",
+      "theme": "dark",
+      "pane": "chat",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "browser",
+      "viewport": "1640x900",
+      "theme": "dark",
+      "step": "no page or outbound-request error occurred at 200%",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "start",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "harness",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "hall",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "council",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "debate",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "chat",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "browser",
+      "viewport": "1440x900",
+      "theme": "light",
+      "step": "no page or outbound-request error occurred at 200%",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "start",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "harness",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "hall",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "council",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "debate",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "chat",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "browser",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "step": "no page or outbound-request error occurred at 200%",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1280x800",
+      "theme": "light",
+      "pane": "start",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1280x800",
+      "theme": "light",
+      "pane": "harness",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1280x800",
+      "theme": "light",
+      "pane": "hall",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1280x800",
+      "theme": "light",
+      "pane": "council",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1280x800",
+      "theme": "light",
+      "pane": "debate",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1280x800",
+      "theme": "light",
+      "pane": "chat",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "browser",
+      "viewport": "1280x800",
+      "theme": "light",
+      "step": "no page or outbound-request error occurred at 200%",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1280x800",
+      "theme": "dark",
+      "pane": "start",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1280x800",
+      "theme": "dark",
+      "pane": "harness",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1280x800",
+      "theme": "dark",
+      "pane": "hall",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1280x800",
+      "theme": "dark",
+      "pane": "council",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1280x800",
+      "theme": "dark",
+      "pane": "debate",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1280x800",
+      "theme": "dark",
+      "pane": "chat",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "browser",
+      "viewport": "1280x800",
+      "theme": "dark",
+      "step": "no page or outbound-request error occurred at 200%",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "390x844",
+      "theme": "light",
+      "pane": "start",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "390x844",
+      "theme": "light",
+      "pane": "harness",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "390x844",
+      "theme": "light",
+      "pane": "hall",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "390x844",
+      "theme": "light",
+      "pane": "council",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "390x844",
+      "theme": "light",
+      "pane": "debate",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "390x844",
+      "theme": "light",
+      "pane": "chat",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "browser",
+      "viewport": "390x844",
+      "theme": "light",
+      "step": "no page or outbound-request error occurred at 200%",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "390x844",
+      "theme": "dark",
+      "pane": "start",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "390x844",
+      "theme": "dark",
+      "pane": "harness",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "390x844",
+      "theme": "dark",
+      "pane": "hall",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "390x844",
+      "theme": "dark",
+      "pane": "council",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "390x844",
+      "theme": "dark",
+      "pane": "debate",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "390x844",
+      "theme": "dark",
+      "pane": "chat",
+      "step": "200% keeps every control reachable and at least 24 CSS px without page overflow",
+      "passed": true,
+      "detail": "overflow=0px clipped=[] small=[]"
+    },
+    {
+      "group": "browser",
+      "viewport": "390x844",
+      "theme": "dark",
+      "step": "no page or outbound-request error occurred at 200%",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "group": "long-recovery",
+      "viewport": "1280x800",
+      "theme": "dark",
+      "step": "transcript and pinned conclusion hold independent nonzero nested scroll offsets",
+      "passed": true,
+      "detail": "{\"streamHost\":\"hallStream\",\"stream\":96,\"conclusion\":72,\"page\":0,\"streamRange\":1095,\"conclusionRange\":1231}"
+    },
+    {
+      "group": "long-recovery",
+      "viewport": "1280x800",
+      "theme": "dark",
+      "step": "the full route-created conclusion opens at 200% with focus inside",
+      "passed": true,
+      "detail": "{\"open\":true,\"full\":true,\"focus\":true}"
+    },
+    {
+      "group": "long-recovery",
+      "viewport": "1280x800",
+      "theme": "dark",
+      "step": "Tab stays inside the intentional long-content modal",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "group": "long-recovery",
+      "viewport": "1280x800",
+      "theme": "dark",
+      "step": "the long dialog scrolls to its final marker without moving the underlying regions",
+      "passed": true,
+      "detail": "{\"scrollTop\":1075,\"range\":1075,\"atEnd\":true,\"marker\":true,\"page\":0,\"stream\":96,\"conclusion\":72}"
+    },
+    {
+      "group": "long-recovery",
+      "viewport": "1280x800",
+      "theme": "dark",
+      "step": "Escape restores the Expand trigger",
+      "passed": true,
+      "detail": "{\"open\":false,\"action\":\"expand\",\"stream\":96,\"conclusion\":72,\"page\":0}"
+    },
+    {
+      "group": "long-recovery",
+      "viewport": "1280x800",
+      "theme": "dark",
+      "step": "Escape restores transcript, conclusion and page scroll exactly",
+      "passed": true,
+      "detail": "before={\"streamHost\":\"hallStream\",\"stream\":96,\"conclusion\":72,\"page\":0,\"streamRange\":1095,\"conclusionRange\":1231} after={\"open\":false,\"action\":\"expand\",\"stream\":96,\"conclusion\":72,\"page\":0}"
+    },
+    {
+      "group": "browser",
+      "viewport": "1280x800",
+      "theme": "dark",
+      "step": "no page or outbound-request error occurred during long recovery",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "group": "long-recovery",
+      "viewport": "390x844",
+      "theme": "light",
+      "step": "transcript and pinned conclusion hold independent nonzero nested scroll offsets",
+      "passed": true,
+      "detail": "{\"streamHost\":\"hall-main\",\"stream\":96,\"conclusion\":72,\"page\":0,\"streamRange\":5520,\"conclusionRange\":6151}"
+    },
+    {
+      "group": "long-recovery",
+      "viewport": "390x844",
+      "theme": "light",
+      "step": "the full route-created conclusion opens at 200% with focus inside",
+      "passed": true,
+      "detail": "{\"open\":true,\"full\":true,\"focus\":true}"
+    },
+    {
+      "group": "long-recovery",
+      "viewport": "390x844",
+      "theme": "light",
+      "step": "Tab stays inside the intentional long-content modal",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "group": "long-recovery",
+      "viewport": "390x844",
+      "theme": "light",
+      "step": "the long dialog scrolls to its final marker without moving the underlying regions",
+      "passed": true,
+      "detail": "{\"scrollTop\":5470,\"range\":5470,\"atEnd\":true,\"marker\":true,\"page\":0,\"stream\":96,\"conclusion\":72}"
+    },
+    {
+      "group": "long-recovery",
+      "viewport": "390x844",
+      "theme": "light",
+      "step": "Escape restores the Expand trigger",
+      "passed": true,
+      "detail": "{\"open\":false,\"action\":\"expand\",\"stream\":96,\"conclusion\":72,\"page\":0}"
+    },
+    {
+      "group": "long-recovery",
+      "viewport": "390x844",
+      "theme": "light",
+      "step": "Escape restores transcript, conclusion and page scroll exactly",
+      "passed": true,
+      "detail": "before={\"streamHost\":\"hall-main\",\"stream\":96,\"conclusion\":72,\"page\":0,\"streamRange\":5520,\"conclusionRange\":6151} after={\"open\":false,\"action\":\"expand\",\"stream\":96,\"conclusion\":72,\"page\":0}"
+    },
+    {
+      "group": "browser",
+      "viewport": "390x844",
+      "theme": "light",
+      "step": "no page or outbound-request error occurred during long recovery",
+      "passed": true,
+      "detail": ""
+    }
+  ],
+  "captures": [
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "start",
+      "path": "/tmp/pr241-integrated-accessibility/rendered-1440x900-light-start.png",
+      "sha256": "10cecd67f0de36a6acc74bb2d92b88893e7c68b39a1e7e21633987de855aa0cc"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "harness",
+      "path": "/tmp/pr241-integrated-accessibility/rendered-1440x900-light-harness.png",
+      "sha256": "8d8cce0c87e4887f8cbeaa177ab185dbfff457b7b8cf65ec833045c9db0367f2"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "hall",
+      "path": "/tmp/pr241-integrated-accessibility/rendered-1440x900-light-hall.png",
+      "sha256": "920787bce2986b8a5c25f73cb3a764ce3f3946b8495dee2d27ae9dc6b3eefcdf"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "council",
+      "path": "/tmp/pr241-integrated-accessibility/rendered-1440x900-light-council.png",
+      "sha256": "390041d9b79fe29735721639b73d5f3954ffaa6289807d3677e2a4d3dec352f0"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "debate",
+      "path": "/tmp/pr241-integrated-accessibility/rendered-1440x900-light-debate.png",
+      "sha256": "80de9c6250dc2c8bf264f420a7ef8d7489f4213c2efded702a8f9b9d71a2d68a"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "chat",
+      "path": "/tmp/pr241-integrated-accessibility/rendered-1440x900-light-chat.png",
+      "sha256": "8e272587f1d2a04c6e3ca4464e6a8bd0b12fa67812d9b98f5b2d1f193812f5c4"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "start",
+      "path": "/tmp/pr241-integrated-accessibility/rendered-1440x900-dark-start.png",
+      "sha256": "ae86a13b0f2054d76668b3585b2fec9922065391eb3989ffecbb828c3b08c6a3"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "harness",
+      "path": "/tmp/pr241-integrated-accessibility/rendered-1440x900-dark-harness.png",
+      "sha256": "d065ad3e1e4325c3863709a76514dc95aaa858881d32fd0a49358f7ae7cc958b"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "hall",
+      "path": "/tmp/pr241-integrated-accessibility/rendered-1440x900-dark-hall.png",
+      "sha256": "be700b43e6fec628308f33fcfcb94bc54dcbdb80c591e4e5443e796494b333b9"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "council",
+      "path": "/tmp/pr241-integrated-accessibility/rendered-1440x900-dark-council.png",
+      "sha256": "c57e85ce24f94e99a6a106a74d9041c26acdc0ab3f881e236a863dd342b7505e"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "debate",
+      "path": "/tmp/pr241-integrated-accessibility/rendered-1440x900-dark-debate.png",
+      "sha256": "e766e49c66ca399a648f5915d6e7d86bc476412268a4267614fcad18f93486c2"
+    },
+    {
+      "group": "rendered",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "chat",
+      "path": "/tmp/pr241-integrated-accessibility/rendered-1440x900-dark-chat.png",
+      "sha256": "90d9f1f04a22db418ec4e11bb7229d17edd21f20a1efdc34ba1dc1906da4323d"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1640x900",
+      "theme": "light",
+      "pane": "start",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-1640x900-light-start.png",
+      "sha256": "6f0b94450434237dbc8b878f4b9a719ad8a71b4496915f13e94b1aefee5eebec"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1640x900",
+      "theme": "light",
+      "pane": "harness",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-1640x900-light-harness.png",
+      "sha256": "6f9282305ad0a7514f4965690ec168419840af2f1f62c4228f92a75249ca64f0"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1640x900",
+      "theme": "light",
+      "pane": "hall",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-1640x900-light-hall.png",
+      "sha256": "61103fac6cfb5304cc5a3c0c53918f9f68dd5d4f3372024645c799111d798ee0"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1640x900",
+      "theme": "light",
+      "pane": "council",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-1640x900-light-council.png",
+      "sha256": "0e72cb0675eab4d0a1879b5d355297d9e8d9e01d9cbea52c20abad6580f855e9"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1640x900",
+      "theme": "light",
+      "pane": "debate",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-1640x900-light-debate.png",
+      "sha256": "d99325deed4e6779c38edb2b742ee74b688880f13a86fe7fe00314725f8c635e"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1640x900",
+      "theme": "light",
+      "pane": "chat",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-1640x900-light-chat.png",
+      "sha256": "9c86a4bab55be9c4e07026297326383f4b177907686caaab37d65082b329ff57"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1640x900",
+      "theme": "dark",
+      "pane": "start",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-1640x900-dark-start.png",
+      "sha256": "01d16f1f853923d90ca3d24615ae3d5507abd62aaafddea44ce715d45fb60d1e"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1640x900",
+      "theme": "dark",
+      "pane": "harness",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-1640x900-dark-harness.png",
+      "sha256": "54972f680ce7bd60e25dd0f3c863b88d3779c0986682e327ccb00bebfde8ffee"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1640x900",
+      "theme": "dark",
+      "pane": "hall",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-1640x900-dark-hall.png",
+      "sha256": "8940a2db83c069f10fba0dddcce1e7fbdc75ff9f68c2360edf8f1f6b486153a8"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1640x900",
+      "theme": "dark",
+      "pane": "council",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-1640x900-dark-council.png",
+      "sha256": "e157644ca77a6a0ecf9c782954032d9f797e995a1244e095aa10f2e2a81ed092"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1640x900",
+      "theme": "dark",
+      "pane": "debate",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-1640x900-dark-debate.png",
+      "sha256": "beae7d298168e11b2b3eb61f2d16fc9d657c323bc65bd3fec20a834bc2e27071"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1640x900",
+      "theme": "dark",
+      "pane": "chat",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-1640x900-dark-chat.png",
+      "sha256": "918cdbc74ab0e5073b4e851da367dfaaa93786b1e85954cc82caa82f910cb287"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "start",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-1440x900-light-start.png",
+      "sha256": "220ce984ff2a46a4bac95183c0fdb6df94f054c57ec82a80a6d54a9fa4b0e1bb"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "harness",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-1440x900-light-harness.png",
+      "sha256": "36f7f91e177dfee1323d317b0063250d810c26966a2284cc1dc18c2f3f694117"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "hall",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-1440x900-light-hall.png",
+      "sha256": "261f088c901b97024d919268628c810e150a517997bba382f6f60d3df7916b9c"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "council",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-1440x900-light-council.png",
+      "sha256": "7c33c4ff4df0bb70990a2b799b456ed6ee9b2a7cb8a63f6139d893caf2c0bf58"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "debate",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-1440x900-light-debate.png",
+      "sha256": "41dfd947dbb5936195e2d810899e950e0f38aed1deb4e2a321ccf5cd6657b286"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "chat",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-1440x900-light-chat.png",
+      "sha256": "31627e4006d3bdd2cd39ff483f0ce15ebfce3e10d0f26b29b8021bcc247fc108"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "start",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-1440x900-dark-start.png",
+      "sha256": "6d4eb86ed7992c8a3726b9036d7c0773338a32080c09e38e7d8088bec80c24a8"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "harness",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-1440x900-dark-harness.png",
+      "sha256": "56fec8966cfb08da3218f39dda8fb96c8b1805440e32f24a74607f7a24073ce4"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "hall",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-1440x900-dark-hall.png",
+      "sha256": "4ee5d99bf0e2e9e0847b17517d25e22eb7cbfdbc09b6fabb57a16e3ab5aa33e9"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "council",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-1440x900-dark-council.png",
+      "sha256": "6dcf6db9355c2acd02cc1328e47e4b63da379f8e7ce5e33ab3257ef1106f1a4e"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "debate",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-1440x900-dark-debate.png",
+      "sha256": "64a49f9e75d0ec05ec9ee4734221c15d62e13b55cfd14111babe9146748d043a"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "chat",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-1440x900-dark-chat.png",
+      "sha256": "611e27672c5de620a2d1ad6fc25240ff9ef122b8fbf89aa8b9282cec87edf5f4"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1280x800",
+      "theme": "light",
+      "pane": "start",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-1280x800-light-start.png",
+      "sha256": "6e5893f652665add2cfacfe39bbf784fc6f6de85dcfcd7a6a651bc44e48c17af"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1280x800",
+      "theme": "light",
+      "pane": "harness",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-1280x800-light-harness.png",
+      "sha256": "e2fb1578048834449f2b83bc956c5d4e9b4c6a83cd7db59014d8b1c643f319fd"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1280x800",
+      "theme": "light",
+      "pane": "hall",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-1280x800-light-hall.png",
+      "sha256": "f4c280c0d80ee849dd5084143eaa1d1d59cd909e42c2a68a36b100ae06f51355"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1280x800",
+      "theme": "light",
+      "pane": "council",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-1280x800-light-council.png",
+      "sha256": "9f96608678d274f4d6897ec9b5404c89a10aa37c137de47c3665242c0d12dcbe"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1280x800",
+      "theme": "light",
+      "pane": "debate",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-1280x800-light-debate.png",
+      "sha256": "e2b59299b66defda7bef572d79aed708fc355e9103b1c68e881ca97469cab3ce"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1280x800",
+      "theme": "light",
+      "pane": "chat",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-1280x800-light-chat.png",
+      "sha256": "c92b284860c7ab521e3c299e391bba8da89c1d22de0850ae5e699cb301276e82"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1280x800",
+      "theme": "dark",
+      "pane": "start",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-1280x800-dark-start.png",
+      "sha256": "f38d0b9c1bbd117908d37c867e057a864ed9087ba4992c6fe23558bc2f16b734"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1280x800",
+      "theme": "dark",
+      "pane": "harness",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-1280x800-dark-harness.png",
+      "sha256": "964e563dca71673d11fa5b2faa14861f90e1a498d664c045eb28f5f52d8273a6"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1280x800",
+      "theme": "dark",
+      "pane": "hall",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-1280x800-dark-hall.png",
+      "sha256": "36a01de35ea27777e99a4684116ab9fe9a92dfdca2bec4bebd7db2380bf16910"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1280x800",
+      "theme": "dark",
+      "pane": "council",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-1280x800-dark-council.png",
+      "sha256": "5e613413316e6cd57596ca5437ae18aac535558093744ccdf50f90aae24050d0"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1280x800",
+      "theme": "dark",
+      "pane": "debate",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-1280x800-dark-debate.png",
+      "sha256": "cbcb9e74952bd1e4f2ce176024b47b7bcbe9405ca3a69903b322491aac76ed40"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "1280x800",
+      "theme": "dark",
+      "pane": "chat",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-1280x800-dark-chat.png",
+      "sha256": "efdd53086afde75af192db4c09976d05d2aae5d9f4de84e575cb1a584339862f"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "390x844",
+      "theme": "light",
+      "pane": "start",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-390x844-light-start.png",
+      "sha256": "305999f4e8f25951a8f776b40a1676652eb68eefe3cbf10b495543019b97abf2"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "390x844",
+      "theme": "light",
+      "pane": "harness",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-390x844-light-harness.png",
+      "sha256": "84771fe62b58f2bb58ad91aff5a54949b9254910a802a6538580a4ada8bba406"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "390x844",
+      "theme": "light",
+      "pane": "hall",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-390x844-light-hall.png",
+      "sha256": "efa3c114591554e4a16f0f156a5cf413404ac1f48a9419943b00eedc85ee1961"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "390x844",
+      "theme": "light",
+      "pane": "council",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-390x844-light-council.png",
+      "sha256": "3104e1a210202cbfa454d41aba24b7e4093290cb51495e9bf7e98eedf35fc180"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "390x844",
+      "theme": "light",
+      "pane": "debate",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-390x844-light-debate.png",
+      "sha256": "1eb8fc1a111d3df0874e250de33c1d8fe5a30201efca63138f2d87b5c4256a58"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "390x844",
+      "theme": "light",
+      "pane": "chat",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-390x844-light-chat.png",
+      "sha256": "6516829e69d857a640b8820012eafc4344cca408183c5015bd43429557867811"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "390x844",
+      "theme": "dark",
+      "pane": "start",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-390x844-dark-start.png",
+      "sha256": "40267c149b8d16a66615726c4bf142e53753307cc69beb8179cb76faca67df5f"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "390x844",
+      "theme": "dark",
+      "pane": "harness",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-390x844-dark-harness.png",
+      "sha256": "d47161de27c3b2f303d03be310e1876185f22ea0b17a1f61a3298a06dd1ec8dd"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "390x844",
+      "theme": "dark",
+      "pane": "hall",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-390x844-dark-hall.png",
+      "sha256": "f8d9d8c224f9729b1d2f7f183338fc2e5fce450f68da591a7a2ea6c02e092fbf"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "390x844",
+      "theme": "dark",
+      "pane": "council",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-390x844-dark-council.png",
+      "sha256": "40764bc5b7f4c757096ce671406e22195e243a435fab67950ee3b8ba86bcfa87"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "390x844",
+      "theme": "dark",
+      "pane": "debate",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-390x844-dark-debate.png",
+      "sha256": "23994d35c041630b3ebb57a25d8f8e5a591e0e9db572cf1549a1e3e470ff6fc7"
+    },
+    {
+      "group": "zoom-200",
+      "viewport": "390x844",
+      "theme": "dark",
+      "pane": "chat",
+      "path": "/tmp/pr241-integrated-accessibility/zoom-200-390x844-dark-chat.png",
+      "sha256": "855927d7fdb1415657a0e03222c884e045fd11d1f7494ac6aac7e860b69ee466"
+    },
+    {
+      "group": "long-recovery",
+      "viewport": "1280x800",
+      "theme": "dark",
+      "pane": "conclusion-modal",
+      "path": "/tmp/pr241-integrated-accessibility/long-recovery-1280x800-dark-conclusion-modal.png",
+      "sha256": "f4c210a3db8b800b5000431e07d64df40b951fdd3406a12ec8cbd7461c64405a"
+    },
+    {
+      "group": "long-recovery",
+      "viewport": "390x844",
+      "theme": "light",
+      "pane": "conclusion-modal",
+      "path": "/tmp/pr241-integrated-accessibility/long-recovery-390x844-light-conclusion-modal.png",
+      "sha256": "4525380239def17590a45346539dc4595a8f3e456faeea7b29171768c7cbf6f7"
+    }
+  ]
+}
