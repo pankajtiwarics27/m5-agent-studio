@@ -3520,8 +3520,8 @@
         "progress_percent": 100,
         "attempt_count": 1,
         "started_at": "2026-11-08T04:58:25.005799+00:00",
-        "completed_at": "2026-11-08T04:58:25.005799+00:00",
-        "commit_sha": "9e075c65a517c3cb2e5e1e1e4f827d9be4bfe128",
+        "completed_at": "2026-11-08T05:32:29.481443+00:00",
+        "commit_sha": "02fadd85b619259d4ed4e9170939a86582a2ee52",
         "changed_files": [
           ".github/workflows/ci.yml",
           "docs/README.md",
@@ -3541,6 +3541,7 @@
           "product/M5_2_0_UIUX_Authorization_Trace.json",
           "product/M5_2_0_UIUX_Control_Inventory.json",
           "product/M5_2_0_UIUX_Overlays.json",
+          "product/M5_2_0_UIUX_Pipeline_Workspace.json",
           "product/M5_2_0_UIUX_Presentations.json",
           "product/M5_2_0_UIUX_Preservation_E2E.json",
           "product/M5_2_0_UIUX_Preservation_Signoff.json",
@@ -3581,35 +3582,43 @@
           "Focused mutation/source suites -> 131 passed; broader owning suite -> 364 passed, 1 environment-only historical-commit skip (73bc5e unavailable), 1 third-party deprecation warning.",
           "Ruff and mypy -> clean; frontend syntax, documentation links, scoped-test map and git diff --check -> clean.",
           "Integrated UIUX release gate -> 37/37 artifact checks, 7/7 phase gates, 0 findings; V2 matrix 272 controls and 121 mounted routes; preservation map 21/21 rows and 73 provers.",
-          "Final clean-source focused suite -> 186 passed, 0 failures (performance safety, stream performance, task events, accessibility, release gate, docs verification and cross-tab reference); one third-party deprecation warning."
+          "Final clean-source focused suite -> 186 passed, 0 failures (performance safety, stream performance, task events, accessibility, release gate, docs verification and cross-tab reference); one third-party deprecation warning.",
+          "Integrated origin/main through 5e7c7ad at clean merge HEAD 02fadd8; upstream workspace-header source and UIV2-29 rendering source were regenerated through owning scripts.",
+          "Integrated dedicated Chromium walk -> 21/21 checks, 11 captures, dirty=false, manifest sha256 7a14dbb7801fb0daf00950615675a1abde4b3f73f1d54b233a9e771e9a3aeec9; 58 real fast SSE schedules in 343ms (169.096/s), 19 renders, complete text retained.",
+          "Integrated full-window timing -> mean 2.23ms, nearest-rank p95 2.70ms, max 5.80ms over 20 ten-event frames; unchanged legacy walk 15/15 at 2.02ms. Two cycles leave cursor 30000, cache 5000, 300 cards/1147 stream nodes, post-GC nodes 8481 -> 8481 -> 8481 and JS heap 3363620 -> 3312204 -> 3324148 bytes.",
+          "Integrated backend gate -> 300 passed across 13 modules, isolation 16/16, unqualified and blocked (fail closed), dirty=false at 02fadd8.",
+          "Integrated keyboard 15/15, responsive 27/27, accessibility 120/120 with 62 captures (manifest sha256 0f9dcc2e51e055ec4037b0c09fccc904b7a2587ada1713ce1c64a8d3d92d8a8a).",
+          "Integrated approved visual matrix -> 48 captures, 2200/2200 checks, manifest sha256 f4d47d490d18574bc5c3e45e05be0ec751fb57f0d61157311234c6796b9e34c1; no structural delta from the explicit UIV2-28 approval.",
+          "Integrated focused owning suite -> 392 passed, 0 failures (performance, streams, task events, accessibility, release gate, docs, cross-tab, trusted transformations, pipeline workspace, tokens, adversarial, control/route/auth and preservation); one third-party deprecation warning.",
+          "Integrated release gate -> 37/37 artifact checks, 7/7 phase gates, 0 findings; Ruff, mypy, frontend syntax, docs, scope map and diff checks clean."
         ],
         "visual_evidence": [
-          "/tmp/uiv2-29-performance-clean-final/capture-manifest.json — clean 9e075c6, 21/21 checks and 11 actual captures, sha256 efd3f566baa15c5539bde8dd492b3eb2bbe4e2d36328baf3590597827f4b28f9 (local review evidence).",
-          "product/M5_2_0_UIUX_V2_Performance_Run.json — committed source-bound metrics, environment, checks and capture digests; docs/uiv2-v2-performance-safety.md renders the actual measurements.",
-          "/tmp/uiv2-29-accessibility-clean-final/capture-manifest.json — clean 9e075c6, 120/120 checks and 62 captures, sha256 f5c0edb155e98db68371c43419b98831f798342df826a0e252c28e7785058e1b.",
-          "product/M5_2_0_UIUX_V2_Cross_Tab_Approval.json — explicit user-approved UIV2-28 structural baseline; the UIV2-29 source passed all 2200/2200 approved checks without a structural delta."
+          "/tmp/uiv2-29-integrated-performance/capture-manifest.json — clean integrated 02fadd8, 21/21 checks and 11 captures, sha256 7a14dbb7801fb0daf00950615675a1abde4b3f73f1d54b233a9e771e9a3aeec9 (local review evidence).",
+          "product/M5_2_0_UIUX_V2_Performance_Run.json — committed integrated source-bound metrics, environment, checks and capture digests; docs/uiv2-v2-performance-safety.md renders the actual measurements.",
+          "/tmp/uiv2-29-integrated-accessibility/capture-manifest.json — clean integrated 02fadd8, 120/120 checks and 62 captures, sha256 0f9dcc2e51e055ec4037b0c09fccc904b7a2587ada1713ce1c64a8d3d92d8a8a.",
+          "/tmp/uiv2-29-integrated-cross-tab/check-manifest.json — 48 approved captures and 2200/2200 checks, sha256 f4d47d490d18574bc5c3e45e05be0ec751fb57f0d61157311234c6796b9e34c1; product/M5_2_0_UIUX_V2_Cross_Tab_Approval.json remains the explicit user-approved structural baseline."
         ],
         "acceptance_evidence": [
-          "Actual environment and metrics are committed: real fast SSE 159.297/s, unchanged 4ms frame gate passed at 2.095ms mean, two 12,000-event cycles leave a 5000-event cache and 300-card DOM, post-GC nodes are flat at 8481 and heap does not grow across repeated cycles.",
+          "Actual integrated environment and metrics are committed: real fast SSE 169.096/s, unchanged 4ms frame gate passed at 2.23ms mean, two 12,000-event cycles leave a 5000-event cache and 300-card DOM, post-GC nodes are flat at 8481 and heap does not grow across repeated cycles.",
           "No unauthorized execution path: anonymous approval is 401 and authenticated unknown approval is 404; 300 backend tests cover permissions, scoped grants, recovery, process containment, side-effect/durable-intent ledgers and lease fencing; isolation remains unqualified and blocked rather than being advertised as qualified.",
           "All four viewports in both themes preserve shell geometry with zero external-shell shift and no document overflow; all 48 approved structural variants pass 2200/2200 checks, so the result conforms to the approved target rather than a UI-only completion claim.",
-          "Existing features and safety boundaries are preserved by 364 broader owning tests, 21/21 preservation rows, 120/120 accessibility checks, 15/15 keyboard, 27/27 responsive and 37/37 release-gate checks. No backend route, payload, session, workspace or authorization contract changed."
+          "Existing features and safety boundaries are preserved by 392 integrated focused owning tests, 21/21 preservation rows, 120/120 accessibility checks, 15/15 keyboard, 27/27 responsive and 37/37 release-gate checks. The earlier broader suite passed 364 tests with one historical-commit environment skip. No UIV2-29 backend route, payload, session, workspace or authorization contract changed; upstream workspace-header behavior is integrated and its transformation/pipeline tests pass."
         ],
         "known_regressions": [
           {
             "regression": "The pre-change full-window ten-event frame missed its 4ms budget on current Chromium (4.67ms isolated; legacy 14/15).",
             "status": "closed_by_incremental_snapshot_rendering",
-            "resolution": "Ordered append/prune now maintains the read-only snapshot incrementally, stable cache snapshots avoid repeated copies/normalization, identical notes/counts are not rewritten, and disclosure scans occur only on full rebuilds. Four consecutive legacy runs passed 15/15 and clean dedicated/legacy evidence passes at 2.095/2.10ms means with merge, approval, cursor and reader semantics retained."
+            "resolution": "Ordered append/prune maintains the read-only snapshot incrementally, stable cache snapshots avoid repeated copies/normalization, identical notes/counts are not rewritten, and disclosure scans occur only on full rebuilds. Four consecutive legacy runs passed 15/15; final integrated dedicated/legacy evidence passes at 2.23/2.02ms means with merge, approval, cursor and reader semantics retained."
           },
           {
             "regression": "The new walk initially labeled the maximum of 20 samples as p95.",
             "status": "closed_by_nearest_rank_reporting",
-            "resolution": "The walk now uses nearest-rank p95 and records max separately. Clean final metrics are mean 2.095ms, p95 2.70ms, max 2.80ms; the metric contract rejects a missing or inconsistent maximum."
+            "resolution": "The walk uses nearest-rank p95 and records max separately. Final integrated metrics are mean 2.23ms, p95 2.70ms, max 5.80ms; the metric contract rejects a missing or inconsistent maximum and the unchanged mean gate passes."
           }
         ],
         "blockers": [],
-        "handoff_summary": "UIV2-29 is locally complete at clean implementation 9e075c6. It adds source-bound real-SSE, DOM/post-GC heap, layout, authorization, recovery, ledger/fencing and isolation gates to CI and closes the reproduced 4.67ms full-window performance miss without weakening the 4ms budget. Final records are dirty=false: browser 21/21 with 11 captures, backend 300 tests and 16 isolation checks, accessibility 120/120 with 62 captures, approved visual 2200/2200, broader owning suite 364 passed with one historical-commit environment skip, and release gate 37/37 with 0 findings. No backend API or safety boundary changed.",
-        "exact_next_action": "Commit this clean-HEAD evidence and tracker update, push the session branch, open a PR, require all Python and browser jobs to pass, merge, then start UIV2-30 release review and handoff."
+        "handoff_summary": "UIV2-29 is locally complete at clean integrated implementation 02fadd8, including origin/main through 5e7c7ad. It adds source-bound real-SSE, DOM/post-GC heap, layout, authorization, recovery, ledger/fencing and isolation gates to CI and closes the reproduced 4.67ms full-window miss without weakening the 4ms budget. Final integrated records are dirty=false: browser 21/21 with 11 captures at 169.096 SSE/s and 2.23ms mean, backend 300 tests and 16 isolation checks, accessibility 120/120 with 62 captures, approved visual 2200/2200, focused owning suite 392 passed, and release gate 37/37 with 0 findings. No UIV2-29 backend API or safety boundary changed.",
+        "exact_next_action": "Commit the integrated clean-HEAD evidence, push PR #245, require all Python and browser jobs to pass on the merge commit, merge, then start UIV2-30 release review and handoff."
       }
     },
     {

@@ -115,10 +115,12 @@ script headers. No provider request or real user workspace is used.
 ## UIV2-29 source-refresh evidence
 
 The UIV2-29 Harness snapshot/rendering optimization changed the frontend digest but no approved
-structural signature. At clean implementation HEAD `9e075c65a517c3cb2e5e1e1e4f827d9be4bfe128`,
-the accessibility walk again passed **120/120 checks with 62 captures**. Its capture manifest is
-`/tmp/uiv2-29-accessibility-clean-final/capture-manifest.json`, SHA-256
-`f5c0edb155e98db68371c43419b98831f798342df826a0e252c28e7785058e1b`; the imported run and the
-raw manifest both record `dirty=false`. The same source passed **15/15 keyboard**, **27/27
-responsive**, and **2200/2200 approved cross-tab checks**. The explicit UIV2-28 approval therefore
-remains the structural baseline; no new visual decision was inferred or required.
+structural signature. After integrating `origin/main` through `5e7c7ad`, clean implementation HEAD
+`02fadd85b619259d4ed4e9170939a86582a2ee52` passed **120/120 checks with 62 captures**. Its capture
+manifest is `/tmp/uiv2-29-integrated-accessibility/capture-manifest.json`, SHA-256
+`0f9dcc2e51e055ec4037b0c09fccc904b7a2587ada1713ce1c64a8d3d92d8a8a`; the imported run and the
+raw manifest both record `dirty=false`. The same integrated source passed **15/15 keyboard**,
+**27/27 responsive**, and **2200/2200 approved cross-tab checks**. The final approved-check manifest
+is `/tmp/uiv2-29-integrated-cross-tab/check-manifest.json`, SHA-256
+`f4d47d490d18574bc5c3e45e05be0ec751fb57f0d61157311234c6796b9e34c1`. The explicit UIV2-28
+approval therefore remains the structural baseline; no new visual decision was inferred or required.

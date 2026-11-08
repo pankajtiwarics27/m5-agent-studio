@@ -4,7 +4,7 @@
   "story": "UIV2-29",
   "statement": "Measured streaming, DOM/heap, layout and backend safety evidence; unprobed container isolation remains unqualified and blocked.",
   "source_sha256": {
-    "static/index.html": "3174cdc1d6d4983c505706bacce97447830de26eea267b7c202b51af197fa7d6",
+    "static/index.html": "e551bdf35322de6bd10d96495e62f315a76021515974e845a4d744daac877fda",
     "scripts/uiv2_performance_safety_walk.mjs": "6b9d124630d4284a1c96ac81dad82893350b07ec3e634c2ca2e1d6aad198753c",
     ".github/workflows/ci.yml": "1554e1d2bf5bbafc8aad972f0b590644e21b29080058d1ba08866b7a278b66ba"
   },
@@ -116,11 +116,11 @@
         },
         "fast": {
           "model": "Gemma-4-21B-REAP-4bit",
-          "elapsed_ms": 364.10000000009313,
+          "elapsed_ms": 343,
           "renders": 19,
           "schedules": 58,
           "model_tokens": 58,
-          "sse_per_second": 159.297,
+          "sse_per_second": 169.096,
           "complete_chars": 330
         }
       },
@@ -130,7 +130,7 @@
             "Nodes": 8481,
             "Documents": 2,
             "JSEventListeners": 334,
-            "JSHeapUsedSize": 3366168,
+            "JSHeapUsedSize": 3363620,
             "JSHeapTotalSize": 3932160,
             "LayoutCount": 1,
             "RecalcStyleCount": 3
@@ -139,8 +139,8 @@
             "Nodes": 8481,
             "Documents": 2,
             "JSEventListeners": 334,
-            "JSHeapUsedSize": 3311928,
-            "JSHeapTotalSize": 3903488,
+            "JSHeapUsedSize": 3312204,
+            "JSHeapTotalSize": 4165632,
             "LayoutCount": 123,
             "RecalcStyleCount": 245
           },
@@ -148,13 +148,13 @@
             "Nodes": 8481,
             "Documents": 2,
             "JSEventListeners": 334,
-            "JSHeapUsedSize": 3322004,
+            "JSHeapUsedSize": 3324148,
             "JSHeapTotalSize": 3903488,
             "LayoutCount": 245,
             "RecalcStyleCount": 487
           },
           "cycle_1": {
-            "elapsed_ms": 3981,
+            "elapsed_ms": 3977.100000000093,
             "cursor": 18000,
             "cached": 5000,
             "cards": 300,
@@ -162,7 +162,7 @@
             "last": 18000
           },
           "cycle_2": {
-            "elapsed_ms": 3983.0999999998603,
+            "elapsed_ms": 3989.8000000002794,
             "cursor": 30000,
             "cached": 5000,
             "cards": 300,
@@ -173,9 +173,9 @@
         },
         "steady": {
           "calls": 20,
-          "mean_ms": 2.0949999999953435,
-          "p95_ms": 2.699999999953434,
-          "max_ms": 2.800000000046566,
+          "mean_ms": 2.2299999999580904,
+          "p95_ms": 2.6999999997206032,
+          "max_ms": 5.7999999998137355,
           "cards": 300
         }
       },
@@ -183,10 +183,10 @@
         {
           "viewport": "1640x900",
           "theme": "light",
-          "cls_total": 0.15396,
-          "cls_internal_stream": 0.15396,
+          "cls_total": 0.17819,
+          "cls_internal_stream": 0.17819,
           "cls_external_shell": 0,
-          "shifts": 6,
+          "shifts": 7,
           "overflow": 0,
           "max_geometry_delta": 0,
           "cards": 300,
@@ -231,10 +231,10 @@
         {
           "viewport": "1280x800",
           "theme": "light",
-          "cls_total": 0.17722,
-          "cls_internal_stream": 0.17722,
+          "cls_total": 0.20676,
+          "cls_internal_stream": 0.20676,
           "cls_external_shell": 0,
-          "shifts": 6,
+          "shifts": 7,
           "overflow": 0,
           "max_geometry_delta": 0,
           "cards": 300,
@@ -320,7 +320,7 @@
         "  [PASS] no new privileges — --security-opt=no-new-privileges",
         "  [PASS] no implicit image pull — --pull=never",
         "  [PASS] resource limits — --pids-limit=128 --memory=2g --cpus=2",
-        "  [PASS] single workspace bind mount — type=bind,source=/tmp/m5-browser/tmp/m5-isolation-smoke-50jimhzy,target=/workspace",
+        "  [PASS] single workspace bind mount — type=bind,source=/tmp/m5-isolation-smoke-fhujwbm3,target=/workspace",
         "",
         "== 3. Skill-code execution gates (app._run_skill_script) ==",
         "  [PASS] default-off skill-code denial — PermissionError",
