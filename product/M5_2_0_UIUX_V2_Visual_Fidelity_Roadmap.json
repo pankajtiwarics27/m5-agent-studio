@@ -3748,18 +3748,24 @@
           "Refreshed clean 971f685 browser evidence: Compare 15/15 + six PNGs, run sha256 b1fc9c3c4dde1d52f73e9b43e0df3930d16d0b1dcfddc37e6e3becedaeb3538e; approved visual 48/144/2200, manifest sha256 29580335c23b25f8a889170057a4a48c59edff04e62f9cf703a8e04e7676da63.",
           "Integrated origin/main 5ab3d54 cleanly. Combined lifecycle + release + source-manifest + preservation-signoff suite: 192/192 passed; mypy, Ruff, docs validation (242 files), scope map (175 modules) and release-review check passed.",
           "Final integrated PR CI run 42461591225 at c01d01bd0a02c9617c7b08524f24be7f3fa3eddd: Python 3.11, Python 3.12, Python 3.13 and Browser safety regressions all passed; this run closes both the process-group and generated-manifest corrections.",
-          "Final integrated clean-HEAD evidence at c01d01b: Compare 15/15 + six PNGs, run sha256 b3130ffc8d83ed525e521b8d81509e5ef9af3f2c3377b32c470cf4c47b011537; approved visual 48 captures /144 PNGs /2200 checks, manifest sha256 c821e40fe67b58455dee3f3f7654e307023413163212d37c504d5b3f6c973d8f."
+          "Final integrated clean-HEAD evidence at c01d01b: Compare 15/15 + six PNGs, run sha256 b3130ffc8d83ed525e521b8d81509e5ef9af3f2c3377b32c470cf4c47b011537; approved visual 48 captures /144 PNGs /2200 checks, manifest sha256 c821e40fe67b58455dee3f3f7654e307023413163212d37c504d5b3f6c973d8f.",
+          "#185 implementation 5a1a0c53dba398cd1026436aee68723ecaf96878: full local suite 3855 passed, 32 skipped; Harness 22/22; browser regressions 36/36; approved visual 2200/2200; PR CI 42474479933 passed all four jobs. Its first clean Compare run failed 2/15 by pairing a stale run-0 record with a later not-busy sample; the failure was not imported or waived.",
+          "#185 final implementation dfa6647a45d19d75e731799a2e21450ea3399673: Compare walk liveness is sampled before the record; source contracts 35/35 and real Compare 15/15. Final implementation PR CI 42475581227 passed Python 3.11/3.12/3.13 and Browser safety regressions.",
+          "#185 current clean-HEAD evidence at dfa6647: Compare 15/15 + six PNGs, run sha256 8d95ce3b2711c103cd439cda5f3b97642250a3d20295e3f6947e34110977b803; approved visual 48 captures /144 PNGs /2200 checks, manifest sha256 bf3db7b76fc2f2e4d6b2a96eeec50057ccb94099dcd9812773dfe9ba6c57f328. Evidence is current-browser-sources and bound to CI 42475581227; the following evidence commit changes only release records/tracker data."
         ],
         "visual_evidence": [
           "/tmp/uiv2-30-final3-visual/check-manifest.json — clean c01d01bd0a02c9617c7b08524f24be7f3fa3eddd, 48 variants, 144 PNGs and 2200/2200 approved checks, sha256 c821e40fe67b58455dee3f3f7654e307023413163212d37c504d5b3f6c973d8f.",
-          "/tmp/uiv2-30-final3-compare/ and docs/media/uiv2-30-release-review/ — six actual Compare live/restored/server/forgotten/narrow/light PNGs; /tmp/uiv2-30-final3-compare.json records 15/15 checks, sha256 b3130ffc8d83ed525e521b8d81509e5ef9af3f2c3377b32c470cf4c47b011537."
+          "/tmp/uiv2-30-final3-compare/ and docs/media/uiv2-30-release-review/ — six actual Compare live/restored/server/forgotten/narrow/light PNGs; /tmp/uiv2-30-final3-compare.json records 15/15 checks, sha256 b3130ffc8d83ed525e521b8d81509e5ef9af3f2c3377b32c470cf4c47b011537.",
+          "/tmp/issue185-final-visual/check-manifest.json — clean dfa6647a45d19d75e731799a2e21450ea3399673, 48 variants, 144 PNGs and 2200/2200 approved checks, sha256 bf3db7b76fc2f2e4d6b2a96eeec50057ccb94099dcd9812773dfe9ba6c57f328.",
+          "/tmp/issue185-final-compare/compare/ — six actual Compare live/restored/server/forgotten/narrow/light PNGs; /tmp/issue185-final-compare/compare.json records 15/15 checks, sha256 8d95ce3b2711c103cd439cda5f3b97642250a3d20295e3f6947e34110977b803."
         ],
         "acceptance_evidence": [
           "Final integrated evidence at c01d01bd0a02c9617c7b08524f24be7f3fa3eddd: Compare 15/15 with six PNGs; approved visual 48 captures / 2200 checks across light/dark and 1640x900, 1440x900, 1280x800, 390x844. Backend authorization/recovery/ledger/fencing/isolation: 300 tests +16 isolation checks; no external provider calls.",
           "Release evidence binds matching implementation and critical CI SHA c01d01bd0a02c9617c7b08524f24be7f3fa3eddd. Final PR run 42461591225 passed Python 3.11/3.12/3.13 and Browser safety. Three browser source hashes, visual manifest, Compare run and six PNG hashes prevent stale imported evidence.",
           "README distinguishes UI/UX handoff readiness from the still-blocked production/security gate; 7/7 README claims, 47 commands, 0 findings. Release review has 7/7 local checks and 0 findings. The roadmap is 30/30 done; no UIV2-31 is implied.",
           "UIV2-29 final/acceptance metrics report actual nodes 8505 -> 8484 -> 8505 and heap 3373868 -> 3309948 -> 3329676. UIV2-26 pending-CI status is closed against run 42454692827 and full commit 289a4fbc7348fd7410ee823b1dbd8322745d9d74.",
-          "The PR process-tree teardown and generated-manifest failures remain disclosed and are corrected, not waived. Final PR CI run 42461591225 passed all four jobs after both corrections and integration with main. No application API, session, workspace, authorization or isolation behavior changed in UIV2-30."
+          "The PR process-tree teardown and generated-manifest failures remain disclosed and are corrected, not waived. Final PR CI run 42461591225 passed all four jobs after both corrections and integration with main. No application API, session, workspace, authorization or isolation behavior changed in UIV2-30.",
+          "#185 current evidence binds matching implementation and critical CI SHA dfa6647a45d19d75e731799a2e21450ea3399673. Implementation PR run 42475581227 passed Python 3.11/3.12/3.13 and Browser safety. Three browser source hashes are verified inside that commit as well as the checkout; clean visual and Compare manifests, six PNG hashes and the explicit approved structural baseline prevent stale imported evidence. The final evidence-only PR CI remains separately required before merge and issue closure."
         ],
         "known_regressions": [
           {
@@ -3781,6 +3787,11 @@
             "regression": "PR CI run 42459934879 failed all Python jobs because the preservation helper change had not been propagated to the pinned UI source manifest, preservation signoff and dependent release gate.",
             "status": "closed_in_final_pr_ci_42461591225",
             "resolution": "Regenerated owner artifacts in dependency order and reran their tests: 82 passed plus the former ancestry skip resolved by restoring public history, then 11/11 source-manifest tests passed. Browser safety had passed. Final PR CI run 42461591225 passed all four jobs."
+          },
+          {
+            "regression": "The first clean #185 Compare run at 5a1a0c5 failed 2/15 checks when debate_done landed between the walk's record read and its separate not-busy sample.",
+            "status": "closed_by_dfa6647_and_ci_42475581227",
+            "resolution": "The failed run was not imported. The walk now samples liveness before the record, preventing a stale run-0/stored=false snapshot from being paired with a later not-busy read. Source contracts passed 35/35, the corrected real walk passed 15/15, and final implementation CI 42475581227 passed all four jobs."
           }
         ],
         "blockers": [],

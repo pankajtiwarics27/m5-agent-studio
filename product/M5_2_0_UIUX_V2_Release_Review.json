@@ -12,13 +12,13 @@
     "scope": "merge/handoff of the 30-story UI/UX V2 program only; tagging/publishing a production release remains under scripts/security_release_gate.py and scripts/release.py"
   },
   "pinned_release": {
-    "implementation_head": "c01d01bd0a02c9617c7b08524f24be7f3fa3eddd",
+    "implementation_head": "dfa6647a45d19d75e731799a2e21450ea3399673",
     "dirty": false,
-    "static_sha256": "49c18ae49d90e6c2b0ebfb0c3f26988d61433596e211acd06994f37d92c4eead",
-    "review_scope": "uiv2-30-integrated",
-    "current_browser_sources": false,
-    "post_handoff_evidence": "pending-clean-implementation-and-ci",
-    "evidence_recorded_at": "2026-11-08T08:20:00.649751+00:00",
+    "static_sha256": "3033a0211ca3739298e1e751d0fe89c68edf97b1fa66645a63307a158f2eca97",
+    "review_scope": "current-browser-sources",
+    "current_browser_sources": true,
+    "post_handoff_evidence": "current",
+    "evidence_recorded_at": "2026-11-08T11:36:32.882377+00:00",
     "note": "The evidence commit may contain only later release docs/tracker changes; executable browser sources are bound by digest and verified inside the implementation commit."
   },
   "program_state": {
@@ -30,36 +30,36 @@
     "percent_complete": 100
   },
   "critical_ci": {
-    "headSha": "c01d01bd0a02c9617c7b08524f24be7f3fa3eddd",
+    "headSha": "dfa6647a45d19d75e731799a2e21450ea3399673",
     "status": "completed",
     "conclusion": "success",
-    "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42461591225",
-    "createdAt": "2026-11-08T08:07:44Z",
-    "updatedAt": "2026-11-08T08:19:34Z",
+    "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42475581227",
+    "createdAt": "2026-11-08T11:24:05Z",
+    "updatedAt": "2026-11-08T11:36:12Z",
     "jobs": [
       {
-        "name": "test (3.13)",
+        "name": "test (3.11)",
         "status": "completed",
         "conclusion": "success",
-        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42461591225/job/128671832983"
-      },
-      {
-        "name": "test (3.12)",
-        "status": "completed",
-        "conclusion": "success",
-        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42461591225/job/128671833141"
+        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42475581227/job/128716081696"
       },
       {
         "name": "Browser safety regressions",
         "status": "completed",
         "conclusion": "success",
-        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42461591225/job/128671833169"
+        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42475581227/job/128716081864"
       },
       {
-        "name": "test (3.11)",
+        "name": "test (3.12)",
         "status": "completed",
         "conclusion": "success",
-        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42461591225/job/128671833202"
+        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42475581227/job/128716081892"
+      },
+      {
+        "name": "test (3.13)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42475581227/job/128716082064"
       }
     ]
   },
@@ -117,10 +117,10 @@
     "container_isolation_qualified": true
   },
   "visual_evidence": {
-    "run": "/tmp/uiv2-30-final3-visual/check-manifest.json",
-    "manifest_sha256": "c821e40fe67b58455dee3f3f7654e307023413163212d37c504d5b3f6c973d8f",
+    "run": "/tmp/issue185-final-visual/check-manifest.json",
+    "manifest_sha256": "bf3db7b76fc2f2e4d6b2a96eeec50057ccb94099dcd9812773dfe9ba6c57f328",
     "git": {
-      "head": "c01d01bd0a02c9617c7b08524f24be7f3fa3eddd",
+      "head": "dfa6647a45d19d75e731799a2e21450ea3399673",
       "dirty": false
     },
     "contract_sha256": "caf0e5543c6e644eae4a12a6db0ed38a169ad361a96af75cdb04cbfa0f4c2435",
@@ -227,8 +227,8 @@
     "external_provider_calls": false
   },
   "compare_recovery": {
-    "run": "/tmp/uiv2-30-final3-compare.json",
-    "run_sha256": "b3130ffc8d83ed525e521b8d81509e5ef9af3f2c3377b32c470cf4c47b011537",
+    "run": "/tmp/issue185-final-compare/compare.json",
+    "run_sha256": "8d95ce3b2711c103cd439cda5f3b97642250a3d20295e3f6947e34110977b803",
     "script": "scripts/compare_continuity_walk.mjs",
     "checks": 15,
     "passed": 15,
@@ -236,33 +236,33 @@
     "captures": [
       {
         "path": "compare-record-forgotten.png",
-        "sha256": "74c7533c116807725e8aa35b873cad2649d2c9f3a59fe5ac8156a47e20e29ba4",
-        "bytes": 15664
+        "sha256": "a364a2db933642b86eb2636ba1f8e7efc49193f6b5b681d1fce7e1497738c67c",
+        "bytes": 19952
       },
       {
         "path": "compare-record-light.png",
-        "sha256": "ded342c7f802f91e5b5f745981c6736c9f7e738c61d7785bca256bd483308f43",
-        "bytes": 40129
+        "sha256": "d929b762d00ac7fc2aa83094d5c0c36c2d6f9c930b5079ca11d085aca9105224",
+        "bytes": 59077
       },
       {
         "path": "compare-record-live.png",
-        "sha256": "26cf3387bb6200d02cd18c92096d5f281b2da1cfb1a3ee87cf6e1760817f9287",
-        "bytes": 65017
+        "sha256": "c7324a16e5cfae29dca203e39a13d25ec18080264dc26260ca9061ee27612c66",
+        "bytes": 93879
       },
       {
         "path": "compare-record-narrow.png",
-        "sha256": "ed579086e006d7ebef41493c9f48d080571c9781d0cbe4118af4cec355bfaed0",
-        "bytes": 60025
+        "sha256": "af7997476afdf02e2aeedf07c16d7f39b44a0d18f7913c57910c64350371a26a",
+        "bytes": 72972
       },
       {
         "path": "compare-record-restored.png",
-        "sha256": "ab18fd5180959527688f4044b23e5752a02da54b61ae4426337336d85c0a0b32",
-        "bytes": 49265
+        "sha256": "de4835cc0b9eca6934ed5b755bd9e84076c1fceab44cf3a3ca45d469cfbe8b98",
+        "bytes": 70359
       },
       {
         "path": "compare-record-server.png",
-        "sha256": "fa348c73e7446920a87873a5fa9b8426a1db9d72c65aa28721e6756a0744980a",
-        "bytes": 17110
+        "sha256": "72c87b58a0cd4c1bc046a0fd7808d39aa34fe2a377a1829ba459be208f94a9a1",
+        "bytes": 22094
       }
     ]
   },
@@ -448,8 +448,8 @@
     },
     {
       "id": "issue-185-harness-view-cache-wording",
-      "status": "implementation-complete-evidence-refresh-pending",
-      "detail": "Issue #185 chose Option A after the V2 handoff: Harness headline counts now name this view/cache on streaming, replay, pruned, stalled and idle paths. The owning 22-check walk covers both cache/log directions, keeps count == cards, and regenerates its captures; the current UIV2-28/29 source contracts are refreshed. This review remains explicitly pinned to UIV2-30's integrated evidence while the follow-up's clean implementation browser runs and matching green CI are pending. Issue #185 must not be closed from this historical-scope review."
+      "status": "resolved-post-handoff",
+      "detail": "Issue #185 chose Option A after the V2 handoff: Harness headline counts now name this view/cache on streaming, replay, pruned, stalled and idle paths. The owning walk covers a cache smaller than the log and a cache retaining server-pruned events, keeps count == cards, and regenerates its captures. This wording-only follow-up changes no backend API, session, workspace or authorization behavior; current evidence is refreshed at the follow-up implementation SHA."
     }
   ],
   "follow_ups": [
