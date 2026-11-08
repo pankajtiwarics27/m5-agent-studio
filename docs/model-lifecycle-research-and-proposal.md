@@ -5,6 +5,12 @@ Repository audited: `67e9430d1e30ec066f74daa286c6636ac0f1839c`.
 Scope: session model switches, residency, context admission, latency, and quality across
 local oMLX, Ollama, LM Studio, and explicitly authorized remote/cloud inference.
 
+Follow-up: [implementation plan and deeper research](cross-runtime-model-lifecycle-plan.md)
+adds native request-profile consistency, deferred unload/tokenizer-load behavior, shared
+model/tool memory accounting, and explicit capability/ownership release gates. It refines
+cold preflight into metadata checks before a switch and exact request-fit checks only after
+the target can be safely admitted. Both documents remain proposals, not implemented behavior.
+
 ## Executive recommendation
 
 Build **one model lifecycle coordinator per shared hardware resource domain**, with
