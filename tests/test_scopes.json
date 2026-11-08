@@ -182,6 +182,9 @@
     "poetry.lock"
   ],
   "source_areas": {
+    "scripts/check_lifecycle_feasibility.py": [
+      "models.providers"
+    ],
     "workspace_paths.py": ["ui.harness", "security.execution"],
     "onboarding_preflight.py": [
       "ui.start"

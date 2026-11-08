@@ -6,6 +6,10 @@ This expands the [initial audit and research](model-lifecycle-research-and-propo
 with the owner's clarified requirement and a second upstream source/API review.
 Nothing here changes runtime configuration, public APIs, roadmaps, or security signoff.
 
+LC-00 follow-up: [capability feasibility package](model-lifecycle-capability-feasibility.md)
+and [proposed ADR-0031](adr/0031-shared-domain-model-lifecycle-authority.md).
+The offline spike does not qualify installed runtimes or enable production control.
+
 ## 1. Product outcome and scope
 
 Keep broad access to models through **oMLX, Ollama, and LM Studio**. Do not replace oMLX,
