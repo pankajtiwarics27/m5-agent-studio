@@ -84,11 +84,11 @@ The cross-tab matrix is the common empty/seeded state. Populated, long-content, 
 
 ## Human structural-fidelity approval
 
-**Approved.** `user:Arena ask_user uiv2-28-clean-head-approval=approve, 2026-11-08` at `2026-11-07T20:40:02.468968+00:00`.
+**Approved.** `user:Arena sidebar-243-recaptured-approval=approve; unchanged source55dff2b7c73f2064c7a649ceb1edfa9a9052d5a7; candidate7186910f9c46979e6320a6e2fa84f53e84067159f2b4d92ea5e03a6b59f884b8; visual baseline only, not merge authorization` at `2026-11-08T04:36:35.639562+00:00`.
 
-- Candidate: `docs/media/uiv2-28-accessibility/cross-tab-candidate/candidate-manifest.json`
-- Candidate SHA-256: `a1dd3b8767b8903a907561a07f6844c5523f1dd1bcbae3fee13f25906bd790d3`
-- HEAD: `c674c3b95163ea5c10a6faada82ae08305c63fad`
+- Candidate: `docs/media/cross-tab-reference-uiv2-26/sidebar-243-candidate/candidate-manifest.json`
+- Candidate SHA-256: `7186910f9c46979e6320a6e2fa84f53e84067159f2b4d92ea5e03a6b59f884b8`
+- HEAD: `55dff2b7c73f2064c7a649ceb1edfa9a9052d5a7`
 
 Future `--check` runs compare all 48 live structural signatures with this approval and still rerun every independent reference/layout assertion.
 

@@ -957,17 +957,17 @@
     "rule": "A human must approve the annotated candidate; the agent cannot infer or self-certify this decision.",
     "human_approval": {
       "decision": "approved",
-      "reference": "user:Arena ask_user uiv2-28-clean-head-approval=approve, 2026-11-08",
-      "recorded_at": "2026-11-07T20:40:02.468968+00:00",
+      "reference": "user:Arena sidebar-243-recaptured-approval=approve; unchanged source55dff2b7c73f2064c7a649ceb1edfa9a9052d5a7; candidate7186910f9c46979e6320a6e2fa84f53e84067159f2b4d92ea5e03a6b59f884b8; visual baseline only, not merge authorization",
+      "recorded_at": "2026-11-08T04:36:35.639562+00:00",
       "scope": "Structural fidelity of all 48 annotated live/reference comparisons; not a pixel-clone claim."
     },
     "candidate": {
-      "manifest": "docs/media/uiv2-28-accessibility/cross-tab-candidate/candidate-manifest.json",
-      "manifest_sha256": "a1dd3b8767b8903a907561a07f6844c5523f1dd1bcbae3fee13f25906bd790d3",
-      "git_head": "c674c3b95163ea5c10a6faada82ae08305c63fad"
+      "manifest": "docs/media/cross-tab-reference-uiv2-26/sidebar-243-candidate/candidate-manifest.json",
+      "manifest_sha256": "7186910f9c46979e6320a6e2fa84f53e84067159f2b4d92ea5e03a6b59f884b8",
+      "git_head": "55dff2b7c73f2064c7a649ceb1edfa9a9052d5a7"
     },
     "captures": 48,
-    "approval_sha256": "1016cfd87aef533e419fd45b72223cff434f567cd83ad8b7a2e3d193e4fb6044"
+    "approval_sha256": "cf944cf94613678f312760b0fac25d3515c552730655e25eb9758b8764efac9d"
   },
   "totals": {
     "panes": 6,

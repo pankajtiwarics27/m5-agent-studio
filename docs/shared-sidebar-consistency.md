@@ -36,11 +36,12 @@ the fix the same browser regression passes, including desktop width consistency.
 Broader regeneration/browser evidence and fresh full CI are recorded in the PR;
 checks not completed are not claimed as passing.
 
-The existing human-approved visual record and independent security sign-off are
-not edited by this patch. The intentional Harness geometry change requires a
-fresh clean-head48-variant candidate and explicit owner visual approval before
-its structural baseline may be refreshed. Candidate checks are author evidence,
-not independent acceptance or permission to merge a new PR.
+The source-change commit preserved the existing human-approved visual record
+and independent security sign-off. The intentional Harness geometry change
+requires a fresh clean-head48-variant candidate and explicit owner visual approval
+before its structural baseline may be refreshed. The subsequent owner decision
+is recorded below; candidate checks alone are not independent acceptance or
+permission to merge a new PR.
 
 
 Author checkpoint:223 focused source regressions pass, including checkout-store
@@ -52,5 +53,29 @@ Ruff, mypy62, frontend syntax, docs236, scope-map171, baseline validation and bo
 startup/auth smokes pass. Two shell metrics are registered in the token inventory;
 348px is only the initial navigation-height default before actual measurement.
 These checks are not visual-baseline approval, full multi-version CI, merge
-permission or independent security sign-off. The clean-head visual candidate is
-the next review checkpoint; the existing approval JSON remains untouched.
+permission or independent security sign-off. At that checkpoint, clean-head
+visual review was pending and the existing approval JSON remained untouched.
+
+
+## Owner-approved visual baseline
+
+The owner approved the sidebar layout and then explicitly confirmed the
+replacement candidate through `sidebar-243-recaptured-approval=approve`. The
+original local candidate had been cleared by the session reset; it was not
+reconstructed or silently rebound. The replacement was recaptured from the
+unchanged source commit `55dff2b7c73f2064c7a649ceb1edfa9a9052d5a7`, with a clean
+tracked worktree at capture, all48 variants and2104/2104 independent checks.
+
+Approved manifest SHA-256:
+`7186910f9c46979e6320a6e2fa84f53e84067159f2b4d92ea5e03a6b59f884b8`.
+The owning approval command recorded that explicit decision and regenerated the
+cross-tab contract/page. The approved baseline now passes a fresh48-variant
+live/reference run with2200/2200 checks, including exact live/reference structural
+signature comparisons. No visual gate, tolerance or independent layout rule was
+weakened. Post-approval source regressions pass38 tests; Ruff, mypy62, docs236,
+source manifest and security-signoff validation pass. App/HTML/standalone code
+has not changed since the reviewed source commit.
+
+This is visual baseline approval only. Independent security sign-off remains
+unchanged/deferred. New exact-head Python3.11/3.12/3.13 and browser CI remain
+required; PR #244 remains unmerged and no merge authorization is inferred.
