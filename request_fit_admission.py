@@ -21,6 +21,7 @@ from model_lifecycle_coordinator import LifecycleCoordinator, RequestLease, _enc
 from request_fit import (
     Confidence,
     FitDiagnostic,
+    FitProfile,
     PreparedRequest,
     RequestFitDenied,
     assess_fit,
@@ -125,6 +126,71 @@ class FitApproval:
     expires_ms: int
     diagnostic: FitDiagnostic
     reference: str
+
+
+def validate_counter_metadata(
+    profile: FitProfile,
+    qualification: CounterQualification | None,
+    *,
+    features: frozenset[str],
+    now_ms: int,
+) -> None:
+    """Pure stage-one filter before source disruption; no lease, probe or I/O.
+
+    Qualification is an installed producer assertion, not native proof. Passing
+    this filter does not reserve memory, load the target, count or confer fit.
+    Repeat it with the final feature set under warm residency before counting.
+    """
+    number(now_ms)
+    if (
+        not isinstance(profile, FitProfile)
+        or not isinstance(features, frozenset)
+        or not {"messages", "template", "request_settings"} <= features
+    ):
+        raise RequestFitDenied("counter_unqualified")
+    q, now = qualification, now_ms
+    if not isinstance(q, CounterQualification):
+        raise RequestFitDenied("counter_unqualified")
+    number(q.expires_ms, positive=True)
+    if (
+        q.expires_ms <= now
+        or q.native_profile_digest != profile.native_profile_digest
+        or profile.tokenizer_revision is None
+        or q.tokenizer_revision != profile.tokenizer_revision
+        or profile.renderer_revision is None
+        or q.renderer_revision != profile.renderer_revision
+        or q.confidence not in ("exact", "qualified_upper_bound")
+        or not isinstance(q.supported_features, frozenset)
+        or not features <= q.supported_features
+        or q.may_load is not False
+        or q.workspace_within_model_peak is not True
+        or q.preserves_request is not True
+        or q.output_accounting != profile.output_accounting
+    ):
+        raise RequestFitDenied("counter_unqualified")
+    for value in (
+        q.version,
+        q.server_identity,
+        q.tokenizer_revision,
+        q.renderer_revision,
+        q.reference,
+    ):
+        reference(value)
+    number(q.expires_ms, positive=True)
+    if not isinstance(q.capabilities, tuple):
+        raise RequestFitDenied("counter_unqualified")
+    caps = {c.name: c for c in q.capabilities if isinstance(c, CapabilityEvidence)}
+    if len(caps) != len(q.capabilities) or any(
+        name not in caps
+        or caps[name].state_for_installed_scope(
+            runtime_id=profile.memory.target.runtime_id,
+            runtime_version=q.version,
+            profile_fingerprint=profile.memory.target.profile_fingerprint,
+        )
+        != "supported"
+        for name in CAPABILITIES
+    ):
+        raise RequestFitDenied("counter_unqualified")
 
 
 class RequestFitAdmission:
@@ -240,48 +306,9 @@ class RequestFitAdmission:
     def _qualified(
         self, prepared: PreparedRequest, q: CounterQualification | None, now: int
     ) -> None:
-        if not isinstance(q, CounterQualification):
-            raise RequestFitDenied("counter_unqualified")
-        profile = prepared.profile
-        if (
-            q.expires_ms <= now
-            or q.native_profile_digest != profile.native_profile_digest
-            or profile.tokenizer_revision is None
-            or q.tokenizer_revision != profile.tokenizer_revision
-            or profile.renderer_revision is None
-            or q.renderer_revision != profile.renderer_revision
-            or q.confidence not in ("exact", "qualified_upper_bound")
-            or not isinstance(q.supported_features, frozenset)
-            or not prepared.features <= q.supported_features
-            or q.may_load is not False
-            or q.workspace_within_model_peak is not True
-            or q.preserves_request is not True
-            or q.output_accounting != profile.output_accounting
-        ):
-            raise RequestFitDenied("counter_unqualified")
-        for value in (
-            q.version,
-            q.server_identity,
-            q.tokenizer_revision,
-            q.renderer_revision,
-            q.reference,
-        ):
-            reference(value)
-        number(q.expires_ms, positive=True)
-        if not isinstance(q.capabilities, tuple):
-            raise RequestFitDenied("counter_unqualified")
-        caps = {c.name: c for c in q.capabilities if isinstance(c, CapabilityEvidence)}
-        if len(caps) != len(q.capabilities) or any(
-            name not in caps
-            or caps[name].state_for_installed_scope(
-                runtime_id=prepared.lease.target.runtime_id,
-                runtime_version=q.version,
-                profile_fingerprint=prepared.lease.target.profile_fingerprint,
-            )
-            != "supported"
-            for name in CAPABILITIES
-        ):
-            raise RequestFitDenied("counter_unqualified")
+        validate_counter_metadata(
+            prepared.profile, q, features=prepared.features, now_ms=now
+        )
 
     def _binding(
         self,

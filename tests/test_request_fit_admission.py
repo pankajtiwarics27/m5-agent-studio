@@ -752,3 +752,74 @@ def test_unexpected_service_failure_is_typed_sanitized_and_sends_nothing(tmp_pat
         assert "SECRET" not in str(error.value.to_mapping())
         assert "/private" not in str(error.value.to_mapping())
         assert b.count_calls == 0 and b.observe_calls == 0
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        "approved",
+        "missing",
+        "may-load",
+        "unbounded-workspace",
+        "expired",
+        "wrong-tokenizer",
+        "wrong-version",
+        "partial-features",
+    ],
+)
+def test_pure_counter_metadata_filter_needs_no_coordinator_residency_lease_or_probe(
+    case,
+):
+    # This is stage-one metadata only: no coordinator, provider or native effects.
+    fp = rf.FitProfile(
+        profile(A), "omlx_openai", "a" * 64, "fake-tokenizer", "fake-renderer"
+    )
+    features = frozenset({"messages", "template", "request_settings", "tools", "media"})
+    q = ra.CounterQualification(
+        "fake-v1",
+        "fake-process",
+        fp.native_profile_digest,
+        fp.tokenizer_revision,
+        fp.renderer_revision,
+        "qualified_upper_bound",
+        features,
+        50000,
+        "fake-metadata-only",
+        tuple(
+            CapabilityEvidence(
+                name,
+                "supported",
+                "installed",
+                A.runtime_id,
+                "fake-v1",
+                A.profile_fingerprint,
+                ("fake-assumption-not-native-qualification",),
+            )
+            for name in ra.CAPABILITIES
+        ),
+        False,
+        True,
+        True,
+        "included",
+    )
+    if case == "missing":
+        q = None
+    elif case == "may-load":
+        q = replace(q, may_load=True)
+    elif case == "unbounded-workspace":
+        q = replace(q, workspace_within_model_peak=False)
+    elif case == "expired":
+        q = replace(q, expires_ms=1000)
+    elif case == "wrong-tokenizer":
+        q = replace(q, tokenizer_revision="different")
+    elif case == "wrong-version":
+        q = replace(q, version="other-version")
+    elif case == "partial-features":
+        q = replace(q, supported_features=features - {"media"})
+    if case == "approved":
+        assert (
+            ra.validate_counter_metadata(fp, q, features=features, now_ms=1000) is None
+        )
+    else:
+        with pytest.raises(rf.RequestFitDenied, match="counter_unqualified"):
+            ra.validate_counter_metadata(fp, q, features=features, now_ms=1000)

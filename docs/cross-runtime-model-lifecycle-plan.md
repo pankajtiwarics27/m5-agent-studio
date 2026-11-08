@@ -479,7 +479,8 @@ hardware qualification and independent security review were not run for this doc
 ## LC-07 implementation boundary (dormant)
 
 The [full request-fit contract](request-fit-admission.md) supplies immutable final
-wire preparation, strict reserve arithmetic and an injected warm-resident count
+wire preparation, a pure pre-disruption installed-counter metadata filter, strict
+reserve arithmetic and an injected warm-resident count
 service with durable no-replay markers and fresh pre/post native/memory evidence.
 Dormant Ollama/LM Studio inference now separately defaults to refusal without an
 exact-byte fit callback. No production counter or installed qualification is

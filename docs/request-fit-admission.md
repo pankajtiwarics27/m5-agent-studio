@@ -59,10 +59,15 @@ token quantities to add to the full input count.
 
 1. **Before disrupting a source:** a future orchestrator must validate approved
    target context/memory and installed capabilities/renderer/tokenizer identity.
-   A matching local tokenizer must already be installed with a bounded admitted
-   footprint. No download, hidden model load, source unload or tokenizer probe
-   is performed by preparation. This story supplies the contracts, not that
-   cross-runtime orchestrator (LC-08/09).
+   `validate_counter_metadata(profile, qualification, features=..., now_ms=...)`
+   is a pure filter requiring no coordinator, resident instance, memory lease or
+   probe. It checks installed scope, matching revisions, declared full feature
+   coverage, expiry, non-loading behavior and footprint within the approved target
+   peak. A matching local tokenizer must already be installed. Passing is not
+   memory reservation, fit/count approval or permission to load. Repeat this filter
+   with the final feature set after residency. No download, hidden model load,
+   source unload or tokenizer probe is performed. LC-08/09 must invoke this before
+   disruption in the actual cross-runtime orchestrator.
 2. **After the target is safely the sole resident:** the dormant service requires
    an active exact `RequestLease`, warm held `MemoryLease`, live policy permit,
    fresh native resident/context/ownership/control evidence and current memory
@@ -183,3 +188,29 @@ Nine isolated source mutations (overflow, potentially loading counter, missing
 template inclusion, wrong body, missing post-count memory check, ticket expiry,
 both native fit gates and count replay) were caught by the new suite. Mutation
 copies/logs were disposable and never changed the working sources.
+
+
+### Broader regression and final stage-one seam
+
+- A pure metadata-only pre-disruption filter now has eight positive/negative
+  fixtures without coordinator/residency/request or memory leases. The same
+  filter is repeated by the warm service. **165 new request-fit cases** and
+  **677 combined lifecycle/admission/provider cases** passed (one upstream
+  Starlette/httpx warning); all nine mutations were caught again.
+- The broad local run at initial implementation head `48d3d9a` finished with
+  **4,134 passed, 1 failed, 32 skipped, 1 warning** in **1,187.28 seconds**.
+  Its sole failure was the absent pinned baseline commit in the initially shallow
+  checkout. Full history was fetched, baseline verification passed, and all
+  **three baseline tests passed** on rerun. This is not reported as a clean
+  single full-suite run or a full run of the later hardened head; the 677-case
+  regression covers the final changed surfaces. The 32 skips include unavailable
+  browser/optional environment cases, not successful native qualification.
+- Configured mypy (71 sources), Ruff, test-scope map (184 modules/13 areas), ADR,
+  docs, governance, deferred security-record consistency, UI source manifest,
+  frontend syntax, demo/screenshot manifest, tracked Python compilation and commit
+  messages passed. App and standalone isolated startup/auth/origin smoke tests
+  passed. Standalone/route matrix/subsystem inventory regenerated without drift;
+  roadmap dashboard check passed. No visual baseline was recaptured or accepted.
+- Final-head full Python 3.11/3.12/3.13 plus browser CI is a separate merge gate.
+  Local supply-chain build/verification was not repeated (CI retains its gates).
+  No acceptance ledger, security signoff or native support matrix advances.
