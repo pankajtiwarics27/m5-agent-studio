@@ -710,6 +710,11 @@ async def native_omlx_unload_command():
   assert env[1].view('shared').committed_bytes==0 and env[0].snapshot('shared').state=='idle'
   assert len(env[4].posts)==1 and not env[2].models
 asyncio.run(native_omlx_unload_command())
+import pytest
+from test_native_scheduler_ownership import test_real_foreign_inference_lease_cannot_send_this_call_under_another_request
+for backend in ('ollama','lmstudio'):
+ with pytest.MonkeyPatch.context() as patch:
+  test_real_foreign_inference_lease_cannot_send_this_call_under_another_request(pathlib.Path('private-foreign-lease-'+backend),patch,backend)
 print('isolated native executor and shared transaction guards passed')
 """.replace("REPO", repr(str(root)))
     env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}

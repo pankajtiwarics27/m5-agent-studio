@@ -880,3 +880,54 @@ history and regenerating resolved that evidence lookup, without changing approva
 pins. Live isolation remains unqualified/blocked. Full regression and fresh
 exact-head CI remain pending at this chronological note, not inherited from
 merged PR259. No independent acceptance or activation is claimed.
+
+## Claimed lease ownership before warm handoff and refusal cleanup
+
+The preceding durable-load checkpoint5ed0809 passed **4837 local tests,32 skips,
+one warning**, exact-head PR CI42514617279 and push CI42514591565 green. PR260
+comment6726200217 supersedes its chronological pre-full notes. Those are historical
+results, not validation for this continuation.
+
+An offline fault audit reproduced inference accepting another FIFO caller's real
+request lease for its warm producer, and inference/unload wrong-purpose refusal
+marking a foreign admitted request/control uncertain. The actor now shares a
+small request/control **lease identity fence** across load, inference and unload.
+It requires concrete request/control lease type, exact queued request/domain/
+target and current owner epoch **before** invoking a warm/completion producer,
+assigning cleanup ownership or marking an unexpected lease uncertain. Refusing
+another caller's claim cancels only the actor's own queued waiter; the foreign
+admitted slot and ready model hold remain unchanged, without probe/count/send.
+An owned wrong-purpose slot still follows the existing conservative hold path.
+
+The fence is consumer identity validation, not current native/fit/lease authority
+or a replacement for their generation/instance/profile/freshness checks. The warm
+handoff separately requires its fit service to use the scheduler's **actual**
+coordinator and memory-owner objects, not merely compatible objects or an equal
+lease from a copied owner. Failure before count/native execution retains only the
+owned request's uncertainty and charge. No new recovery, operation ownership,
+claim semantics or inference terminal-completion policy is introduced.
+
+Initial evidence: **32 new offline tests;1210 passed,one upstream warning** in the
+combined22-module suite (59.62s). The initial18-case audit reproduced14 failures
+(foreign producer/cleanup and owner-object faults), with4 existing load-fence cases
+passing. Cases include all three actors/both request and control purposes, real
+foreign inference send refusal, scope/subclass mismatch, exact owner objects and
+owned wrong-purpose holds. Private isolated standalone rejects the real foreign
+inference lease for both providers without public native sibling fallback.
+Native facts/transports remain synthetic; full regression and exact-head CI must
+be recorded separately. No routes/default producers/settings/transport activation,
+schema change, oMLX target/inference, already-absent success, unload-all/cache,
+LC09 recovery or independent acceptance is added. LC08 remains incomplete.
+
+
+Pre-full claimed-lease checkpoint: all five disposable mutations were caught
+(foreign request identity:10 failures; domain, epoch, fit coordinator and memory
+owner:two failures each), without worktree source mutation. Ruff/mypy75, scope197/
+13, docs/ADR, compile, baseline/governance/deferred security, JavaScript, app and
+standalone auth/origin smokes passed. The new ownership test module is explicitly
+mapped to models.providers. Standalone4,265,001bytes; fresh backend302/16,
+source64/6/121, preservation21/272/50, performance21/21 and release7/7 with2200
+visual/15Compare passed, zero findings, demo/screenshot6/6 and approval pins
+unchanged. Live isolation remains unqualified/blocked. Full regression and fresh
+exact-head CI are pending at this chronological note; earlier5ed0809 results are
+not current-source validation. No acceptance or activation is claimed.

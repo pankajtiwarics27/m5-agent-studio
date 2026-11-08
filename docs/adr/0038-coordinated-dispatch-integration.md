@@ -172,6 +172,16 @@ after independent successors without a new probe or poisoning their ownership or
 memory. Keep pure identity hashing distinct from proof/authority; no schema,
 backfill, migration/reset, activation or new native target support is implied.
 
+Fence claimed request/control leases to the actor's exact queued request, domain,
+target and owner epoch before producer execution or cleanup assignment. Foreign
+wrong-purpose slots must not be marked uncertain or cancelled by this actor;
+owned wrong-purpose slots retain conservative holding semantics. Require warm
+fit services to share the scheduler's actual coordinator and memory-owner objects
+before counter/native execution. Treat this consumer fence as identity only, not
+native/fit/physical/recovery authority, and preserve existing generation/instance/
+profile/current-state gates. Do not infer general operation ownership or enable
+new native targets, producers, routes or migration/recovery through this check.
+
 ## Alternatives
 
 - Replace served routing immediately: would activate unqualified transports and

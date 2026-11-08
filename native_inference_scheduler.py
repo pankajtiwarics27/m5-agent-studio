@@ -38,6 +38,7 @@ from native_transition_driver import (
     OmlxUnloadAdmission,
     QueuedUnloadRequest,
     QueuedLoadRequest,
+    QueuedColdRequest,
     ReleaseJob,
     ReleaseResult,
     LoadCompletion,
@@ -140,13 +141,7 @@ class NativeInferenceScheduler:
                     request_id=queued.request_id,
                 )
                 if isinstance(item, LoadLease):
-                    if (
-                        item.request_id != queued.request_id
-                        or item.domain_id != queued.domain_id
-                        or item.target != queued.admission.memory.target
-                        or item.owner_epoch != self.driver.coord._epoch
-                    ):
-                        raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+                    self._check_lease_owner(queued, item)
                     control = item
                     memory = self._memory(plan.domain_id, item.target)
                     assert_no_active_write_transaction(
@@ -233,6 +228,26 @@ class NativeInferenceScheduler:
             finally:
                 if locked:
                     self._lock.release()
+
+    def _check_lease_owner(
+        self,
+        queued: QueuedColdRequest | QueuedLoadRequest | QueuedUnloadRequest,
+        lease: RequestLease | LoadLease,
+    ) -> None:
+        """Consumer identity fence, not native/fit/current-lease authority.
+
+        Must run BEFORE assigning cleanup ownership or invoking a producer.
+        A wrong-purpose lease belonging to THIS request can still be held by
+        the existing refusal path; another caller's lease must not be touched.
+        """
+        if (
+            type(lease) not in (RequestLease, LoadLease)
+            or lease.request_id != queued.request_id
+            or lease.domain_id != queued.domain_id
+            or lease.target != queued.admission.memory.target
+            or lease.owner_epoch != self.driver.coord._epoch
+        ):
+            raise RuntimeDispatchDenied("coordinated_execution_unavailable")
 
     def _confirmed_load(
         self, queued: QueuedLoadRequest, control: LoadLease, memory: MemoryLease
@@ -387,6 +402,8 @@ class NativeInferenceScheduler:
                     now_ms=self.driver._now(),
                     request_id=queued.request_id,
                 )
+                if isinstance(item, (RequestLease, LoadLease)):
+                    self._check_lease_owner(queued, item)
                 if type(item) is not ReleaseStep:
                     # A miswired purpose may not leak an admitted slot or turn
                     # inference/acquire authority into release authority.
@@ -521,6 +538,8 @@ class NativeInferenceScheduler:
                 )
                 if item is None:
                     raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+                if isinstance(item, (RequestLease, LoadLease)):
+                    self._check_lease_owner(queued, item)
                 if isinstance(item, RequestLease):
                     request = item
                     memory = self._memory(plan.domain_id, item.target)
@@ -534,6 +553,8 @@ class NativeInferenceScheduler:
                         or warm.fit.profile != plan.admission.profile
                         or warm.fit.qualification != plan.admission.counter
                         or warm.permit.qualification != plan.admission.native
+                        or warm.fit.service.coord is not self.driver.coord
+                        or warm.fit.service.memory is not self.driver.memory
                     ):
                         raise RuntimeDispatchDenied("coordinated_execution_unavailable")
                     async with aclosing(
