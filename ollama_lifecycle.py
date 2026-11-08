@@ -50,7 +50,7 @@ from ollama_protocol import (
     validate_prepared,
 )
 from runtime_persistence import assert_no_active_write_transaction
-from shared_memory_admission import MemoryLease, MemorySample, SharedMemoryAdmission
+from shared_memory_admission import MemoryLease, MemorySample, SharedMemoryAdmission, _load_confirmation_reference
 
 Intent = TransitionStep | RequestLease | LoadLease | ReleaseStep
 REQUIRED_CAPABILITIES = (
@@ -896,9 +896,13 @@ class OllamaLifecycleBridge:
 
         def finish(conn: sqlite3.Connection) -> bool:
             current(conn, after)
-            return self.coordinator._finish_load(
+            if not self.coordinator._finish_load(
                 conn, intent, evidence, reference=observed.reference, now_ms=now
-            )
+            ):
+                return False
+            self.coordinator._event(conn, intent.domain_id, 'ollama_load_verified', intent.lease_id,
+                           _load_confirmation_reference(intent, lease))
+            return True
 
         return self.coordinator._call(finish, now_ms=now)
 

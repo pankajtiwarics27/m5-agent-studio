@@ -160,6 +160,18 @@ A pending200/202 ACK remains insufficient. Preserve cancelled/expired cleanup,
 uncertainty/no-replay and later target budget fencing. Do not qualify oMLX target/
 inference, install producers, redirect HTTP, activate or complete LC09 recovery.
 
+Harden explicit-load confirmation symmetrically with unload: record a native
+provider-specific verified control/memory identity receipt atomically with actual
+terminal slot completion, after native profile/instance/physical/memory checks.
+Require the actor's own request/domain/target/epoch before producer execution and
+exact completed uncancelled/unexpired request/deadline, released control slot,
+actual model binding and unique native receipt before canonical success. A generic
+kernel finish, boolean or request status cannot manufacture native qualification.
+Roll back slot completion on receipt-write failure. Preserve historical completion
+after independent successors without a new probe or poisoning their ownership or
+memory. Keep pure identity hashing distinct from proof/authority; no schema,
+backfill, migration/reset, activation or new native target support is implied.
+
 ## Alternatives
 
 - Replace served routing immediately: would activate unqualified transports and

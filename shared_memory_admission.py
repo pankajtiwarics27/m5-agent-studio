@@ -14,7 +14,7 @@ from dataclasses import asdict, dataclass
 from typing import TYPE_CHECKING, Literal, TypeVar
 
 from local_runtime_lifecycle import ObservationStamp
-from model_lifecycle_coordinator import LifecycleCoordinator, ModelTarget, TransitionStep, _integer, _label
+from model_lifecycle_coordinator import LifecycleCoordinator, LoadLease, ModelTarget, TransitionStep, _integer, _label
 
 if TYPE_CHECKING:
     from execution_profiles import ResourceFootprint
@@ -211,6 +211,18 @@ def _lease(row: sqlite3.Row) -> MemoryLease:
         raise MemoryDenied('memory_binding_invalid')
     return MemoryLease(row['id'], row['domain'], row['work_id'], row['kind'], row['peak_bytes'],
                        row['binding'], row['owner_epoch'])
+
+
+def _load_confirmation_reference(control: LoadLease, memory: MemoryLease) -> str:
+    """Identity fingerprint ONLY, not proof or authority to complete a load.
+
+    Native consumers record it in the SAME write as terminal slot completion,
+    after their independent profile/native/memory checks. Never minted by actor.
+    """
+    if type(control) is not LoadLease or not isinstance(memory, MemoryLease) or memory.kind != 'model':
+        raise MemoryDenied('model_memory_mismatch')
+    return hashlib.sha256(json.dumps({'control': asdict(control), 'memory': asdict(memory)},
+                                    sort_keys=True, separators=(',', ':')).encode()).hexdigest()
 
 
 def _model_step(binding: str) -> TransitionStep:

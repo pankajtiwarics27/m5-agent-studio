@@ -649,6 +649,18 @@ async def native_load_command():
    assert len(b.driver.mutations(b))==1 and getattr(b,'count_calls',0)==0
    assert (await collect(execute.stream(admission(b).call)))[-1]['type']=='usage'
    assert b.count_calls==1 and b.memory.view('shared').committed_bytes==600
+   cls=pkg.native_transition_driver.OllamaLoadCompletion if backend=='ollama' else pkg.native_transition_driver.LmLoadCompletion
+   original=cls.complete
+   async def missing_receipt(job):
+    assert await original(job) is True
+    b.coord._call(lambda conn:conn.execute('DELETE FROM journal WHERE operation_id=? AND event=?',(job.permit.intent.lease_id,backend+'_load_verified')))
+    return True
+   cls.complete=missing_receipt
+   try:
+    await execute.command(load_call(b))
+    raise AssertionError('missing private native receipt accepted')
+   except pkg.runtime_dispatch_boundary.RuntimeDispatchDenied: pass
+   finally: cls.complete=original
 asyncio.run(native_load_command())
 from test_model_lifecycle_release import opened as release_opened,loaded as release_loaded,release as release_step,physical as release_physical,sample as release_sample
 coord,memory,fleet=release_opened(pathlib.Path('release-only-kernel'))

@@ -36,7 +36,7 @@ from model_lifecycle_coordinator import (
     _encode,
 )
 from runtime_persistence import assert_no_active_write_transaction
-from shared_memory_admission import MemoryLease, MemorySample, SharedMemoryAdmission
+from shared_memory_admission import MemoryLease, MemorySample, SharedMemoryAdmission, _load_confirmation_reference
 from lmstudio_protocol import (
     SOURCE_PIN,
     LmCatalog,
@@ -911,9 +911,13 @@ class LmStudioLifecycleBridge:
 
         def finish(conn: sqlite3.Connection) -> bool:
             current(conn, after)
-            return self.coord._finish_load(
+            if not self.coord._finish_load(
                 conn, intent, evidence, reference=observed.reference, now_ms=now
-            )
+            ):
+                return False
+            self.coord._event(conn, intent.domain_id, 'lmstudio_load_verified', intent.lease_id,
+                           _load_confirmation_reference(intent, lease))
+            return True
 
         return self.coord._call(finish, now_ms=now)
 

@@ -814,3 +814,69 @@ security, JavaScript and both app/standalone auth/origin smokes passed. Bundle
 passed, zero findings. Demo/screenshot6/6 and visual pins unchanged. Live isolation
 remains unqualified/blocked; full regression and exact-head CI still pending at
 this chronological note. No activation/acceptance/merge is claimed.
+
+## Exact durable explicit-load confirmation (dormant hardening)
+
+Merged PR259 at0637760 passed **4789 local tests,32 skips,one warning** with
+exact-head PR CI42511757760 and push CI42511753659 green. PR259 comment6725824019
+supersedes that head's chronological pre-full notes. This is historical evidence,
+not validation for the present continuation.
+
+An offline adversarial audit reproduced a narrower explicit-load gap in both
+providers: a concrete completion callback returningTrue plus a request row marked
+completed could produce canonical confirmed without durable native completion.
+The actor now verifies an exact durable completion chain, like the unload actor,
+without expanding load authority or qualifying new target types.
+
+Ollama/LM Studio native load completion writes a provider-specific
+`ollama_load_verified`/`lmstudio_load_verified` receipt in the **same transaction**
+as terminal control-slot completion, only after its existing current authorization,
+loaded native profile/instance, full-runtime physical proof and independent memory
+budget checks. The journal operation-id field scopes this event to the actual
+control-lease ID. Its reference is a bounded SHA-256 identity fingerprint of the
+complete control lease and actual model-memory lease. The shared pure hash helper
+is neither a proof generator nor an authorizer. Generic kernel `finish_load`, a
+callback boolean or a completed request row cannot substitute for native checks.
+Receipt-write failure rolls back request/slot completion and retains charged
+uncertainty. Cancelled/expired native cleanup may have a verification receipt;
+that is not API success.
+
+Before a completion producer runs, the actor requires its own queued request,
+domain, target and owner epoch. After the native callback, canonical success
+requires that exact uncancelled,unexpired completed load request and original
+deadline, released control lease with matching epoch/generation, exact actual model
+hold/profile, and exactly one matching provider-scoped receipt. Missing, duplicated
+or cross-scope receipts refuse without fallback or retry. No schema change,
+backfill, historical receipt synthesis or history reset is introduced.
+
+Confirmation is point-in-time completion, **not a continuing promise of residency
+or readiness**. A separately owned successor may already have admitted inference,
+become uncertain, unloaded the old hold or loaded a successor. An unchanged old
+verified identity remains historically valid even if its actual hold is now
+uncertain/released; the actor must not require the domain to remain idle, probe
+again, cancel that successor, or pause its new memory. A foreign FIFO control
+returned by a miswired claim is refused before producer/native I/O and left owned
+by its original caller.
+
+Initial evidence: **48 new offline tests;1178 passed,one upstream warning** in the
+combined21-module suite (55.78s), including atomic receipt-write rollback, generic
+kernel completion refusal and historical successor races. Private standalone
+coverage also rejects missing native receipts for both providers. Native facts
+and producers remain fakes; full regression and exact-head CI are recorded
+separately when executed. No routes/default producers/settings/transport activation,
+oMLX target load/inference, already-absent policy, unload-all/cache or LC09 recovery
+is added. LC08 remains incomplete; independent acceptance is not advanced.
+
+
+Pre-full load-confirmation checkpoint: five disposable mutations were caught
+(skipped durable confirmation, active slot accepted, duplicate receipt accepted,
+constant identity hash, foreign FIFO control producer), two failures each; no
+worktree source mutation. Ruff/mypy75, scope196/13, docs/ADR, baseline/governance/
+deferred security, JavaScript, app and standalone auth/origin smokes passed.
+Standalone4,264,025bytes; fresh backend302/16 and source/preservation/performance/
+release/demo/screenshot checks passed with zero findings. The initial release
+artifact generation was blocked by missing shallow Git history; fetching complete
+history and regenerating resolved that evidence lookup, without changing approval
+pins. Live isolation remains unqualified/blocked. Full regression and fresh
+exact-head CI remain pending at this chronological note, not inherited from
+merged PR259. No independent acceptance or activation is claimed.
