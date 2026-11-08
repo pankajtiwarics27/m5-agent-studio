@@ -240,8 +240,17 @@ def build_inventory() -> dict[str, object]:
     check(
         "an id the current read does not carry is kept once, under Unavailable",
         'label="Unavailable"' in sync
-        and '>[Unavailable] ${escapeHtml(prevVal)}<' in sync
-        and "const unavailable = Boolean(held) && !unifiedCatalog.some(item => item.id === prevVal);" in sync,
+        and "const unavailable = Boolean(held) && !unifiedCatalog.some(item => item.id === prevVal);" in sync
+        # UIV2-P7-03 bounds the *visible* text of a long model id. The rule this asserts is that the
+        # absent id stays visible and named, so the bounded form is accepted only when the untruncated
+        # id survives on the option's title - shortening a label may never be the only copy of a name.
+        and (
+            '>[Unavailable] ${escapeHtml(prevVal)}<' in sync
+            or (
+                '>[Unavailable] ${escapeHtml(modelDisplayLabel(prevVal, prevVal))}<' in sync
+                and 'title="${escapeHtml(prevVal)}"' in sync
+            )
+        ),
         "an absent id must stay visible and named rather than be replaced",
     )
     check(

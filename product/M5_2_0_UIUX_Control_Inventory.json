@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "3033a0211ca3739298e1e751d0fe89c68edf97b1fa66645a63307a158f2eca97",
+  "frontend_sha256": "7a938b83e3b512b80b20ed006436763117acb4445ce13b463bcc93f72699c6f6",
   "panes": [
     {
       "dom_id": "start",
@@ -2023,8 +2023,9 @@
     "markup_controls": 272,
     "pane_controls": 110,
     "chrome_controls": 162,
-    "script_rendered_controls": 72,
+    "script_rendered_controls": 74,
     "script_rendered_by_function": {
+      "debateModelPageFooter": 2,
       "ensureStageCardMounted": 1,
       "hallClearScopeNoteHtml": 2,
       "harnessEvidenceChangeHtml": 1,
@@ -2036,6 +2037,7 @@
       "renderActiveHall": 3,
       "renderCommandPaletteList": 1,
       "renderDebateCriteria": 3,
+      "renderDebateModelChecks": 1,
       "renderDebateRecord": 4,
       "renderDeliberationEvidence": 1,
       "renderHallVerdict": 1,
@@ -2054,8 +2056,7 @@
       "renderOpenContextDocs": 3,
       "renderProvidersModal": 3,
       "renderTelemetry": 1,
-      "saveMcpServer": 1,
-      "syncUnifiedSelectors": 1
+      "saveMcpServer": 1
     }
   },
   "not_verified": [

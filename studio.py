@@ -4537,6 +4537,15 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   .compare-model-picks { flex: 1 1 320px; min-width: 0; }
   .compare-model-checks { display: flex; gap: 8px 14px; flex-wrap: wrap; align-items: flex-start; margin-top: 4px; }
   .compare-model-checks .chk-lbl { align-items: flex-start; }
+  /* UIV2-P7-04: the row that says how much of the list is on screen. Full width so it never
+     sits beside a model name and reads as another model; the count comes before the control
+     because the count is the fact and the control is the remedy. */
+  .compare-model-checks > .debate-model-more {
+    flex: 1 0 100%; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    margin-top: 2px; font-size: 12px; color: var(--text-dim);
+  }
+  .compare-model-checks > .debate-model-more .debate-model-more-reason { color: var(--text-faint); }
+  .compare-model-checks-scroll { max-height: 16.5rem; overflow-y: auto; }
   .compare-models-chosen { font-size: 12px; color: var(--text-dim); }
   .compare-run-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .compare-arbiter { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
@@ -12262,6 +12271,33 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     return option ? String(option.textContent || "").trim() : node.value;
   }
 
+  // UIV2-P7-03: a local model id can be 60+ characters of slug. It is the longest
+  // string the pickers carry, so it sets the width of every select and reads as the
+  // loudest thing on the pane - not because it matters more than the task, only
+  // because it is longer. The picker shows a bounded alias that keeps both ends: the
+  // family at the front, the quantisation or size at the back, which is the part a
+  // reader actually compares. Only the visible text changes. Every <option value> is
+  // still the raw id, so no payload, session restore or dispatch can notice, and the
+  // untruncated label stays on the option's title and on the select's title.
+  const MODEL_LABEL_MAX = 44;
+  function modelDisplayLabel(label, id) {
+    const full = String(label === null || label === undefined || label === "" ? (id || "") : label)
+      .replace(/\s+/g, " ")
+      .trim();
+    if (full.length <= MODEL_LABEL_MAX) return full;
+    return `${full.slice(0, 26)}…${full.slice(-13)}`;
+  }
+
+  // The full label for a picker's tooltip: the option's own title when the catalogue
+  // set one, otherwise its raw id. Truncation must never be the only copy of a name.
+  function selectedOptionFullLabel(id) {
+    const node = document.getElementById(id);
+    if (!node) return "";
+    const option = node.options ? node.options[node.selectedIndex] : null;
+    if (!option) return "";
+    return String(option.title || option.value || "").trim();
+  }
+
   function harnessRunPlan() {
     const dirNode = document.getElementById("harnessWorkspaceInput");
     const dir = dirNode ? String(dirNode.value || "").trim() : "";
@@ -12382,7 +12418,9 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
       project.title = path || "Open task settings to choose the project directory";
     }
     const model = document.getElementById("harnessLeadModel");
-    if (model) model.title = harnessSelectedText("harnessLeadModel") || "Choose a model";
+    // The picker's visible text is the bounded alias (UIV2-P7-03); its tooltip stays the
+    // untruncated id, so shortening a label never hides which model is selected.
+    if (model) model.title = selectedOptionFullLabel("harnessLeadModel") || harnessSelectedText("harnessLeadModel") || "Choose a model";
     // The collapsed group says what it holds and whether it was changed, in words: a
     // reader who never opens it is not missing a decision.
     const summary = document.getElementById("harnessAdvancedSummary");
@@ -12609,7 +12647,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     }
     const optionsHtml = Object.keys(groups).map(g =>
       `<optgroup label="${escapeHtml(g)}">` +
-      groups[g].map(it => `<option value="${escapeHtml(it.id)}">${escapeHtml(it.label)}</option>`).join("") +
+      groups[g].map(it => `<option value="${escapeHtml(it.id)}" title="${escapeHtml(it.label || it.id)}">${escapeHtml(modelDisplayLabel(it.label, it.id))}</option>`).join("") +
       `</optgroup>`
     ).join("") + `<optgroup label="On-Demand"><option value="__custom__">+ Load or enter custom model ID…</option></optgroup>`;
 
@@ -12647,7 +12685,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
       const unavailable = Boolean(held) && !unifiedCatalog.some(item => item.id === prevVal);
       const hadFocus = sel === document.activeElement;
       const unavailableOption = unavailable
-        ? `<optgroup label="Unavailable"><option value="${escapeHtml(prevVal)}">[Unavailable] ${escapeHtml(prevVal)}</option></optgroup>`
+        ? `<optgroup label="Unavailable"><option value="${escapeHtml(prevVal)}" title="${escapeHtml(prevVal)}">[Unavailable] ${escapeHtml(modelDisplayLabel(prevVal, prevVal))}</option></optgroup>`
         : "";
       sel.innerHTML = unavailableOption + optionsHtml;
       if (held) sel.value = prevVal;
@@ -12664,17 +12702,97 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
 
     // Debate checkboxes include only Loaded Local M5 + Cloud/Combo Models
     const prevChecked = new Set([...document.querySelectorAll(".debate-m-chk:checked")].map(c => c.value));
-    document.getElementById("debateModelChecks").innerHTML = unifiedCatalog.slice(0, 10).map((it, idx) => {
+    renderDebateModelChecks({ prevChecked, firstInit });
+    // The set of models is part of what Start will do, so a rebuilt list re-states it.
+    updateDebateRunControl();
+  }
+
+  // UIV2-P7-04: the Compare model list, its first page, and the control that opens the rest.
+  //
+  // Two things this has to get right, because both silently lose a reader's choice:
+  //
+  // 1. A restored comparison used to be honoured only for its first row. The restore list
+  //    was nulled inside the map, so row 0 consulted it and every row after fell back to
+  //    "first three" - the comment above it says the list "has to honour it rather than
+  //    picking the first three", and it did not. The list is now captured once, before the
+  //    rows are built.
+  // 2. Paging may not hide a ticked row. A model chosen from the expanded list would vanish
+  //    when the list collapsed, taking its selection with it, so collapsing is refused while
+  //    any chosen model sits past the first page - with the reason on screen, not in a log.
+  function renderDebateModelChecks(opts) {
+    const host = document.getElementById("debateModelChecks");
+    if (!host) return null;
+    const options = opts || {};
+    const prevChecked = options.prevChecked instanceof Set ? options.prevChecked : new Set();
+    const firstInit = Boolean(options.firstInit);
+    const restore = firstInit && Array.isArray(debateRestoreModels) ? debateRestoreModels.slice() : null;
+    if (firstInit) debateRestoreModels = null;
+
+    const total = unifiedCatalog.length;
+    const overflow = total > DEBATE_MODEL_PAGE;
+    const pageIds = new Set(unifiedCatalog.slice(0, DEBATE_MODEL_PAGE).map(it => it.id));
+    const wanted = restore || prevChecked;
+    // Reopening the list is not a choice the pane may make quietly: if something the reader
+    // (or a restored comparison) chose lives past the page, the page has to open.
+    const outsidePage = [...wanted].filter(id => !pageIds.has(id) && unifiedCatalog.some(it => it.id === id));
+    if (outsidePage.length) debateShowAllModels = true;
+    const showAll = debateShowAllModels || !overflow;
+    const shown = showAll ? unifiedCatalog : unifiedCatalog.slice(0, DEBATE_MODEL_PAGE);
+
+    host.innerHTML = shown.map((it, idx) => {
       // A comparison restored from this browser's copy names the models it compared; the list is
       // built after that restore, so it has to honour it rather than picking the first three.
       const chk = firstInit
-        ? (debateRestoreModels ? debateRestoreModels.includes(it.id) : idx < 3)
+        ? (restore ? restore.includes(it.id) : idx < 3)
         : prevChecked.has(it.id);
-      if (firstInit) debateRestoreModels = null;
-      return `<label class="chk-lbl"><input type="checkbox" class="debate-m-chk" value="${escapeHtml(it.id)}" ${chk ? "checked" : ""}/> ${escapeHtml(it.label)}</label>`;
-    }).join("");
-    // The set of models is part of what Start will do, so a rebuilt list re-states it.
-    updateDebateRunControl();
+      // UIV2-P7-03: the same bounded alias the pickers use, so one model does not read
+      // as two different widths in two panes. The checkbox value stays the raw id and
+      // the untruncated label stays on the row's title.
+      return `<label class="chk-lbl" title="${escapeHtml(it.label || it.id)}"><input type="checkbox" class="debate-m-chk" value="${escapeHtml(it.id)}" ${chk ? "checked" : ""}/> ${escapeHtml(modelDisplayLabel(it.label, it.id))}</label>`;
+    }).join("") + (overflow ? debateModelPageFooter(total, showAll, pageIds) : "");
+
+    host.classList.toggle("compare-model-checks-scroll", Boolean(showAll && overflow));
+    return shown.length;
+  }
+
+  // The page's own sentence. It states how many of how many, so a reader never has to count
+  // rows to learn that the list is partial.
+  function debateModelPageFooter(total, showAll, pageIds) {
+    if (!showAll) {
+      return `<div class="debate-model-more"><span>Showing ${DEBATE_MODEL_PAGE} of ${total} models</span>`
+        + `<button type="button" class="btn btn-xs" id="debateShowAllModelsBtn" onclick="showAllDebateModels()" `
+        + `title="List every model this catalogue holds, not just the first ${DEBATE_MODEL_PAGE}">Show all ${total}</button></div>`;
+    }
+    const hiddenChecked = [...document.querySelectorAll(".debate-m-chk:checked")]
+      .filter(box => !pageIds.has(box.value)).length;
+    if (hiddenChecked) {
+      return `<div class="debate-model-more"><span>Showing all ${total} models</span>`
+        + `<span class="debate-model-more-reason">${hiddenChecked} chosen `
+        + `${hiddenChecked === 1 ? "model is" : "models are"} past the first ${DEBATE_MODEL_PAGE}, so the list stays open.</span></div>`;
+    }
+    return `<div class="debate-model-more"><span>Showing all ${total} models</span>`
+      + `<button type="button" class="btn btn-xs" id="debateFirstPageModelsBtn" onclick="showFirstPageDebateModels()" `
+      + `title="Back to the first ${DEBATE_MODEL_PAGE} models">Show first ${DEBATE_MODEL_PAGE}</button></div>`;
+  }
+
+  function showAllDebateModels() {
+    debateShowAllModels = true;
+    return redebateModelChecks();
+  }
+
+  function showFirstPageDebateModels() {
+    debateShowAllModels = false;
+    return redebateModelChecks();
+  }
+
+  // A toggle redraws the list only; the catalogue, the selection and the run control are
+  // untouched, so opening the list can never change what a run would do.
+  function redebateModelChecks() {
+    const prevChecked = new Set([...document.querySelectorAll(".debate-m-chk:checked")].map(c => c.value));
+    const shown = renderDebateModelChecks({ prevChecked, firstInit: false });
+    [...document.querySelectorAll(".debate-m-chk")].forEach(box => { box.checked = prevChecked.has(box.value); });
+    if (shown !== null) updateDebateRunControl();
+    return shown;
   }
 
   async function refreshTelemetry() {
@@ -14620,6 +14738,11 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
   let debateSourceMeta = null;
   let debateLocalKept = false;
   let debateRestoreModels = null;
+  // UIV2-P7-04: the first page of the model list, and whether the reader asked for all of
+  // it. Ten rows is a page, not a limit: the list used to stop at ten with nothing on
+  // screen saying so, so a model past the tenth could not be compared at all.
+  const DEBATE_MODEL_PAGE = 10;
+  let debateShowAllModels = false;
 
   /** The comparison on screen, as data: every panel, the arbiter, and where it came from. */
   function debateSnapshot() {

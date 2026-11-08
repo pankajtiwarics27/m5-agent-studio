@@ -8176,7 +8176,7 @@
     "migration_decision": "retain vanilla JS; reassess after measured maintenance/performance evidence"
   },
   "competitive_research": {
-    "status": "research_pending",
+    "status": "partial_screenshot_recorded",
     "products": [
       "Claude Code",
       "ChatGPT",
@@ -8185,6 +8185,29 @@
       "VS Code/Copilot",
       "OpenHands"
     ],
-    "instruction": "Verify each contemporary claim against primary docs/screenshots; record date and URL. No unsupported competitor feature claims."
+    "instruction": "Verify each contemporary claim against primary docs/screenshots; record date and URL. No unsupported competitor feature claims.",
+    "record": {
+      "path": "docs/uiux-2-0-competitive-research.md",
+      "date": "2026-11-08",
+      "product_observed": "Claude desktop application",
+      "source": "3 owner-supplied screenshots; no public URL or released build number recorded",
+      "surfaces_seen": 3,
+      "surfaces_not_seen": "Projects, artifacts, scheduled tasks, connectors, comparison flows",
+      "supports_decisions_on": "typography, hierarchy, composer shape, empty states, developer-chrome placement, display-level model aliasing",
+      "does_not_support": "any claim about competitor internals, permission model, provider support, offline behaviour, or unreleased capability",
+      "remaining_products": [
+        "ChatGPT",
+        "Cursor",
+        "Windsurf",
+        "VS Code/Copilot",
+        "OpenHands"
+      ],
+      "opens_gaps": [
+        "No public URL or build number for the observed Claude build.",
+        "Only 3 of that product's surfaces were captured.",
+        "No M5 baseline screenshots were added by this record; docs/uiux-2-0-baseline-evidence.md still stands at 0/6 accepted."
+      ],
+      "authority": "none — informs a proposal; approves nothing and claims no story."
+    }
   }
 }
