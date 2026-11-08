@@ -26,7 +26,7 @@ owner epoch for supported cooperating processes. All future app instances must
 resolve the same owner namespace; neither different directories nor arbitrary
 external clients are magically coordinated. Unsupported locking fails closed.
 
-Use a separate application-tagged private schema v1 for residency, queued requests,
+The initial LC-02 proposal uses application-tagged private schema v1 for residency, queued requests,
 request leases, operation intents and metadata-only sequenced journal entries.
 Reuse `runtime_persistence` short synchronous transactions and failure discipline,
 not a second ad hoc connection lifetime. Keep Studio's active schema v3 unchanged.
@@ -80,3 +80,10 @@ Not reviewed. Status is proposed, not accepted. Owner authorization to develop
 LC-02 does not constitute architectural acceptance or independent security
 signoff. No historical roadmap, signed-review, native-runtime or hardware-test
 acceptance state is changed. Test8 remains paused.
+
+## LC-03 follow-up proposal
+
+[Proposed ADR-0033](0033-dormant-shared-memory-accounting.md) extends new dormant
+journals to v2 for model/action memory reservations. Existing v1 journals are
+preserved and refused; no populated migration or architectural acceptance is
+implied. The original proposal and its not-reviewed status remain unchanged.
