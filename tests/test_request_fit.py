@@ -342,3 +342,34 @@ def test_hidden_history_tools_alternate_output_limits_and_permissive_input_not_a
     body[field] = value
     with pytest.raises(rf.RequestFitDenied):
         rf.prepare_request(p.lease, p.profile, p.budget, rf.encode(body), origin="chat")
+
+
+@pytest.mark.parametrize("wire", ["omlx_openai", "ollama_native", "lmstudio_openai"])
+@pytest.mark.parametrize("field", ["images", "input_audio", "attachments"])
+def test_native_or_unowned_media_fields_cannot_look_like_a_text_only_request(
+    wire, field
+):
+    p = prepared(wire=wire)
+    body = rf.decode(p.body)
+    body["messages"][-1][field] = ["unowned-reference"]
+    with pytest.raises(rf.RequestFitDenied, match="unsupported_media"):
+        rf.prepare_request(p.lease, p.profile, p.budget, rf.encode(body), origin="chat")
+
+
+@pytest.mark.parametrize("wire", ["omlx_openai", "ollama_native", "lmstudio_openai"])
+@pytest.mark.parametrize(
+    "case", ["message-integration", "server-tool", "non-function-call"]
+)
+def test_unknown_message_or_native_tool_modes_are_not_generic_text_count_coverage(
+    wire, case
+):
+    p = prepared(wire=wire)
+    body = rf.decode(p.body)
+    if case == "message-integration":
+        body["messages"][-1]["integrations"] = ["server-mcp"]
+    elif case == "server-tool":
+        body["tools"] = [{"type": "web_search"}]
+    else:
+        body["messages"][2]["tool_calls"][0]["type"] = "server_execution"
+    with pytest.raises(rf.RequestFitDenied):
+        rf.prepare_request(p.lease, p.profile, p.budget, rf.encode(body), origin="chat")

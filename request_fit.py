@@ -48,6 +48,8 @@ ERRORS = frozenset(
         "count_unverified",
         "count_uncertain",
         "approval_stale",
+        "admission_unavailable",
+        "memory_unavailable",
     }
 )
 MAX_BODY_BYTES = 4 * 1024 * 1024
@@ -298,6 +300,20 @@ def _conversation(messages: object, wire: Wire) -> tuple[set[str], set[str]]:
         ):
             raise RequestFitDenied("invalid_request")
         role = message["role"]
+        thinking = "thinking" if wire == "ollama_native" else "reasoning_content"
+        if set(message) & {"images", "audio", "video", "input_audio", "attachments"}:
+            raise RequestFitDenied("unsupported_media")
+        if set(message) - {
+            "role",
+            "content",
+            "tool_calls",
+            "tool_call_id",
+            "tool_name" if wire == "ollama_native" else "name",
+            thinking,
+        }:
+            raise RequestFitDenied("invalid_request")
+        if wire == "ollama_native" and isinstance(message.get("content"), list):
+            raise RequestFitDenied("unsupported_media")
         if "content" not in message or (
             message["content"] is None
             and not (role == "assistant" and message.get("tool_calls"))
@@ -311,7 +327,6 @@ def _conversation(messages: object, wire: Wire) -> tuple[set[str], set[str]]:
         if role == "user":
             users += 1
             components.add("latest_user")
-        thinking = "thinking" if wire == "ollama_native" else "reasoning_content"
         if thinking in message:
             if not isinstance(message[thinking], str):
                 raise RequestFitDenied("invalid_request")
@@ -331,7 +346,13 @@ def _conversation(messages: object, wire: Wire) -> tuple[set[str], set[str]]:
         if not isinstance(calls, list) or (calls and role != "assistant"):
             raise RequestFitDenied("incomplete_tool_exchange")
         for call in calls:
-            if not isinstance(call, dict) or not isinstance(call.get("function"), dict):
+            if (
+                not isinstance(call, dict)
+                or set(call) - {"id", "type", "function"}
+                or call.get("type") != "function"
+                or not isinstance(call.get("function"), dict)
+                or set(call["function"]) - {"name", "arguments"}
+            ):
                 raise RequestFitDenied("incomplete_tool_exchange")
             call_id = reference(call.get("id"))
             if call_id in seen:
@@ -455,6 +476,25 @@ def prepare_request(
     if "tools" in value:
         if not isinstance(value["tools"], list):
             raise RequestFitDenied("invalid_request")
+        names: set[str] = set()
+        for tool in value["tools"]:
+            if (
+                not isinstance(tool, dict)
+                or set(tool) != {"type", "function"}
+                or tool.get("type") != "function"
+                or not isinstance(tool.get("function"), dict)
+                or set(tool["function"]) - {"name", "description", "parameters"}
+            ):
+                raise RequestFitDenied("invalid_request")
+            fn = tool["function"]
+            name = reference(fn.get("name"))
+            if (
+                name in names
+                or not isinstance(fn.get("parameters", {}), dict)
+                or ("description" in fn and not isinstance(fn["description"], str))
+            ):
+                raise RequestFitDenied("invalid_request")
+            names.add(name)
         if value["tools"]:
             features.add("tools")
             components.add("tool_definitions")

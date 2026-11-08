@@ -30,7 +30,12 @@ from request_fit import (
     verify_prepared,
 )
 from runtime_persistence import assert_no_active_write_transaction
-from shared_memory_admission import MemoryLease, MemorySample, SharedMemoryAdmission
+from shared_memory_admission import (
+    MemoryDenied,
+    MemoryLease,
+    MemorySample,
+    SharedMemoryAdmission,
+)
 
 CAPABILITIES = (
     "full_request_counter",
@@ -568,9 +573,16 @@ class RequestFitAdmission:
                 counter=counter,
                 observe=observe,
             )
-        except RequestFitDenied as exc:
-            if exc.diagnostic is not None:
+        except Exception as exc:
+            if isinstance(exc, RequestFitDenied) and exc.diagnostic is not None:
                 raise
+            code = (
+                exc.code
+                if isinstance(exc, RequestFitDenied)
+                else "memory_unavailable"
+                if isinstance(exc, MemoryDenied)
+                else "admission_unavailable"
+            )
             diagnostic = FitDiagnostic(
                 prepared.profile.memory.context_tokens,
                 None,
@@ -581,4 +593,4 @@ class RequestFitAdmission:
                 None,
                 tuple((k, None) for k in sorted(prepared.components)),
             )
-            raise RequestFitDenied(exc.code, diagnostic) from None
+            raise RequestFitDenied(code, diagnostic) from None

@@ -42,7 +42,9 @@ pairs, mismatched native selector/context/output settings, permissive truncation
 or shifting, and unknown output limits. This intentionally narrow contract does
 not advertise all provider fields as supported. Inline image structures are
 represented without decoding or fetching; remote URLs, unowned attachments and
-unsupported audio/video are refused. Presence of media requires a counter
+unsupported audio/video and native media fields outside the supported content
+representation are refused. Ollama native preparation remains text-only, matching
+its dormant inference bridge; it does not flatten image parts. Presence of media requires a counter
 qualified for that complete representation or a qualified upper bound.
 
 The immutable object binds body SHA-256, byte size, wire/profile identity, lease
@@ -85,7 +87,9 @@ token quantities to add to the full input count.
    rather than evicting valid authority. Restart requires new admission, never
    replay of a sent count. This bound is not a hardware tier or token/context cap.
 
-Observation and counter callbacks run outside write transactions. Existing
+Observation and counter callbacks run outside write transactions. The synchronous
+permit authorizer must be trusted memory-only code; do not perform I/O or nested
+coordinator transactions inside it. Existing
 machine-domain ownership and shared-memory pressure holds remain authoritative;
 counting reserves no second independently loaded model or unaccounted workspace.
 The count timeout cannot establish native cancellation or physical release.
@@ -105,7 +109,9 @@ explicit total generation reserve must fit; equality is allowed. Unknown,
 negative, boolean or estimated token quantities are not proof.
 
 `RequestFitDenied.to_mapping()` exposes a fixed code, `retryable: false` and safe
-numeric context/count/reserve/confidence/component fields, never native exception
+numeric context/count/reserve/confidence/component fields. Shared-memory refusals
+map to `memory_unavailable` while preserving committed pressure pauses; unexpected
+service/storage failures map to `admission_unavailable`. Neither exposes native exception
 text, request bytes, model paths, tool arguments or credentials. Unknown counts
 remain null; no fabricated estimate fills them in. A 7,326/4,096 refusal reports
 those counts without sending inference. No blind retry, 8K/16K replacement,
@@ -164,3 +170,16 @@ for 71 source files; the scope map validated 184 test modules in 13 areas.
 Tests are offline with temporary coordinator/memory stores and synthetic count,
 media-bound, installed-capability and resident evidence, not native qualification.
 Broader regression evidence is recorded separately after execution.
+
+
+### Follow-up hardening
+
+Final focused validation now includes **157 new tests**: unexpected service/storage
+exceptions remain sanitized, shared-memory pressure still commits its pause, and
+unknown message fields, native/unowned media fields, server-executed tool modes
+and non-function calls cannot masquerade as text-only coverage. These checks
+reject rather than strip or convert fields. No production qualification follows.
+Nine isolated source mutations (overflow, potentially loading counter, missing
+template inclusion, wrong body, missing post-count memory check, ticket expiry,
+both native fit gates and count replay) were caught by the new suite. Mutation
+copies/logs were disposable and never changed the working sources.

@@ -457,7 +457,7 @@ def test_memory_pressure_pause_commits_before_any_counter_call(tmp_path):
     b = setup(tmp_path)
     with b.coord:
         b.sample_changes["pressure"] = "critical"
-        with pytest.raises(sm.MemoryDenied):
+        with pytest.raises(rf.RequestFitDenied, match="memory_unavailable"):
             asyncio.run(evaluate(b))
         assert b.count_calls == 0 and b.memory.view("shared").state == "paused"
         assert (
@@ -647,8 +647,9 @@ def test_atomic_counter_receipt_failure_sends_no_count_and_can_retry_before_comm
             return original(conn, domain, event, *args, **kwargs)
 
         monkeypatch.setattr(b.coord, "_event", fail)
-        with pytest.raises(RuntimeError, match="injected"):
+        with pytest.raises(rf.RequestFitDenied, match="admission_unavailable") as error:
             asyncio.run(evaluate(b))
+        assert "injected" not in str(error.value.to_mapping())
         assert b.count_calls == 0
         assert (
             b.coord._call(
@@ -736,3 +737,18 @@ def test_bounded_ticket_cache_refuses_without_effects_and_prunes_expired(tmp_pat
         with pytest.raises(rf.RequestFitDenied, match="counter_already_dispatched"):
             asyncio.run(evaluate(b))
         assert not b.service._issued and b.count_calls == 1
+
+
+def test_unexpected_service_failure_is_typed_sanitized_and_sends_nothing(tmp_path):
+    b = setup(tmp_path)
+    with b.coord:
+
+        def failed_clock():
+            raise RuntimeError("SECRET service internals and /private/file")
+
+        b.service.clock = failed_clock
+        with pytest.raises(rf.RequestFitDenied, match="admission_unavailable") as error:
+            asyncio.run(evaluate(b))
+        assert "SECRET" not in str(error.value.to_mapping())
+        assert "/private" not in str(error.value.to_mapping())
+        assert b.count_calls == 0 and b.observe_calls == 0
