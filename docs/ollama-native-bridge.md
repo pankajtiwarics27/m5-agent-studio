@@ -212,3 +212,31 @@ Ruff, configured mypy (67 modules), docs (250 files), ADR validation, conservati
 scope mapping (180 modules / 13 areas) and `git diff --check` passed. Broader
 repository validation is recorded separately after execution; this count is not
 full-suite, installed/hardware or independent-review evidence.
+
+Broader local verification at source commit `051bf03`:
+
+- Full pytest: **3,846 passed, 33 skipped, 2 failed** in 1,155.87 seconds. Both
+  failures were missing historical Git objects in the initially shallow checkout
+  (`test_baseline` and `test_uiv2_release_review`), not source/test logic. After
+  `git fetch --unshallow origin main`, baseline ancestry validation passed and
+  **all 22 tests** in those two suites passed. The entire 19-minute run was not
+  repeated locally; this is not reported as a second all-green full run. The run
+  also emitted one upstream Starlette/httpx deprecation warning. Skips are not
+  passes or native/hardware qualification.
+- Seven disposable source mutations were caught by the new suites: enabling
+  truncation, accepting all 2xx ACKs, omitting shared-memory admission, allowing
+  send replay, accepting changed load/inference profiles, bypassing the live
+  authorizer, and replacing native tool IDs. Original checkout files were not
+  mutated; temporary experiment files are not committed.
+- Baseline, Ruff, mypy, docs, ADR, scopes, governance, deferred-security-record,
+  UI source manifest, frontend syntax, demo, screenshot-manifest and tracked-Python
+  compilation checks passed. Manifest validation does not recapture or accept new
+  screenshots. Both isolated app and standalone startup/auth/origin smoke checks
+  passed.
+- Standalone, route matrix and subsystem inventory were regenerated without
+  drift; the roadmap generator's check also passed. Dormant modules remain
+  deliberately unconsumed by the served app/standalone.
+- The pushed source commit's feature-branch CI completed successfully on Python
+  3.11/3.12/3.13 and browser safety. PR-head CI remains a separate merge gate;
+  no merge authorization is implied. Release supply-chain build/verify was not
+  repeated locally; the CI Python jobs include that check.
