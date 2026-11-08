@@ -111,3 +111,14 @@ python3 scripts/uiv2_accessibility_adversarial.py --check
 Use the locked browser environment from `tests/browser/` and the CI Chromium setup. The Council
 state and long-content walks require an authenticated disposable fixture, as documented in their
 script headers. No provider request or real user workspace is used.
+
+## UIV2-29 source-refresh evidence
+
+The UIV2-29 Harness snapshot/rendering optimization changed the frontend digest but no approved
+structural signature. At clean implementation HEAD `9e075c65a517c3cb2e5e1e1e4f827d9be4bfe128`,
+the accessibility walk again passed **120/120 checks with 62 captures**. Its capture manifest is
+`/tmp/uiv2-29-accessibility-clean-final/capture-manifest.json`, SHA-256
+`f5c0edb155e98db68371c43419b98831f798342df826a0e252c28e7785058e1b`; the imported run and the
+raw manifest both record `dirty=false`. The same source passed **15/15 keyboard**, **27/27
+responsive**, and **2200/2200 approved cross-tab checks**. The explicit UIV2-28 approval therefore
+remains the structural baseline; no new visual decision was inferred or required.

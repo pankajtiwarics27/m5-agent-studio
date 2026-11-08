@@ -3516,20 +3516,100 @@
       "rollback": "Revert isolated story commit without deleting sessions, database state, MCP secrets or user workspace files. Preserve existing migrations and contracts.",
       "agent_prompt": "Implement UIV2-29: Performance and backend safety regression gate. Required outcome: Test high-frequency SSE updates, memory, layout stability, permissions and recovery without introducing a frontend framework by default. Specific gate: Record actual metrics with environment; no unbounded DOM growth; no new unauthorized execution path; no regression to crash recovery/ledger/fencing; blocked isolation remains blocked. Compare real UI screenshots against approved minimalist target, verify full feature preservation, and BLOCK instead of claiming done if any mandatory gate fails.",
       "tracking": {
-        "status": "not_started",
-        "progress_percent": 0,
-        "attempt_count": 0,
-        "started_at": null,
-        "completed_at": null,
-        "commit_sha": null,
-        "changed_files": [],
-        "tests_executed": [],
-        "visual_evidence": [],
-        "acceptance_evidence": [],
-        "known_regressions": [],
+        "status": "done",
+        "progress_percent": 100,
+        "attempt_count": 1,
+        "started_at": "2026-11-08T04:58:25.005799+00:00",
+        "completed_at": "2026-11-08T04:58:25.005799+00:00",
+        "commit_sha": "9e075c65a517c3cb2e5e1e1e4f827d9be4bfe128",
+        "changed_files": [
+          ".github/workflows/ci.yml",
+          "docs/README.md",
+          "docs/media/uiv2-29-performance-safety/.gitignore",
+          "docs/uiux-2-0-adversarial.md",
+          "docs/uiux-2-0-authorization-trace.md",
+          "docs/uiux-2-0-control-inventory.md",
+          "docs/uiux-2-0-p0-signoff.md",
+          "docs/uiux-2-0-presentations.md",
+          "docs/uiux-2-0-preservation-e2e.md",
+          "docs/uiux-2-0-route-map.md",
+          "docs/uiux-2-0-status-and-evidence.md",
+          "docs/uiv2-v2-accessibility-adversarial-evidence.md",
+          "docs/uiv2-v2-accessibility-adversarial.md",
+          "docs/uiv2-v2-performance-safety.md",
+          "product/M5_2_0_UIUX_Adversarial.json",
+          "product/M5_2_0_UIUX_Authorization_Trace.json",
+          "product/M5_2_0_UIUX_Control_Inventory.json",
+          "product/M5_2_0_UIUX_Overlays.json",
+          "product/M5_2_0_UIUX_Presentations.json",
+          "product/M5_2_0_UIUX_Preservation_E2E.json",
+          "product/M5_2_0_UIUX_Preservation_Signoff.json",
+          "product/M5_2_0_UIUX_Release_Gate.json",
+          "product/M5_2_0_UIUX_Route_Map.json",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "product/M5_2_0_UIUX_Status_Components.json",
+          "product/M5_2_0_UIUX_V2_Accessibility_Adversarial.json",
+          "product/M5_2_0_UIUX_V2_Accessibility_Adversarial_Run.json",
+          "product/M5_2_0_UIUX_V2_Backend_Safety_Run.json",
+          "product/M5_2_0_UIUX_V2_Cross_Tab_Reference.json",
+          "product/M5_2_0_UIUX_V2_Performance_Run.json",
+          "product/M5_2_0_UIUX_V2_Performance_Safety.json",
+          "product/M5_2_0_UIUX_V2_Preservation_Matrix.json",
+          "product/M5_2_0_UIUX_V2_Visual_Fidelity_Roadmap.json",
+          "scripts/uiux_harness_timeline_inventory.py",
+          "scripts/uiux_preservation_e2e.py",
+          "scripts/uiux_stream_perf_inventory.py",
+          "scripts/uiv2_performance_safety.py",
+          "scripts/uiv2_performance_safety_walk.mjs",
+          "static/index.html",
+          "studio.py",
+          "tests/test_scopes.json",
+          "tests/test_task_events.py",
+          "tests/test_uiv2_performance_safety.py"
+        ],
+        "tests_executed": [
+          "Pre-change safety baseline -> 210 passed. Legacy real-Chromium stream baseline -> 14/15; isolated full-window ten-event frame 4.67ms against the unchanged 4ms budget; cache 5000 and DOM 300 remained bounded.",
+          "Ordered snapshot append/prune, stable read-only snapshots, cached-snapshot render guard and redundant-write removal -> four consecutive legacy runs 15/15, full-window means 2.38, 2.89, 3.18 and 2.18ms; final clean legacy run 15/15 at 2.10ms.",
+          "Clean 9e075c6 dedicated Chromium walk -> 21/21 checks, 11 captures, dirty=false, manifest sha256 efd3f566baa15c5539bde8dd492b3eb2bbe4e2d36328baf3590597827f4b28f9.",
+          "Real fast SSE -> 58 schedules in 364.1ms (159.297/s), 19 coalesced renders, complete text retained; paced real SSE produced distinct loading and complete captures.",
+          "Two 12,000-event Harness cycles -> cursor 30000, cache 5000, 300 cards/1147 stream nodes; post-GC document Nodes 8481 -> 8481 -> 8481 and JS heap 3366168 -> 3311928 -> 3322004 bytes after explicit CDP garbage collection.",
+          "Full-window timing at clean HEAD -> mean 2.095ms, nearest-rank p95 2.70ms, maximum 2.80ms over 20 ten-event frames; the pre-existing 4ms mean budget was not relaxed.",
+          "Four viewports × light/dark -> eight/eight layout rows, zero external-shell CLS, zero geometry delta, zero document overflow and 300 cards; intentional internal stream movement is reported separately.",
+          "Clean backend run -> 300 passed across 13 owning modules, 0 failures; isolation smoke 16/16 checks, isolation_status=unqualified, dependent_execution=blocked (fail closed), no live-probe claim.",
+          "Refreshed UIV2-28 at the same clean HEAD -> 120/120 checks, 62 captures, dirty=false, capture manifest sha256 f5c0edb155e98db68371c43419b98831f798342df826a0e252c28e7785058e1b; legacy keyboard 15/15 and responsive 27/27.",
+          "Approved 48-variant cross-tab visual gate -> 2200/2200 checks; structural signatures remain the explicitly user-approved UIV2-28 baseline, so no fresh visual approval was inferred or required.",
+          "Focused mutation/source suites -> 131 passed; broader owning suite -> 364 passed, 1 environment-only historical-commit skip (73bc5e unavailable), 1 third-party deprecation warning.",
+          "Ruff and mypy -> clean; frontend syntax, documentation links, scoped-test map and git diff --check -> clean.",
+          "Integrated UIUX release gate -> 37/37 artifact checks, 7/7 phase gates, 0 findings; V2 matrix 272 controls and 121 mounted routes; preservation map 21/21 rows and 73 provers.",
+          "Final clean-source focused suite -> 186 passed, 0 failures (performance safety, stream performance, task events, accessibility, release gate, docs verification and cross-tab reference); one third-party deprecation warning."
+        ],
+        "visual_evidence": [
+          "/tmp/uiv2-29-performance-clean-final/capture-manifest.json — clean 9e075c6, 21/21 checks and 11 actual captures, sha256 efd3f566baa15c5539bde8dd492b3eb2bbe4e2d36328baf3590597827f4b28f9 (local review evidence).",
+          "product/M5_2_0_UIUX_V2_Performance_Run.json — committed source-bound metrics, environment, checks and capture digests; docs/uiv2-v2-performance-safety.md renders the actual measurements.",
+          "/tmp/uiv2-29-accessibility-clean-final/capture-manifest.json — clean 9e075c6, 120/120 checks and 62 captures, sha256 f5c0edb155e98db68371c43419b98831f798342df826a0e252c28e7785058e1b.",
+          "product/M5_2_0_UIUX_V2_Cross_Tab_Approval.json — explicit user-approved UIV2-28 structural baseline; the UIV2-29 source passed all 2200/2200 approved checks without a structural delta."
+        ],
+        "acceptance_evidence": [
+          "Actual environment and metrics are committed: real fast SSE 159.297/s, unchanged 4ms frame gate passed at 2.095ms mean, two 12,000-event cycles leave a 5000-event cache and 300-card DOM, post-GC nodes are flat at 8481 and heap does not grow across repeated cycles.",
+          "No unauthorized execution path: anonymous approval is 401 and authenticated unknown approval is 404; 300 backend tests cover permissions, scoped grants, recovery, process containment, side-effect/durable-intent ledgers and lease fencing; isolation remains unqualified and blocked rather than being advertised as qualified.",
+          "All four viewports in both themes preserve shell geometry with zero external-shell shift and no document overflow; all 48 approved structural variants pass 2200/2200 checks, so the result conforms to the approved target rather than a UI-only completion claim.",
+          "Existing features and safety boundaries are preserved by 364 broader owning tests, 21/21 preservation rows, 120/120 accessibility checks, 15/15 keyboard, 27/27 responsive and 37/37 release-gate checks. No backend route, payload, session, workspace or authorization contract changed."
+        ],
+        "known_regressions": [
+          {
+            "regression": "The pre-change full-window ten-event frame missed its 4ms budget on current Chromium (4.67ms isolated; legacy 14/15).",
+            "status": "closed_by_incremental_snapshot_rendering",
+            "resolution": "Ordered append/prune now maintains the read-only snapshot incrementally, stable cache snapshots avoid repeated copies/normalization, identical notes/counts are not rewritten, and disclosure scans occur only on full rebuilds. Four consecutive legacy runs passed 15/15 and clean dedicated/legacy evidence passes at 2.095/2.10ms means with merge, approval, cursor and reader semantics retained."
+          },
+          {
+            "regression": "The new walk initially labeled the maximum of 20 samples as p95.",
+            "status": "closed_by_nearest_rank_reporting",
+            "resolution": "The walk now uses nearest-rank p95 and records max separately. Clean final metrics are mean 2.095ms, p95 2.70ms, max 2.80ms; the metric contract rejects a missing or inconsistent maximum."
+          }
+        ],
         "blockers": [],
-        "handoff_summary": "",
-        "exact_next_action": "Pin HEAD and inspect dependent UI/handlers; capture baseline before changes"
+        "handoff_summary": "UIV2-29 is locally complete at clean implementation 9e075c6. It adds source-bound real-SSE, DOM/post-GC heap, layout, authorization, recovery, ledger/fencing and isolation gates to CI and closes the reproduced 4.67ms full-window performance miss without weakening the 4ms budget. Final records are dirty=false: browser 21/21 with 11 captures, backend 300 tests and 16 isolation checks, accessibility 120/120 with 62 captures, approved visual 2200/2200, broader owning suite 364 passed with one historical-commit environment skip, and release gate 37/37 with 0 findings. No backend API or safety boundary changed.",
+        "exact_next_action": "Commit this clean-HEAD evidence and tracker update, push the session branch, open a PR, require all Python and browser jobs to pass, merge, then start UIV2-30 release review and handoff."
       }
     },
     {
@@ -3682,20 +3762,20 @@
       "id": "P6",
       "name": "Cross-tab QA and release gate",
       "total": 5,
-      "done": 3,
+      "done": 4,
       "in_progress": 0,
       "blocked": 0,
-      "not_started": 2,
-      "percent_complete": 60
+      "not_started": 1,
+      "percent_complete": 80
     }
   ],
   "progress": {
     "total": 30,
-    "done": 28,
+    "done": 29,
     "in_progress": 0,
     "blocked": 0,
-    "not_started": 2,
-    "percent_complete": 93
+    "not_started": 1,
+    "percent_complete": 97
   },
   "session_recovery_protocol": [
     "Read global prompt and tracking",
