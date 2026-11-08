@@ -145,6 +145,8 @@ def test_the_strip_states_how_the_view_was_filled(payload):
     honesty = payload["frontend"]["honesty"]
     assert honesty["states_the_source_live"] is True
     assert honesty["states_the_count_and_range"] is True
+    assert honesty["every_headline_names_this_view"] is True
+    assert honesty["cache_beyond_the_log_is_view_only"] is True
     assert honesty["states_the_cursor"] is True
     assert honesty["says_when_the_log_did_not_resume"] is True
     assert honesty["says_what_is_pruned"] is True
@@ -298,6 +300,9 @@ def test_the_walk_reads_the_log_and_replays_it():
         "replayHarnessLog",
         "harness-timeline-row",
         "harnessLogState",
+        "cacheBeyondLog",
+        "a cache smaller than the log",
+        "outside the log's reported retained range",
         "api/harness/sessions",
         "no page error occurred during the walk",
     ):
@@ -359,6 +364,28 @@ def test_a_strip_that_claims_to_follow_an_unread_log_is_caught(sources):
         html_transform=lambda text: text.replace(
             "&& !harnessRunActive && harnessCursor > 0;",
             "&& !harnessRunActive;",
+            1,
+        )
+    )
+    assert "honesty" in _checks(payload)
+
+
+def test_a_cache_count_presented_as_the_log_is_caught(sources):
+    payload = sources(
+        html_transform=lambda text: text.replace(
+            "and ${viewCount}`;",
+            "and ${plural(count, \"cached event\")} are held in the log`;",
+            1,
+        )
+    )
+    assert "honesty" in _checks(payload)
+
+
+def test_a_stale_cache_presented_as_current_log_contents_is_caught(sources):
+    payload = sources(
+        html_transform=lambda text: text.replace(
+            "outside the log's reported retained range",
+            "current events in the durable log",
             1,
         )
     )

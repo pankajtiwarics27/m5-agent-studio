@@ -2,6 +2,7 @@
   "schema_version": 1,
   "document_type": "m5_uiv2_release_evidence",
   "story": "UIV2-30",
+  "review_scope": "uiv2-30-integrated",
   "recorded_at": "2026-11-08T08:20:00.649751+00:00",
   "source_sha256": {
     "static/index.html": "49c18ae49d90e6c2b0ebfb0c3f26988d61433596e211acd06994f37d92c4eead",

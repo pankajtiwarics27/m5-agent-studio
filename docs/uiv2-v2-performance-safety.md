@@ -16,12 +16,12 @@ Environment: `linux` / `x64`, 2 CPUs, Node `v22.22.3`, `Python 3.11.2`, `Headles
 
 | Metric | Actual | Gate |
 | --- | ---: | ---: |
-| Fast real SSE schedules | 58 in 491.9ms (117.9/s) | ≥20 and ≥50/s |
-| Coalesced chat renders | 23 | fewer than 58 schedules, complete text retained |
-| Full-window ten-event frame | mean 3.10ms; nearest-rank p95 7.00ms; max 10.70ms | mean ≤4ms |
+| Fast real SSE schedules | 58 in 331.1ms (175.2/s) | ≥20 and ≥50/s |
+| Coalesced chat renders | 18 | fewer than 58 schedules, complete text retained |
+| Full-window ten-event frame | mean 1.77ms; nearest-rank p95 2.70ms; max 3.40ms | mean ≤4ms |
 | Events / cache / cards | 30,000 / 5,000 / 300 | 5,000 / 300 ceilings |
-| Post-GC document nodes | 8505 → 8484 → 8505 | repeated-cycle growth ≤64 |
-| Post-GC JS heap | 3.22 MiB → 3.16 MiB → 3.18 MiB | cycle growth ≤8 MiB; baseline growth ≤16 MiB |
+| Post-GC document nodes | 8481 → 8481 → 8481 | repeated-cycle growth ≤64 |
+| Post-GC JS heap | 3.22 MiB → 3.18 MiB → 3.19 MiB | cycle growth ≤8 MiB; baseline growth ≤16 MiB |
 
 Memory readings use CDP `Performance.getMetrics` immediately after `HeapProfiler.collectGarbage`. They are repeated-cycle plateau checks, not a claim that a browser never allocates during a frame.
 
@@ -31,18 +31,18 @@ Streaming intentionally moves cards inside the trajectory scroller. The gate rep
 
 | Viewport | Theme | Total shift | Internal stream | External shell | Geometry delta | Overflow |
 | --- | --- | ---: | ---: | ---: | ---: | ---: |
-| 1640x900 | light | 0.17819 | 0.17819 | 0.00000 | 0.00px | 0px |
+| 1640x900 | light | 0.15396 | 0.15396 | 0.00000 | 0.00px | 0px |
 | 1640x900 | dark | 0.24490 | 0.24490 | 0.00000 | 0.00px | 0px |
 | 1440x900 | light | 0.22236 | 0.22236 | 0.00000 | 0.00px | 0px |
 | 1440x900 | dark | 0.31766 | 0.31766 | 0.00000 | 0.00px | 0px |
-| 1280x800 | light | 0.20676 | 0.20676 | 0.00000 | 0.00px | 0px |
+| 1280x800 | light | 0.17722 | 0.17722 | 0.00000 | 0.00px | 0px |
 | 1280x800 | dark | 0.29537 | 0.29537 | 0.00000 | 0.00px | 0px |
 | 390x844 | light | 0.68225 | 0.68225 | 0.00000 | 0.00px | 0px |
 | 390x844 | dark | 0.97464 | 0.97464 | 0.00000 | 0.00px | 0px |
 
 ## Executed backend and isolation run
 
-**300 tests passed across 13 owning modules; 16 isolation checks passed; 0 failures.**
+**302 tests passed across 13 owning modules; 16 isolation checks passed; 0 failures.**
 
 Environment: Python `3.11.2`, `Linux-6.1.158+-x86_64-with-glibc2.36`, 2 CPUs. No external service, provider, user workspace or live container probe is used.
 

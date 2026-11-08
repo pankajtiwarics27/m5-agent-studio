@@ -325,4 +325,15 @@ def test_no_new_png_is_a_git_input() -> None:
         ["git", "diff", "--name-only", "--diff-filter=ACMRTUXB", "HEAD"],
         cwd=ROOT, capture_output=True, text=True, check=True,
     ).stdout.splitlines()
-    assert not [name for name in changed if name.lower().endswith((".png", ".jpg", ".jpeg"))]
+    # Issue #185 explicitly requires its four existing, owning-walk captures to be retaken.
+    # That scoped update does not make cross-tab candidates or any other raster file a Git input.
+    harness_walk_captures = {
+        "docs/media/harness-timeline/log-open.png",
+        "docs/media/harness-timeline/pruned.png",
+        "docs/media/harness-timeline/replayed.png",
+        "docs/media/harness-timeline/short-window.png",
+    }
+    raster = {name for name in changed if name.lower().endswith((".png", ".jpg", ".jpeg"))}
+    assert not (raster - harness_walk_captures)
+    for name in raster:
+        subprocess.run(["git", "cat-file", "-e", f"HEAD:{name}"], cwd=ROOT, check=True)

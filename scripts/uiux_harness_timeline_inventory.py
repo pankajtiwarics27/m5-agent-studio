@@ -289,7 +289,14 @@ def read_frontend(html: str, server: str) -> dict:
         },
         "honesty": {
             "states_the_source_live": "following the log from seq" in log_state,
-            "states_the_count_and_range": "held, seq ${first}-${last}" in log_state,
+            "states_the_count_and_range": "${viewCount}, seq ${first}-${last}" in log_state,
+            "every_headline_names_this_view": "const viewCount" in log_state
+            and log_state.count("${viewCount}") >= 4
+            and "held in the log" not in log_state
+            and "plural(count, \"event\")" not in log_state,
+            "cache_beyond_the_log_is_view_only": "const outside" in log_state
+            and "seq < retained || seq > latest" in log_state
+            and "outside the log's reported retained range" in log_state,
             "states_the_cursor": "cursor ${harnessCursor}" in log_state,
             "says_when_the_log_did_not_resume": "the log did not resume (${tele.reason})" in log_state,
             "says_what_is_pruned": "earlier event" in log_state and "pruned, retained from seq" in log_state,
@@ -482,6 +489,8 @@ def build_inventory() -> dict:
     honesty_rules = (
         ("states_the_source_live", "the strip does not say when it is following the stream"),
         ("states_the_count_and_range", "the strip does not say how many events it holds and from where"),
+        ("every_headline_names_this_view", "a cache count is presented as the durable log's count"),
+        ("cache_beyond_the_log_is_view_only", "cached entries outside the server's retained range are presented as current log contents"),
         ("states_the_cursor", "the strip does not say where the cursor is"),
         ("says_when_the_log_did_not_resume", "a log that did not resume is presented as a normal read"),
         ("says_what_is_pruned", "pruned history is not counted"),
@@ -641,9 +650,9 @@ def build_inventory() -> dict:
         },
         "findings": findings,
         "limits": [
-            "the strip is a view of what the browser holds, not a second log: it never invents an event, and "
-            "`this view holds N of the M events last reported` is the widest claim it makes about events it "
-            "cannot see",
+            "the strip is a view of what the browser holds, not a second log: it never invents an event; "
+            "`this view holds N of the M events last reported` scopes a smaller cache, and cached entries beyond "
+            "the server's reported retained range are explicitly view-only",
             "the recorded-event card is a fallback, not a design for every type: the eighteen types with a card "
             "keep it, and the twenty-five without one are described by `harnessEventSummary()` in the reader's "
             "terms rather than printed as JSON",
@@ -696,7 +705,7 @@ def render_doc(payload: dict) -> str:
         "",
         "```",
         "▾ Session log   13 events                         [Jump to latest ↓] [Replay log] [Resync]",
-        "following the log from seq 13 · 13 events held · replayed 2 times",
+        "following the log from seq 13 · this view holds 13 cached events · replayed 2 times",
         "",
         "  #1   session/init             standard policy · direct /tmp/project · lead Qwen3.8-27B   04:55:16",
         "  #2   security/policy_revision standard -> plan (revision 2)                             04:55:19",
@@ -708,16 +717,17 @@ def render_doc(payload: dict) -> str:
         "",
         "| State | What it says |",
         "|---|---|",
-        "| `live` | `following the log from seq N · M events held` — the stream is filling the view |",
-        "| a run in flight | `a run is in flight: the trajectory is what it sends, and M events are held in the log` |",
-        "| idle | `M events held, seq A-B · cursor N of L` — the log was read, and the stream is not open |",
-        "| `replay` | `the log did not resume (reason), so this view is the snapshot's: task state and M events, seq A-B` |",
-        "| `pruned` | `… · K earlier events pruned, retained from seq R` and `· this view holds N of the M events last reported` |",
+        "| `live` | `following the log from seq N · this view holds M cached events` — the stream is filling the view |",
+        "| a run in flight | `a run is in flight: the trajectory is what it sends, and this view holds M cached events` |",
+        "| idle | `this view holds M cached events, seq A-B · cursor N of L` — the log was read, and the stream is not open |",
+        "| `replay` | `the log did not resume (reason), so this view is the snapshot's: task state and this view holds M cached events, seq A-B` |",
+        "| `pruned` | `this view holds N of the M events last reported … · K earlier events pruned, retained from seq R` |",
+        "| cache older than the log | `K cached events outside the log's reported retained range seq R-L` — those entries are view-only |",
         "",
-        "Those last two are the honest states. A gap in the log is not silently smoothed over into a normal read,",
-        "and a view that holds fewer events than the log last reported says so instead of implying it has",
-        "everything. Pruning wins the colour over every other state, because a missing event matters more than",
-        "whether the view is live.",
+        "#185 chose Option A: every headline number names this view. A gap in the log is not silently smoothed",
+        "over into a normal read, a smaller cache says how many last-reported events it actually holds, and entries",
+        "that outlived a server prune are called view-only. Pruning wins the colour over every other state, because",
+        "a missing event matters more than whether the view is live.",
         "",
         "## One row per event, and a row that points",
         "",

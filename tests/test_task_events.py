@@ -502,6 +502,10 @@ const out = vm.runInContext(`
       { session: 'hns-active', seqs: [1, 2, 3], pending: 0, decisions: 0 },
       { session: 'hns-active', seqs: [1, 2], pending: 0, decisions: 0 },
     ),
+    appendWindowEarlier: harnessStreamAppendWindow(
+      { session: 'hns-active', seqs: [5, 6, 7, 8, 9, 10, 11, 12, 13], pending: 0, decisions: 0 },
+      { session: 'hns-active', seqs: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], pending: 0, decisions: 0 },
+    ),
     appendWindowEmpty: harnessStreamAppendWindow(
       { session: '', seqs: [], pending: 0, decisions: 0 },
       { session: 'hns-active', seqs: [1], pending: 0, decisions: 0 },
@@ -551,6 +555,9 @@ def test_frontend_append_window_never_answers_for_another_session(isolated_env: 
     assert out["appendWindowSlide"] == {"dropped": 1, "from": 2}
     assert out["appendWindowPending"] is None
     assert out["appendWindowShrank"] is None
+    # #185: a re-read that restores earlier entries must redraw them; a no-op append would
+    # leave nine cards on screen while claiming thirteen in the strip.
+    assert out["appendWindowEarlier"] is None
     assert out["appendWindowEmpty"] is None
     assert out["appendWindowUnanchored"] is None
 

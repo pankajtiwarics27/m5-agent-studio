@@ -15,8 +15,11 @@
     "implementation_head": "c01d01bd0a02c9617c7b08524f24be7f3fa3eddd",
     "dirty": false,
     "static_sha256": "49c18ae49d90e6c2b0ebfb0c3f26988d61433596e211acd06994f37d92c4eead",
+    "review_scope": "uiv2-30-integrated",
+    "current_browser_sources": false,
+    "post_handoff_evidence": "pending-clean-implementation-and-ci",
     "evidence_recorded_at": "2026-11-08T08:20:00.649751+00:00",
-    "note": "The evidence commit may contain only later release docs/tracker changes; executable browser sources are bound by digest."
+    "note": "The evidence commit may contain only later release docs/tracker changes; executable browser sources are bound by digest and verified inside the implementation commit."
   },
   "program_state": {
     "total": 30,
@@ -280,50 +283,50 @@
     },
     "fast_sse": {
       "model": "Gemma-4-21B-REAP-4bit",
-      "elapsed_ms": 491.90000000037253,
-      "renders": 23,
+      "elapsed_ms": 331.09999999962747,
+      "renders": 18,
       "schedules": 58,
       "model_tokens": 58,
-      "sse_per_second": 117.91,
+      "sse_per_second": 175.174,
       "complete_chars": 330
     },
     "steady_frame": {
       "calls": 20,
-      "mean_ms": 3.099999999953434,
-      "p95_ms": 7,
-      "max_ms": 10.700000000186265,
+      "mean_ms": 1.7700000000651925,
+      "p95_ms": 2.7000000001862645,
+      "max_ms": 3.400000000372529,
       "cards": 300
     },
     "memory": {
       "baseline": {
-        "Nodes": 8505,
+        "Nodes": 8481,
         "Documents": 2,
         "JSEventListeners": 334,
-        "JSHeapUsedSize": 3373868,
-        "JSHeapTotalSize": 4456448,
+        "JSHeapUsedSize": 3375100,
+        "JSHeapTotalSize": 3932160,
         "LayoutCount": 1,
         "RecalcStyleCount": 3
       },
       "after_cycle_1": {
-        "Nodes": 8484,
+        "Nodes": 8481,
         "Documents": 2,
         "JSEventListeners": 334,
-        "JSHeapUsedSize": 3309948,
-        "JSHeapTotalSize": 4165632,
+        "JSHeapUsedSize": 3337896,
+        "JSHeapTotalSize": 3903488,
         "LayoutCount": 123,
         "RecalcStyleCount": 245
       },
       "after_cycle_2": {
-        "Nodes": 8505,
+        "Nodes": 8481,
         "Documents": 2,
         "JSEventListeners": 334,
-        "JSHeapUsedSize": 3329676,
+        "JSHeapUsedSize": 3342772,
         "JSHeapTotalSize": 3903488,
-        "LayoutCount": 246,
-        "RecalcStyleCount": 488
+        "LayoutCount": 245,
+        "RecalcStyleCount": 487
       },
       "cycle_1": {
-        "elapsed_ms": 4137.200000000186,
+        "elapsed_ms": 3977.7000000001863,
         "cursor": 18000,
         "cached": 5000,
         "cards": 300,
@@ -331,7 +334,7 @@
         "last": 18000
       },
       "cycle_2": {
-        "elapsed_ms": 4173.9000000003725,
+        "elapsed_ms": 3975.100000000093,
         "cursor": 30000,
         "cached": 5000,
         "cards": 300,
@@ -342,7 +345,7 @@
     },
     "backend_tests": {
       "test_modules": 13,
-      "tests_passed": 300,
+      "tests_passed": 302,
       "failed": 0,
       "isolation_pass_checks": 16
     },
@@ -369,7 +372,7 @@
         "  [PASS] no new privileges — --security-opt=no-new-privileges",
         "  [PASS] no implicit image pull — --pull=never",
         "  [PASS] resource limits — --pids-limit=128 --memory=2g --cpus=2",
-        "  [PASS] single workspace bind mount — type=bind,source=/tmp/m5-browser/tmp/m5-isolation-smoke-6r18tslc,target=/workspace",
+        "  [PASS] single workspace bind mount — type=bind,source=/tmp/m5-isolation-smoke-cgttrczn,target=/workspace",
         "",
         "== 3. Skill-code execution gates (app._run_skill_script) ==",
         "  [PASS] default-off skill-code denial — PermissionError",
@@ -442,6 +445,11 @@
       "id": "uiv2-30-generated-source-manifest",
       "status": "corrected",
       "detail": "PR CI run 42459934879 passed Browser safety but failed all three Python jobs because the preservation helper edit had not been propagated through the UI source manifest, preservation signoff and release gate. Those owner artifacts were regenerated in dependency order; source-manifest, signoff, release-gate and release-review tests then passed, including the historical ancestry check after restoring the shallow clone's history."
+    },
+    {
+      "id": "issue-185-harness-view-cache-wording",
+      "status": "implementation-complete-evidence-refresh-pending",
+      "detail": "Issue #185 chose Option A after the V2 handoff: Harness headline counts now name this view/cache on streaming, replay, pruned, stalled and idle paths. The owning 22-check walk covers both cache/log directions, keeps count == cards, and regenerates its captures; the current UIV2-28/29 source contracts are refreshed. This review remains explicitly pinned to UIV2-30's integrated evidence while the follow-up's clean implementation browser runs and matching green CI are pending. Issue #185 must not be closed from this historical-scope review."
     }
   ],
   "follow_ups": [

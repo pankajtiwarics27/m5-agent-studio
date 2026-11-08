@@ -119,41 +119,23 @@
       "id": null,
       "tone": "neutral",
       "live": false,
-      "line": 11211
+      "line": 11214
     },
     {
       "id": null,
       "tone": "busy",
       "live": false,
-      "line": 11212
+      "line": 11215
     },
     {
       "id": null,
       "tone": "ok",
       "live": false,
-      "line": 11213
-    },
-    {
-      "id": null,
-      "tone": "warn",
-      "live": false,
-      "line": 11214
-    },
-    {
-      "id": null,
-      "tone": "warn",
-      "live": false,
-      "line": 11215
-    },
-    {
-      "id": null,
-      "tone": "warn",
-      "live": false,
       "line": 11216
     },
     {
       "id": null,
-      "tone": "danger",
+      "tone": "warn",
       "live": false,
       "line": 11217
     },
@@ -171,9 +153,27 @@
     },
     {
       "id": null,
-      "tone": "neutral",
+      "tone": "danger",
       "live": false,
       "line": 11220
+    },
+    {
+      "id": null,
+      "tone": "warn",
+      "live": false,
+      "line": 11221
+    },
+    {
+      "id": null,
+      "tone": "warn",
+      "live": false,
+      "line": 11222
+    },
+    {
+      "id": null,
+      "tone": "neutral",
+      "live": false,
+      "line": 11223
     }
   ],
   "state_matrix": [

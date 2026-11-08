@@ -12,12 +12,16 @@ The first decision covers only merge/handoff of the UI/UX V2 program. It is not 
 | --- | --- |
 | Implementation HEAD | `c01d01bd0a02c9617c7b08524f24be7f3fa3eddd` (dirty=`false`) |
 | Frontend SHA-256 | `49c18ae49d90e6c2b0ebfb0c3f26988d61433596e211acd06994f37d92c4eead` |
+| Evidence scope | `uiv2-30-integrated`; current-browser-sources=`false` |
+| Post-handoff #185 evidence | `pending-clean-implementation-and-ci` |
 | Roadmap at generation | 30/30 done, 0 in progress, 0 blocked |
 | Critical CI | [`c01d01bd0a02c9617c7b08524f24be7f3fa3eddd`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42461591225) — success |
 | Local executed checks | 7/7 exit 0 |
 | Production release | `release-blocked`; release_ready=`false` |
 
-The imported implementation HEAD and critical CI HEAD must match. A later evidence/tracker commit may differ only as the recorded handoff revision; executable browser sources remain pinned by SHA-256 and final PR CI must pass separately.
+The imported implementation HEAD and critical CI HEAD must match. A later evidence/tracker commit may differ only as the recorded handoff revision; executable browser sources remain pinned by SHA-256 and final PR CI must pass separately. The source digests are also read back from the implementation commit, so a JSON-only relabeling cannot make an old run current.
+
+**Post-handoff #185 evidence is still pending.** This is a valid historical UIV2-30 review, not proof that #185 is ready to close. Fresh clean implementation browser runs and matching green CI are required before the evidence scope can become `current-browser-sources`.
 
 ### Production blockers preserved
 
@@ -29,6 +33,7 @@ The imported implementation HEAD and critical CI HEAD must match. A later eviden
 - UIV2-26 established the explicit owner-approved 48-variant structural visual baseline; UIV2-27 mapped all 21 preservation rows to executed provers.
 - UIV2-28 measured keyboard, contrast, zoom, reduced-motion and nested-scroll recovery; UIV2-29 added real-SSE, post-GC memory, layout and backend safety gates.
 - UIV2-30 changes release documentation and verification only. It does not change `app.py`, `static/index.html`, `studio.py`, API payloads, sessions or workspace data.
+- Post-handoff #185 is a separate wording-only Harness follow-up: its current evidence names view/cache bounds explicitly and changes no backend API, session, workspace or authorization behavior.
 
 ## Actual screenshot and recovery proof
 
@@ -77,11 +82,11 @@ Environment: `linux` / `x64`, 2 CPUs, `HeadlessChrome/153.0.8010.0`; disposable 
 
 | Metric | Actual | Gate/scope |
 | --- | ---: | --- |
-| Fast real SSE | 58 schedules in 491.9ms = 117.91/s | at least 50/s, complete reply retained |
-| Full-window frame | mean 3.10ms; p95 7.00ms; max 10.70ms | unchanged mean ≤4ms |
-| Post-GC nodes | 8505 → 8484 → 8505 | no repeated-cycle growth beyond the declared budget |
-| Post-GC JS heap | 3373868 → 3309948 → 3329676 bytes | repeated-cycle plateau, not zero allocation |
-| Backend safety | 300 tests; 16 isolation checks | zero failures |
+| Fast real SSE | 58 schedules in 331.1ms = 175.17/s | at least 50/s, complete reply retained |
+| Full-window frame | mean 1.77ms; p95 2.70ms; max 3.40ms | unchanged mean ≤4ms |
+| Post-GC nodes | 8481 → 8481 → 8481 | no repeated-cycle growth beyond the declared budget |
+| Post-GC JS heap | 3375100 → 3337896 → 3342772 bytes | repeated-cycle plateau, not zero allocation |
+| Backend safety | 302 tests; 16 isolation checks | zero failures |
 | Local container isolation | unqualified; blocked (fail closed) | live probes not requested; not advertised as qualified |
 
 ## Corrections and resolved historical defects
@@ -93,6 +98,7 @@ Environment: `linux` / `x64`, 2 CPUs, `HeadlessChrome/153.0.8010.0`; disposable 
 | compare-restore-history | verified-resolved | Historical UIV2-16/17 restore-crash notes are not current behavior: the boot-order guard is present and this review's real Compare continuity walk passed 15/15 with six captures. |
 | uiv2-30-fixture-process-group | corrected | PR CI run 42458307474 exposed a Python 3.12 fixture-teardown race; the duplicate push run 42458278773 at the same SHA passed all four jobs, but the failure was not waived. preservation_suite.stop_server now retains the process-group id after parent exit, escalates surviving descendants to SIGKILL and waits for group exit, with synchronized graceful and SIGTERM-ignoring grandchild regressions. |
 | uiv2-30-generated-source-manifest | corrected | PR CI run 42459934879 passed Browser safety but failed all three Python jobs because the preservation helper edit had not been propagated through the UI source manifest, preservation signoff and release gate. Those owner artifacts were regenerated in dependency order; source-manifest, signoff, release-gate and release-review tests then passed, including the historical ancestry check after restoring the shallow clone's history. |
+| issue-185-harness-view-cache-wording | implementation-complete-evidence-refresh-pending | Issue #185 chose Option A after the V2 handoff: Harness headline counts now name this view/cache on streaming, replay, pruned, stalled and idle paths. The owning 22-check walk covers both cache/log directions, keeps count == cards, and regenerates its captures; the current UIV2-28/29 source contracts are refreshed. This review remains explicitly pinned to UIV2-30's integrated evidence while the follow-up's clean implementation browser runs and matching green CI are pending. Issue #185 must not be closed from this historical-scope review. |
 
 ## Open follow-ups and evidence limits
 

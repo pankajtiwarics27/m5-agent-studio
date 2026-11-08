@@ -22,13 +22,14 @@ What replaced them is a contract about *what changes*:
 * a render that only changes the words of the last turn replaces that one node. The transcript's
   *shape* - which turns exist, what state each is in, whether it has tools, reasoning, usage or a
   context line - decides whether the cheap path is allowed;
-* the harness stream draws the newest 300 cards of the log, and says so, with the count and the way
-  to see the rest in the same breath;
+* the harness stream draws the newest 300 cards of this view's cache, and says so, with the count
+  and the way to re-read the server's log in the same breath;
 * a live event appends one card and drops one off the top rather than rebuilding the window. The
   append is only allowed when the cards on screen are still a contiguous run of the new window, no
   approval state changed, and nothing that arrives would redraw a card already drawn;
-* the cache behind the stream holds 5,000 events and drops its oldest, while `harnessCursor` and
-  `retained_from_seq` stay the truth about which event comes next.
+* the cache behind the stream holds 5,000 events and drops its oldest; its size is always named as
+  this view's bound, never the durable log's, while `harnessCursor` and `retained_from_seq` stay the
+  truth about which event comes next.
 
 This inventory states that contract in source. It cannot time a render; the walk
 (`scripts/stream_perf_walk.mjs`) does that, on a real streamed reply and on synthetic bursts.
@@ -281,11 +282,11 @@ def build_inventory() -> dict:
         "the render is not windowed",
     )
     check(
-        "the pane says how much of the log is not on screen, and where to read it",
+        "the pane says how much of this view's cache is not on screen, and how to re-read the log",
         "harnessWindowNoteText" in html
-        and "Showing the newest ${showing} of ${total} events on screen" in html
-        and "Replay re-reads the whole log from the server." in html,
-        "the window note is missing or does not say what it is",
+        and "Showing the newest ${showing} of ${total} events in this view's cache" in html
+        and "Replay re-reads the server's log into this view." in html,
+        "the window note is missing, ambiguous about the cache, or does not name Replay",
     )
     note_updater = function_body(html, "harnessUpdateWindowNote")
     check(
@@ -328,6 +329,11 @@ def build_inventory() -> dict:
         "harnessRenderedSession = \"\";" in function_body(html, "harnessResetEventCache")
         and "harnessRenderedSeqs = [];" in function_body(html, "harnessResetEventCache"),
         "the cache is reset but the window it was drawn from is kept",
+    )
+    check(
+        "the append is refused when a re-read restores cards before the drawn head",
+        "if (incoming.length && incoming[0] < drawn[0]) return null;" in append_window,
+        "an earlier restored card could be counted without being drawn",
     )
     check(
         "the append is also refused for an approval event, which changes a card that already exists",
