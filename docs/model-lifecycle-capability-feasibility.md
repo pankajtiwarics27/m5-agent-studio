@@ -200,3 +200,18 @@ consistency, source-manifest and whitespace checks passed. Signoff consistency i
 not independent acceptance; the existing deferred/pending record is unchanged.
 Full multi-Python/browser CI and hardware tests were not run locally. No production
 module, standalone build input, dependency, runtime setting or schema changed.
+
+
+## LC-04 source recheck and adapter boundary
+
+The [unactivated oMLX bridge](omlx-lifecycle-bridge.md) rechecked the same pinned
+[public routes](https://github.com/jundot/omlx/blob/2165e75726ba83d9651dbaced61c97728da77bba/omlx/server.py#L3973)
+and [pool status builder](https://github.com/jundot/omlx/blob/2165e75726ba83d9651dbaced61c97728da77bba/omlx/engine_pool.py#L4754).
+Public load is `/v1/models/{model_id}/load`; no fallback admin route is assumed.
+`model_context_length` is model metadata; pool status supplies neither exact
+native instance/digest nor active-request counts or authoritative physical
+release. Exposed aliases, helpers, external/distributed engines and missing flags
+must not become an invented complete empty inventory. Source review/strict fake
+parsing does not qualify a currently installed version. The adapter therefore
+requires external installed-scope attestations and native evidence producers,
+none of which is registered or certified by this story.

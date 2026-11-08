@@ -398,22 +398,24 @@ class SharedMemoryAdmission:
 
     def dispatch(self, lease: MemoryLease, sample: MemorySample, *, now_ms: int) -> bool:
         """Persist before any external effect; repeated dispatch never means replay."""
-        def dispatch(conn: sqlite3.Connection) -> bool:
-            row = self._active(conn, lease)
-            view = self._view(conn, lease.domain_id)
-            self._ready(conn, view)
-            attributed = self._validate(view, sample, now_ms, admission=True)
-            self._fits(view, sample, attributed, 0)
-            if row['status'] != 'reserved':
-                return False
-            if lease.kind == 'model':
-                step = _model_step(lease.binding)
-                if self._coordinator._active_step(conn, step, now_ms) is None:
-                    raise MemoryDenied('lifecycle_intent_stale')
-            conn.execute("UPDATE memory_reservations SET status='dispatched' WHERE id=?", (lease.lease_id,))
-            self._change(conn, lease.domain_id, 'memory_dispatched', lease.work_id)
-            return True
-        return self._admission_call(dispatch, sample, now_ms)
+        return self._admission_call(lambda conn: self._dispatch(conn, lease, sample, now_ms), sample, now_ms)
+
+    def _dispatch(self, conn: sqlite3.Connection, lease: MemoryLease, sample: MemorySample, now_ms: int) -> bool:
+        """Internal composition seam: caller owns the same fenced transaction."""
+        row = self._active(conn, lease)
+        view = self._view(conn, lease.domain_id)
+        self._ready(conn, view)
+        attributed = self._validate(view, sample, now_ms, admission=True)
+        self._fits(view, sample, attributed, 0)
+        if row['status'] != 'reserved':
+            return False
+        if lease.kind == 'model':
+            step = _model_step(lease.binding)
+            if self._coordinator._active_step(conn, step, now_ms) is None:
+                raise MemoryDenied('lifecycle_intent_stale')
+        conn.execute("UPDATE memory_reservations SET status='dispatched' WHERE id=?", (lease.lease_id,))
+        self._change(conn, lease.domain_id, 'memory_dispatched', lease.work_id)
+        return True
 
     def expand_action(self, lease: MemoryLease, footprint: ResourceFootprint, sample: MemorySample,
                       *, bound: ActionMemoryBound | None = None, now_ms: int) -> MemoryLease:
