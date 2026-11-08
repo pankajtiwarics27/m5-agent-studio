@@ -596,3 +596,51 @@ smokes and fresh backend safety302/16 passed. Applicable source, preservation,
 performance and release records were regenerated with zero findings; standalone
 is 4,214,158 bytes. No visual approval/pin was changed. Full/CI remain pending at
 this chronological checkpoint until separately executed.
+
+## Unload-only kernel continuation (private schema v4; dormant)
+
+The preceding explicit native-load checkpoint `2172b4a` subsequently completed
+**4526 passed / 32 skipped / one warning** (1256.24s), with exact-head PR CI
+42499922167 and push CI42499918241 green on Python3.11/3.12/3.13 plus browser.
+PR257 comment6724236422 records that evidence; it supersedes the chronological
+pending-full notes above, not the validation of this new continuation.
+
+This checkpoint adds a distinct release-only coordinator primitive, **not** a
+native unload consumer. `ReleaseStep` binds the actual owned source/instance and
+its actual dispatched model hold without a replacement target. A release goal
+never enters load/verify. Full-runtime unload-scoped physical terminal/absence
+proof marks physical completion but preserves the domain switching/operation
+barrier. The real source hold stays charged until independent LC03 terminal,
+attributed-zero settlement. Only `finish_unload`, checking its exact durable
+released reservation and current operation identity in the final write, retires
+the barrier. Cancellation/expiry never become completed controls; physical success
+alone cannot authorize the next load. Uncertainty and restart require explicit
+reconciliation rather than native replay.
+
+Private schema v4 preserves/refuses earlier populated versions. No migration,
+namespace reset, application history schema change or activation is introduced.
+Existing native permits do not accept the new type. Existing load/inference
+actors fence miswired release intent uncertain before their native job factories.
+No unload command/plan, unload-all/cache, already-absent success policy, HTTP
+redirection, defaults, transports, qualifiers or native counters are installed.
+See the [kernel contract](model-lifecycle-coordinator.md#lc08-unload-only-release-foundation-dormant-no-native-consumer).
+
+Focused offline evidence: **57 new tests** cover three fake source runtimes,
+physical-vs-memory separation, partial/ACK/stale/wrong-scope proofs, nonzero and
+nonterminal settlement, paused/unknown memory, forged identities, FIFO/purpose
+fencing, active control/inference slots, cancellation/expiry, concurrent finish,
+late completion, all restart phases, SQL goal constraints, older-version database
+preservation, native permit refusal and both existing actor purposes. The private
+standalone kernel test is extended as well. No live runtime/hardware qualification,
+LC08 completion, LC09 recovery completion, independent acceptance, merge or test8
+retry is claimed. Full regression and exact-head CI for this increment must be
+recorded only after execution.
+
+Final pre-full evidence for this continuation: the combined 17-module lifecycle,
+native, dispatch, fit and persistence suite passed **924 tests**, one upstream
+warning (41.25s). Ruff, mypy75, scope mapping192/13, docs/ADR, baseline/governance/
+deferred-security consistency, JavaScript and both app/standalone authenticated
+startup-origin smokes passed. The standalone is 4,226,687 bytes; fresh backend
+safety302/16 and regenerated source/preservation/performance/release records report
+zero findings, with live isolation still unqualified/blocked. Full regression and
+exact-head CI are not inherited from `2172b4a` and remain pending here.

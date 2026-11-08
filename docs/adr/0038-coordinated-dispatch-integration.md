@@ -109,6 +109,21 @@ uninstalled; oMLX targets and unload/all/cache commands still refuse. Do not
 redirect the existing oMLX HTTP model-control route or infer future request fit
 from model residency. This is partial LC08 integration, not activation/review.
 
+Add a distinct release-only foundation before any native unload command consumer.
+Do not invent a replacement target or widen existing transition/permit authority.
+Persist private schema v4 acquire/release goals and source request/model-hold
+references; permit NULL target only for release. Preserve/refuse v1/v2/v3 without
+migration/reset. Physical unload uses existing operation-scoped full-runtime
+absence/terminal proof, but retains the switching/operation barrier until the
+actual bound source reservation has independent durable LC03 zero settlement.
+Retire the barrier only with current operation/epoch/generation/request/hold checks
+in one final write; cancelled/expired requests cannot become completed controls.
+Keep physically complete-but-unsettled release markable uncertain and restart
+reconciliation-only. Existing native permits reject this new type; miswired
+existing actors fence it without native calls. This foundation is not an unload
+consumer, already-absent success policy, unload-all/cache, LC09 recovery, default
+producer or production activation.
+
 ## Alternatives
 
 - Replace served routing immediately: would activate unqualified transports and
@@ -132,7 +147,7 @@ Coordinated combos, unqualified private/proxy providers and unowned evictions
 currently refuse. Legacy behavior remains served by default, so no cross-runtime
 guarantee is claimed for it. Static inventory cannot prove dynamic/native
 reachability. Namespaced warm standalone tests do not qualify installed native
-behavior. No configuration/schema/dependency, native activation or
+behavior. No public configuration/application-schema/dependency, native activation or
 security/architecture acceptance is implied.
 
 ## Review Status

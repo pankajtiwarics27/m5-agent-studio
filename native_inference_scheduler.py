@@ -18,6 +18,7 @@ from uuid import uuid4
 
 from model_lifecycle_coordinator import (
     LoadLease,
+    ReleaseStep,
     ModelTarget,
     RequestLease,
     TransitionStep,
@@ -160,6 +161,12 @@ class NativeInferenceScheduler:
                         raise RuntimeDispatchDenied("coordinated_execution_unavailable")
                     return {"status": "confirmed"}
                 if not isinstance(item, TransitionStep):
+                    if isinstance(item, ReleaseStep):
+                        self.driver.coord.mark_release_uncertain(
+                            item,
+                            reference="native_scheduler_wrong_release",
+                            now_ms=self.driver._now(),
+                        )
                     raise RuntimeDispatchDenied("coordinated_execution_unavailable")
                 if item.kind in ("drain", "unload"):
                     memory = self._memory(plan.domain_id, item.source)
@@ -304,6 +311,12 @@ class NativeInferenceScheduler:
                         raise RuntimeDispatchDenied("coordinated_execution_unavailable")
                     return
                 if not isinstance(item, TransitionStep):
+                    if isinstance(item, ReleaseStep):
+                        self.driver.coord.mark_release_uncertain(
+                            item,
+                            reference="native_scheduler_wrong_release",
+                            now_ms=self.driver._now(),
+                        )
                     # A miswired producer must not turn a durable load slot
                     # into inference or strand it as apparently ready work.
                     if isinstance(item, LoadLease):

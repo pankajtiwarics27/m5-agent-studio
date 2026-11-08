@@ -650,6 +650,18 @@ async def native_load_command():
    assert (await collect(execute.stream(admission(b).call)))[-1]['type']=='usage'
    assert b.count_calls==1 and b.memory.view('shared').committed_bytes==600
 asyncio.run(native_load_command())
+from test_model_lifecycle_release import opened as release_opened,loaded as release_loaded,release as release_step,physical as release_physical,sample as release_sample
+coord,memory,fleet=release_opened(pathlib.Path('release-only-kernel'))
+with coord:
+ model=release_loaded(coord,memory,fleet)
+ step=release_step(coord)
+ assert type(step) is pkg.model_lifecycle_coordinator.ReleaseStep and not hasattr(step,'target')
+ assert coord.complete_release(step,reference='fake-physical',now_ms=1000,evidence=release_physical(coord,fleet,step))
+ assert coord.claim_next('shared',now_ms=1000) is None
+ assert not coord.finish_unload(step,reference='held-memory',now_ms=1000)
+ memory.settle(model,release_sample(memory,now=1000),terminal=True,reference='actual-zero',now_ms=1000)
+ assert coord.finish_unload(step,reference='barrier-retired',now_ms=1000)
+ assert coord.snapshot('shared').state=='idle'
 print('isolated native executor and shared transaction guards passed')
 """.replace("REPO", repr(str(root)))
     env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}
