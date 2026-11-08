@@ -115,3 +115,35 @@ These are checkpoint results, not LC-08 completion, architecture acceptance or
 permission to activate/merge. Concrete executor, canonical consumption,
 coordinator-backed race tests and executor-level standalone consumption remain
 open as listed above.
+
+## Warm concrete executor checkpoint
+
+`native_dispatch_executor.py` now supplies a concrete **warm-only** consumer of
+actual LC-02/03 leases, LC-07 fit service, and Ollama/LM Studio bridge inference.
+It reconstructs final provider bytes from the complete owned application input
+and compares them against the separately authorized native request. Counting and
+inference use identical bytes/digest; mismatched output/temperature/reasoning or
+omitted messages refuse rather than mutate the approved native profile. The fit
+callback must be the actual matching service, not a generic true assumption.
+
+A synchronous trusted planner may supply only an already-admitted native job;
+it is not a cold transition or arbitrary transport callback. Absent planner,
+oMLX inference, explicit controls and cold orchestration remain unavailable here.
+No planner/producer/backend is registered. LM Studio `off` additionally requires
+an explicit installed-scoped `reasoning_mode_off` assertion; other requested
+reasoning levels refuse because a matching native wire control is not established.
+No settings are changed or inferred from a model name.
+
+The canonical packet accumulator keeps reasoning separate, assembles bounded
+native JSON tool fragments without inventing IDs/arguments, rejects unadvertised
+or partial calls, and withholds tool/usage events until the concrete bridge is
+fully exhausted, including independent terminal checks. Missing counts/rates stay
+unknown. Consumer close reaches the concrete bridge; fit tickets are revoked, not
+used to invent memory release. This does not yet finish application canonical
+consumption or executor-level standalone bundling; those remain active LC-08 work.
+
+Initial executor tests: **27 passed**, through real dormant coordinator/memory /
+fit/native bridge kernels with explicit fake installed/native/counter facts. They
+cover positive exact-byte send, changed/unqualified/overflow zero inference,
+reasoning changes and canonical malformed-fragment/refusal cases. These are not
+installed native qualification or story completion.
