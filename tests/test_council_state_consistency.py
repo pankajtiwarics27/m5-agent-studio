@@ -322,7 +322,23 @@ def test_a_session_read_that_skips_the_turn_facts_is_caught(sources):
 
 
 def test_a_reinstated_model_default_is_caught(sources):
-    payload = sources(app_transform=lambda t: t.replace('    model = body.get("model")\n', '    model = body.get("model") or "Qwen3.8-27B-oQ4e-mtp"\n', 1))
+    def reinstate_summon_default(source: str) -> str:
+        import ast
+
+        # Target this handler, not the first unrelated model assignment in the
+        # application (the coordinated native gateway now precedes Council).
+        node = next(n for n in ast.parse(source).body if isinstance(n, ast.AsyncFunctionDef) and n.name == "api_hall_summon")
+        lines = source.splitlines(keepends=True)
+        start, end = node.lineno - 1, node.end_lineno
+        handler = "".join(lines[start:end])
+        original = '    model = body.get("model")\n'
+        assert handler.count(original) == 1
+        mutated = handler.replace(original, '    model = body.get("model") or "Qwen3.8-27B-oQ4e-mtp"\n', 1)
+        result = "".join(lines[:start]) + mutated + "".join(lines[end:])
+        assert inventory.python_function(result, "_coordinated_gateway_chat") == inventory.python_function(source, "_coordinated_gateway_chat")
+        return result
+
+    payload = sources(app_transform=reinstate_summon_default)
     assert "a summon that names no model is refused instead of defaulted" in _checks(payload)
 
 

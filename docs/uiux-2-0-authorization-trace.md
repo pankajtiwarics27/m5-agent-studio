@@ -5,9 +5,9 @@ It is the `UIUX-P0-04` artifact: for state-changing route candidates resolved by
 what can refuse them and what durable state they touch, derived from `app.py` and the route map.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4`.
-* `app.py` digest: `61fc096c3a1530cb…` · route map digest: `77df096f8c09eb60…`.
+* `app.py` digest: `a8654e7fe75481aa…` · route map digest: `6af7a848ece0d87a…`.
 * 50 resolved state-changing route candidates, out of 81 in `app.py`; 0 fetch site(s) have 0 unresolved URL or method edge(s) (0 method).
-* 22 reference an authority subsystem, 43 a durable-state subsystem, 3 contain a SQL write, and 23 can leave the machine.
+* 26 reference an authority subsystem, 43 a durable-state subsystem, 3 contain a SQL write, and 23 can leave the machine.
 
 ## What this page is, and is not
 
@@ -34,7 +34,7 @@ never enable an action, an approval or a recovery state on a client-side guess.*
 
 ## The shared boundary
 
-Every request passes `security_boundary()` (`app.py:3867`) before any handler runs.
+Every request passes `security_boundary()` (`app.py:3899`) before any handler runs.
 It protects everything under `/api/`, `/v1/`.
 
 | Gate | Status | When it can refuse |
@@ -178,12 +178,14 @@ A screen that says "this stays local" has to know which of its buttons cannot pr
 | `history_privacy` | state | history retention and export |
 | `mcp_client` | support | MCP transports and tool calls |
 | `model_admission` | authority | decides whether a model may be loaded or used |
+| `native_dispatch_executor` | authority | couples admitted warm native requests to exact full-request fit and concrete native bridge gates; supplies no producers or cold load authority |
 | `onboarding_preflight` | support | local readiness probing |
 | `process_supervision` | authority | registers and contains subprocesses |
 | `recovery_guard` | state | crash-recovery state |
 | `resource_admission` | authority | decides whether the host can take another concurrent unit of work |
 | `routing_experiments` | support | routing experiments and measurements |
 | `routing_policy` | authority | routing consent: which provider may serve which request |
+| `runtime_dispatch_boundary` | authority | refuses legacy runtime bypasses in internal coordinated composition; does not issue native-operation authority |
 | `runtime_persistence` | state | durable runtime records |
 | `sandbox_boundary` | authority | decides which isolation backend is in force and closes the boundary on failure |
 | `scoped_grants` | authority | issues, narrows and revokes scoped capabilities for a session |

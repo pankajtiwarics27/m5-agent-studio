@@ -88,7 +88,9 @@ REQUIRED_DOCS: dict[str, tuple[str, ...]] = {
 # source (the roadmap JSON) is validated by its own dashboard-regeneration check.
 PLACEHOLDER_EXEMPT = frozenset({"docs/product-roadmap-status.md"})
 
-PLACEHOLDERS = re.compile(r"\bTODO\b|\bTBD\b|\bFIXME\b|<placeholder[^>]*>|<insert[^>]*>", re.IGNORECASE)
+PLACEHOLDERS = re.compile(
+    r"\bTODO\b|\bTBD\b|\bFIXME\b|<placeholder[^>]*>|<insert[^>]*>", re.IGNORECASE
+)
 INLINE_LINK = re.compile(r"(?<!!)\[[^\]]*\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
 EXTERNAL_PREFIXES = ("http://", "https://", "mailto:", "tel:", "#")
 
@@ -143,8 +145,15 @@ def _read(root: Path, relative: Path) -> Document | None:
 def markdown_files(root: Path) -> list[Path]:
     """Return every published Markdown file: root-level docs plus docs/."""
     files = sorted((root / "docs").rglob("*.md")) if (root / "docs").is_dir() else []
-    for name in ("README.md", "AGENTS.md", "BASELINE.md", "SECURITY.md", "CONTRIBUTING.md",
-                 "CODE_OF_CONDUCT.md", "IMPLEMENTATION_STATUS.md"):
+    for name in (
+        "README.md",
+        "AGENTS.md",
+        "BASELINE.md",
+        "SECURITY.md",
+        "CONTRIBUTING.md",
+        "CODE_OF_CONDUCT.md",
+        "IMPLEMENTATION_STATUS.md",
+    ):
         candidate = root / name
         if candidate.is_file():
             files.append(candidate)
@@ -169,7 +178,9 @@ def _link_errors(root: Path, document: Document) -> list[str]:
 # than INLINED_MODULES (the orchestrator and the retention/privacy helpers are
 # injected as whole sections, not as sibling modules).
 _BUILD_SPECIAL_MODULES = frozenset({"workflow_orchestration", "history_privacy"})
-_SHIPPED_COUNT_RE = re.compile(r"(\d+) of (\d+) shipped Python modules are wired into the served app")
+_SHIPPED_COUNT_RE = re.compile(
+    r"(\d+) of (\d+) shipped Python modules are wired into the served app"
+)
 _CONTRACT_COUNT_RE = re.compile(r"`app\.py` plus (\d+) small contract modules")
 _INLINES_COUNT_RE = re.compile(r"inlines (\d+) sibling modules")
 _TYPECHECKED_COUNT_RE = re.compile(r"\((\d+) of them type-checked")
@@ -192,14 +203,16 @@ def _imported_local_modules(root: Path) -> set[str]:
 
 
 def _inlined_modules(root: Path) -> set[str]:
-    """`INLINED_MODULES` from the builder, read by AST so nothing is executed."""
+    """Flat and namespaced embedded modules, read by AST without executing code."""
     tree = ast.parse((root / "scripts" / "build_studio.py").read_text(encoding="utf-8"))
+    embedded: set[str] = set()
     for node in tree.body:
         if isinstance(node, ast.Assign) and any(
-            getattr(target, "id", None) == "INLINED_MODULES" for target in node.targets
+            getattr(target, "id", None) in {"INLINED_MODULES", "NATIVE_MODULES"}
+            for target in node.targets
         ):
-            return set(ast.literal_eval(node.value))
-    return set()
+            embedded.update(ast.literal_eval(node.value))
+    return embedded
 
 
 def _mypy_modules(root: Path) -> set[str]:
@@ -219,7 +232,11 @@ def _module_count_errors(root: Path) -> list[str]:
         return []
     # Scratch trees assembled by the tests hold documentation only; with no code
     # to compare against there is nothing to keep true.
-    required = (root / "app.py", root / "scripts" / "build_studio.py", root / "pyproject.toml")
+    required = (
+        root / "app.py",
+        root / "scripts" / "build_studio.py",
+        root / "pyproject.toml",
+    )
     if not all(path.is_file() for path in required):
         return []
     errors: list[str] = []
@@ -241,15 +258,25 @@ def _module_count_errors(root: Path) -> list[str]:
         if match is None:
             return  # sentence rewritten; nothing to keep true
         if int(match.group(1)) != actual:
-            errors.append(f"{README}: states {match.group(1)} {what}, code has {actual}")
+            errors.append(
+                f"{README}: states {match.group(1)} {what}, code has {actual}"
+            )
 
-    _check(_INLINES_COUNT_RE, len(inlined | _BUILD_SPECIAL_MODULES), "inlined sibling modules")
+    _check(
+        _INLINES_COUNT_RE,
+        len(inlined | _BUILD_SPECIAL_MODULES),
+        "inlined sibling modules",
+    )
     match = _SHIPPED_COUNT_RE.search(readme.text)
     if match is not None:
         if int(match.group(1)) != len(imported):
-            errors.append(f"{README}: states {match.group(1)} wired modules, code has {len(imported)}")
+            errors.append(
+                f"{README}: states {match.group(1)} wired modules, code has {len(imported)}"
+            )
         if int(match.group(2)) != len(modules):
-            errors.append(f"{README}: states {match.group(2)} shipped modules, code has {len(modules)}")
+            errors.append(
+                f"{README}: states {match.group(2)} shipped modules, code has {len(modules)}"
+            )
     _check(_CONTRACT_COUNT_RE, len(modules), "small contract modules")
     _check(_TYPECHECKED_COUNT_RE, len(mypy_modules), "type-checked modules")
     missing_from_mypy = sorted(modules - mypy_modules)
@@ -293,16 +320,22 @@ def validate_docs(root: Path = ROOT) -> list[str]:
                 errors.append(f"{relative}: missing required section: {heading}")
         if relative not in PLACEHOLDER_EXEMPT and PLACEHOLDERS.search(document.text):
             match = PLACEHOLDERS.search(document.text)
-            errors.append(f"{relative}: contains placeholder text: {match.group(0) if match else ''}")
+            errors.append(
+                f"{relative}: contains placeholder text: {match.group(0) if match else ''}"
+            )
         if relative not in published_targets:
-            errors.append(f"{relative}: is not linked from {README} or {DOCS_INDEX} (written but not published)")
+            errors.append(
+                f"{relative}: is not linked from {README} or {DOCS_INDEX} (written but not published)"
+            )
         errors.extend(_link_errors(root, document))
 
     for relative in markdown_files(root):
         document = _read(root, relative)
         if document is None:
             continue
-        if relative.as_posix() not in PLACEHOLDER_EXEMPT and PLACEHOLDERS.search(document.text):
+        if relative.as_posix() not in PLACEHOLDER_EXEMPT and PLACEHOLDERS.search(
+            document.text
+        ):
             errors.append(f"{relative}: contains placeholder text")
         errors.extend(_link_errors(root, document))
 

@@ -156,7 +156,7 @@
               "PATCH": 3,
               "POST": 40
             },
-            "routes_with_authority_subsystem": 22,
+            "routes_with_authority_subsystem": 26,
             "routes_with_authority_directly": 15,
             "routes_with_state_subsystem": 43,
             "routes_with_state_directly": 16,

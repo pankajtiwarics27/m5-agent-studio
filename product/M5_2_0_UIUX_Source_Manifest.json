@@ -19,16 +19,16 @@
     {
       "path": "app.py",
       "role": "the FastAPI server the UI talks to; source of the route table",
-      "sha256": "61fc096c3a1530cb371bf9029e5e80499732aede5deff61d23d81b19df1afac4",
-      "bytes": 1054884,
-      "lines": 22618
+      "sha256": "a8654e7fe75481aa2e4def2c493d854f73cd9a065640aa73a7040ba8682e71d1",
+      "bytes": 1067253,
+      "lines": 22899
     },
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "43fc4067554ca49a1d26d75c212e9a1694c44293a96da73f206eb6c841282fc4",
-      "bytes": 3857243,
-      "lines": 82357
+      "sha256": "1d6446f6c2636bcdd614c7715579f39c5ba5c7161d327d0fed044d23d155c91b",
+      "bytes": 4159274,
+      "lines": 82982
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -68,9 +68,9 @@
     {
       "path": "scripts/build_studio.py",
       "role": "regenerates studio.py from app.py and the inlined modules",
-      "sha256": "72cd009cb059cf9b2dcbfb298bc689236be4b91ef644c513a37c56ba68bfb268",
-      "bytes": 7040,
-      "lines": 132
+      "sha256": "78882e9d8f0f2c5d7fe6f9d6b2cf5a067b6deef9f337f6fbf186708e8585e7f7",
+      "bytes": 11218,
+      "lines": 254
     },
     {
       "path": "scripts/check_frontend_syntax.py",
@@ -96,9 +96,9 @@
     {
       "path": "scripts/uiux_authorization_trace.py",
       "role": "traces the authorization and state behind each state-changing call",
-      "sha256": "e217410b556e7e921b3faa2e2cbbdec71729b63aa46096952e048795bff688c2",
-      "bytes": 37169,
-      "lines": 765
+      "sha256": "cfe3aa4d5b10f36ca91d3355b08d23dd7b40a25af6ae0c89988a8ebb580968a5",
+      "bytes": 37524,
+      "lines": 767
     },
     {
       "path": "scripts/uiux_preservation_signoff.py",
@@ -571,7 +571,7 @@
   },
   "api": {
     "path": "app.py",
-    "sha256": "61fc096c3a1530cb371bf9029e5e80499732aede5deff61d23d81b19df1afac4",
+    "sha256": "a8654e7fe75481aa2e4def2c493d854f73cd9a065640aa73a7040ba8682e71d1",
     "route_count": 121,
     "by_method": {
       "DELETE": 7,
