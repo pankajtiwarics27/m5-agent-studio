@@ -106,3 +106,17 @@ def test_picker_filters_without_execution_or_policy_changes():
     assert "MCP servers: <strong" in html
     assert "MCP tools: <strong" in html
     assert "MCP:<span" not in html
+
+
+def test_navigation_metrics_are_shared_and_sessions_follow_measured_height():
+    html = (ROOT / "static/index.html").read_text()
+    assert "--studio-nav-width: 200px;" in html
+    assert "#mainLayout { padding-left: var(--studio-nav-width); }" in html
+    assert "width: var(--studio-nav-width); padding: var(--space-4);" in html
+    assert "--studio-nav-height: 348px;" in html
+    assert "var(--studio-nav-height)" in html
+    assert "new ResizeObserver(syncSessionsPosition).observe(tabRail);" in html
+    for line in html.splitlines():
+        if 'body[data-active-pane="harness"] .mode-tabs {' in line:
+            assert all(token not in line for token in ("width:", "padding:", "gap:"))
+    assert 'body[data-active-pane="harness"] .mode-tab {' not in html

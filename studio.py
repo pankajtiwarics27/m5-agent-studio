@@ -4983,6 +4983,8 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   /* UIV2-16: how many answer columns the Compare grid draws, set from the run. */
   --debate-cols: 1;
   --header-height: 56px;
+  --studio-nav-width: 200px;
+  --studio-nav-height: 348px;
 }
 body[data-theme="light"] {
   color-scheme: light;
@@ -5037,12 +5039,12 @@ body { font-family: var(--sans); }
 .status-pill .dot { box-shadow: none; width: 6px; height: 6px; }
 .mode-tabs {
   position: fixed; left: 0; top: var(--header-height); bottom: 0; z-index: 19;
-  width: 200px; padding: var(--space-4); display: flex; flex-direction: column; align-items: stretch;
+  width: var(--studio-nav-width); padding: var(--space-4); display: flex; flex-direction: column; align-items: stretch;
   background: var(--bg-elev); border-right: 1px solid var(--border); gap: var(--row-gap);
   overflow-x: hidden; overflow-y: auto; border-radius: 0;
 }
 .mode-tab { width: 100%; justify-content: flex-start; }
-#mainLayout { padding-left: 200px; }
+#mainLayout { padding-left: var(--studio-nav-width); }
 .mode-tab {
   border-radius: var(--radius-sm); padding: var(--space-2) 10px; min-height: var(--control-min-h);
   font-size: var(--text-sm); font-weight: var(--weight-medium);
@@ -6052,12 +6054,10 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 .sessions-toggle { display: none; }
 .inspector-title-row { display: flex; align-items: center; justify-content: space-between; }
 #pane-harness > .pane-title { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); }
-body[data-active-pane="harness"] #mainLayout { padding-left: 240px; }
-body[data-active-pane="harness"] .mode-tabs { width: 240px; height: 320px; bottom: auto; padding: 12px; gap: 4px; }
-body[data-active-pane="harness"] .mode-tab { justify-content: flex-start; }
-body[data-active-pane="harness"] .mode-tab span { display: inline; }
+/* Harness adds sessions below the same navigation, not a second set of nav metrics. */
+body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto; }
 #pane-harness .harness-shell { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); min-height: 0; }
-#pane-harness .harness-sidebar { position: fixed; display: flex; left: 0; top: calc(var(--header-height) + 320px); bottom: 0; width: 240px; z-index: 20; border-right: 1px solid var(--border); border-top: 1px solid var(--border); background: var(--bg-elev); }
+#pane-harness .harness-sidebar { position: fixed; display: flex; left: 0; top: calc(var(--header-height) + var(--studio-nav-height)); bottom: 0; width: var(--studio-nav-width); z-index: 20; border-right: 1px solid var(--border); border-top: 1px solid var(--border); background: var(--bg-elev); }
 #pane-harness .harness-sidebar > div:first-child { padding: 14px !important; flex-direction: column !important; align-items: stretch; }
 #pane-harness .harness-sidebar .hall-chronicles { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: auto; }
 #pane-harness .harness-sidebar .chronicle-item { flex: 0 0 auto; }
@@ -6100,19 +6100,13 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
 .harness-settings-body .harness-advanced { width: 100%; }
 .harness-run-hint { font-size: 11px; line-height: 1.5; width: 100%; }
 @media (max-width: 1279px) {
-  body[data-active-pane="harness"] #mainLayout { padding-left: 64px; }
-  body[data-active-pane="harness"] .mode-tabs { width: 64px; height: auto; bottom: 0; padding: 12px 8px; }
-  body[data-active-pane="harness"] .mode-tab { justify-content: center; }
-  body[data-active-pane="harness"] .mode-tab span { display: none; }
+  body[data-active-pane="harness"] .mode-tabs { height: auto; bottom: 0; }
   #pane-harness .harness-sidebar { display: none; }
   body[data-active-pane="harness"] .sessions-toggle { display: inline-flex; }
   body.sessions-open #pane-harness .harness-sidebar { display: flex; width: min(280px, 85vw); top: calc(var(--header-height) + 48px); left: 64px; box-shadow: 10px 0 36px rgba(0,0,0,.18); z-index: 30; }
 }
 @media (max-width: 799px) {
-  body[data-active-pane="harness"] #mainLayout { padding-left: 0; }
-  body[data-active-pane="harness"] .mode-tabs { position: static; width: 100%; height: 44px; padding: 0 12px; flex-direction: row; }
-  body[data-active-pane="harness"] .mode-tab { width: auto; flex: 0 0 auto; }
-  body[data-active-pane="harness"] .mode-tab span { display: inline; }
+  body[data-active-pane="harness"] .mode-tabs { height: 44px; }
   body.sessions-open #pane-harness .harness-sidebar { left: 0; top: calc(var(--header-height) + 92px); }
   .workspace-toolbar { padding: 4px 12px; gap: 6px; }
   .workspace-caption { display: none; }
@@ -21678,7 +21672,16 @@ body[data-active-pane="harness"] .mode-tab span { display: inline; }
   }
 
   const tabRail = document.querySelector(".mode-tabs");
-  if (tabRail) tabRail.addEventListener("keydown", tabRailKeydown);
+  if (tabRail) {
+    tabRail.addEventListener("keydown", tabRailKeydown);
+    // Measure the real navigation rather than reserving 320px: density, fonts and
+    // wrapping can change its height. This only positions the existing session list.
+    const syncSessionsPosition = () => document.documentElement.style.setProperty(
+      "--studio-nav-height", `${tabRail.getBoundingClientRect().height}px`,
+    );
+    new ResizeObserver(syncSessionsPosition).observe(tabRail);
+    syncSessionsPosition();
+  }
   syncTabOrientation();
   renderInspectorFor((document.querySelector(".mode-tab.active") || {}).dataset?.tab || "harness");
   try {

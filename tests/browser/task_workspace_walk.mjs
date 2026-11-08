@@ -58,6 +58,43 @@ try {
   await page.waitForFunction(()=>document.querySelector('#harnessLeadModel').options.length>0);
   await page.waitForFunction(()=>document.getElementById('harnessWorkspaceInput').value.trim().length>0);
   check('header rehydrates after reload', (await caption()).text===`Workspace: ${savedWorkspace}` && await page.$eval('#harnessWorkspaceInput',n=>n.value.trim())===savedWorkspace, await caption());
+  // Shared navigation must not jump when switching into/out of Harness.
+  const navigationPosts = posts.length;
+  for (const theme of ['light', 'dark']) for (const compact of [false, true]) {
+    for (const width of [390, 799, 800, 820, 1279, 1280, 1568]) {
+      await page.setViewport({width, height: 900});
+      await page.evaluate(({theme, compact}) => { applyTheme(theme); applyDensity(compact); }, {theme, compact});
+      const navigation = async tab => {
+        await page.evaluate(tab => switchTab(tab), tab);
+        // Let density/font/viewport layout and the session-position observer settle.
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        return page.evaluate(() => {
+          const rail = document.querySelector('.mode-tabs');
+          const rect = n => { const b = n.getBoundingClientRect(); return [b.x,b.y,b.width,b.height].map(v=>Math.round(v*100)/100); };
+          const css = getComputedStyle(rail);
+          return {width: rect(rail)[2], padding: css.padding, gap: css.gap,
+            mainLeft: rect(document.getElementById('mainLayout'))[0] + parseFloat(getComputedStyle(document.getElementById('mainLayout')).paddingLeft),
+            buttons: [...rail.querySelectorAll('.mode-tab')].map(n=>({box:rect(n), justify:getComputedStyle(n).justifyContent, label:getComputedStyle(n.querySelector('span')).display}))};
+        });
+      };
+      const reference = await navigation('start');
+      for (const tab of ['harness', 'hall', 'council', 'debate', 'chat']) {
+        const actual = await navigation(tab);
+        check(`shared navigation ${tab}/${theme}/${compact}/${width}`,JSON.stringify(actual)===JSON.stringify(reference),{reference, actual});
+        if (tab==='harness' && width>=1280) {
+          const seam = await page.evaluate(() => {
+            const nav=document.querySelector('.mode-tabs').getBoundingClientRect();
+            const session=document.getElementById('harnessSessionsPanel').getBoundingClientRect();
+            const last=document.querySelector('.mode-tab:last-child').getBoundingClientRect();
+            return {navBottom:nav.bottom,sessionTop:session.top,lastBottom:last.bottom};
+          });
+          check(`sessions below full navigation ${theme}/${compact}/${width}`,Math.abs(seam.navBottom-seam.sessionTop)<1 && seam.lastBottom<=seam.navBottom,seam);
+        }
+      }
+    }
+  }
+  check('tab consistency makes no write/inference request',posts.length===navigationPosts,posts);
+  await page.evaluate(() => switchTab('harness'));
   await page.evaluate(path=>syncProjectDirInputs(path),longWorkspace);
   await page.evaluate(() => startFreshHarnessDraft());
   for (const theme of ['light', 'dark']) {
