@@ -193,8 +193,39 @@ class UnloadAdmission:
 
 
 @dataclass(frozen=True, slots=True)
+class OmlxUnloadAdmission:
+    """Source-only LC04 readiness plus the ACTUAL separately bound model hold.
+
+    No synthetic native profile, FitProfile, tokenizer or target load is implied.
+    The driver independently verifies clock/policy/runtime against its owner.
+    """
+
+    call: RuntimeDispatchCall
+    native: ox.OmlxQualification
+    profile: ModelMemoryProfile
+    clock_id: str
+    max_age: float
+
+    @property
+    def memory(self) -> ModelMemoryProfile:
+        return self.profile
+
+    def validate(self, now: int) -> None:
+        ox.validate_unload_qualification(
+            self.native, self.profile, now, clock_id=self.clock_id, max_age=self.max_age
+        )
+        if (
+            self.call.action != "unload"
+            or self.call.payload != b"{}"
+            or self.call.runtime != "omlx"
+            or self.call.model != self.profile.target.artifact_id
+        ):
+            raise RuntimeDispatchDenied("invalid_dispatch_request")
+
+
+@dataclass(frozen=True, slots=True)
 class QueuedUnloadRequest:
-    admission: UnloadAdmission
+    admission: UnloadAdmission | OmlxUnloadAdmission
     request_id: str
     domain_id: str
     deadline_ms: int
@@ -289,9 +320,6 @@ class LmRelease(LmTransition):
     """Actual LM source-instance release, with no replacement selector."""
 
 
-ReleaseJob = OllamaRelease | LmRelease
-
-
 @dataclass(frozen=True, slots=True)
 class ReleaseResult:
     """Stage/barrier result only, NEVER canonical API confirmation.
@@ -353,6 +381,14 @@ class OmlxSourceTransition:
                 return await proof(observation)
 
         return await self.bridge.confirm(self.permit, bounded)
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class OmlxRelease(OmlxSourceTransition):
+    """Explicit oMLX release; no oMLX target/inference/fit authority."""
+
+
+ReleaseJob = OllamaRelease | LmRelease | OmlxRelease
 
 
 TransitionJob = OllamaTransition | LmTransition | OmlxSourceTransition
@@ -470,7 +506,7 @@ class NativeTransitionDriver:
 
     def enqueue_unload(
         self,
-        admission: UnloadAdmission,
+        admission: UnloadAdmission | OmlxUnloadAdmission,
         request_id: str,
         domain_id: str,
         *,
@@ -478,12 +514,22 @@ class NativeTransitionDriver:
     ) -> QueuedUnloadRequest:
         assert_no_active_write_transaction("native release readiness")
         try:
-            if type(admission) is not UnloadAdmission:
+            if type(admission) not in (UnloadAdmission, OmlxUnloadAdmission):
                 raise RuntimeDispatchDenied("invalid_dispatch_request")
             admission.validate(self._now())
 
             def source(conn):
                 domain = self.coord._domain(conn, domain_id)
+                if isinstance(admission, OmlxUnloadAdmission):
+                    if (
+                        admission.clock_id != self.coord.observer_clock_id
+                        or admission.max_age != self.coord._max_observation_age
+                        or admission.native.runtime
+                        != self.coord._binding(
+                            domain, admission.profile.target.runtime_id
+                        )
+                    ):
+                        raise RuntimeDispatchDenied("coordinated_execution_unavailable")
                 row = conn.execute(
                     "SELECT * FROM memory_reservations WHERE domain=? AND kind='model' AND status='dispatched' AND owner_epoch=?",
                     (domain_id, self.coord._epoch),
@@ -574,24 +620,36 @@ class NativeTransitionDriver:
             self.coord._call(current, now_ms=self._now())
             valid, held = True, queued.memory
             queued.admission.validate(self._now())
-            if type(job) not in (OllamaRelease, LmRelease):
+            if type(job) not in (OllamaRelease, LmRelease, OmlxRelease):
                 raise RuntimeDispatchDenied("coordinated_execution_unavailable")
             if (
-                job.permit.intent != step
-                or job.permit.qualification != queued.admission.native
+                job.permit.qualification != queued.admission.native
                 or job.memory != held
                 or job.activity is None
             ):
                 raise RuntimeDispatchDenied("coordinated_execution_unavailable")
-            if isinstance(job, OllamaRelease):
-                if not isinstance(job.bridge, ol.OllamaLifecycleBridge):
+            if isinstance(job, OmlxRelease):
+                if (
+                    not isinstance(job.bridge, ox.OmlxLifecycleBridge)
+                    or job.permit.step != step
+                    or type(queued.admission) is not OmlxUnloadAdmission
+                    or job.profile != queued.admission.memory
+                ):
                     raise RuntimeDispatchDenied("coordinated_execution_unavailable")
-                owner = job.bridge.coordinator
+                owner, owner_memory = job.bridge._coordinator, job.bridge._memory
             else:
-                if not isinstance(job.bridge, lm.LmStudioLifecycleBridge):
+                if job.permit.intent != step:
                     raise RuntimeDispatchDenied("coordinated_execution_unavailable")
-                owner = job.bridge.coord
-            if owner is not self.coord or job.bridge.memory is not self.memory:
+                if isinstance(job, OllamaRelease):
+                    if not isinstance(job.bridge, ol.OllamaLifecycleBridge):
+                        raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+                    owner = job.bridge.coordinator
+                else:
+                    if not isinstance(job.bridge, lm.LmStudioLifecycleBridge):
+                        raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+                    owner = job.bridge.coord
+                owner_memory = job.bridge.memory
+            if owner is not self.coord or owner_memory is not self.memory:
                 raise RuntimeDispatchDenied("coordinated_execution_unavailable")
             if step.kind == "drain":
                 if job._drain() is not True:

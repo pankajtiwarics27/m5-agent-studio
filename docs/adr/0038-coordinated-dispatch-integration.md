@@ -147,6 +147,19 @@ work on cancelled/expired cleanup. Preserve unknown holds/barriers on interrupte
 work and never unlock another lock owner. Keep oMLX unload-only, already-absent
 success, unload-all/cache, production composition and LC09 recovery unavailable.
 
+Add distinct OmlxUnloadAdmission with LC04 source qualification and the actual
+separately bound model-memory profile, never a fabricated native fit/load profile.
+Bind clock/observation policy/runtime to the actual owner before queue/probe.
+Explicitly extend only the oMLX release intent role and compose concrete OmlxRelease
+on the optional actor. Record source profile digest with actual load send; require
+that record and exact hold before release drain/mutation. Missing records refuse,
+not migrate/reset. Keep disjoint release send/ACK receipts, mandatory current ACK
+before confirmation, all native source/visibility gates, full-runtime physical
+proof, independent real zero settlement and durable canonical retirement checks.
+A pending200/202 ACK remains insufficient. Preserve cancelled/expired cleanup,
+uncertainty/no-replay and later target budget fencing. Do not qualify oMLX target/
+inference, install producers, redirect HTTP, activate or complete LC09 recovery.
+
 ## Alternatives
 
 - Replace served routing immediately: would activate unqualified transports and

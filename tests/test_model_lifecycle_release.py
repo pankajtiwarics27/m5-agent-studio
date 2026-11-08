@@ -589,8 +589,12 @@ def test_native_permits_cannot_borrow_foreign_release_authority(tmp_path, backen
             from test_omlx_lifecycle_bridge import permit, Clock
             import omlx_lifecycle as native
 
-            with pytest.raises(native.OmlxError, match="invalid_permit"):
-                permit(coord, step, Clock())
+            p = permit(coord, step, Clock())
+            bridge = native.OmlxLifecycleBridge(
+                coord, memory, lambda _: None, Clock(), authorize=lambda _: True
+            )
+            with pytest.raises(native.OmlxError, match="source_profile_unverified"):
+                coord._call(lambda conn: bridge._release_binding(conn, p))
         else:
             from test_native_transition_driver import fixture
 

@@ -35,6 +35,7 @@ from native_transition_driver import (
     ColdAdmission,
     LoadAdmission,
     UnloadAdmission,
+    OmlxUnloadAdmission,
     QueuedUnloadRequest,
     ReleaseJob,
     ReleaseResult,
@@ -80,7 +81,7 @@ class NativeLoadPlan:
 class NativeUnloadPlan:
     """Trusted source-only composition; no defaults or already-absent success."""
 
-    admission: UnloadAdmission
+    admission: UnloadAdmission | OmlxUnloadAdmission
     domain_id: str
     deadline_ms: int
     release: Callable[[ReleaseStep, MemoryLease], ReleaseJob]
@@ -306,7 +307,7 @@ class NativeInferenceScheduler:
             plan = self.unload_plan(call)
             if (
                 type(plan) is not NativeUnloadPlan
-                or type(plan.admission) is not UnloadAdmission
+                or type(plan.admission) not in (UnloadAdmission, OmlxUnloadAdmission)
                 or plan.admission.call != call
             ):
                 raise RuntimeDispatchDenied("invalid_dispatch_request")

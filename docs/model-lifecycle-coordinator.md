@@ -367,3 +367,14 @@ Historical completion is checked independently of a successor's current slot.
 No default plan or public route is enabled; already-absent/unmatched sources,
 oMLX unload-only and unload-all/cache remain unsupported. See the
 [integration actor continuation](runtime-dispatch-integration.md#optional-native-unload-command-actor-continuation-still-dormant).
+
+### oMLX source-only actor continuation
+
+The same `ReleaseStep`/durable-retirement protocol can now be explicitly consumed
+by an oMLX source-only native job, with distinct LC04 qualification plus actual
+source-memory profile and original native-load record. No acquire target or
+request-fit metadata is invented. Release send/ACK markers are separate from
+acquire; source absence and independent held-memory zero settlement remain required.
+Optional oMLX actor composition is not default installation or HTTP redirection.
+Schema/migration policy remains unchanged. See the
+[source-only integration](runtime-dispatch-integration.md#omlx-source-only-unload-command-continuation-dormant).

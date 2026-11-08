@@ -756,3 +756,61 @@ ignored cancelled status, missing retirement receipt, bypassed lock acquisition 
 stranded pre-driver factory failures (two failures each). No source worktree was
 mutated by the fault harness. Full regression and exact-head CI remain pending
 at this chronological checkpoint; this is not independent acceptance/activation.
+
+## oMLX source-only unload-command continuation (dormant)
+
+The preceding optional Ollama/LM Studio actor checkpoint `da31140` passed **4744
+local tests,32 skips,one warning**, with PR CI42509113652 and push CI42509109538
+green. PR259 comment6725456811 supersedes its pre-full notes. Those results remain
+historical, not evidence for this new source snapshot.
+
+`OmlxUnloadAdmission` is a distinct source-only readiness type. It carries the
+LC04 native qualification and the **actual separately bound model-memory profile**,
+not a fabricated Ollama/LM profile, FitProfile, token count or target selector.
+Native runtime/profile/context/capability and fresh clock scope are checked before
+queue/probe; the driver independently checks the supplied clock, observation-age
+policy and exact runtime against its coordinator, plus actual resident/instance/
+source reservation. Blocking-load capability is deliberately not inferred or
+required for a source-only unload. No oMLX target load/inference is qualified.
+
+The oMLX permit/activity/observation intent union explicitly accepts `ReleaseStep`,
+with the separate current release-operation gate. Concrete `OmlxRelease` jobs
+compose on the existing optional unload actor and remain incompatible with the
+acquire driver. A native source-profile digest is durably recorded with an actual
+oMLX load send; release requires that original record to match the held source
+profile before drain and mutation. Missing/historical unmatched records refuse;
+no record repair, namespace deletion or reset is introduced. Source-only job
+profile and actual memory binding must also match exactly.
+
+Release send/ACK receipt vocabulary is disjoint from acquire. A 200 or 202
+unloading ACK only records pending work and is required before release confirmation;
+it never proves physical terminality or zero memory. Current authorization,
+quiescent native activity/helper visibility, pinned/helper/distributed/external/
+loading refusals, fresh native status and bound all-runtime absence/terminal proof
+remain mandatory. Physical completion retains the barrier until independent real
+source-hold attributed-zero settlement and durable final retirement. Post-send
+cancelled/expired cleanup may retire resources but cannot produce canonical success.
+Errors/cancellation retain charged uncertainty without polling or replay.
+
+No plan, transport, qualifier, authorizer, proof/sample producer or HTTP redirection
+is installed. oMLX load/inference on the generic actor, already-absent success,
+unload-all/cache, remaining canonical workflows, LC09 recovery and production
+activation remain open. Private schema staysv4; a reviewed populated migration is
+still absent. Existing oMLX HTTP controls remain unchanged/unredirected.
+
+Initial evidence: **45 new offline tests;1130 passed,one upstream warning** in the
+combined20-module lifecycle/native/dispatch/fit/persistence suite (52.21s), including
+real private standalone oMLX release composition. Facts/transports are synthetic,
+not installed/native hardware qualification. Full regression and exact-head CI
+must be recorded separately after execution, not inherited from earlier heads.
+
+Pre-full oMLX source-only checkpoint: all five disposable mutations were caught
+(original native profile record, owner clock, release ACK, native physical-proof
+version, actual source attributed zero), one failing test each; worktree source
+was not mutated. Ruff/mypy75, scope195/13, docs/ADR, baseline/governance/deferred
+security, JavaScript and both app/standalone auth/origin smokes passed. Bundle
+4,259,968bytes; fresh backend302/16, source64/6/121, preservation21 capabilities/
+272 controls/50 routes, performance21/21 and release7/7 with2200 visual/15Compare
+passed, zero findings. Demo/screenshot6/6 and visual pins unchanged. Live isolation
+remains unqualified/blocked; full regression and exact-head CI still pending at
+this chronological note. No activation/acceptance/merge is claimed.

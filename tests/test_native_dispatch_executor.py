@@ -689,6 +689,15 @@ async def native_unload_command():
    assert b.memory.view('shared').committed_bytes==0 and b.coord.snapshot('shared').state=='idle'
    assert len(b.driver.mutations(b))==1 and getattr(b,'count_calls',0)==0
 asyncio.run(native_unload_command())
+from test_omlx_unload_control import loaded as loaded_omlx,scheduler as omlx_unload_scheduler,call as omlx_unload_call
+async def native_omlx_unload_command():
+ env,lease=await loaded_omlx(pathlib.Path('native-omlx-unload-command'))
+ with env[0]:
+  execute=omlx_unload_scheduler(env,lease)
+  assert await execute.command(omlx_unload_call())=={'status':'confirmed'}
+  assert env[1].view('shared').committed_bytes==0 and env[0].snapshot('shared').state=='idle'
+  assert len(env[4].posts)==1 and not env[2].models
+asyncio.run(native_omlx_unload_command())
 print('isolated native executor and shared transaction guards passed')
 """.replace("REPO", repr(str(root)))
     env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}
