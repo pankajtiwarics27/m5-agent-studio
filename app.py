@@ -85,6 +85,7 @@ import edit_rollback
 import edit_transactions
 import execution_profiles
 import runtime_dispatch_boundary
+import native_dispatch_executor  # noqa: F401 -- internal composition, no activation
 import model_admission
 import artifact_lineage
 import process_supervision
@@ -4888,11 +4889,18 @@ async def stream_any_model(
         coordinated_kind, coordinated_meta, coordinated_model = parse_model_route(model_spec)
         native_runtime = dispatch.target(coordinated_kind, coordinated_meta)
         if native_runtime is not None:
-            async for event in dispatch.stream(
-                native_runtime, coordinated_model, messages, tools=_CHAT_NATIVE_TOOLS.get(),
-                temperature=temperature, max_tokens=max_tokens, reasoning_mode=reasoning_mode,
-            ):
-                yield event
+            if _CHAT_NATIVE_TOOLS.get() and not _CANONICAL_NATIVE_CONSUMER.get():
+                raise runtime_dispatch_boundary.RuntimeDispatchDenied("canonical_consumer_required")
+            async with contextlib.aclosing(
+                dispatch.stream(
+                    native_runtime, coordinated_model, messages, tools=_CHAT_NATIVE_TOOLS.get(),
+                    temperature=temperature, max_tokens=max_tokens, reasoning_mode=reasoning_mode,
+                )
+            ) as native_source:
+                async for event in native_source:
+                    if event.get("type") == "tool_call" and not _CANONICAL_NATIVE_CONSUMER.get():
+                        raise runtime_dispatch_boundary.RuntimeDispatchDenied("canonical_consumer_required")
+                    yield event
             return
 
     # Strip any KV-cache, prompt-cache, or provider-opaque attributes before wire dispatch (M5-P4-02 AC 1).
@@ -5108,9 +5116,215 @@ def _normalize_gateway_messages_and_tools(
     return norm
 
 
+# Only consumers that preserve structural native call IDs/arguments may receive
+# canonical tool events. Legacy text parsers must not silently discard them.
+_CANONICAL_NATIVE_CONSUMER: ContextVar[bool] = ContextVar("studio_canonical_native_consumer", default=False)
+
+
+async def _coordinated_gateway_chat(request: Request, body: dict[str, Any]):
+    allowed = {
+        "model",
+        "messages",
+        "tools",
+        "temperature",
+        "max_tokens",
+        "max_completion_tokens",
+        "stream",
+        "reasoning_effort",
+    }
+    if (
+        not isinstance(body, dict)
+        or set(body) - allowed
+        or type(body.get("stream", False)) is not bool
+        or (
+            "max_tokens" in body
+            and "max_completion_tokens" in body
+            and body["max_tokens"] != body["max_completion_tokens"]
+        )
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "invalid_dispatch_request", "retryable": False},
+        )
+    model = body.get("model")
+    if not isinstance(model, str) or not model:
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "invalid_dispatch_request", "retryable": False},
+        )
+    # Do not flatten tool/result history, inject XML tool prompts, substitute
+    # Hello, truncate or coerce user limits/options. The concrete executor owns
+    # strict native preparation and reports unsupported semantics explicitly.
+    messages = body.get("messages")
+    tools = body.get("tools")
+    temperature = body.get("temperature", 0.0)
+    maximum = body.get("max_completion_tokens", body.get("max_tokens", 4096))
+    reasoning = body.get("reasoning_effort", "off")
+
+    async def events():
+        tools_token = _CHAT_NATIVE_TOOLS.set(tools)
+        consumer_token = _CANONICAL_NATIVE_CONSUMER.set(True)
+        try:
+            async with contextlib.aclosing(
+                stream_any_model(
+                    request.app.state.http,
+                    model,
+                    messages,
+                    temperature,
+                    maximum,
+                    reasoning,
+                )
+            ) as source:
+                async for item in source:
+                    yield item
+        finally:
+            _CANONICAL_NATIVE_CONSUMER.reset(consumer_token)
+            _CHAT_NATIVE_TOOLS.reset(tools_token)
+
+    def native_call(event):
+        # The executor accepts only advertised, complete structural calls after
+        # independent native terminality, never calls parsed from reasoning/text.
+        return {
+            "id": event["id"],
+            "type": "function",
+            "function": {
+                "name": event["name"],
+                "arguments": event.get("arguments_json")
+                or json.dumps(event["arguments"], ensure_ascii=False),
+            },
+        }
+
+    def actual_usage(event):
+        counts = {
+            key: event[key]
+            for key in ("prompt_tokens", "completion_tokens", "total_tokens")
+            if event.get(key) is not None
+        }
+        return counts or None  # Unknown is not an invented zero/estimated count.
+
+    cid = "chatcmpl-" + uuid.uuid4().hex
+    if not body.get("stream", False):
+        content, thinking, calls, usage = [], [], [], None
+        finish = None
+        try:
+            async with contextlib.aclosing(events()) as source:
+                async for item in source:
+                    if item["type"] == "content":
+                        content.append(item["text"])
+                    elif item["type"] == "reasoning":
+                        thinking.append(item["text"])
+                    elif item["type"] == "tool_call":
+                        calls.append(native_call(item))
+                    elif item["type"] == "usage":
+                        usage = actual_usage(item)
+                        finish = item.get("finish_reason")
+            if finish not in ("stop", "tool_calls", "length"):
+                raise runtime_dispatch_boundary.RuntimeDispatchDenied(
+                    "coordinated_execution_unavailable"
+                )
+        except runtime_dispatch_boundary.RuntimeDispatchDenied as exc:
+            raise HTTPException(status_code=503, detail=exc.to_mapping()) from None
+        except Exception:
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "code": "coordinated_execution_unavailable",
+                    "retryable": False,
+                },
+            ) from None
+        message = {"role": "assistant", "content": "".join(content) or None}
+        if thinking:
+            message["reasoning_content"] = "".join(thinking)
+        if calls:
+            message["tool_calls"] = calls
+        return JSONResponse(
+            {
+                "id": cid,
+                "object": "chat.completion",
+                "created": int(time.time()),
+                "model": model,
+                "choices": [{"index": 0, "message": message, "finish_reason": finish}],
+                "usage": usage,
+            }
+        )
+
+    async def chunks():
+        finish, usage, call_index = None, None, 0
+        try:
+            async with contextlib.aclosing(events()) as source:
+                async for item in source:
+                    kind = item["type"]
+                    if kind == "usage":
+                        finish, usage = item.get("finish_reason"), actual_usage(item)
+                        continue
+                    if kind == "tool_call":
+                        delta = {
+                            "tool_calls": [{"index": call_index, **native_call(item)}]
+                        }
+                        call_index += 1
+                    elif kind in ("content", "reasoning"):
+                        delta = {
+                            "content"
+                            if kind == "content"
+                            else "reasoning_content": item["text"]
+                        }
+                    else:
+                        raise runtime_dispatch_boundary.RuntimeDispatchDenied(
+                            "coordinated_execution_unavailable"
+                        )
+                    yield (
+                        "data: "
+                        + json.dumps(
+                            {
+                                "id": cid,
+                                "object": "chat.completion.chunk",
+                                "model": model,
+                                "choices": [
+                                    {"index": 0, "delta": delta, "finish_reason": None}
+                                ],
+                            }
+                        )
+                        + "\n\n"
+                    )
+            if finish not in ("stop", "tool_calls", "length"):
+                raise runtime_dispatch_boundary.RuntimeDispatchDenied(
+                    "coordinated_execution_unavailable"
+                )
+            yield (
+                "data: "
+                + json.dumps(
+                    {
+                        "id": cid,
+                        "object": "chat.completion.chunk",
+                        "model": model,
+                        "choices": [{"index": 0, "delta": {}, "finish_reason": finish}],
+                        "usage": usage,
+                    }
+                )
+                + "\n\n"
+            )
+            yield "data: [DONE]\n\n"
+        except runtime_dispatch_boundary.RuntimeDispatchDenied as exc:
+            yield "data: " + json.dumps({"error": exc.to_mapping()}) + "\n\n"
+        except Exception:
+            yield 'data: {"error":{"code":"coordinated_execution_unavailable","retryable":false}}\n\n'
+
+    return StreamingResponse(chunks(), media_type="text/event-stream")
+
+
 @app.post("/v1/chat/completions")
 async def openai_gateway_chat(request: Request):
     body = await request.json()
+    if _local_runtime_dispatch().coordinated:
+        if not isinstance(body, dict) or not isinstance(body.get("model"), str):
+            raise HTTPException(status_code=400, detail={"code": "invalid_dispatch_request", "retryable": False})
+        kind, meta, _ = parse_model_route(body["model"])
+        try:
+            native = _local_runtime_dispatch().target(kind, meta)
+        except runtime_dispatch_boundary.RuntimeDispatchDenied as exc:
+            raise HTTPException(status_code=503, detail=exc.to_mapping()) from None
+        if native is not None:
+            return await _coordinated_gateway_chat(request, body)
     model = body.get("model") or "Qwen3.8-27B-oQ4e-mtp"
     tools = body.get("tools") or None
     messages = _normalize_gateway_messages_and_tools(body.get("messages") or [], tools)

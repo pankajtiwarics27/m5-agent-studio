@@ -472,14 +472,14 @@ def test_every_local_module_import_is_inlined_for_the_standalone_build() -> None
     builder's inlining list so the same gap cannot reappear.
     """
     sys.path.insert(0, str(ROOT / "scripts"))
-    from build_studio import INLINED_MODULES  # noqa: PLC0415
+    from build_studio import INLINED_MODULES, NATIVE_MODULES  # noqa: PLC0415
 
     local_modules = {path.stem for path in ROOT.glob("*.py")} - {"app", "studio", "setup"}
     app_imports = _local_module_imports((ROOT / "app.py").read_text(encoding="utf-8"), local_modules)
     # history_privacy and workflow_orchestration are inlined with dedicated blocks.
     specially_inlined = {"history_privacy", "workflow_orchestration"}
 
-    missing = app_imports - set(INLINED_MODULES) - specially_inlined
+    missing = app_imports - set(INLINED_MODULES) - set(NATIVE_MODULES) - specially_inlined
 
     assert missing == set(), f"app.py imports local modules the standalone build does not inline: {sorted(missing)}"
 

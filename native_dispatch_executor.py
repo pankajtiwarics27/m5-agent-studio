@@ -310,6 +310,7 @@ class CanonicalNativePackets:
                         id=identifier,
                         name=part["name"],
                         arguments=arguments,
+                        arguments_json=part["arguments"],
                     )
                 )
             if self.usage is None:
@@ -464,5 +465,9 @@ class NativeDispatchExecutor:
                 if source is not None:
                     await source.aclose()
             finally:
-                if isinstance(job.fit, NativeFitInputs):
+                if (
+                    isinstance(job.fit, NativeFitInputs)
+                    and isinstance(job.fit.service, RequestFitAdmission)
+                    and isinstance(job.fit.permit, FitPermit)
+                ):
                     job.fit.service.revoke(job.fit.permit.lease)

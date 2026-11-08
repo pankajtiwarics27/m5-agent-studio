@@ -41,6 +41,21 @@ A fake backend proves routing only. Native execution still requires actual
 LC-02 domain operations, LC-03 memory, LC-04--06 qualifications and LC-07 exact
 final-wire fit plus independent terminality. No backend is installed by default.
 
+Compose a warm concrete executor from actual native bridge/fit services and
+already-admitted leases. Reconstruct final bytes from complete application input,
+refuse profile/output/reasoning changes and require the matching fit-service
+callback. Tools/usage are withheld through independent native terminality.
+Coordinated native gateway consumption bypasses legacy XML normalization and
+preserves native IDs and LM argument strings; unknown options refuse explicitly.
+Other legacy text tool consumers refuse instead of losing structural authority.
+
+Embed lifecycle/fit/protocol/executor modules as a private standalone package,
+not flat globals. Rewrite sibling imports to that package and reuse the existing
+application persistence and dispatch objects as shims, preserving transaction
+ContextVar and exception identities. Register modules before execution; do not
+replace public module names. Isolated artifact tests block sibling fallbacks and
+exercise both warm kernels with fake facts, not installed native qualification.
+
 ## Alternatives
 
 - Replace served routing immediately: would activate unqualified transports and
@@ -53,16 +68,17 @@ final-wire fit plus independent terminality. No backend is installed by default.
 
 ## Tradeoffs
 
-This first integration checkpoint is incomplete LC-08: native executor/canonical
-consumer, complete final-wire request-fit coupling and concurrent cold-control /
-inference races still need implementation and proof before story closure.
-The backend interface is not itself a production executor. Coordinated combos,
-unqualified private/proxy providers and unowned evictions currently refuse.
-Legacy behavior remains served by default, so no cross-runtime guarantee is
-claimed for that default. Static inventory cannot prove dynamic/native reachability.
-Standalone fencing works without importing dormant native modules; that is not
-standalone native executor qualification. No configuration/schema/dependency,
-native activation or security/architecture acceptance is implied.
+LC-08 remains incomplete: cold acquisition/control orchestration, pre-disruption
+metadata gates, remaining all-path canonical consumption and complete cross-runtime
+cold-control races still need implementation/proof. The warm executor is not a
+production producer or cold-load controller. Current races cover duplicate count
+and queued-control blocking while an admitted native stream is active only.
+Coordinated combos, unqualified private/proxy providers and unowned evictions
+currently refuse. Legacy behavior remains served by default, so no cross-runtime
+guarantee is claimed for it. Static inventory cannot prove dynamic/native
+reachability. Namespaced warm standalone tests do not qualify installed native
+behavior. No configuration/schema/dependency, native activation or
+security/architecture acceptance is implied.
 
 ## Review Status
 

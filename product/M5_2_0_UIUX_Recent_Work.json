@@ -13,56 +13,56 @@
       "status": "blocked",
       "tone": "danger",
       "label": "blocked",
-      "app_line": 14528,
+      "app_line": 14742,
       "occurrences": 1
     },
     {
       "status": "cancelled",
       "tone": "warn",
       "label": "stopped by you",
-      "app_line": 14403,
+      "app_line": 14617,
       "occurrences": 7
     },
     {
       "status": "completed",
       "tone": "ok",
       "label": "completed",
-      "app_line": 19588,
+      "app_line": 19802,
       "occurrences": 4
     },
     {
       "status": "error",
       "tone": "danger",
       "label": "failed",
-      "app_line": 19719,
+      "app_line": 19933,
       "occurrences": 4
     },
     {
       "status": "idle",
       "tone": "info",
       "label": "ready",
-      "app_line": 2311,
+      "app_line": 2312,
       "occurrences": 2
     },
     {
       "status": "paused",
       "tone": "warn",
       "label": "paused",
-      "app_line": 12566,
+      "app_line": 12780,
       "occurrences": 11
     },
     {
       "status": "running",
       "tone": "busy",
       "label": "running",
-      "app_line": 8836,
+      "app_line": 9050,
       "occurrences": 10
     },
     {
       "status": "waiting_approval",
       "tone": "warn",
       "label": "waiting approval",
-      "app_line": 8719,
+      "app_line": 8933,
       "occurrences": 1
     }
   ],

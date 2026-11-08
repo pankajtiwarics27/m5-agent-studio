@@ -349,7 +349,11 @@ def _conversation(messages: object, wire: Wire) -> tuple[set[str], set[str]]:
             if (
                 not isinstance(call, dict)
                 or set(call) - {"id", "type", "function"}
-                or call.get("type") != "function"
+                # Native Ollama's exact prepared call has id/function, not
+                # OpenAI's required type tag. Missing type is accepted ONLY for
+                # this wire; a present non-function tag still refuses.
+                or call.get("type", "function" if wire == "ollama_native" else None)
+                != "function"
                 or not isinstance(call.get("function"), dict)
                 or set(call["function"]) - {"name", "arguments"}
             ):

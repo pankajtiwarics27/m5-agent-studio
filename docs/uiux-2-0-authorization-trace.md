@@ -5,7 +5,7 @@ It is the `UIUX-P0-04` artifact: for state-changing route candidates resolved by
 what can refuse them and what durable state they touch, derived from `app.py` and the route map.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4`.
-* `app.py` digest: `d6d8fffe23dd9561…` · route map digest: `ae39d88ce52b1451…`.
+* `app.py` digest: `a8654e7fe75481aa…` · route map digest: `426194eed2484db8…`.
 * 50 resolved state-changing route candidates, out of 81 in `app.py`; 0 fetch site(s) have 0 unresolved URL or method edge(s) (0 method).
 * 26 reference an authority subsystem, 43 a durable-state subsystem, 3 contain a SQL write, and 23 can leave the machine.
 
@@ -34,7 +34,7 @@ never enable an action, an approval or a recovery state on a client-side guess.*
 
 ## The shared boundary
 
-Every request passes `security_boundary()` (`app.py:3898`) before any handler runs.
+Every request passes `security_boundary()` (`app.py:3899`) before any handler runs.
 It protects everything under `/api/`, `/v1/`.
 
 | Gate | Status | When it can refuse |
@@ -178,6 +178,7 @@ A screen that says "this stays local" has to know which of its buttons cannot pr
 | `history_privacy` | state | history retention and export |
 | `mcp_client` | support | MCP transports and tool calls |
 | `model_admission` | authority | decides whether a model may be loaded or used |
+| `native_dispatch_executor` | authority | couples admitted warm native requests to exact full-request fit and concrete native bridge gates; supplies no producers or cold load authority |
 | `onboarding_preflight` | support | local readiness probing |
 | `process_supervision` | authority | registers and contains subprocesses |
 | `recovery_guard` | state | crash-recovery state |

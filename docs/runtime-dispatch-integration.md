@@ -41,27 +41,30 @@ not proof of native reachability, installed behavior or runtime qualification.
   features already work in coordinated mode. Legacy default is unchanged.
 - Consumer close/cancellation propagates to the backend iterator; the fence does
   not invent native cancellation, request completion, lease release or settlement.
-- Standalone carries the same fence without a sibling import; the isolated-copy
-  test exercises refusal outside the checkout. Existing standalone native adapter
-  consumption is **not** asserted.
+- Standalone carries the same fence and a private namespaced native module
+  bundle. Isolated-copy tests exercise the warm concrete executor through real
+  dormant kernels with fake producers, without repository sibling imports. This
+  is not installed native qualification; no backend/producer is registered.
 
 ## Required next work / release blocks
 
 LC-08 is **not complete**. The backend protocol is an internal dependency seam,
-not authority to perform native operations. Positive backends in this checkpoint's
-tests are fakes proving routing and input preservation only. Still required:
+not authority to perform native operations. The warm executor now uses real
+coordinator/memory/fit/native kernels with explicit fake evidence in tests; the
+initial fence tests still use fake backends for routing only. Still required:
 
-1. Concrete canonical native executor tying final provider preparation and LC-07
-   pre-disruption/warm counting to actual admitted LC-02/03 operations and the
-   LC-04--06 bridge send markers. No always-true backend assumption may become a
-   production load permit.
-2. Full canonical tool/reasoning/usage packet consumption without interpreting
-   reasoning as tool authority, plus request inclusion evidence across workflows.
-3. Cold transition and concurrent explicit-control/inference race tests using real
-   dormant coordinator/memory/bridge kernels, late effects and owned native facts.
-4. Standalone consumption of that executor with isolated module identities and
-   shared transaction guards (not just this dependency-free routing fence).
-5. Complete legacy/generic bypass/mutation coverage and final full CI. LC-09 still
+1. Cold acquisition/control orchestration, with pure LC-07 metadata readiness
+   before disrupting a source, actual sole-resident target binding/counting, and
+   valid domain operations for every load. The current executor refuses controls
+   and accepts only already-admitted warm jobs, never creating load authority.
+2. Canonical consumption and complete-input inclusion proof across remaining
+   workflows. The coordinated native gateway consumes structural calls; legacy
+   text tool consumers explicitly refuse before native planning when advertising
+   tools, and reject unexpected structural call events rather than dropping IDs.
+3. Full explicit-control/inference and cross-runtime cold race tests, late effects,
+   release and settlement. Current executor races cover same-lease count replay
+   and a queued control blocked by an active real dormant native stream only.
+4. Complete legacy/generic bypass/mutation coverage and final full CI. LC-09 still
    owns session handoff/checkpoint/grant/budget/recovery semantics; LC-10 migration
    UI and LC-11 hardware/release/security qualification stay separately gated.
 
@@ -111,10 +114,10 @@ is advanced. Tests1--7 acceptance is unchanged; test8 remains paused/unpassed.
   frontend syntax and baseline verification passed. Full history was fetched to
   make the pinned baseline available in this initially shallow checkout.
 
-These are checkpoint results, not LC-08 completion, architecture acceptance or
-permission to activate/merge. Concrete executor, canonical consumption,
-coordinator-backed race tests and executor-level standalone consumption remain
-open as listed above.
+These are historical fence checkpoint results, not LC-08 completion,
+architecture acceptance or permission to activate/merge. Subsequent warm executor
+and gateway/standalone integration is recorded below; cold orchestration and
+remaining all-path consumption remain open as listed above.
 
 ## Warm concrete executor checkpoint
 
@@ -139,11 +142,77 @@ native JSON tool fragments without inventing IDs/arguments, rejects unadvertised
 or partial calls, and withholds tool/usage events until the concrete bridge is
 fully exhausted, including independent terminal checks. Missing counts/rates stay
 unknown. Consumer close reaches the concrete bridge; fit tickets are revoked, not
-used to invent memory release. This does not yet finish application canonical
-consumption or executor-level standalone bundling; those remain active LC-08 work.
+used to invent memory release. At the initial executor checkpoint, application
+canonical consumption and standalone bundling were still pending. The next
+section records their subsequent, limited warm integration.
 
 Initial executor tests: **27 passed**, through real dormant coordinator/memory /
 fit/native bridge kernels with explicit fake installed/native/counter facts. They
 cover positive exact-byte send, changed/unqualified/overflow zero inference,
 reasoning changes and canonical malformed-fragment/refusal cases. These are not
 installed native qualification or story completion.
+
+
+## Coordinated native gateway and standalone warm integration
+
+The existing authenticated `/v1/chat/completions` route now branches to canonical
+consumption **before** legacy normalization only for coordinated native targets.
+Remote/legacy routing remains unchanged. Raw messages, full paired tool history,
+system/security anchors, tool schemas and requested generation settings reach the
+same exact-byte native preparation/count path. Structural IDs are not regenerated;
+LM Studio fragmented argument JSON retains its original string, including whitespace.
+Reasoning remains separate from content and is never parsed for tool execution.
+Native Ollama prepared history omits OpenAI's `type` tag: LC-07's conversation
+classification now accepts that omission only for the native Ollama wire. A
+present non-function tag and a missing OpenAI tag remain invalid.
+
+Coordinated native gateway input is intentionally strict: supported top-level keys
+are `model`, `messages`, `tools`, `temperature`, `max_tokens`,
+`max_completion_tokens`, `stream`, `reasoning_effort`. Unknown semantics (for
+example `tool_choice` or `response_format`), a non-boolean `stream`, or conflicting
+output-limit aliases return fixed HTTP 400 instead of being silently discarded.
+Existing defaults are forwarded, not clamped into an approved profile; the
+executor refuses if the actual requested profile is not qualified/identical.
+Count/profile/native failures return fixed HTTP 503 diagnostics in non-streaming
+mode, or an SSE error without fabricated completion/`[DONE]` on streaming failure.
+Unknown native usage stays null/absent rather than prompt-token zero, estimated
+counts or invented throughput. No new route, setting, auth or consent exception
+is introduced. Tool authorization/execution is not granted by a native packet.
+
+The canonical capability ContextVar is internal to the gateway consumer. Legacy
+text tool consumers refuse advertised tools before native planning and unexpected
+structural events explicitly (`canonical_consumer_required`); they do not silently
+lose IDs or execute reasoning/text as structural authority. Closing a gateway
+stream explicitly closes every intermediate iterator down to the real bridge
+and resets both per-request ContextVars in the owning task. Unproven native
+terminal completion retains uncertainty and peak memory; it publishes neither
+held calls, usage nor a successful gateway finish.
+
+`build_studio.py` embeds lifecycle/fit/protocol/executor source into a private,
+per-application module package. Sibling imports are AST-rewritten to that package;
+modules are registered before execution for dataclass identities. The actual
+inlined application persistence and dispatch objects are reused as shims: no
+second transaction tracker or mismatching dispatch exception identity. Public
+sibling imports are not globally replaced. An isolated copied artifact test
+blocks public native sibling imports, verifies the shared transaction guard, and
+executes both warm providers through dormant real kernels plus explicit fake
+native/counter producers. No cold acquisition or installed qualification follows.
+The documentation/build coverage checks include this namespaced bundle, not only
+flat inlining.
+
+Expanded executor suite: **52 tests**. Focused executor/request-fit/native-protocol
+run: **348 passed**. This includes full history/ID preservation for both gateway
+response modes, withheld tools on terminal failure, cancellation propagation,
+unknown usage, unsupported-option refusal, legacy consumer pre-planning refusal,
+count replay, queued-control serialization and isolated standalone execution.
+All provider, memory and counter observations in these tests are explicit fakes.
+Full regression and CI results are recorded separately when available.
+
+Pre-full-run combined fence/executor/admission/chat-tool/request-fit/native-bridge
+regression: **551 passed**, one upstream Starlette/httpx warning. Ruff, configured
+mypy (73 sources), scope mapping (186 modules/13 areas), docs/ADR/governance,
+deferred-security-record consistency, baseline, frontend syntax and isolated app
+and standalone startup/token/origin smokes passed. Generated source-bound records
+were refreshed through their generators; backend safety was freshly rerun:
+**300 tests plus 16 isolation checks passed**, with live container isolation still
+unqualified/blocked. No visual approval/source pin or acceptance ledger advanced.

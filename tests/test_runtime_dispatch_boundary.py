@@ -102,6 +102,7 @@ def test_coordinated_stream_receives_all_input_without_legacy_transformations(
         }
     ]
     token = studio._CHAT_NATIVE_TOOLS.set(tools)
+    consumer_token = studio._CANONICAL_NATIVE_CONSUMER.set(True)
     try:
         result = asyncio.run(
             collect(
@@ -110,6 +111,7 @@ def test_coordinated_stream_receives_all_input_without_legacy_transformations(
         )
     finally:
         studio._CHAT_NATIVE_TOOLS.reset(token)
+        studio._CANONICAL_NATIVE_CONSUMER.reset(consumer_token)
     assert result[0]["text"] == "READY"
     call = backends[runtime].calls[0]
     body = json.loads(call.payload)

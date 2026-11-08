@@ -20,6 +20,7 @@ from urllib.parse import unquote, urlsplit
 _DISPATCH_CODES = frozenset(
     {
         "coordinated_backend_unavailable",
+        "canonical_consumer_required",
         "legacy_transport_blocked",
         "coordinated_combo_unsupported",
         "unowned_eviction_forbidden",

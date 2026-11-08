@@ -19,7 +19,7 @@ async def collect(source):
     return [v async for v in source]
 
 
-async def context(tmp_path, backend):
+async def context(tmp_path, backend, *, tools=None, messages=None):
     if backend == "ollama":
         import test_ollama_lifecycle_bridge as driver
     else:
@@ -27,11 +27,13 @@ async def context(tmp_path, backend):
     b = driver.setup(tmp_path)
     req, ml = await driver.warm(b)
     payload = dict(
-        messages=[
+        messages=messages
+        if messages is not None
+        else [
             dict(role="system", content="SECURITY " + "anchor " * 3000),
             dict(role="user", content="FULL ORIGINAL ಕರ್ನಾಟಕ 😀"),
         ],
-        tools=None,
+        tools=tools,
         temperature=0.2,
         max_tokens=512,
         reasoning_mode="high" if backend == "ollama" else "off",
@@ -289,6 +291,7 @@ def test_lm_native_fragments_keep_ids_and_exact_json_until_terminal():
         id="native-id",
         name="read",
         arguments={"path": "<>&"},
+        arguments_json='{"path":"<>&"}',
     )
     assert result[-1]["completion_tokens"] is None and result[-1]["decode_tps"] is None
 
@@ -319,3 +322,503 @@ def test_malformed_lm_tool_packets_never_publish_a_call(case):
     )
     with pytest.raises(rf.RequestFitDenied):
         consumer.finish("lmstudio")
+
+
+@pytest.mark.parametrize("backend", ["ollama", "lmstudio"])
+@pytest.mark.parametrize("stream", [False, True])
+@pytest.mark.parametrize("terminal_ok", [True, False])
+def test_application_gateway_preserves_canonical_native_ids_and_argument_bytes(
+    tmp_path, monkeypatch, backend, stream, terminal_ok
+):
+    import json
+    from types import SimpleNamespace
+    import app as app
+
+    tools = [
+        dict(
+            type="function",
+            function=dict(
+                name="read",
+                parameters={
+                    "type": "object",
+                    "properties": {"path": {"type": "string"}},
+                },
+            ),
+        )
+    ]
+
+    async def run():
+        messages = [
+            dict(role="system", content="SECURITY " + "anchor " * 3000),
+            dict(
+                role="assistant",
+                content="",
+                reasoning_content="prior reasoning, not executable",
+                tool_calls=[
+                    dict(
+                        id="previous-native-id",
+                        type="function",
+                        function=dict(name="read", arguments='{"path":"original"}'),
+                    )
+                ],
+            ),
+            dict(
+                role="tool",
+                tool_call_id="previous-native-id",
+                content="ORIGINAL RESULT ಕರ್ನಾಟಕ 😀",
+            ),
+            dict(role="user", content="LATEST USER — do not drop history"),
+        ]
+        b = await context(tmp_path, backend, tools=tools, messages=messages)
+        if not terminal_ok:
+
+            async def failed_terminal():
+                raise RuntimeError("SECRET terminal response")
+
+            b.job = replace(b.job, terminal=failed_terminal)
+        try:
+            if backend == "ollama":
+                from test_ollama_native_protocol import packet, done, line
+
+                b.wire.packets = [
+                    line(
+                        packet(
+                            message=dict(
+                                role="assistant",
+                                content="",
+                                tool_calls=[
+                                    dict(
+                                        id="native-call-id",
+                                        function=dict(
+                                            name="read", arguments={"path": "<>&"}
+                                        ),
+                                    )
+                                ],
+                            )
+                        )
+                    ),
+                    line(done()),
+                ]
+                arguments = json.dumps({"path": "<>&"}, ensure_ascii=False)
+            else:
+                from test_lmstudio_native_protocol import sse, packet
+
+                arguments = ' { "path" : "<>&" } '
+                b.wire.chunks = [
+                    sse(
+                        packet(
+                            choices=[
+                                dict(
+                                    index=0,
+                                    delta=dict(
+                                        tool_calls=[
+                                            dict(
+                                                index=0,
+                                                id="native-call-id",
+                                                type="function",
+                                                function=dict(
+                                                    name="read", arguments=arguments
+                                                ),
+                                            )
+                                        ]
+                                    ),
+                                    finish_reason="tool_calls",
+                                )
+                            ]
+                        )
+                    ),
+                    b"data: [DONE]\n\n",
+                ]
+            monkeypatch.setattr(
+                app,
+                "_LOCAL_RUNTIME_DISPATCH",
+                rd.RuntimeDispatchBoundary(
+                    True, {backend: b.executor}, {"fixture": backend}
+                ),
+            )
+            monkeypatch.setattr(
+                app,
+                "parse_model_route",
+                lambda _: (
+                    "cloud",
+                    {"alias": "fixture", "base_url": "http://localhost/v1"},
+                    b.call.model,
+                ),
+            )
+            body = rf.decode(b.call.payload)
+            body = dict(
+                model="fixture/model",
+                messages=body["messages"],
+                tools=tools,
+                temperature=0.2,
+                max_tokens=512,
+                reasoning_effort=body["reasoning_mode"],
+                stream=stream,
+            )
+
+            async def request_body():
+                return body
+
+            request = SimpleNamespace(
+                json=request_body,
+                app=SimpleNamespace(state=SimpleNamespace(http=object())),
+            )
+            if not terminal_ok:
+                from fastapi import HTTPException
+
+                if stream:
+                    response = await app.openai_gateway_chat(request)
+                    text = "".join([piece async for piece in response.body_iterator])
+                    assert '"error"' in text and "[DONE]" not in text
+                    assert '"tool_calls"' not in text and "SECRET" not in text
+                else:
+                    with pytest.raises(HTTPException) as error:
+                        await app.openai_gateway_chat(request)
+                    assert error.value.status_code == 503 and "SECRET" not in str(
+                        error.value.detail
+                    )
+                assert (
+                    b.count_calls == 1
+                    and b.coord.snapshot("shared").state == "reconciling"
+                )
+                assert b.memory.view("shared").committed_bytes == 600
+                assert (
+                    app._CHAT_NATIVE_TOOLS.get() is None
+                    and not app._CANONICAL_NATIVE_CONSUMER.get()
+                )
+                return
+            response = await app.openai_gateway_chat(request)
+            if stream:
+                text = "".join([piece async for piece in response.body_iterator])
+                assert "data: [DONE]" in text
+                packets = [
+                    json.loads(line[6:])
+                    for line in text.splitlines()
+                    if line.startswith("data: {")
+                ]
+                if backend == "lmstudio":
+                    assert packets[-1]["usage"] is None
+                call = next(
+                    p["choices"][0]["delta"]["tool_calls"][0]
+                    for p in packets
+                    if p["choices"][0]["delta"].get("tool_calls")
+                )
+            else:
+                packet = json.loads(response.body)
+                if backend == "lmstudio":
+                    assert packet["usage"] is None
+                call = packet["choices"][0]["message"]["tool_calls"][0]
+            assert call["id"] == "native-call-id"
+            assert call["function"] == {"name": "read", "arguments": arguments}
+            assert (
+                b.count_calls == 1 and b.coord.snapshot("shared").active_requests == 0
+            )
+            assert (
+                app._CHAT_NATIVE_TOOLS.get() is None
+                and not app._CANONICAL_NATIVE_CONSUMER.get()
+            )
+        finally:
+            b.coord.close()
+
+    asyncio.run(run())
+
+
+@pytest.mark.parametrize("backend", ["ollama", "lmstudio"])
+def test_consumer_close_retains_native_uncertainty_and_peak_not_false_completion(
+    tmp_path, backend
+):
+    async def run():
+        b = await context(tmp_path, backend)
+        try:
+            source = b.executor.stream(b.call)
+            assert (await anext(source))["type"] in ("content", "reasoning")
+            await source.aclose()
+            assert b.wire.closed and b.memory.view("shared").committed_bytes == 600
+            assert b.coord.snapshot("shared").state == "reconciling"
+        finally:
+            b.coord.close()
+
+    asyncio.run(run())
+
+
+def test_standalone_native_namespaces_execute_real_kernels_without_repo_module_imports(
+    tmp_path,
+):
+    import os
+    import shutil
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    shutil.copy(root / "studio.py", tmp_path / "studio.py")
+    code = """import sys,pathlib,importlib.abc,asyncio
+root=pathlib.Path(REPO)
+sys.path[:]=[p for p in sys.path if pathlib.Path(p or '.').resolve()!=root]
+public={'local_runtime_lifecycle','model_lifecycle_coordinator','shared_memory_admission','omlx_lifecycle','ollama_protocol','ollama_lifecycle','lmstudio_protocol','lmstudio_lifecycle','request_fit','request_fit_admission','native_dispatch_executor'}
+class NoSiblingFallback(importlib.abc.MetaPathFinder):
+ def find_spec(self,fullname,path=None,target=None):
+  if fullname in public:raise AssertionError('standalone sibling import: '+fullname)
+sys.meta_path.insert(0,NoSiblingFallback())
+import studio
+n=studio.native_dispatch_executor
+assert n.__file__.startswith('<embedded-native/')
+pkg=sys.modules[n.__package__]
+assert sys.modules[n.__package__+'.runtime_persistence'] is studio
+assert sys.modules[n.__package__+'.runtime_dispatch_boundary'] is studio
+assert not public.intersection(sys.modules)
+# All executor/fit/native no-I/O guards share the actual standalone transaction scope.
+with studio._write_transaction_scope():
+ try:n.assert_no_active_write_transaction('probe')
+ except studio.TransactionDisciplineError:pass
+ else:raise AssertionError('split transaction tracker')
+# Import offline test producers only AFTER the isolated no-sibling assertion;
+# aliases below are test composition, never production bundle registration.
+for name in public:sys.modules[name]=getattr(pkg,name)
+sys.modules['runtime_persistence']=studio
+sys.modules['runtime_dispatch_boundary']=studio
+sys.modules['execution_profiles']=studio
+sys.path.insert(0,str(root/'tests'))
+from test_native_dispatch_executor import context,collect
+async def run():
+ for backend in ('ollama','lmstudio'):
+  b=await context(pathlib.Path(backend),backend)
+  try:
+   result=await collect(b.executor.stream(b.call))
+   assert result[-1]['type']=='usage' and b.count_calls==1
+   assert b.coord.snapshot('shared').active_requests==0
+  finally:b.coord.close()
+asyncio.run(run())
+print('isolated native executor and shared transaction guards passed')
+""".replace("REPO", repr(str(root)))
+    env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=tmp_path,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=45,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "isolated native executor" in result.stdout
+
+
+@pytest.mark.parametrize("backend", ["ollama", "lmstudio"])
+def test_concurrent_same_lease_count_cannot_replay_or_double_native_send(
+    tmp_path, backend
+):
+    async def run():
+        b = await context(tmp_path, backend)
+        release, entered = asyncio.Event(), asyncio.Event()
+        original = b.job.fit.counter
+
+        async def held_counter(prepared, qualification):
+            # The shared fixture normally reads b.last_binding immediately.
+            # Preserve THIS invocation's observed binding across the barrier;
+            # a rejected concurrent attempt may observe a newer reference.
+            binding = b.last_binding
+            entered.set()
+            await release.wait()
+            return replace(await original(prepared, qualification), binding=binding)
+
+        b.job = replace(b.job, fit=replace(b.job.fit, counter=held_counter))
+        before = len(b.driver.mutations(b))
+        first = asyncio.create_task(collect(b.executor.stream(b.call)))
+        try:
+            await asyncio.wait_for(entered.wait(), 2)
+            with pytest.raises(ne.NativeFitDenied) as error:
+                await collect(b.executor.stream(b.call))
+            assert error.value.to_mapping()["code"] == "counter_already_dispatched"
+            release.set()
+            assert (await first)[-1]["type"] == "usage"
+            assert b.count_calls == 1 and len(b.driver.mutations(b)) == before + 1
+        finally:
+            release.set()
+            if not first.done():
+                first.cancel()
+                await asyncio.gather(first, return_exceptions=True)
+            b.coord.close()
+
+    asyncio.run(run())
+
+
+@pytest.mark.parametrize("backend", ["ollama", "lmstudio"])
+def test_queued_control_cannot_own_transition_while_real_native_stream_is_active(
+    tmp_path, backend
+):
+    from test_model_lifecycle_coordinator import B, A
+
+    async def run():
+        b = await context(tmp_path, backend)
+        try:
+            source = b.executor.stream(b.call)
+            await anext(source)
+            other = B if b.request.target != B else A
+            b.coord.enqueue(
+                "explicit-next", "shared", other, deadline_ms=100000, now_ms=b.now
+            )
+            assert b.coord.claim_next("shared", now_ms=b.now) is None
+            assert b.coord.snapshot("shared").active_requests == 1
+            assert len(b.fleet.models) == 1
+            result = await collect(source)
+            assert result[-1]["type"] == "usage"
+            next_step = b.coord.claim_next("shared", now_ms=b.now)
+            assert next_step.kind == "drain" and next_step.target == other
+            assert len(b.fleet.models) == 1  # No ACK, inferred release or target load.
+            assert b.memory.view("shared").committed_bytes == 600
+        finally:
+            b.coord.close()
+
+    asyncio.run(run())
+
+
+@pytest.mark.parametrize("backend", ["ollama", "lmstudio"])
+def test_unproven_native_terminality_withholds_tools_usage_and_keeps_holds(
+    tmp_path, backend
+):
+    async def run():
+        b = await context(tmp_path, backend)
+
+        async def unproven():
+            raise RuntimeError("SECRET terminal producer")
+
+        b.job = replace(b.job, terminal=unproven)
+        seen = []
+        try:
+            with pytest.raises(rd.RuntimeDispatchDenied) as error:
+                async for event in b.executor.stream(b.call):
+                    seen.append(event)
+            assert "SECRET" not in str(error.value)
+            assert not any(e["type"] in ("usage", "tool_call") for e in seen)
+            assert b.coord.snapshot("shared").state == "reconciling"
+            assert b.memory.view("shared").committed_bytes == 600
+        finally:
+            b.coord.close()
+
+    asyncio.run(run())
+
+
+@pytest.mark.parametrize("backend", ["ollama", "lmstudio"])
+def test_gateway_consumer_close_propagates_immediately_through_all_iterators(
+    tmp_path, monkeypatch, backend
+):
+    import app
+    from types import SimpleNamespace
+
+    async def run():
+        b = await context(tmp_path, backend)
+        try:
+            monkeypatch.setattr(
+                app,
+                "_LOCAL_RUNTIME_DISPATCH",
+                rd.RuntimeDispatchBoundary(
+                    True, {backend: b.executor}, {"fixture": backend}
+                ),
+            )
+            monkeypatch.setattr(
+                app,
+                "parse_model_route",
+                lambda _: ("cloud", {"alias": "fixture"}, b.call.model),
+            )
+            inputs = rf.decode(b.call.payload)
+            body = dict(
+                model="fixture/model",
+                messages=inputs["messages"],
+                temperature=0.2,
+                max_tokens=512,
+                reasoning_effort=inputs["reasoning_mode"],
+                stream=True,
+            )
+            response = await app._coordinated_gateway_chat(
+                SimpleNamespace(
+                    app=SimpleNamespace(state=SimpleNamespace(http=object()))
+                ),
+                body,
+            )
+            first = await anext(response.body_iterator)
+            assert first.startswith("data: ") and "[DONE]" not in first
+            await response.body_iterator.aclose()
+            assert b.wire.closed
+            assert b.coord.snapshot("shared").state == "reconciling"
+            assert b.memory.view("shared").committed_bytes == 600
+            assert (
+                app._CHAT_NATIVE_TOOLS.get() is None
+                and not app._CANONICAL_NATIVE_CONSUMER.get()
+            )
+        finally:
+            b.coord.close()
+
+    asyncio.run(run())
+
+
+@pytest.mark.parametrize(
+    "fields",
+    [
+        {"response_format": {"type": "json_object"}},
+        {"tool_choice": "required"},
+        {"stream": "true"},
+        {"max_tokens": 512, "max_completion_tokens": 4096},
+    ],
+)
+def test_coordinated_gateway_rejects_unsupported_fields_before_count_or_send(
+    monkeypatch, fields
+):
+    import app
+    from fastapi import HTTPException
+    from types import SimpleNamespace
+
+    async def forbidden(*a, **k):
+        raise AssertionError("invalid gateway input reached inference")
+        yield
+
+    monkeypatch.setattr(app, "stream_any_model", forbidden)
+    with pytest.raises(HTTPException) as error:
+        asyncio.run(
+            app._coordinated_gateway_chat(
+                SimpleNamespace(),
+                dict(
+                    model="local", messages=[{"role": "user", "content": "x"}], **fields
+                ),
+            )
+        )
+    assert error.value.status_code == 400
+
+
+@pytest.mark.parametrize("backend", ["ollama", "lmstudio"])
+def test_legacy_text_tool_consumer_refuses_before_native_planning(
+    tmp_path, monkeypatch, backend
+):
+    import app
+
+    async def run():
+        b = await context(tmp_path, backend)
+        try:
+            monkeypatch.setattr(
+                app,
+                "_LOCAL_RUNTIME_DISPATCH",
+                rd.RuntimeDispatchBoundary(
+                    True, {backend: b.executor}, {"fixture": backend}
+                ),
+            )
+            monkeypatch.setattr(
+                app,
+                "parse_model_route",
+                lambda _: ("cloud", {"alias": "fixture"}, b.call.model),
+            )
+            token = app._CHAT_NATIVE_TOOLS.set(
+                [{"type": "function", "function": {"name": "read"}}]
+            )
+            try:
+                with pytest.raises(rd.RuntimeDispatchDenied) as error:
+                    await collect(
+                        app.stream_any_model(object(), "fixture", [], 0.2, 512, "off")
+                    )
+                assert error.value.code == "canonical_consumer_required"
+                assert b.count_calls == 0
+            finally:
+                app._CHAT_NATIVE_TOOLS.reset(token)
+        finally:
+            b.coord.close()
+
+    asyncio.run(run())
