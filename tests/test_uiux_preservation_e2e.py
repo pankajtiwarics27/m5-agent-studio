@@ -273,18 +273,27 @@ def test_every_known_failure_names_an_owner_an_issue_and_a_reason() -> None:
         assert len(known["reason"]) > 60, known
 
 
-def test_stopping_a_fixture_stops_the_app_it_forked() -> None:
-    """The leak that OOM-killed a run: the app is a child of the fixture, not the fixture.
+@pytest.mark.parametrize("ignore_sigterm", [False, True], ids=["graceful", "ignored-sigterm"])
+def test_stopping_a_fixture_stops_the_app_it_forked(ignore_sigterm: bool) -> None:
+    """The whole process tree must stop, including after the parent has exited.
 
-    `demo_tour.py --serve` forks the server. Terminating the parent leaves the child holding its
-    port and ~60 MB of RSS, and the suite starts fourteen of them per run; on a 4 GB runner the
-    leak is the memory the next run needs. `stop_server` signals the session, so the whole tree
-    goes - which is what this test checks, with a real grandchild rather than a mock.
+    `demo_tour.py --serve` forks the server. Terminating only the parent leaves the child holding
+    its port and ~60 MB of RSS; even signalling both has a delivery race if cleanup waits only for
+    the parent. Exercise normal SIGTERM shutdown and a grandchild that ignores SIGTERM so cleanup
+    must retain the process-group id, escalate, and wait for the actual descendant to disappear.
     """
     suite = _load_suite()
+    child_code = "import time; print('ready', flush=True); time.sleep(120)"
+    if ignore_sigterm:
+        child_code = (
+            "import signal, time; signal.signal(signal.SIGTERM, signal.SIG_IGN); "
+            "print('ready', flush=True); time.sleep(120)"
+        )
     script = (
         "import subprocess, sys, time\n"
-        "child = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(120)'])\n"
+        f"child = subprocess.Popen([sys.executable, '-c', {child_code!r}], "
+        "stdout=subprocess.PIPE, text=True)\n"
+        "child.stdout.readline()  # the grandchild installed its handler before cleanup starts\n"
         "print(child.pid, flush=True)\n"
         "time.sleep(120)\n"
     )

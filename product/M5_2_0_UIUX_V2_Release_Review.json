@@ -12,10 +12,10 @@
     "scope": "merge/handoff of the 30-story UI/UX V2 program only; tagging/publishing a production release remains under scripts/security_release_gate.py and scripts/release.py"
   },
   "pinned_release": {
-    "implementation_head": "703945e496c38b6bf0fb148f18fb213f00d20015",
+    "implementation_head": "eb12625bb29aee02c469eeb5720df888fd62d010",
     "dirty": false,
     "static_sha256": "49c18ae49d90e6c2b0ebfb0c3f26988d61433596e211acd06994f37d92c4eead",
-    "evidence_recorded_at": "2026-11-08T07:01:53.677025+00:00",
+    "evidence_recorded_at": "2026-11-08T07:40:45.618667+00:00",
     "note": "The evidence commit may contain only later release docs/tracker changes; executable browser sources are bound by digest."
   },
   "program_state": {
@@ -27,36 +27,36 @@
     "percent_complete": 97
   },
   "critical_ci": {
-    "headSha": "703945e496c38b6bf0fb148f18fb213f00d20015",
+    "headSha": "eb12625bb29aee02c469eeb5720df888fd62d010",
     "status": "completed",
     "conclusion": "success",
-    "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42454692827",
-    "createdAt": "2026-11-08T06:25:36Z",
-    "updatedAt": "2026-11-08T06:37:04Z",
+    "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42458278773",
+    "createdAt": "2026-11-08T07:18:55Z",
+    "updatedAt": "2026-11-08T07:30:21Z",
     "jobs": [
-      {
-        "name": "test (3.13)",
-        "status": "completed",
-        "conclusion": "success",
-        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42454692827/job/128651103483"
-      },
       {
         "name": "test (3.11)",
         "status": "completed",
         "conclusion": "success",
-        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42454692827/job/128651103579"
+        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42458278773/job/128661856145"
       },
       {
-        "name": "Browser safety regressions",
+        "name": "test (3.13)",
         "status": "completed",
         "conclusion": "success",
-        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42454692827/job/128651103624"
+        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42458278773/job/128661856305"
       },
       {
         "name": "test (3.12)",
         "status": "completed",
         "conclusion": "success",
-        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42454692827/job/128651103685"
+        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42458278773/job/128661856312"
+      },
+      {
+        "name": "Browser safety regressions",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42458278773/job/128661856413"
       }
     ]
   },
@@ -114,10 +114,10 @@
     "container_isolation_qualified": true
   },
   "visual_evidence": {
-    "run": "/tmp/uiv2-30-visual-baseline/check-manifest.json",
-    "manifest_sha256": "3b4674791cc4b05b94c7dd2b39092e00fe05cdd31578eef43b87ed5dc0788e08",
+    "run": "/tmp/uiv2-30-final-visual/check-manifest.json",
+    "manifest_sha256": "0b67e4222122f3cec2806c7e27ba1c782abd4a337a2048f674c71f4fc764e6e0",
     "git": {
-      "head": "703945e496c38b6bf0fb148f18fb213f00d20015",
+      "head": "eb12625bb29aee02c469eeb5720df888fd62d010",
       "dirty": false
     },
     "contract_sha256": "caf0e5543c6e644eae4a12a6db0ed38a169ad361a96af75cdb04cbfa0f4c2435",
@@ -224,8 +224,8 @@
     "external_provider_calls": false
   },
   "compare_recovery": {
-    "run": "/tmp/uiv2-30-compare-baseline.json",
-    "run_sha256": "24b943d96b306ef858a77fbe8e7174025f1de2ca823129d733ffc5146388a56a",
+    "run": "/tmp/uiv2-30-final-compare.json",
+    "run_sha256": "1579153e1197162915fd42d3cd9b2ecc05305d7f95e7f57348feedd8b773ae8b",
     "script": "scripts/compare_continuity_walk.mjs",
     "checks": 15,
     "passed": 15,
@@ -233,33 +233,33 @@
     "captures": [
       {
         "path": "compare-record-forgotten.png",
-        "sha256": "a364a2db933642b86eb2636ba1f8e7efc49193f6b5b681d1fce7e1497738c67c",
-        "bytes": 19952
+        "sha256": "74c7533c116807725e8aa35b873cad2649d2c9f3a59fe5ac8156a47e20e29ba4",
+        "bytes": 15664
       },
       {
         "path": "compare-record-light.png",
-        "sha256": "11bd48230f31393374dd14bc538e7c23dc191d7ef6d2acc26b8b40f981d5da85",
-        "bytes": 58959
+        "sha256": "8ebf85da4cae7827a4ca9abcfbabe289ba444927210a4a8c72f298851e86647e",
+        "bytes": 40188
       },
       {
         "path": "compare-record-live.png",
-        "sha256": "20af43c30c89e25f88717305383ddaea8d3ba5dd650a6161317db9c822020671",
-        "bytes": 94076
+        "sha256": "7c47b0a6c8eb9e26fb88887353b8c754e5d80d3964d1391c0eab4356b75f7057",
+        "bytes": 65373
       },
       {
         "path": "compare-record-narrow.png",
-        "sha256": "af7997476afdf02e2aeedf07c16d7f39b44a0d18f7913c57910c64350371a26a",
-        "bytes": 72972
+        "sha256": "ed579086e006d7ebef41493c9f48d080571c9781d0cbe4118af4cec355bfaed0",
+        "bytes": 60025
       },
       {
         "path": "compare-record-restored.png",
-        "sha256": "35622c5bfad71f896ea6c1b9c4effae5b261fb09e42e0ce7891283b939b6b7d4",
-        "bytes": 70372
+        "sha256": "89be4652e82971b4c639ec6a28516c9fb53c45d63ab6b79bd4e8da2785cbf352",
+        "bytes": 49703
       },
       {
         "path": "compare-record-server.png",
-        "sha256": "72c87b58a0cd4c1bc046a0fd7808d39aa34fe2a377a1829ba459be208f94a9a1",
-        "bytes": 22094
+        "sha256": "fa348c73e7446920a87873a5fa9b8426a1db9d72c65aa28721e6756a0744980a",
+        "bytes": 17110
       }
     ]
   },
@@ -432,6 +432,11 @@
       "id": "compare-restore-history",
       "status": "verified-resolved",
       "detail": "Historical UIV2-16/17 restore-crash notes are not current behavior: the boot-order guard is present and this review's real Compare continuity walk passed 15/15 with six captures."
+    },
+    {
+      "id": "uiv2-30-fixture-process-group",
+      "status": "corrected",
+      "detail": "PR CI run 42458307474 exposed a Python 3.12 fixture-teardown race; the duplicate push run 42458278773 at the same SHA passed all four jobs, but the failure was not waived. preservation_suite.stop_server now retains the process-group id after parent exit, escalates surviving descendants to SIGKILL and waits for group exit, with synchronized graceful and SIGTERM-ignoring grandchild regressions."
     }
   ],
   "follow_ups": [

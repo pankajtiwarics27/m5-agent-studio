@@ -290,6 +290,8 @@ def validate_evidence(payload: Any, hashes: dict[str, str] | None = None) -> lis
     ci = payload.get("ci", {})
     if ci.get("status") != "completed" or ci.get("conclusion") != "success" or not _is_commit(ci.get("headSha")):
         errors.append("release CI evidence is not successful and source-pinned")
+    if ci.get("headSha") != git.get("head"):
+        errors.append("release CI and approved visual evidence must pin the same implementation HEAD")
     jobs = ci.get("jobs", [])
     by_name = {row.get("name"): row for row in jobs}
     if set(by_name) != REQUIRED_CI_JOBS or any(row.get("status") != "completed" or row.get("conclusion") != "success" for row in jobs):
@@ -536,6 +538,11 @@ def build() -> dict[str, Any]:
                 "status": "verified-resolved",
                 "detail": "Historical UIV2-16/17 restore-crash notes are not current behavior: the boot-order guard is present and this review's real Compare continuity walk passed 15/15 with six captures.",
             },
+            {
+                "id": "uiv2-30-fixture-process-group",
+                "status": "corrected",
+                "detail": "PR CI run 42458307474 exposed a Python 3.12 fixture-teardown race; the duplicate push run 42458278773 at the same SHA passed all four jobs, but the failure was not waived. preservation_suite.stop_server now retains the process-group id after parent exit, escalates surviving descendants to SIGKILL and waits for group exit, with synchronized graceful and SIGTERM-ignoring grandchild regressions.",
+            },
         ],
         "follow_ups": [
             {
@@ -624,7 +631,7 @@ def render_doc(payload: dict[str, Any]) -> str:
         f"| Local executed checks | {payload['totals']['local_checks_passed']}/{payload['totals']['local_checks']} exit 0 |",
         f"| Production release | `{payload['security_release']['release_decision']}`; release_ready=`{str(payload['security_release']['release_ready']).lower()}` |",
         "",
-        "The imported implementation HEAD and CI HEAD can differ by release-documentation commits. Executable browser sources are pinned by SHA-256; later evidence/tracker commits do not silently inherit a different frontend.",
+        "The imported implementation HEAD and critical CI HEAD must match. A later evidence/tracker commit may differ only as the recorded handoff revision; executable browser sources remain pinned by SHA-256 and final PR CI must pass separately.",
         "",
         "### Production blockers preserved",
         "",

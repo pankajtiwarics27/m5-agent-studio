@@ -3706,7 +3706,7 @@
         "changed_files": [
           "README.md",
           "docs/README.md",
-          "docs/media/uiv2-30-release-review/",
+          "docs/media/uiv2-30-release-review/.gitignore",
           "docs/uiux-2-0-readme-onboarding.md",
           "docs/uiv2-v2-release-review.md",
           "product/M5_2_0_UIUX_Readme_Onboarding.json",
@@ -3714,8 +3714,10 @@
           "product/M5_2_0_UIUX_V2_Release_Evidence.json",
           "product/M5_2_0_UIUX_V2_Release_Review.json",
           "product/M5_2_0_UIUX_V2_Visual_Fidelity_Roadmap.json",
+          "scripts/preservation_suite.py",
           "scripts/uiv2_release_review.py",
           "tests/test_scopes.json",
+          "tests/test_uiux_preservation_e2e.py",
           "tests/test_uiv2_release_review.py"
         ],
         "tests_executed": [
@@ -3726,17 +3728,24 @@
           "Merged main CI run 42454692827 at 703945e -> test (3.11), test (3.12), test (3.13) and Browser safety regressions all success.",
           "Production security gate executed -> gate_invariants_satisfied=true, release_ready=false, release_decision=release-blocked; independent AS-031 signoff remains the blocker.",
           "UIV2-30 release contract and fail-closed mutations: 18/18 passed; Ruff, mypy (62 files), docs validation (238 files), test scope mapping and diff checks passed.",
-          "UI/UX release gate regenerated at README-change evidence: 37/37 checks, 7/7 gates, 0 findings; owner + docs + boot + security/release + UIV2-30 tests 117/117 passed (402.39s)."
+          "UI/UX release gate regenerated at README-change evidence: 37/37 checks, 7/7 gates, 0 findings; owner + docs + boot + security/release + UIV2-30 tests 117/117 passed (402.39s).",
+          "Clean implementation eb12625bb29aee02c469eeb5720df888fd62d010: Compare 15/15 + six PNGs, run sha256 1579153e1197162915fd42d3cd9b2ecc05305d7f95e7f57348feedd8b773ae8b; approved visual 48 captures / 144 PNGs / 2200 checks, manifest sha256 0b67e4222122f3cec2806c7e27ba1c782abd4a337a2048f674c71f4fc764e6e0.",
+          "Clean implementation backend safety: 300 tests + 16 isolation checks passed; isolation remains unqualified and dependent execution blocked; run sha256 0ce60cf742c991318c487c37effaaac4a9e81747f24f76e4530fbe03895559cc.",
+          "Implementation push CI run 42458278773 at eb12625 passed Python 3.11/3.12/3.13 and Browser safety. PR run 42458307474 failed only test_stopping_a_fixture_stops_the_app_it_forked on Python 3.12; failure retained and corrected, not waived.",
+          "Focused teardown repeated 40/40 before correction; stop_server now retains the process-group id, escalates surviving descendants and waits for group exit. Synchronized graceful and SIGTERM-ignoring grandchild regression cases: 2/2 passed (2.18s).",
+          "Final focused release, preservation, boot-order and security gate suite: 54/54 passed (14.01s). Ruff, mypy (62 files), compileall, docs validation (238 files), scope map and diff checks passed.",
+          "Corrected process-tree teardown stress: 20/20 parametrized real-grandchild cases passed across graceful and SIGTERM-ignoring modes."
         ],
         "visual_evidence": [
-          "/tmp/uiv2-30-visual-baseline/check-manifest.json — clean 703945e, 48 variants, 144 PNGs and 2200/2200 approved checks, sha256 3b4674791cc4b05b94c7dd2b39092e00fe05cdd31578eef43b87ed5dc0788e08.",
-          "/tmp/uiv2-30-compare-baseline/ — six actual Compare live/restored/server/forgotten/narrow/light PNGs; /tmp/uiv2-30-compare-baseline.json records 15/15 checks."
+          "/tmp/uiv2-30-final-visual/check-manifest.json — clean eb12625bb29aee02c469eeb5720df888fd62d010, 48 variants, 144 PNGs and 2200/2200 approved checks, sha256 0b67e4222122f3cec2806c7e27ba1c782abd4a337a2048f674c71f4fc764e6e0.",
+          "/tmp/uiv2-30-final-compare/ and docs/media/uiv2-30-release-review/ — six actual Compare live/restored/server/forgotten/narrow/light PNGs; /tmp/uiv2-30-final-compare.json records 15/15 checks, sha256 1579153e1197162915fd42d3cd9b2ecc05305d7f95e7f57348feedd8b773ae8b."
         ],
         "acceptance_evidence": [
-          "Real clean-main comparison walk: 15/15 checks and six PNGs; recovery fails closed, narrow and light captures preserved. Clean approved visual reference: 48 captures / 2200 checks across light/dark and 1640x900, 1440x900, 1280x800, 390x844.",
-          "Release evidence pins full implementation and CI SHA 703945e496c38b6bf0fb148f18fb213f00d20015; run 42454692827 has all four successful jobs. Three UIV2-30 source hashes prevent stale imported evidence.",
-          "README now distinguishes UI/UX handoff readiness from the still-blocked production/security gate; 7/7 README claims, 47 commands, 0 findings. UIV2-30 has 7/7 local checks and 0 findings.",
-          "UIV2-29 final/acceptance metrics now report the actual 8505 -> 8484 -> 8505 node path; UIV2-26 pending-CI status is closed against real run 42454692827 and full commit 289a4fbc7348fd7410ee823b1dbd8322745d9d74."
+          "Final implementation evidence: Compare 15/15 with six PNGs; approved visual 48 captures / 2200 checks across light/dark and 1640x900, 1440x900, 1280x800, 390x844. Backend authorization/recovery/ledger/fencing/isolation: 300 tests +16 isolation checks; no external provider calls.",
+          "Release evidence binds implementation and successful CI SHA eb12625bb29aee02c469eeb5720df888fd62d010; push run 42458278773 has all four successful jobs. Three browser source hashes, visual manifest, Compare run and six PNG hashes prevent stale imported evidence.",
+          "README distinguishes UI/UX handoff readiness from the still-blocked production/security gate; 7/7 README claims, 47 commands, 0 findings. Release review has 7/7 local checks and 0 findings. Final PR CI remains a separate closure requirement.",
+          "UIV2-29 final/acceptance metrics report actual nodes 8505 -> 8484 -> 8505 and heap 3373868 -> 3309948 -> 3329676. UIV2-26 pending-CI status is closed against run 42454692827 and full commit 289a4fbc7348fd7410ee823b1dbd8322745d9d74.",
+          "PR CI process-tree teardown failure was disclosed and corrected in scripts/preservation_suite.py, with graceful and SIGTERM-ignoring real-grandchild tests. No application runtime, API, session, workspace, authorization or isolation behavior changed."
         ],
         "known_regressions": [
           {
@@ -3748,11 +3757,16 @@
             "regression": "UIV2-26 trusted-transformation mitigation remained marked pending final CI after later merged runs were green.",
             "status": "closed_in_merged_ci_42454692827",
             "resolution": "Closed using the actual merged 703945e run with all three Python versions and Browser safety regressions successful. The release generator rejects any remaining pending regression status."
+          },
+          {
+            "regression": "PR CI run 42458307474 Python 3.12 exposed that preservation_suite.stop_server waited for the fixture parent but not its forked app process group.",
+            "status": "corrected_final_pr_ci_not_yet_recorded",
+            "resolution": "The failed run remains recorded; same-SHA push run 42458278773 passed all four jobs. Cleanup now retains the process-group id, escalates surviving descendants to SIGKILL and waits for group exit. Real graceful and SIGTERM-ignoring grandchild tests pass; final PR CI is still required before story closure."
           }
         ],
         "blockers": [],
-        "handoff_summary": "Implementation tests are green and the scoped UI/UX handoff is ready, but the story is not closed until the implementation commit has clean-HEAD final evidence, PR CI and an explicit merge decision. Production/security release remains blocked by independent AS-031 signoff.",
-        "exact_next_action": "Commit the reviewed UIV2-30 implementation, recapture Compare/approved visual/CI evidence at that clean full SHA, regenerate dependent docs and complete the PR."
+        "handoff_summary": "Implementation-source evidence is green at eb12625: Compare 15/15, visual 2200/2200, backend 300+16 and same-SHA push CI 4/4. The PR teardown failure is corrected in verification infrastructure. Do not close until the final evidence commit passes PR CI; production/security remains release-blocked.",
+        "exact_next_action": "Run final focused suites and static checks, commit the imported evidence plus process-group correction, then require all final PR #247 checks before marking UIV2-30 done."
       }
     }
   ],
@@ -3850,5 +3864,5 @@
     "story_id": "UIV2-01",
     "instructions": "Start with source verification and screenshots. Do not edit frontend until UIV2-03 target reference is approved."
   },
-  "progress_percent": 70
+  "progress_percent": 90
 }

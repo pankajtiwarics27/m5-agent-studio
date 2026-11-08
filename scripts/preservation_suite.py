@@ -119,23 +119,45 @@ def start_server(env: dict) -> tuple[subprocess.Popen, str, str]:
 
 
 def stop_server(process: subprocess.Popen) -> None:
-    """Stop the fixture *and* the app it forked, then wait for the port to be free."""
-    for sig in (signal.SIGTERM, signal.SIGKILL):
-        if process.poll() is not None:
-            break
-        try:
-            os.killpg(os.getpgid(process.pid), sig)
-        except (ProcessLookupError, PermissionError):  # pragma: no cover - already gone
-            break
-        try:
-            process.wait(timeout=10)
-        except subprocess.TimeoutExpired:  # pragma: no cover - escalate on the next pass
-            continue
-        break
+    """Stop the fixture's whole session and wait until no group member remains.
+
+    The app is a grandchild of the fixture. Waiting for the fixture parent alone leaves a small
+    SIGTERM delivery race, and a child that ignores SIGTERM would survive indefinitely. Keep the
+    process-group id after the parent exits, escalate if any descendant remains, and do not return
+    while the group is still reachable. Both call sites create the process with start_new_session,
+    so its pid is also the process-group id even if the parent has already exited.
+    """
     try:
-        process.stdout.close()  # type: ignore[union-attr]
-    except Exception:  # pragma: no cover - a closed pipe is not a failure
-        pass
+        pgid = os.getpgid(process.pid)
+    except ProcessLookupError:  # pragma: no cover - parent exited before cleanup
+        pgid = process.pid
+    try:
+        for sig in (signal.SIGTERM, signal.SIGKILL):
+            try:
+                os.killpg(pgid, sig)
+            except ProcessLookupError:
+                break
+            if process.poll() is None:
+                try:
+                    process.wait(timeout=10)
+                except subprocess.TimeoutExpired:  # pragma: no cover - escalate on the next pass
+                    continue
+            deadline = time.monotonic() + (2 if sig == signal.SIGTERM else 10)
+            while True:
+                try:
+                    os.killpg(pgid, 0)
+                except ProcessLookupError:
+                    return
+                if time.monotonic() >= deadline:
+                    if sig == signal.SIGTERM:
+                        break  # a descendant survived graceful shutdown; kill the whole group
+                    raise RuntimeError(f"demo server process group {pgid} survived SIGKILL")
+                time.sleep(0.02)
+    finally:
+        try:
+            process.stdout.close()  # type: ignore[union-attr]
+        except Exception:  # pragma: no cover - a closed pipe is not a failure
+            pass
 
 
 def probe_route(base_url: str, token: str, method: str, path: str) -> dict:

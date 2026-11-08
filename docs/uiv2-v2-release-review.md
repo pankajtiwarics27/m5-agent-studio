@@ -10,14 +10,14 @@ The first decision covers only merge/handoff of the UI/UX V2 program. It is not 
 
 | Field | Verified value |
 | --- | --- |
-| Implementation HEAD | `703945e496c38b6bf0fb148f18fb213f00d20015` (dirty=`false`) |
+| Implementation HEAD | `eb12625bb29aee02c469eeb5720df888fd62d010` (dirty=`false`) |
 | Frontend SHA-256 | `49c18ae49d90e6c2b0ebfb0c3f26988d61433596e211acd06994f37d92c4eead` |
 | Roadmap at generation | 29/30 done, 1 in progress, 0 blocked |
-| Critical CI | [`703945e496c38b6bf0fb148f18fb213f00d20015`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42454692827) — success |
+| Critical CI | [`eb12625bb29aee02c469eeb5720df888fd62d010`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42458278773) — success |
 | Local executed checks | 7/7 exit 0 |
 | Production release | `release-blocked`; release_ready=`false` |
 
-The imported implementation HEAD and CI HEAD can differ by release-documentation commits. Executable browser sources are pinned by SHA-256; later evidence/tracker commits do not silently inherit a different frontend.
+The imported implementation HEAD and critical CI HEAD must match. A later evidence/tracker commit may differ only as the recorded handoff revision; executable browser sources remain pinned by SHA-256 and final PR CI must pass separately.
 
 ### Production blockers preserved
 
@@ -34,21 +34,21 @@ The imported implementation HEAD and CI HEAD can differ by release-documentation
 
 | Evidence | Actual result | Binding |
 | --- | --- | --- |
-| Approved structural matrix | 2200/2200 checks; 48 variants / 144 PNGs | manifest `3b4674791cc4b05b94c7dd2b39092e00fe05cdd31578eef43b87ed5dc0788e08` |
+| Approved structural matrix | 2200/2200 checks; 48 variants / 144 PNGs | manifest `0b67e4222122f3cec2806c7e27ba1c782abd4a337a2048f674c71f4fc764e6e0` |
 | Human approval | approved-check | `user:Arena sidebar-243-recaptured-approval=approve; unchanged source55dff2b7c73f2064c7a649ceb1edfa9a9052d5a7; candidate7186910f9c46979e6320a6e2fa84f53e84067159f2b4d92ea5e03a6b59f884b8; visual baseline only, not merge authorization` |
-| Compare restore/export continuity | 15/15 checks; six PNGs | run `24b943d96b306ef858a77fbe8e7174025f1de2ca823129d733ffc5146388a56a` |
+| Compare restore/export continuity | 15/15 checks; six PNGs | run `1579153e1197162915fd42d3cd9b2ecc05305d7f95e7f57348feedd8b773ae8b` |
 | Browser / fonts | HeadlessChrome/153.0.8010.0 | three font digests recorded in the release evidence |
 
-Local review manifests: `/tmp/uiv2-30-visual-baseline/check-manifest.json` and `/tmp/uiv2-30-compare-baseline.json`. PNGs are not committed; their hashes, source digests and actual outcomes are. Approval is structural fidelity, not pixel identity or self-certification.
+Local review manifests: `/tmp/uiv2-30-final-visual/check-manifest.json` and `/tmp/uiv2-30-final-compare.json`. PNGs are not committed; their hashes, source digests and actual outcomes are. Approval is structural fidelity, not pixel identity or self-certification.
 
 ### Compare captures
 
-- `compare-record-forgotten.png` — `a364a2db933642b86eb2636ba1f8e7efc49193f6b5b681d1fce7e1497738c67c` (19952 bytes)
-- `compare-record-light.png` — `11bd48230f31393374dd14bc538e7c23dc191d7ef6d2acc26b8b40f981d5da85` (58959 bytes)
-- `compare-record-live.png` — `20af43c30c89e25f88717305383ddaea8d3ba5dd650a6161317db9c822020671` (94076 bytes)
-- `compare-record-narrow.png` — `af7997476afdf02e2aeedf07c16d7f39b44a0d18f7913c57910c64350371a26a` (72972 bytes)
-- `compare-record-restored.png` — `35622c5bfad71f896ea6c1b9c4effae5b261fb09e42e0ce7891283b939b6b7d4` (70372 bytes)
-- `compare-record-server.png` — `72c87b58a0cd4c1bc046a0fd7808d39aa34fe2a377a1829ba459be208f94a9a1` (22094 bytes)
+- `compare-record-forgotten.png` — `74c7533c116807725e8aa35b873cad2649d2c9f3a59fe5ac8156a47e20e29ba4` (15664 bytes)
+- `compare-record-light.png` — `8ebf85da4cae7827a4ca9abcfbabe289ba444927210a4a8c72f298851e86647e` (40188 bytes)
+- `compare-record-live.png` — `7c47b0a6c8eb9e26fb88887353b8c754e5d80d3964d1391c0eab4356b75f7057` (65373 bytes)
+- `compare-record-narrow.png` — `ed579086e006d7ebef41493c9f48d080571c9781d0cbe4118af4cec355bfaed0` (60025 bytes)
+- `compare-record-restored.png` — `89be4652e82971b4c639ec6a28516c9fb53c45d63ab6b79bd4e8da2785cbf352` (49703 bytes)
+- `compare-record-server.png` — `fa348c73e7446920a87873a5fa9b8426a1db9d72c65aa28721e6756a0744980a` (17110 bytes)
 
 ## Critical checks that actually ran
 
@@ -64,10 +64,10 @@ Local review manifests: `/tmp/uiv2-30-visual-baseline/check-manifest.json` and `
 
 CI jobs in the imported merged-release run:
 
-- **test (3.13)** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42454692827/job/128651103483))
-- **test (3.11)** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42454692827/job/128651103579))
-- **Browser safety regressions** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42454692827/job/128651103624))
-- **test (3.12)** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42454692827/job/128651103685))
+- **test (3.11)** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42458278773/job/128661856145))
+- **test (3.13)** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42458278773/job/128661856305))
+- **test (3.12)** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42458278773/job/128661856312))
+- **Browser safety regressions** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42458278773/job/128661856413))
 
 The older 40-story UI/UX gate remains separately owned by `scripts/uiux_release_gate.py`; this review requires its committed 37/37 checks and 7/7 gates and also runs it during final verification. It does not pretend that artifact generation is a full browser or three-interpreter test run.
 
@@ -91,6 +91,7 @@ Environment: `linux` / `x64`, 2 CPUs, `HeadlessChrome/153.0.8010.0`; disposable 
 | uiv2-29-node-transcription | corrected | The roadmap previously copied flat 8481 nodes into the final summary; the actual committed run is 8505 -> 8484 -> 8505. The run remained within its no-growth budget; only the summary was wrong. |
 | uiv2-26-pending-ci | closed | The trusted-transformation mitigation is no longer pending: the merged 703945e CI run passed all three Python versions and Browser safety regressions. |
 | compare-restore-history | verified-resolved | Historical UIV2-16/17 restore-crash notes are not current behavior: the boot-order guard is present and this review's real Compare continuity walk passed 15/15 with six captures. |
+| uiv2-30-fixture-process-group | corrected | PR CI run 42458307474 exposed a Python 3.12 fixture-teardown race; the duplicate push run 42458278773 at the same SHA passed all four jobs, but the failure was not waived. preservation_suite.stop_server now retains the process-group id after parent exit, escalates surviving descendants to SIGKILL and waits for group exit, with synchronized graceful and SIGTERM-ignoring grandchild regressions. |
 
 ## Open follow-ups and evidence limits
 

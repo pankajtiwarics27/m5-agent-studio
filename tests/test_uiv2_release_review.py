@@ -101,9 +101,25 @@ def test_compare_restore_defect_is_closed_by_real_walk_and_boot_guard(payload: d
 def test_ci_evidence_contains_every_required_successful_job(payload: dict) -> None:
     ci = payload["critical_ci"]
     assert ci["conclusion"] == "success"
-    assert ci["headSha"] == "703945e496c38b6bf0fb148f18fb213f00d20015"
+    assert contract._is_commit(ci["headSha"])
+    assert ci["headSha"] == payload["pinned_release"]["implementation_head"]
     assert {row["name"] for row in ci["jobs"]} == contract.REQUIRED_CI_JOBS
     assert all(row["conclusion"] == "success" and row["status"] == "completed" for row in ci["jobs"])
+
+
+def test_ci_teardown_failure_is_disclosed_and_process_group_cleanup_is_fixed(payload: dict) -> None:
+    correction = next(row for row in payload["corrections"] if row["id"] == "uiv2-30-fixture-process-group")
+    assert correction["status"] == "corrected"
+    assert "42458307474" in correction["detail"]
+    assert "42458278773" in correction["detail"]
+    assert "was not waived" in correction["detail"]
+    source = (ROOT / "scripts" / "preservation_suite.py").read_text(encoding="utf-8")
+    assert "pgid = process.pid" in source
+    assert "os.killpg(pgid, 0)" in source
+    assert "survived SIGKILL" in source
+    tests = (ROOT / "tests" / "test_uiux_preservation_e2e.py").read_text(encoding="utf-8")
+    assert 'ids=["graceful", "ignored-sigterm"]' in tests
+    assert "signal.SIG_IGN" in tests
 
 
 def test_uiv2_29_final_summary_uses_actual_metrics_not_flat_transcription(payload: dict) -> None:
@@ -124,7 +140,9 @@ def test_pending_ci_regression_is_closed_by_the_real_merged_run(payload: dict) -
     statuses = [row["status"] for row in tracking["known_regressions"] if isinstance(row, dict)]
     assert "closed_in_merged_ci_42454692827" in statuses
     assert not any("pending" in status for status in statuses)
-    assert payload["critical_ci"]["url"].endswith("42454692827")
+    correction = next(row for row in payload["corrections"] if row["id"] == "uiv2-26-pending-ci")
+    assert "703945e" in correction["detail"]
+    assert "CI run passed all three Python versions and Browser safety regressions" in correction["detail"]
 
 
 def test_readme_is_linked_truthful_and_free_of_release_overclaims(payload: dict) -> None:
@@ -220,6 +238,9 @@ def test_release_evidence_rejects_lost_approval_failed_visual_or_ci() -> None:
     ci = evidence()
     ci["ci"]["conclusion"] = "failure"
     assert any("CI" in error for error in contract.validate_evidence(ci))
+    mismatched = evidence()
+    mismatched["ci"]["headSha"] = "0" * 40
+    assert any("same implementation HEAD" in error for error in contract.validate_evidence(mismatched))
 
 
 def test_roadmap_gate_rejects_unpinned_dependency_pending_status_and_bad_metrics() -> None:
