@@ -119,13 +119,14 @@ required even if action memory was reconciled first.
 
 ## Storage compatibility and release gates
 
-New private journals are **schema v2** with `memory_domains` and
-`memory_reservations` added to LC-02. Initial DDL/version tags are atomic. The
-active Studio database remains schema v3. Old private v1, unknown/future/corrupt
+LC-03 added `memory_domains` and `memory_reservations` in private schema v2.
+New private journals are now **schema v3** for LC08 explicit-load purpose (see
+[coordinator compatibility](model-lifecycle-coordinator.md)). Initial DDL/version tags are atomic. The
+active Studio database remains schema v3. Old private v1/v2, unknown/future/corrupt
 or incomplete journals are preserved and refused, without resetting holds or
 modifying their bytes. There is no automatic populated migration or backup
 implementation: reviewed backup/migration and rollback evidence are mandatory
-before activation for an existing v1 namespace. Never delete state to unblock it.
+before activation for an existing v1/v2 namespace. Never delete state to unblock it.
 The original schema-v1 proposal is historical; ADR-0031/0032/0033 remain proposed
 and not-reviewed. No roadmap/independent security/acceptance status is advanced.
 

@@ -61,7 +61,7 @@ cleanup. No transaction spans an external effect. A claimed intent is returned
 only after its dispatch record commits. Callers must not retry the physical
 operation merely because they did not receive/complete that intent.
 
-The dormant namespace now uses application-tagged **schema v2**;
+The dormant namespace now uses application-tagged **schema v3**;
 [LC-03](shared-memory-admission.md) adds combined model/action accounting. Tables are
 owner metadata, domain bindings/residency, requests, request leases, operations,
 a sequenced metadata-only journal, memory policy and memory reservations. Journal entries retain owner epoch and
@@ -71,14 +71,14 @@ URLs with authentication, and model output are not collected by the module.
 Callers must supply opaque reference IDs, never hide raw content in a label.
 
 This is not the active `studio_history.db`; Studio's runtime schema remains v3.
-No migration runs on startup or import. First creation applies the private v2
+No migration runs on startup or import. First creation applies the private v3
 DDL/version tag atomically. An interrupted initialization leaves an unrecognized
 journal and fails on reopen rather than silently treating it as empty. Existing
 future/foreign/unversioned/corrupt/incomplete or semantically malformed journals
 are rejected without repair/downgrade. A future upgrade from a populated private
-schema requires a separately reviewed backup/migration; v1 is preserved and refused, not silently upgraded or recreated. A reviewed
-populated v1-to-v2 migration is not implemented and blocks activation for existing
-v1 journals. Never clear this database to unblock a model.
+schema requires a separately reviewed backup/migration; v1/v2 are preserved and
+refused, not silently upgraded or recreated. A populated v1/v2-to-v3 migration is
+not implemented and blocks activation for those existing journals. Never clear this database to unblock a model.
 
 This storage separation is a **proposed** implementation choice, not acceptance
 of ADR-0031/0032. It avoids coupling machine-wide ownership to a session-selected
@@ -228,3 +228,106 @@ document is indexed here without rewriting accepted UI/onboarding evidence.
 Full new-head Python 3.11/3.12/3.13 and browser PR CI is still required, not claimed
 from this focused run. No live model, owner hardware or independent security
 review was performed, and no runtime capability was certified.
+
+
+## LC08 explicit-load intent foundation (not a native command consumer)
+
+`enqueue_load` persists a distinct `load` purpose in the same bounded FIFO as
+inference. Existing `enqueue` remains inference-only; idempotency includes purpose,
+so the same request ID cannot be relabelled. Native transition stages stay the
+same. Only after matching verified residency can `claim_next` return a `LoadLease`
+for the actual native instance. It is deliberately **not** a `RequestLease` or
+its subclass, and does not authorize inference, token counting or native effects.
+
+Both kinds share the one-active-slot constraint, blocking overlapping control /
+inference admission across independent consumers. The historical internal
+`snapshot.active_requests` field counts these exclusive admitted slots, not a
+native stream counter. Native activity still requires separate qualified proof.
+
+`finish_load` requires new complete, reachable, fresh, quiescent all-runtime
+terminal/headroom and owned-instance evidence matching the existing exact target
+and native instance. The `load_control` scope binds epoch, generation and this
+unique **load lease ID** in `EvidenceScope.operation_id`, preventing evidence
+reuse between same-model controls. An ACK, earlier load/verify proof or a warm
+name match alone cannot finish the slot. No implicit reload or count occurs.
+This kernel does not establish installed context/profile qualification or LC03
+settlement: a future concrete command consumer must check those independently.
+
+Cancelled or deadline-expired admitted controls retain their slot until physical
+terminality is proven. A successful `finish_load` means the slot was released;
+its durable request status is `cancelled`/`expired`, not `completed`, in those cases.
+It is **not** a canonical API `confirmed` response. Model residency and model
+memory remain held. `mark_load_uncertain` fences interrupted work for explicit
+reconciliation. Restart interrupts admitted controls without replaying them and
+preserves queued purpose; old epochs/leases cannot complete new-owner work.
+
+SQL purpose fences in fit admission and both inference bridges reject a load
+slot even if a trusted caller rewraps its fields as a `RequestLease`. Inference
+cold-step consumption rejects load-purpose rows; a miswired warm scheduler holds
+its unexpected load slot uncertain instead of treating it as inference. The
+private standalone bundle exercises the same distinct-slot/proof completion.
+
+Schema v3 adds `requests.purpose` with a closed `inference|load` constraint. The
+active Studio history schema remains separately v3; application IDs/namespaces
+are distinct. No namespace deletion, implicit migration, hold reset, native
+activation, command implementation or architecture acceptance is authorized.
+Unload-only/unload-all/cache semantics remain open. A dormant concrete Ollama /
+LM Studio load consumer is now described in the [integration record](runtime-dispatch-integration.md),
+without default producers or activation. No oMLX target/inference qualification is added.
+
+
+The internal `_finish_load` seam lets the concrete native consumer check the actual
+admitted model memory/sample/budget and finish the load slot in **one write**.
+The standalone `finish_load` kernel API still establishes only its documented
+proof-based slot completion, not installed qualification or LC03 authority.
+No schema change beyond the preceding v3 purpose discriminator is introduced.
+
+## LC08 unload-only release foundation (dormant; no native consumer)
+
+The next kernel checkpoint adds `enqueue_unload` and a distinct `ReleaseStep`,
+not an acquire-to-self or an empty/fake replacement model. Its immutable identity
+binds the exact actual source/instance, request, domain, owner epoch, generation,
+operation and existing dispatched model-memory reservation. It has **no target**.
+`requests.target` on an unload row is only the expected-source selector.
+
+A release claim requires that matching owned resident, its current dispatched
+model hold, a ready memory domain and no active inference/load slot. Unmatched,
+absent, uncertain, merely reserved or unbound sources do not create a release
+operation or report successful absence. All three source runtimes are exercised
+with fake kernel facts, not qualified installed native behavior.
+
+The only stages are drain and unload. `complete_release` is separate from
+`complete_step`; unload completion requires fresh, unload-operation-scoped,
+complete/reachable/quiescent all-runtime absence, terminality and headroom proof.
+Physical completion clears resident identity and marks the operation complete,
+but **keeps** `domains.operation_id`, the switching barrier and the queued intent.
+`claim_next` cannot redispatch that completed operation or start a replacement.
+The actual model-memory bytes remain charged.
+
+The existing independent LC03 `settle` must release that exact source reservation
+with fresh terminal/attributed-zero evidence. `finish_unload` then checks its
+**durable released status**, current operation/epoch/generation/source/request,
+a ready memory domain and no other live model reservation in the same write
+that retires the barrier. There is no caller-supplied "memory settled" boolean.
+Its true result means barrier retirement, not an API `confirmed` response:
+cancelled/expired intents retain those statuses. It never loads another model.
+`mark_release_uncertain` also fences physically complete but unsettled releases;
+old epochs/retired operations cannot poison successor work. Restart requires
+explicit reconciliation and preserves conservative memory accounting; no replay,
+polling or LC09 recovery completion is implemented.
+
+Private schema **v4** adds the unload purpose and constrained acquire/release
+operation goal, nullable target **only for release**, and durable request/hold
+references. Acquire records still require real targets and no release references.
+Populated v1/v2/v3 namespaces are refused without modifying their database bytes;
+there is no implicit migration, deletion or reset. The unrelated active Studio
+history schema remains v3. A reviewed backup/migration path is still required
+before any activation.
+
+Existing Ollama/LM Studio/oMLX permits explicitly remain incompatible with this
+new intent. Miswired existing load/inference actors refuse it and fence it
+uncertain without a native call. The private standalone bundle exercises physical
+completion, retained barrier, real memory settlement and final retirement through
+its own namespaced coordinator/memory kernels. Native unload command consumers,
+unload-all/cache, already-absent success policy, routes/settings, default producers,
+installed qualification and production activation remain **unimplemented**.

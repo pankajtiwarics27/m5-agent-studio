@@ -270,3 +270,377 @@ cross-tab/visual-roadmap references match `origin/main` exactly. Full combined
 regression and fresh CI for the reconciled head are pending at this checkpoint;
 pre-reconciliation green CI is not reused as proof for the new merge result.
 LC08 remains incomplete, test8 paused, and no merge is performed here.
+
+## LC08 continuation after PR256: bounded cold-step consumption
+
+PR256 merged the previous dormant checkpoint as `324aea4f05fa9f1af49852a92b2d807395424703`.
+Its reconciled head `4355c43` passed 4,280 local tests (32 skipped, one upstream
+warning) and Python 3.11/3.12/3.13 plus browser-safety CI. That approval was
+consumed by the merge, not carried forward to this continuation branch.
+
+`native_transition_driver.py` adds an internal bounded **cold inference step
+consumer**, not a polling scheduler, completed explicit-control route, native
+producer or activation switch:
+
+- `ColdAdmission` derives the full feature inventory from the owned application
+  input, matches the immutable native/fit profile and generation settings, and
+  checks installed-scoped native and non-loading counter metadata. LM Studio
+  additionally requires qualified reasoning-off, matching counter/native process
+  identity/version and text-only history. No fake instance ID is serialized and
+  no count is inferred before LM Studio has an actual admitted instance.
+- `enqueue` validates readiness **before** queue/generation/probe/native effects.
+  Unknown or loading counters, incomplete template coverage, expired native
+  qualifications, unapproved profile/output/reasoning changes all refuse. Shared
+  pure native qualification checks are reused by existing bridge send gates.
+  `request_fit.request_components` shares the pure feature classifier with final
+  preparation; it is explicitly not body validation, a count or fit approval.
+- Each `advance` requires the real currently dispatched coordinator step, matching
+  live queued request/domain/target/deadline, the exact concrete native job and
+  permit, shared coordinator/memory identity, and repeated target readiness.
+  Source drain/unload uses the source bridge/profile; target load/verify uses the
+  approved target qualification. All sample/proof producers run outside writes.
+- Load reserves the actual target peak, refreshes the memory sample, and uses the
+  concrete native bridge's once-only send marker. ACK merely advances to verify.
+  Verify uses the bridge's all-runtime/instance/profile/ownership terminal proof.
+- Unload ACK does **not** release or settle anything. Native all-runtime physical
+  confirmation must finish first; LC03 then independently requires terminality
+  and attributed zero for the original model lease before settlement. Only then
+  can target reservation/load proceed. Interrupted/invalid stages retain holds,
+  mark uncertainty where still owned, and do not replay, infer release or retry.
+- `TransitionResult` records only completion of that one stage, never a generic
+  `status=confirmed` that a workflow/control endpoint could mistake for the whole
+  operation being done. Warm exact-body preparation, LC07 count/fit and native
+  inference still run separately after a real request lease/instance is admitted.
+
+Packaging, mypy/scopes and the private standalone module bundle include the new
+module. The isolated artifact test now blocks its public sibling fallback and
+executes both providers' cold load/verify with real dormant kernels and fake
+producers, as well as the prior warm inference checks. No default actor, policy
+permit, memory observation, counter, native transport or backend is installed.
+
+Initial cold driver evidence: **45 new tests passed**. Combined cold/warm executor,
+request-fit, concrete native bridge and routing-fence regression: **494 passed**,
+one upstream Starlette/httpx warning. Tests include
+empty-domain cold load through warm exact-fit/native inference, both directions
+of cross-runtime switching with an active-request/queued-load race, source ACK
+held behind independent physical proof/zero attribution, malformed/unqualified
+readiness with no queue/probe/source changes, replay/cancellation/authority/expiry,
+and retained memory after failed proof. Native/installed/count/physical facts are
+explicit fakes, never hardware qualification. Ruff, mypy (74 sources) and scope
+mapping (187 test modules/13 areas) passed. Full regression/CI for this new head
+remain to be recorded when executed.
+
+**Still open:** app-level cold scheduling/lease-to-warm-executor composition;
+explicit load, unload-only, unload-all/cache controls and their races; oMLX step
+consumption; cancellation/recovery orchestration and remaining canonical workflow
+consumers. The current coordinator models source-to-target transitions, not a
+completed unload-only control API. This driver deliberately does not invent such
+an API or fake a target to force eviction. No story closure, native activation,
+architecture/security acceptance, settings changes, merge permission or test8
+resumption follows from these tests.
+
+
+Continuation environment/checkpoint notes: the fresh checkout initially lacked
+full Git history, so baseline and historical release-evidence reads were blocked.
+Full history was fetched; pinned baseline verification and the regenerated release
+review then passed with zero findings. Docs/ADR and app/standalone isolated
+startup/token/origin smoke checks passed. No historical evidence/approval was
+replaced to bypass the shallow-checkout failure.
+
+## Bounded inference scheduling and cold-to-warm handoff
+
+At `f099531`, the preceding driver checkpoint passed **4,325 local tests** with
+32 opt-in/browser skips and one upstream warning. Python 3.11/3.12/3.13 and browser
+CI passed; three disposable safety mutations were caught. These are prior-head
+results, not validation of the scheduler changes below.
+
+`native_inference_scheduler.py` now composes cold steps and warm exact-fit/native
+inference as an internal `CoordinatedDispatchBackend`-compatible consumer. No
+backend/actor instance is installed by default, no settings/mode change occurs,
+and its explicit `command` remains unavailable.
+
+- A trusted synchronous plan supplies immutable `ColdAdmission`, domain/deadline,
+  concrete transition-job and admitted warm-job factories. The actor never mints
+  native permits, qualifiers, counters or physical observations. It rejects plans
+  for a different owned call or warm handoffs with a different request lease,
+  memory, native qualification, fit profile or counter qualification.
+- One actor serializes its streams until native terminal completion or consumer
+  close. Lock waiting is bounded by the request deadline and at most 60 seconds;
+  it adds no inference timeout/output cap. Waiting actors are in-memory, not a
+  durable session queue. Cancellation/deadline before entry does not enqueue or
+  cancel the active owner. Readiness is repeated after waiting and at each stage.
+- `LifecycleCoordinator.claim_next` gains optional internal `request_id` fencing,
+  backward compatible with existing callers. FIFO request selection and matching
+  are checked in the same write as claim; it never skips an earlier waiter or
+  advances an existing operation for a different target. A pre-query followed by
+  an unfenced claim would race with cancellation/other consumers and is rejected
+  as an alternative. This fence is not native-operation authority.
+- The actor takes at most drain/unload/load/verify/request, without polling,
+  background execution, pending-operation replay or automatic retry. Busy behind
+  unrelated work it refuses and cancels only its own queued waiter. Other actors,
+  threads and controls remain subject to the actual coordinator/memory gates, not
+  just the in-process lock.
+- Source memory must be actually dispatched, match the native target and remain
+  held through physical confirmation and attributed-zero settlement. Target peak
+  reservation/verification yields a real admitted instance/request lease before
+  invoking the existing warm executor. Same-target sequential requests reuse
+  actual warm memory rather than issuing another load.
+- Every intermediate native iterator is explicitly closed on consumer close.
+  Incomplete admitted work retains domain/memory uncertainty, never fabricated
+  terminality, release or retry. A close after independently verified terminal
+  usage does not poison warm residency. Failures after step claim but before a
+  job producer returns also require reconciliation rather than stranding/replaying
+  the stage. Even a fully counted context refusal conservatively retains the
+  admitted request/model hold for explicit recovery; this actor does not invent
+  a general cancellation/recovery policy.
+
+The existing native gateway is exercised through actual common dispatch, the
+scheduler, real dormant cold/warm/fit/bridge kernels and explicit fake native
+producers, in both response modes. No generic HTTP client or fallback path reaches
+the actor. The private standalone bundle and its isolated no-sibling-fallback test
+now also exercise complete scheduled cold-to-warm inference for both providers.
+Packaging, types and scoped tests include the scheduler.
+
+The fake count fixture's journal assertion is now scoped to the counted lease,
+not the first count anywhere in the database. This preserves the once-only marker
+check while allowing multiple actual queued/request histories in the same domain.
+
+Initial scheduler evidence: **34 new scheduler tests** and **2 new coordinator
+claim-fence tests**, including concurrency, cross-runtime switching, waiter cancel
+and deadline, interrupted active close, verified-terminal close, foreign queue /
+cancelled-target operations, unsupported plans/controls, warm-handoff refusal,
+producer failure and oversize exact-count refusal without retry/trimming/model
+substitution. The final combined scheduler/coordinator/cold/warm/fit/bridge/fence
+run passed **573 tests**, one upstream warning, including the final exact-fit
+refusal and post-wait expiry cases. Ruff, mypy75 and scope
+mapping (188 modules/13 areas) passed; full regression and CI for this head are
+pending until executed. No installed native qualification follows from fake facts.
+
+**Remaining LC08 work:** explicit load/unload-only/unload-all/cache control
+orchestration and complete races, full oMLX target/inference support, remaining canonical
+workflow consumers, production composition readiness and integration with LC09
+session/grant/budget/recovery semantics. This is bounded inference composition,
+not a durable task scheduler or completion of those controls. Tests1–7 acceptance
+and paused/unpassed test8 are unchanged; no merge or native activation authorized.
+
+
+Scheduler pre-full-run checks: freshly executed backend safety passed **302 tests
+and 16 isolation checks**, with live container isolation still unqualified/blocked.
+Regenerated source manifest, preservation/performance/release records have no
+findings. Ruff, mypy75, docs/ADR and both isolated app/standalone startup/token /
+origin smokes passed. A generator command exceeded the tool wait while its child
+continued; the child finished, its output was checked with zero findings, and the
+remaining checks were run separately, not concurrently rerun. No visual source
+approval/pin or acceptance ledger was advanced.
+
+
+### Source-only oMLX continuation (not oMLX inference support)
+
+`OmlxSourceTransition` now consumes the existing LC04 bridge for **drain/unload
+only**, allowing an already-owned oMLX resident to switch to an independently
+qualified Ollama or LM Studio target through the bounded inference scheduler.
+The driver's real-step, coordinator/memory owner, request/deadline and pre-source
+metadata-readiness gates remain mandatory. No model acquisition, counter, native
+inference or tokenization support is added for an oMLX target. No synthetic fit
+profile, instance identity or architectural context inference is introduced.
+
+LC04 has a different permit and qualification shape. The adapter binds its actual
+`step`, native qualification target/context and separately supplied immutable
+`ModelMemoryProfile` to the real active source reservation. Wrong owners, profiles,
+permits, unqualified/native-busy or helper-unknown sources refuse without target
+I/O. Required unload activity/proof/sample producers must be present before send.
+The bridge's `pending` response is only normalized to the driver's ACK vocabulary:
+HTTP 200/202, empty status or asynchronous unload acknowledgement cannot complete
+release. Independent all-runtime physical proof, then independently attributed
+zero memory settlement, are still separate mandatory gates. Proof production is
+bounded to five seconds; this is not an inference deadline or force-abort policy.
+
+Physical proof may advance the coordinator's unload stage before memory settlement
+fails. In that case the source reservation remains charged and the paused memory
+ledger prevents even a subsequently claimed target-load step from sending. No
+claim that these two independent stores advance atomically is made. Cancellation,
+hung/failed evidence and late effects retain uncertainty without polling/retry.
+
+Offline integration and isolated private-bundle tests exercise real dormant
+scheduler/driver/coordinator/memory/native/fit kernels with **fake installed facts**.
+The source fixture's prior lifecycle-only load is not an oMLX inference/counter
+qualification. No producer is installed, no native endpoint contacted, no setting
+changed and no architecture/security or hardware acceptance advanced. Explicit
+controls, oMLX targets/inference and remaining LC08 workflows stay open.
+
+The previous scheduler checkpoint at `59f1cea` completed **4361 passed, 32 skipped,
+one upstream warning**, plus green Python 3.11/3.12/3.13 and browser CI (run
+`42491137954`). Its durable result is PR257 comment `6723091816`. New-head full
+regression and CI results will be recorded separately after execution.
+
+Source-only pre-full-run evidence: **57 new oMLX composition tests** cover both
+targets, HTTP200/202 physical completion, absent target readiness, source scope /
+profile/memory mismatches, busy/unknown drains, incomplete/failed/hung proof,
+ACK-only refusal, pinned sources, live attribution, cancellation and no replay.
+The combined scheduler/driver/executor/fit/coordinator/native/fence run passed
+**612 tests**, one upstream warning. Both source-to-target combinations also ran
+in the isolated private standalone bundle. Ruff, mypy75, 189-module scope mapping,
+docs/ADR, app/standalone startup-auth-origin smokes and baseline checks passed.
+Fresh backend safety: **302 tests, 16 isolation checks**; live isolation remains
+unqualified/blocked. Regenerated preservation/performance/release evidence has
+zero findings, without changing visual approval pins or accepting architecture.
+Full regression / exact-head CI are pending at this commit, not inherited from
+the earlier scheduler checkpoint.
+
+
+### Explicit-load intent foundation (not command integration)
+
+The coordinator now offers `enqueue_load`, a separately typed `LoadLease`, and
+lease-scoped proof-based `finish_load` / `mark_load_uncertain`. Purpose is durable
+and part of idempotency in private schema v3. Mixed load/inference work shares the
+same FIFO and exclusive slot; no inference lease/count is fabricated to finish a
+load. Fresh complete all-runtime native terminal and exact owned-instance proof
+is still required even for an already-warm target. Slot completion does not settle
+model memory or establish full inference fit; cancelled/expired controls do not
+become completed commands. See the [coordinator contract](model-lifecycle-coordinator.md).
+
+Fit admission, both native inference bridges and cold inference steps now fence
+on durable inference purpose. Rewrapping a load slot's fields as `RequestLease`
+cannot count/send. An unexpectedly miswired warm scheduler marks its load slot
+uncertain rather than stranding or executing it. Private standalone checks cover
+both target providers' distinct control slot and proof-based completion, with
+explicit fake facts and unchanged charged model memory.
+
+**At foundation checkpoint `3c1f055`, scope was foundation-only.** Commands still
+refused at that head; no native load-command orchestrator, oMLX target support, unload-only,
+unload-all or cache implementation is claimed. Older private v1/v2 journals are
+preserved/refused; a reviewed populated migration is absent and blocks activation.
+No active app database, settings, hardware acceptance or review status changes.
+
+Pre-full-run evidence: **35 new offline tests**, and **687 combined** real dormant
+coordinator/memory/native/fit/cold/warm/scheduler/fence tests passed, one upstream
+warning. Ruff, mypy75, scope190/13 and isolated private-bundle tests passed. Full
+regression and exact-head CI will be recorded separately after execution.
+
+The preceding source-only oMLX head `1426970` finished **4418 passed / 32 skipped /
+one warning** and green full Python3.11/3.12/3.13 + browser CI in run42494036883.
+GitHub access was restored and final evidence was posted as PR257 comment6723486722.
+
+
+### Dormant explicit native load consumer (Ollama / LM Studio only)
+
+`NativeLoadPlan` is an optional, separately composed plan on the same
+`NativeInferenceScheduler`. Without it, commands still refuse. Only `load` is
+supported; unload-only, unload-all and cache controls remain unavailable. No
+production plan/qualifier/transport/proof/sample producer or public setting is
+installed. The existing model-control HTTP route remains oMLX-specific; it is
+**not** silently redirected to an Ollama/LM Studio model. oMLX targets still refuse.
+
+`LoadAdmission` validates the immutable empty-options load call against pure
+installed native configuration/profile qualification before enqueue/probe/source
+disruption, after lock waiting and at each stage. It does not create a synthetic
+FitProfile, inference request, instance selector or token count. No inference
+input exists for this command: confirmed model residency is **not** assurance that
+a future full request fits. Future inference still reconstructs/counts its entire
+unchanged input under the existing native/LC07 gates.
+
+The consumer uses real `QueuedLoadRequest` purpose, at most five actual FIFO-fenced
+claims (drain/unload/load/verify/load slot), existing concrete native transitions,
+and the real dispatched model memory. Source physical release and independent
+attributed-zero settlement still precede target reservation. The inference driver
+continues to reject a load row passed as `QueuedColdRequest`; purpose cannot be
+relabeled to get inference authority. Source-only oMLX release is supported, but
+its qualification does not become target/inference qualification.
+
+The final concrete `OllamaLoadCompletion` / `LmLoadCompletion` carries an actual
+`LoadLease` native permit, actual model memory and independent proof/sample
+producers. Both native bridges explicitly accept that permit only for read-only
+load confirmation; native infer/send methods still require their original types.
+Qualification, current control lease, native load-profile record and installed
+runtime/catalog/instance/context checks precede and follow independent proof.
+Native observation/physical proof validation is shared with existing confirmation,
+not weakened or replaced by an ACK. Producer calls run outside transactions and
+are bounded to five seconds. No native inference timeout/cap is added here.
+
+Fresh model binding/status, combined model/action budget, pressure/headroom and
+memory sample revision are checked in the **same final write** as proof-based load
+slot completion. A tool reservation arriving during proof invalidates the earlier
+sample and cannot produce a confirmed response. This atomic seam does not settle
+model memory. Canonical `confirmed` requires a completed uncancelled/unexpired
+load row after native completion, never a raw bridge ACK or boolean alone.
+
+Controls and inference on the same actor share the lock through native terminality;
+lock waiting stays bounded by request deadline / sixty seconds. Independent
+actors, queues and tool reservations remain governed by actual coordinator/memory
+transactions, not just that lock. Cancellation, expired readiness, late proof,
+factory failures, missing/bad authority and incomplete completion retain uncertain
+holds rather than replaying, polling, releasing memory or force-aborting a stream.
+A successfully proved/released control does not poison the still-loaded model.
+
+Pre-full-run evidence: **73 new offline tests**; initial combined run **760 passed,
+one upstream warning**. The final shared native-proof refactor passed **246**
+consumer/native tests. Cases cover cold/warm reuse and later full-fit inference,
+control/inference races in both orders, independent actors, both Ollama/LM Studio
+switching directions, owned oMLX source release, pressure, late tool reservation,
+proof/instance/profile/version/scope mismatches, expiry/cancel, foreign FIFO,
+generic bridge refusal, unsupported controls and oMLX target refusal. Both native
+load consumers also run in the isolated private standalone bundle. Full regression
+and exact-head CI will be recorded after execution, not inherited from older heads.
+
+The preceding foundation head `3c1f055` completed **4453 passed / 32 skipped / one
+warning** and full PR CI42496980469 plus push CI42496974814 all green. Durable
+results: PR257 comment6723850924. LC08, production composition, full controls,
+remaining canonical workflows and LC09 recovery/session/grant/budget integration
+remain incomplete. No activation, settings/HTTP API change, native qualification,
+merge, architecture/security acceptance or hardware test8 retry is authorized.
+
+After the shared native-proof refactor and final bundle rebuild, the complete
+combined suite again passed **760 tests**, one upstream warning. Final scoped
+mapping is 191 modules/13 areas; Ruff, mypy75, docs/ADR, both startup-auth-origin
+smokes and fresh backend safety302/16 passed. Applicable source, preservation,
+performance and release records were regenerated with zero findings; standalone
+is 4,214,158 bytes. No visual approval/pin was changed. Full/CI remain pending at
+this chronological checkpoint until separately executed.
+
+## Unload-only kernel continuation (private schema v4; dormant)
+
+The preceding explicit native-load checkpoint `2172b4a` subsequently completed
+**4526 passed / 32 skipped / one warning** (1256.24s), with exact-head PR CI
+42499922167 and push CI42499918241 green on Python3.11/3.12/3.13 plus browser.
+PR257 comment6724236422 records that evidence; it supersedes the chronological
+pending-full notes above, not the validation of this new continuation.
+
+This checkpoint adds a distinct release-only coordinator primitive, **not** a
+native unload consumer. `ReleaseStep` binds the actual owned source/instance and
+its actual dispatched model hold without a replacement target. A release goal
+never enters load/verify. Full-runtime unload-scoped physical terminal/absence
+proof marks physical completion but preserves the domain switching/operation
+barrier. The real source hold stays charged until independent LC03 terminal,
+attributed-zero settlement. Only `finish_unload`, checking its exact durable
+released reservation and current operation identity in the final write, retires
+the barrier. Cancellation/expiry never become completed controls; physical success
+alone cannot authorize the next load. Uncertainty and restart require explicit
+reconciliation rather than native replay.
+
+Private schema v4 preserves/refuses earlier populated versions. No migration,
+namespace reset, application history schema change or activation is introduced.
+Existing native permits do not accept the new type. Existing load/inference
+actors fence miswired release intent uncertain before their native job factories.
+No unload command/plan, unload-all/cache, already-absent success policy, HTTP
+redirection, defaults, transports, qualifiers or native counters are installed.
+See the [kernel contract](model-lifecycle-coordinator.md#lc08-unload-only-release-foundation-dormant-no-native-consumer).
+
+Focused offline evidence: **57 new tests** cover three fake source runtimes,
+physical-vs-memory separation, partial/ACK/stale/wrong-scope proofs, nonzero and
+nonterminal settlement, paused/unknown memory, forged identities, FIFO/purpose
+fencing, active control/inference slots, cancellation/expiry, concurrent finish,
+late completion, all restart phases, SQL goal constraints, older-version database
+preservation, native permit refusal and both existing actor purposes. The private
+standalone kernel test is extended as well. No live runtime/hardware qualification,
+LC08 completion, LC09 recovery completion, independent acceptance, merge or test8
+retry is claimed. Full regression and exact-head CI for this increment must be
+recorded only after execution.
+
+Final pre-full evidence for this continuation: the combined 17-module lifecycle,
+native, dispatch, fit and persistence suite passed **924 tests**, one upstream
+warning (41.25s). Ruff, mypy75, scope mapping192/13, docs/ADR, baseline/governance/
+deferred-security consistency, JavaScript and both app/standalone authenticated
+startup-origin smokes passed. The standalone is 4,226,687 bytes; fresh backend
+safety302/16 and regenerated source/preservation/performance/release records report
+zero findings, with live isolation still unqualified/blocked. Full regression and
+exact-head CI are not inherited from `2172b4a` and remain pending here.

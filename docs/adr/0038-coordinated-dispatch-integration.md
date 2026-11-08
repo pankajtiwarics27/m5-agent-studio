@@ -56,6 +56,74 @@ ContextVar and exception identities. Register modules before execution; do not
 replace public module names. Isolated artifact tests block sibling fallbacks and
 exercise both warm kernels with fake facts, not installed native qualification.
 
+Propose a separate bounded cold-step consumer with readiness before enqueue and
+again at every native stage. Share pure native qualification and complete-input
+feature classification with the existing send/fit paths; do not serialize a
+provisional LM Studio instance or call metadata readiness a token fit. Consume
+only real coordinator steps and concrete native bridge permits. Source physical
+confirmation and LC03 attributed-zero settlement are separate, both mandatory,
+before target load. Return typed stage completion, not a successful whole-control
+ACK. Keep this dormant and namespaced in standalone; no actor/producers are
+installed and unload-only controls are not fabricated from a fake target.
+
+Compose a bounded inference backend from a concrete cold-step driver and admitted
+warm executor, with full immutable call/profile/counter matching at handoff.
+Serialize one actor through terminal completion/close; bound in-memory lock waiting
+but never add inference output/time caps. Fence coordinator claims optionally to
+the FIFO request in the same SQL write, not a racy pre-query. Refuse foreign/pending
+work instead of polling or stealing it; cancel only the actor's own unadmitted
+waiter. Interrupted stages/requests retain holds for explicit recovery. Keep the
+backend dormant and controls unavailable; in-memory waiters are not durable tasks.
+
+Extend concrete step consumption to an owned oMLX **source only**, using its LC04
+permit/qualification shape and the actual separately bound model memory profile.
+Refuse oMLX target load/verify jobs rather than inventing full-request/native
+inference qualification. Normalize only ACK vocabulary; retain independent
+physical confirmation and attributed-zero settlement, and bound proof production.
+If physical proof advances residency but settlement fails, the paused charged
+memory ledger independently blocks any later native target send. No polling or
+atomic cross-kernel completion is claimed. Keep this dormant and source-only in
+the private standalone bundle as well.
+
+Introduce distinct durable explicit-load intent before implementing its native
+command consumer. Keep load slots separate from inference types and guard their
+SQL purpose in the native/fit kernels, including rewrapped field-identical leases.
+Use the existing single FIFO/exclusive-slot constraint; require load-lease-scoped
+all-runtime native terminal proof for slot completion without fabricated inference
+or token counts. Cancellation/expiry are not native terminality or a completed
+control. Keep model memory held and commands unavailable. Proposed private schema
+v3 adds the closed purpose field; preserve/refuse v1/v2, with no automatic
+populated migration or namespace clearing. A reviewed backup/migration remains an
+activation gate; the active application database is unchanged.
+
+Compose an optional native explicit-load plan on the inference actor, sharing its
+lock but retaining coordinator/memory authority across independent actors. Use
+pure native load configuration readiness (no fake inference input/count) and real
+load-purpose queue/stages/admission. Extend native permits explicitly to LoadLease
+for read-only model confirmation, never inference/send. Reuse native observation /
+proof validation, actual native load-profile records, and fresh all-runtime owned
+instance/context evidence. Check current dispatched model memory/budget/sample
+revision in the same final write as control-slot completion. Canonical confirmed
+requires the actual completed uncancelled/unexpired load row. Keep all producers
+uninstalled; oMLX targets and unload/all/cache commands still refuse. Do not
+redirect the existing oMLX HTTP model-control route or infer future request fit
+from model residency. This is partial LC08 integration, not activation/review.
+
+Add a distinct release-only foundation before any native unload command consumer.
+Do not invent a replacement target or widen existing transition/permit authority.
+Persist private schema v4 acquire/release goals and source request/model-hold
+references; permit NULL target only for release. Preserve/refuse v1/v2/v3 without
+migration/reset. Physical unload uses existing operation-scoped full-runtime
+absence/terminal proof, but retains the switching/operation barrier until the
+actual bound source reservation has independent durable LC03 zero settlement.
+Retire the barrier only with current operation/epoch/generation/request/hold checks
+in one final write; cancelled/expired requests cannot become completed controls.
+Keep physically complete-but-unsettled release markable uncertain and restart
+reconciliation-only. Existing native permits reject this new type; miswired
+existing actors fence it without native calls. This foundation is not an unload
+consumer, already-absent success policy, unload-all/cache, LC09 recovery, default
+producer or production activation.
+
 ## Alternatives
 
 - Replace served routing immediately: would activate unqualified transports and
@@ -71,13 +139,15 @@ exercise both warm kernels with fake facts, not installed native qualification.
 LC-08 remains incomplete: cold acquisition/control orchestration, pre-disruption
 metadata gates, remaining all-path canonical consumption and complete cross-runtime
 cold-control races still need implementation/proof. The warm executor is not a
-production producer or cold-load controller. Current races cover duplicate count
-and queued-control blocking while an admitted native stream is active only.
+production producer or cold scheduler. The continuation step driver adds real
+cold source-to-target bridge/memory consumption and both-direction cross-runtime
+release/race tests with fake facts; app scheduling, full controls and remaining
+workflow consumption are still open.
 Coordinated combos, unqualified private/proxy providers and unowned evictions
 currently refuse. Legacy behavior remains served by default, so no cross-runtime
 guarantee is claimed for it. Static inventory cannot prove dynamic/native
 reachability. Namespaced warm standalone tests do not qualify installed native
-behavior. No configuration/schema/dependency, native activation or
+behavior. No public configuration/application-schema/dependency, native activation or
 security/architecture acceptance is implied.
 
 ## Review Status

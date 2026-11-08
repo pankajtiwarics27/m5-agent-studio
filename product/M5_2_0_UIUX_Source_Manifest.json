@@ -26,8 +26,8 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "963b33bd350595d9ca38793ecb15e1d357f8cfc796cfad677fac7b11c7cc164e",
-      "bytes": 4166618,
+      "sha256": "d01945d23150fd9a23ed083d2b0b23aa8a3b763bc34073c215cd3368a59d3556",
+      "bytes": 4234031,
       "lines": 83105
     },
     {
@@ -68,9 +68,9 @@
     {
       "path": "scripts/build_studio.py",
       "role": "regenerates studio.py from app.py and the inlined modules",
-      "sha256": "78882e9d8f0f2c5d7fe6f9d6b2cf5a067b6deef9f337f6fbf186708e8585e7f7",
-      "bytes": 11218,
-      "lines": 254
+      "sha256": "f7a485e5dd7e15964ce7bbe4e6832197b2c44eca74125365277e308b8180fc05",
+      "bytes": 11284,
+      "lines": 256
     },
     {
       "path": "scripts/check_frontend_syntax.py",

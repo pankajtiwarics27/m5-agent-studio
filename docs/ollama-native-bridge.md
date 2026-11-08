@@ -252,3 +252,23 @@ No production consumer/counter is installed. This preflight TTL is not checked
 at stream completion; it must not invalidate a legitimate long response. The
 existing bridge fixture's true callback is explicitly a fake assumption, not
 installed count proof. No native activation or standalone wiring is implied.
+
+
+## LC08 dormant explicit-load completion
+
+The native permit union now explicitly includes the coordinator's distinct
+`LoadLease` for `confirm_load` only. It has no inference digest. Native `infer`
+and mutating `send` retain their original inference/transition intent checks;
+rewrapping a load lease as an inference lease still fails the durable SQL purpose
+fence. Installed native qualification and the live authorizer must explicitly
+approve the current control permit; no default authorizer/producer is supplied.
+
+Completion reads current native residency/catalog, checks the actual native load
+profile/instance/context and obtains fresh load-lease-scoped all-runtime physical
+proof. Sample and proof producers are bounded to five seconds outside writes.
+The final real model-memory binding/status, combined budget/sample revision and
+control-slot completion are checked in one write. Model memory is not settled or
+released. A bare HTTP ACK or an empty/stale list cannot confirm the command.
+See [LC08 integration](runtime-dispatch-integration.md) for composition, races and
+limits. No future full-request fit, native activation, new HTTP route, settings
+change, installed qualification or architecture/security acceptance is implied.
