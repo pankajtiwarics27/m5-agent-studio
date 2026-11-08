@@ -1,0 +1,433 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "description": "Minimal response excerpts and hypothetical normalized evidence, not captured installed-runtime traces or certification.",
+  "cases": [
+    {
+      "id": "omlx-deferred-unload",
+      "runtime": "omlx",
+      "kind": "release",
+      "source_refs": [
+        "OMLX-SERVER"
+      ],
+      "facts": {
+        "operation_terminal": false,
+        "inventory_reachable": true,
+        "inventory_fresh": true,
+        "inventory_complete": true,
+        "resident_instances": [
+          "source"
+        ],
+        "loading_instances": [],
+        "active_requests": 1,
+        "headroom_verified": true
+      },
+      "expected": "blocked:operation_unsettled",
+      "wire_excerpt": {
+        "http_status": 202,
+        "body": {
+          "status": "unloading",
+          "model_id": "source"
+        }
+      }
+    },
+    {
+      "id": "omlx-success-ack-still-resident",
+      "runtime": "omlx",
+      "kind": "release",
+      "source_refs": [
+        "OMLX-SERVER"
+      ],
+      "facts": {
+        "operation_terminal": true,
+        "inventory_reachable": true,
+        "inventory_fresh": true,
+        "inventory_complete": true,
+        "resident_instances": [
+          "source"
+        ],
+        "loading_instances": [],
+        "active_requests": 0,
+        "headroom_verified": true
+      },
+      "expected": "blocked:resident_or_loading",
+      "wire_excerpt": {
+        "http_status": 200,
+        "body": {
+          "status": "ok",
+          "model_id": "source"
+        }
+      }
+    },
+    {
+      "id": "ollama-timeout-empty-snapshot",
+      "runtime": "ollama",
+      "kind": "release",
+      "source_refs": [
+        "OLLAMA-ROUTES",
+        "OLLAMA-SCHED"
+      ],
+      "facts": {
+        "operation_terminal": false,
+        "inventory_reachable": true,
+        "inventory_fresh": true,
+        "inventory_complete": true,
+        "resident_instances": [],
+        "loading_instances": [],
+        "active_requests": 0,
+        "headroom_verified": true
+      },
+      "expected": "blocked:operation_unsettled",
+      "wire_excerpt": {
+        "transport": "timeout"
+      }
+    },
+    {
+      "id": "lmstudio-stale-empty-snapshot",
+      "runtime": "lmstudio",
+      "kind": "release",
+      "source_refs": [
+        "LM-REST-LIST"
+      ],
+      "facts": {
+        "operation_terminal": true,
+        "inventory_reachable": true,
+        "inventory_fresh": false,
+        "inventory_complete": true,
+        "resident_instances": [],
+        "loading_instances": [],
+        "active_requests": 0,
+        "headroom_verified": true
+      },
+      "expected": "blocked:observation_unknown"
+    },
+    {
+      "id": "lmstudio-manual-instance",
+      "runtime": "lmstudio",
+      "kind": "release",
+      "source_refs": [
+        "LM-REST-LIST"
+      ],
+      "facts": {
+        "operation_terminal": true,
+        "inventory_reachable": true,
+        "inventory_fresh": true,
+        "inventory_complete": true,
+        "resident_instances": [
+          "manually-loaded-instance"
+        ],
+        "loading_instances": [],
+        "active_requests": 0,
+        "headroom_verified": true
+      },
+      "expected": "blocked:resident_or_loading"
+    },
+    {
+      "id": "omlx-loading-not-resident-yet",
+      "runtime": "omlx",
+      "kind": "release",
+      "source_refs": [
+        "OMLX-SERVER"
+      ],
+      "facts": {
+        "operation_terminal": true,
+        "inventory_reachable": true,
+        "inventory_fresh": true,
+        "inventory_complete": true,
+        "resident_instances": [],
+        "loading_instances": [
+          "target"
+        ],
+        "active_requests": 0,
+        "headroom_verified": true
+      },
+      "expected": "blocked:resident_or_loading"
+    },
+    {
+      "id": "ollama-missing-loading-evidence",
+      "runtime": "ollama",
+      "kind": "release",
+      "source_refs": [
+        "OLLAMA-SCHED"
+      ],
+      "facts": {
+        "operation_terminal": true,
+        "inventory_reachable": true,
+        "inventory_fresh": true,
+        "inventory_complete": true,
+        "resident_instances": [],
+        "loading_instances": null,
+        "active_requests": 0,
+        "headroom_verified": true
+      },
+      "expected": "blocked:residency_unknown"
+    },
+    {
+      "id": "omlx-active-stream",
+      "runtime": "omlx",
+      "kind": "release",
+      "source_refs": [
+        "OMLX-SERVER"
+      ],
+      "facts": {
+        "operation_terminal": true,
+        "inventory_reachable": true,
+        "inventory_fresh": true,
+        "inventory_complete": true,
+        "resident_instances": [],
+        "loading_instances": [],
+        "active_requests": 1,
+        "headroom_verified": true
+      },
+      "expected": "blocked:requests_not_drained"
+    },
+    {
+      "id": "omlx-release-headroom-unknown",
+      "runtime": "omlx",
+      "kind": "release",
+      "source_refs": [
+        "OMLX-SERVER"
+      ],
+      "facts": {
+        "operation_terminal": true,
+        "inventory_reachable": true,
+        "inventory_fresh": true,
+        "inventory_complete": true,
+        "resident_instances": [],
+        "loading_instances": [],
+        "active_requests": 0,
+        "headroom_verified": false
+      },
+      "expected": "blocked:headroom_unverified"
+    },
+    {
+      "id": "omlx-synthetic-complete-release",
+      "runtime": "omlx",
+      "kind": "release",
+      "source_refs": [
+        "OMLX-SERVER"
+      ],
+      "facts": {
+        "operation_terminal": true,
+        "inventory_reachable": true,
+        "inventory_fresh": true,
+        "inventory_complete": true,
+        "resident_instances": [],
+        "loading_instances": [],
+        "active_requests": 0,
+        "headroom_verified": true
+      },
+      "expected": "candidate_only"
+    },
+    {
+      "id": "ollama-load-8k-inference-4k",
+      "runtime": "ollama",
+      "kind": "request",
+      "source_refs": [
+        "OLLAMA-ROUTES",
+        "OLLAMA-SCHED"
+      ],
+      "facts": {
+        "approved_context_tokens": 8192,
+        "active_context_tokens": 8192,
+        "input_tokens": 2048,
+        "output_reserve_tokens": 512,
+        "instance_binding_verified": true,
+        "load_profile": "approved-8k",
+        "inference_profile": "default-4k",
+        "counter_load_admitted": true,
+        "counter_verified": true,
+        "count_matches_request": true,
+        "truncation_disabled": true,
+        "shifting_disabled": true
+      },
+      "expected": "blocked:profile_mismatch"
+    },
+    {
+      "id": "ollama-unknown-exact-count",
+      "runtime": "ollama",
+      "kind": "request",
+      "source_refs": [
+        "OLLAMA-ROUTES",
+        "OLLAMA-PROMPT"
+      ],
+      "facts": {
+        "approved_context_tokens": 8192,
+        "active_context_tokens": 8192,
+        "input_tokens": 2048,
+        "output_reserve_tokens": 512,
+        "instance_binding_verified": true,
+        "load_profile": "approved-8k",
+        "inference_profile": "approved-8k",
+        "counter_load_admitted": true,
+        "counter_verified": false,
+        "count_matches_request": true,
+        "truncation_disabled": true,
+        "shifting_disabled": true
+      },
+      "expected": "blocked:counter_unverified"
+    },
+    {
+      "id": "ollama-default-truncation",
+      "runtime": "ollama",
+      "kind": "request",
+      "source_refs": [
+        "OLLAMA-TYPES"
+      ],
+      "facts": {
+        "approved_context_tokens": 8192,
+        "active_context_tokens": 8192,
+        "input_tokens": 2048,
+        "output_reserve_tokens": 512,
+        "instance_binding_verified": true,
+        "load_profile": "approved-8k",
+        "inference_profile": "approved-8k",
+        "counter_load_admitted": true,
+        "counter_verified": true,
+        "count_matches_request": true,
+        "truncation_disabled": false,
+        "shifting_disabled": false
+      },
+      "expected": "blocked:context_controls_unverified"
+    },
+    {
+      "id": "ollama-test8-budget",
+      "runtime": "ollama",
+      "kind": "request",
+      "source_refs": [
+        "STUDIO-TEST8"
+      ],
+      "facts": {
+        "approved_context_tokens": 4096,
+        "active_context_tokens": 4096,
+        "input_tokens": 7326,
+        "output_reserve_tokens": 512,
+        "instance_binding_verified": true,
+        "load_profile": "approved-4k",
+        "inference_profile": "approved-4k",
+        "counter_load_admitted": true,
+        "counter_verified": true,
+        "count_matches_request": true,
+        "truncation_disabled": true,
+        "shifting_disabled": true
+      },
+      "expected": "blocked:context_budget"
+    },
+    {
+      "id": "omlx-tokenizer-without-lease",
+      "runtime": "omlx",
+      "kind": "request",
+      "source_refs": [
+        "OMLX-SERVER"
+      ],
+      "facts": {
+        "approved_context_tokens": 8192,
+        "active_context_tokens": 8192,
+        "input_tokens": 2048,
+        "output_reserve_tokens": 512,
+        "instance_binding_verified": true,
+        "load_profile": "approved-8k",
+        "inference_profile": "approved-8k",
+        "counter_load_admitted": false,
+        "counter_verified": true,
+        "count_matches_request": true,
+        "truncation_disabled": true,
+        "shifting_disabled": true
+      },
+      "expected": "blocked:counter_unadmitted"
+    },
+    {
+      "id": "omlx-media-counter-unsupported",
+      "runtime": "omlx",
+      "kind": "request",
+      "source_refs": [
+        "OMLX-SERVER"
+      ],
+      "facts": {
+        "approved_context_tokens": 8192,
+        "active_context_tokens": 8192,
+        "input_tokens": 2048,
+        "output_reserve_tokens": 512,
+        "instance_binding_verified": true,
+        "load_profile": "approved-8k",
+        "inference_profile": "approved-8k",
+        "counter_load_admitted": true,
+        "counter_verified": false,
+        "count_matches_request": true,
+        "truncation_disabled": true,
+        "shifting_disabled": true
+      },
+      "expected": "blocked:counter_unverified"
+    },
+    {
+      "id": "lmstudio-wrong-instance",
+      "runtime": "lmstudio",
+      "kind": "request",
+      "source_refs": [
+        "LM-REST-LIST",
+        "LM-SDK"
+      ],
+      "facts": {
+        "approved_context_tokens": 8192,
+        "active_context_tokens": 8192,
+        "input_tokens": 2048,
+        "output_reserve_tokens": 512,
+        "instance_binding_verified": false,
+        "load_profile": "approved-8k",
+        "inference_profile": "approved-8k",
+        "counter_load_admitted": true,
+        "counter_verified": true,
+        "count_matches_request": true,
+        "truncation_disabled": true,
+        "shifting_disabled": true
+      },
+      "expected": "blocked:instance_unverified"
+    },
+    {
+      "id": "lmstudio-tools-template-unproven",
+      "runtime": "lmstudio",
+      "kind": "request",
+      "source_refs": [
+        "LM-SDK"
+      ],
+      "facts": {
+        "approved_context_tokens": 8192,
+        "active_context_tokens": 8192,
+        "input_tokens": 2048,
+        "output_reserve_tokens": 512,
+        "instance_binding_verified": true,
+        "load_profile": "approved-8k",
+        "inference_profile": "approved-8k",
+        "counter_load_admitted": true,
+        "counter_verified": true,
+        "count_matches_request": false,
+        "truncation_disabled": true,
+        "shifting_disabled": true
+      },
+      "expected": "blocked:counter_unverified"
+    },
+    {
+      "id": "omlx-synthetic-fitting-request",
+      "runtime": "omlx",
+      "kind": "request",
+      "source_refs": [
+        "OMLX-SERVER"
+      ],
+      "facts": {
+        "approved_context_tokens": 8192,
+        "active_context_tokens": 8192,
+        "input_tokens": 2048,
+        "output_reserve_tokens": 512,
+        "instance_binding_verified": true,
+        "load_profile": "approved-8k",
+        "inference_profile": "approved-8k",
+        "counter_load_admitted": true,
+        "counter_verified": true,
+        "count_matches_request": true,
+        "truncation_disabled": true,
+        "shifting_disabled": true
+      },
+      "expected": "candidate_only"
+    }
+  ]
+}
