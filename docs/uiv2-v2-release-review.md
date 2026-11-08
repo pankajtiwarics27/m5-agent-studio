@@ -92,6 +92,7 @@ Environment: `linux` / `x64`, 2 CPUs, `HeadlessChrome/153.0.8010.0`; disposable 
 | uiv2-26-pending-ci | closed | The trusted-transformation mitigation is no longer pending: the merged 703945e CI run passed all three Python versions and Browser safety regressions. |
 | compare-restore-history | verified-resolved | Historical UIV2-16/17 restore-crash notes are not current behavior: the boot-order guard is present and this review's real Compare continuity walk passed 15/15 with six captures. |
 | uiv2-30-fixture-process-group | corrected | PR CI run 42458307474 exposed a Python 3.12 fixture-teardown race; the duplicate push run 42458278773 at the same SHA passed all four jobs, but the failure was not waived. preservation_suite.stop_server now retains the process-group id after parent exit, escalates surviving descendants to SIGKILL and waits for group exit, with synchronized graceful and SIGTERM-ignoring grandchild regressions. |
+| uiv2-30-generated-source-manifest | corrected | PR CI run 42459934879 passed Browser safety but failed all three Python jobs because the preservation helper edit had not been propagated through the UI source manifest, preservation signoff and release gate. Those owner artifacts were regenerated in dependency order; source-manifest, signoff, release-gate and release-review tests then passed, including the historical ancestry check after restoring the shallow clone's history. |
 
 ## Open follow-ups and evidence limits
 

@@ -437,6 +437,11 @@
       "id": "uiv2-30-fixture-process-group",
       "status": "corrected",
       "detail": "PR CI run 42458307474 exposed a Python 3.12 fixture-teardown race; the duplicate push run 42458278773 at the same SHA passed all four jobs, but the failure was not waived. preservation_suite.stop_server now retains the process-group id after parent exit, escalates surviving descendants to SIGKILL and waits for group exit, with synchronized graceful and SIGTERM-ignoring grandchild regressions."
+    },
+    {
+      "id": "uiv2-30-generated-source-manifest",
+      "status": "corrected",
+      "detail": "PR CI run 42459934879 passed Browser safety but failed all three Python jobs because the preservation helper edit had not been propagated through the UI source manifest, preservation signoff and release gate. Those owner artifacts were regenerated in dependency order; source-manifest, signoff, release-gate and release-review tests then passed, including the historical ancestry check after restoring the shallow clone's history."
     }
   ],
   "follow_ups": [

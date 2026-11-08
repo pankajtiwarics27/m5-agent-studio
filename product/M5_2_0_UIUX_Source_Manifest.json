@@ -369,9 +369,9 @@
     {
       "path": "scripts/preservation_suite.py",
       "role": "runs every prover in the preservation matrix against its own throwaway app and records the result",
-      "sha256": "e203234af95e244fe95f8203bbdc4077b621bc215ed15d73d3c20cfc6903bc04",
-      "bytes": 21026,
-      "lines": 488
+      "sha256": "a4bd64296932382f0afa802ac6147b4f0081d3622a6e7adb3897228bec82ae69",
+      "bytes": 22193,
+      "lines": 510
     },
     {
       "path": "scripts/uiux_preservation_e2e.py",
@@ -383,9 +383,9 @@
     {
       "path": "tests/test_uiux_preservation_e2e.py",
       "role": "checks the matrix mapper and the run record: a known failure is never green and an untaken step is never a pass",
-      "sha256": "d086016c0866fda410815b3225ece20eb392c61f5555aae9f8bb9603d2931184",
-      "bytes": 13821,
-      "lines": 322
+      "sha256": "531b6c966207238ed198ec9775cdf33f31efeacc5b196f102fd44c5294af84bc",
+      "bytes": 14344,
+      "lines": 331
     },
     {
       "path": "scripts/uiux_adversarial_inventory.py",

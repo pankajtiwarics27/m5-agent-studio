@@ -3734,11 +3734,14 @@
           "Implementation push CI run 42458278773 at eb12625 passed Python 3.11/3.12/3.13 and Browser safety. PR run 42458307474 failed only test_stopping_a_fixture_stops_the_app_it_forked on Python 3.12; failure retained and corrected, not waived.",
           "Focused teardown repeated 40/40 before correction; stop_server now retains the process-group id, escalates surviving descendants and waits for group exit. Synchronized graceful and SIGTERM-ignoring grandchild regression cases: 2/2 passed (2.18s).",
           "Final focused release, preservation, boot-order and security gate suite: 54/54 passed (14.01s). Ruff, mypy (62 files), compileall, docs validation (238 files), scope map and diff checks passed.",
-          "Corrected process-tree teardown stress: 20/20 parametrized real-grandchild cases passed across graceful and SIGTERM-ignoring modes."
+          "Corrected process-tree teardown stress: 20/20 parametrized real-grandchild cases passed across graceful and SIGTERM-ignoring modes.",
+          "PR CI run 42459934879: Browser safety passed; all Python jobs failed on stale UI source manifest/release-gate ownership after the preservation helper edit. Regenerated source manifest -> preservation signoff -> UI/UX release gate -> UIV2-30 review in dependency order.",
+          "Regenerated owner suites: 82 passed with one shallow-history skip, then exact public pin fetch + unshallow restored ancestry and source-manifest suite passed 11/11; no skip remains in that suite. UI/UX gate 37/37 checks and 7/7 gates, 0 findings.",
+          "Refreshed clean 971f685 browser evidence: Compare 15/15 + six PNGs, run sha256 b1fc9c3c4dde1d52f73e9b43e0df3930d16d0b1dcfddc37e6e3becedaeb3538e; approved visual 48/144/2200, manifest sha256 29580335c23b25f8a889170057a4a48c59edff04e62f9cf703a8e04e7676da63."
         ],
         "visual_evidence": [
-          "/tmp/uiv2-30-final-visual/check-manifest.json — clean eb12625bb29aee02c469eeb5720df888fd62d010, 48 variants, 144 PNGs and 2200/2200 approved checks, sha256 0b67e4222122f3cec2806c7e27ba1c782abd4a337a2048f674c71f4fc764e6e0.",
-          "/tmp/uiv2-30-final-compare/ and docs/media/uiv2-30-release-review/ — six actual Compare live/restored/server/forgotten/narrow/light PNGs; /tmp/uiv2-30-final-compare.json records 15/15 checks, sha256 1579153e1197162915fd42d3cd9b2ecc05305d7f95e7f57348feedd8b773ae8b."
+          "/tmp/uiv2-30-final2-visual/check-manifest.json — clean 971f685104e64195c62de0c285b412d70d79299e, 48 variants, 144 PNGs and 2200/2200 approved checks, sha256 29580335c23b25f8a889170057a4a48c59edff04e62f9cf703a8e04e7676da63.",
+          "/tmp/uiv2-30-final2-compare/ and docs/media/uiv2-30-release-review/ — six actual Compare live/restored/server/forgotten/narrow/light PNGs; /tmp/uiv2-30-final2-compare.json records 15/15 checks, sha256 b1fc9c3c4dde1d52f73e9b43e0df3930d16d0b1dcfddc37e6e3becedaeb3538e."
         ],
         "acceptance_evidence": [
           "Final implementation evidence: Compare 15/15 with six PNGs; approved visual 48 captures / 2200 checks across light/dark and 1640x900, 1440x900, 1280x800, 390x844. Backend authorization/recovery/ledger/fencing/isolation: 300 tests +16 isolation checks; no external provider calls.",
@@ -3762,11 +3765,16 @@
             "regression": "PR CI run 42458307474 Python 3.12 exposed that preservation_suite.stop_server waited for the fixture parent but not its forked app process group.",
             "status": "corrected_final_pr_ci_not_yet_recorded",
             "resolution": "The failed run remains recorded; same-SHA push run 42458278773 passed all four jobs. Cleanup now retains the process-group id, escalates surviving descendants to SIGKILL and waits for group exit. Real graceful and SIGTERM-ignoring grandchild tests pass; final PR CI is still required before story closure."
+          },
+          {
+            "regression": "PR CI run 42459934879 failed all Python jobs because the preservation helper change had not been propagated to the pinned UI source manifest, preservation signoff and dependent release gate.",
+            "status": "corrected_final_pr_ci_not_yet_recorded",
+            "resolution": "Regenerated owner artifacts in dependency order and reran their tests: 82 passed plus the former ancestry skip resolved by restoring public history, then 11/11 source-manifest tests passed. Browser safety had passed. A fresh final PR run remains required."
           }
         ],
         "blockers": [],
         "handoff_summary": "Implementation-source evidence is green at eb12625: Compare 15/15, visual 2200/2200, backend 300+16 and same-SHA push CI 4/4. The PR teardown failure is corrected in verification infrastructure. Do not close until the final evidence commit passes PR CI; production/security remains release-blocked.",
-        "exact_next_action": "Run final focused suites and static checks, commit the imported evidence plus process-group correction, then require all final PR #247 checks before marking UIV2-30 done."
+        "exact_next_action": "Integrate advanced origin/main, regenerate shared documentation/contracts, commit the manifest corrections and obtain a completely green final PR run before closure."
       }
     }
   ],
