@@ -17,7 +17,7 @@
     "zoom_factor": 2
   },
   "source_sha256": {
-    "static/index.html": "7a938b83e3b512b80b20ed006436763117acb4445ce13b463bcc93f72699c6f6",
+    "static/index.html": "2bf80b669dff0202201dbe15fce36034290ea4a13bb0b4286d30d8e788ee5e44",
     "scripts/uiv2_accessibility_adversarial_walk.mjs": "831d65473af6d28d3e77294420fa49130addb5c02d132b433d0141ded525e0c7",
     "scripts/a11y_walk.mjs": "191400491161725465f2f87acd78456e75be08938e29cfcef99d733ea9037c7d",
     "scripts/responsive_walk.mjs": "f39b774a33f1122458c5435d8e566c57e30cba64834239091a26034b1cd40cbd",
@@ -515,7 +515,7 @@
     {
       "control": "#monitorToggleBtn",
       "before": "clipped at a 195px effective viewport",
-      "after_contract": "wrapping workspace toolbar; reachable at 200%"
+      "after_contract": "the header is one row and scrolls horizontally at narrow widths, so the toggle stays reachable at 200%; #hallClearSessionBtn uses the same contained-scroll remedy"
     },
     {
       "control": "#startTaskInput",
@@ -616,8 +616,8 @@
       "captures": 62
     },
     "git": {
-      "head": "0037008aedde9b1ff9f37698ff8dd9d7452fdd97",
-      "dirty": false
+      "head": "b6134c56aac555379685a300247021a3dcc913c2",
+      "dirty": true
     },
     "validation_errors": []
   },

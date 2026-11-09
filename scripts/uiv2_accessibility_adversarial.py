@@ -96,7 +96,8 @@ MEASURED_REPAIRS = (
     ("#harnessProjectSummary", "113×18 CSS px", "24px minimum target height; responsive walk passes"),
     ("#hallClearSessionBtn", "right=430px at a 360px viewport", "contained horizontal action scrolling; the control remains reachable"),
     ("#chatPersona", "20×44 CSS px at 200% phone zoom", "140px group minimum wraps only when two columns cannot fit"),
-    ("#monitorToggleBtn", "clipped at a 195px effective viewport", "wrapping workspace toolbar; reachable at 200%"),
+    ("#monitorToggleBtn", "clipped at a 195px effective viewport",
+     "the header is one row and scrolls horizontally at narrow widths, so the toggle stays reachable at 200%; #hallClearSessionBtn uses the same contained-scroll remedy"),
     ("#startTaskInput", "220px fixed minimum caused horizontal overflow", "zero flex minimum with the desktop basis retained"),
     ("Start / Council / Chat recovery", "short-height content had no reachable scroll path", "native Start-shell and Council/Chat main overflow recovery"),
 )

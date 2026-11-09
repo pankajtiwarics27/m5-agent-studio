@@ -1,14 +1,14 @@
 {
   "story": "UIV2-28",
   "git": {
-    "head": "0037008aedde9b1ff9f37698ff8dd9d7452fdd97",
-    "dirty": false
+    "head": "b6134c56aac555379685a300247021a3dcc913c2",
+    "dirty": true
   },
   "source_sha256": {
-    "static/index.html": "7a938b83e3b512b80b20ed006436763117acb4445ce13b463bcc93f72699c6f6",
+    "static/index.html": "2bf80b669dff0202201dbe15fce36034290ea4a13bb0b4286d30d8e788ee5e44",
     "scripts/uiv2_accessibility_adversarial_walk.mjs": "831d65473af6d28d3e77294420fa49130addb5c02d132b433d0141ded525e0c7"
   },
-  "generated_at": "2026-11-08T17:44:25.217Z",
+  "generated_at": "2026-11-09T06:04:44.130Z",
   "method": {
     "contrast": "WCAG 2 relative luminance on computed solid backgrounds",
     "zoom": "half CSS viewport with deviceScaleFactor=2",
@@ -28,7 +28,7 @@
       "pane": "start",
       "step": "all visible text meets its WCAG contrast floor with no unmeasured background",
       "passed": true,
-      "detail": "35 pairs, lowest=4.95:1, failures=0"
+      "detail": "36 pairs, lowest=4.95:1, failures=0"
     },
     {
       "group": "rendered",
@@ -64,7 +64,7 @@
       "pane": "harness",
       "step": "all visible text meets its WCAG contrast floor with no unmeasured background",
       "passed": true,
-      "detail": "23 pairs, lowest=4.95:1, failures=0"
+      "detail": "24 pairs, lowest=4.95:1, failures=0"
     },
     {
       "group": "rendered",
@@ -100,7 +100,7 @@
       "pane": "hall",
       "step": "all visible text meets its WCAG contrast floor with no unmeasured background",
       "passed": true,
-      "detail": "55 pairs, lowest=4.95:1, failures=0"
+      "detail": "60 pairs, lowest=4.95:1, failures=0"
     },
     {
       "group": "rendered",
@@ -109,7 +109,7 @@
       "pane": "hall",
       "step": "all tabbable controls have accessible names and no positive tabindex",
       "passed": true,
-      "detail": "16 pane stops; unnamed=[]; positive=0"
+      "detail": "19 pane stops; unnamed=[]; positive=0"
     },
     {
       "group": "rendered",
@@ -127,7 +127,7 @@
       "pane": "hall",
       "step": "Tab traverses the pane and leaves it without a focus loop",
       "passed": true,
-      "detail": "stops=16 visited=15 required=15 final=16 dynamic=0 left=true repeated=none"
+      "detail": "stops=19 visited=19 required=18 final=19 dynamic=1 left=true repeated=none"
     },
     {
       "group": "rendered",
@@ -136,7 +136,7 @@
       "pane": "council",
       "step": "all visible text meets its WCAG contrast floor with no unmeasured background",
       "passed": true,
-      "detail": "53 pairs, lowest=4.95:1, failures=0"
+      "detail": "54 pairs, lowest=4.95:1, failures=0"
     },
     {
       "group": "rendered",
@@ -181,7 +181,7 @@
       "pane": "debate",
       "step": "all tabbable controls have accessible names and no positive tabindex",
       "passed": true,
-      "detail": "14 pane stops; unnamed=[]; positive=0"
+      "detail": "13 pane stops; unnamed=[]; positive=0"
     },
     {
       "group": "rendered",
@@ -199,7 +199,7 @@
       "pane": "debate",
       "step": "Tab traverses the pane and leaves it without a focus loop",
       "passed": true,
-      "detail": "stops=14 visited=13 required=13 final=14 dynamic=0 left=true repeated=none"
+      "detail": "stops=13 visited=12 required=12 final=13 dynamic=0 left=true repeated=none"
     },
     {
       "group": "rendered",
@@ -208,7 +208,7 @@
       "pane": "chat",
       "step": "all visible text meets its WCAG contrast floor with no unmeasured background",
       "passed": true,
-      "detail": "24 pairs, lowest=4.95:1, failures=0"
+      "detail": "25 pairs, lowest=4.95:1, failures=0"
     },
     {
       "group": "rendered",
@@ -252,7 +252,7 @@
       "pane": "start",
       "step": "all visible text meets its WCAG contrast floor with no unmeasured background",
       "passed": true,
-      "detail": "35 pairs, lowest=5.58:1, failures=0"
+      "detail": "36 pairs, lowest=5.58:1, failures=0"
     },
     {
       "group": "rendered",
@@ -288,7 +288,7 @@
       "pane": "harness",
       "step": "all visible text meets its WCAG contrast floor with no unmeasured background",
       "passed": true,
-      "detail": "23 pairs, lowest=5.58:1, failures=0"
+      "detail": "24 pairs, lowest=5.58:1, failures=0"
     },
     {
       "group": "rendered",
@@ -324,7 +324,7 @@
       "pane": "hall",
       "step": "all visible text meets its WCAG contrast floor with no unmeasured background",
       "passed": true,
-      "detail": "55 pairs, lowest=5.58:1, failures=0"
+      "detail": "60 pairs, lowest=5.58:1, failures=0"
     },
     {
       "group": "rendered",
@@ -333,7 +333,7 @@
       "pane": "hall",
       "step": "all tabbable controls have accessible names and no positive tabindex",
       "passed": true,
-      "detail": "16 pane stops; unnamed=[]; positive=0"
+      "detail": "19 pane stops; unnamed=[]; positive=0"
     },
     {
       "group": "rendered",
@@ -351,7 +351,7 @@
       "pane": "hall",
       "step": "Tab traverses the pane and leaves it without a focus loop",
       "passed": true,
-      "detail": "stops=16 visited=15 required=15 final=16 dynamic=0 left=true repeated=none"
+      "detail": "stops=19 visited=19 required=18 final=19 dynamic=1 left=true repeated=none"
     },
     {
       "group": "rendered",
@@ -360,7 +360,7 @@
       "pane": "council",
       "step": "all visible text meets its WCAG contrast floor with no unmeasured background",
       "passed": true,
-      "detail": "53 pairs, lowest=5.58:1, failures=0"
+      "detail": "54 pairs, lowest=5.58:1, failures=0"
     },
     {
       "group": "rendered",
@@ -405,7 +405,7 @@
       "pane": "debate",
       "step": "all tabbable controls have accessible names and no positive tabindex",
       "passed": true,
-      "detail": "14 pane stops; unnamed=[]; positive=0"
+      "detail": "13 pane stops; unnamed=[]; positive=0"
     },
     {
       "group": "rendered",
@@ -423,7 +423,7 @@
       "pane": "debate",
       "step": "Tab traverses the pane and leaves it without a focus loop",
       "passed": true,
-      "detail": "stops=14 visited=13 required=13 final=14 dynamic=0 left=true repeated=none"
+      "detail": "stops=13 visited=12 required=12 final=13 dynamic=0 left=true repeated=none"
     },
     {
       "group": "rendered",
@@ -432,7 +432,7 @@
       "pane": "chat",
       "step": "all visible text meets its WCAG contrast floor with no unmeasured background",
       "passed": true,
-      "detail": "24 pairs, lowest=5.58:1, failures=0"
+      "detail": "25 pairs, lowest=5.58:1, failures=0"
     },
     {
       "group": "rendered",
@@ -1027,7 +1027,7 @@
       "theme": "light",
       "step": "transcript and pinned conclusion hold independent nonzero nested scroll offsets",
       "passed": true,
-      "detail": "{\"streamHost\":\"hall-main\",\"stream\":96,\"conclusion\":72,\"page\":0,\"streamRange\":5520,\"conclusionRange\":6151}"
+      "detail": "{\"streamHost\":\"hall-main\",\"stream\":96,\"conclusion\":72,\"page\":0,\"streamRange\":5899,\"conclusionRange\":6151}"
     },
     {
       "group": "long-recovery",
@@ -1067,7 +1067,7 @@
       "theme": "light",
       "step": "Escape restores transcript, conclusion and page scroll exactly",
       "passed": true,
-      "detail": "before={\"streamHost\":\"hall-main\",\"stream\":96,\"conclusion\":72,\"page\":0,\"streamRange\":5520,\"conclusionRange\":6151} after={\"open\":false,\"action\":\"expand\",\"stream\":96,\"conclusion\":72,\"page\":0}"
+      "detail": "before={\"streamHost\":\"hall-main\",\"stream\":96,\"conclusion\":72,\"page\":0,\"streamRange\":5899,\"conclusionRange\":6151} after={\"open\":false,\"action\":\"expand\",\"stream\":96,\"conclusion\":72,\"page\":0}"
     },
     {
       "group": "browser",
@@ -1084,496 +1084,496 @@
       "viewport": "1440x900",
       "theme": "light",
       "pane": "start",
-      "path": "/tmp/f28/rendered-1440x900-light-start.png",
-      "sha256": "2e1a0656fbc523bf4be6ef9f36880460a5acbdf05bb3246d63947794d3a41ff1"
+      "path": "/tmp/ev/rendered-1440x900-light-start.png",
+      "sha256": "e48ac7786411dad7d2ae423330ac8d16fd2843dd1fb9cb35750cd576130f4299"
     },
     {
       "group": "rendered",
       "viewport": "1440x900",
       "theme": "light",
       "pane": "harness",
-      "path": "/tmp/f28/rendered-1440x900-light-harness.png",
-      "sha256": "55d098809e5a50b95bdaf82b5b03a7fac1bc01bba174b89ed662c1370a237a97"
+      "path": "/tmp/ev/rendered-1440x900-light-harness.png",
+      "sha256": "69d11a35aa01ff117e09911e6a3f71382d6f5d3337814ae512769b70c0e9d546"
     },
     {
       "group": "rendered",
       "viewport": "1440x900",
       "theme": "light",
       "pane": "hall",
-      "path": "/tmp/f28/rendered-1440x900-light-hall.png",
-      "sha256": "ad1b86a566fe1f7c2ecfd95cb652cd7cc206b6ad9654c26a0250acbc94ecc17c"
+      "path": "/tmp/ev/rendered-1440x900-light-hall.png",
+      "sha256": "ff06e1533b0dfc602c9e5efd435818334f2197651da8e2252978072ff77dcee5"
     },
     {
       "group": "rendered",
       "viewport": "1440x900",
       "theme": "light",
       "pane": "council",
-      "path": "/tmp/f28/rendered-1440x900-light-council.png",
-      "sha256": "3b6d19e6765bd32203045066f041be6ff87eb5c453fc7184aa27516275c423a5"
+      "path": "/tmp/ev/rendered-1440x900-light-council.png",
+      "sha256": "cc77daf34f433c0e5a31b7cbc7abf62ad6364cb38d37a40a89256ce97162f4f5"
     },
     {
       "group": "rendered",
       "viewport": "1440x900",
       "theme": "light",
       "pane": "debate",
-      "path": "/tmp/f28/rendered-1440x900-light-debate.png",
-      "sha256": "f7df5a834467edf34abd2f9c6dbde17c0d944eaf199a9fea9b675a00b8f9c6bd"
+      "path": "/tmp/ev/rendered-1440x900-light-debate.png",
+      "sha256": "93514948759583bb32c258c6bf2a026f723d5ab8b13f47cc1bde5f230d6d8870"
     },
     {
       "group": "rendered",
       "viewport": "1440x900",
       "theme": "light",
       "pane": "chat",
-      "path": "/tmp/f28/rendered-1440x900-light-chat.png",
-      "sha256": "47fa52194c7841c2ef0de7b96c1e8308defbc709638eb8310adb1e04e8984cbc"
+      "path": "/tmp/ev/rendered-1440x900-light-chat.png",
+      "sha256": "614fec2a1d4d9860670e22a9b2999ca221f6a0bc3f9ac233d1ba277fcb8863f9"
     },
     {
       "group": "rendered",
       "viewport": "1440x900",
       "theme": "dark",
       "pane": "start",
-      "path": "/tmp/f28/rendered-1440x900-dark-start.png",
-      "sha256": "3921fde3270bc202121c32441db9b82349f4b6b191d38ac81e6a05a33fd271b6"
+      "path": "/tmp/ev/rendered-1440x900-dark-start.png",
+      "sha256": "a328b57f98860073191d4cffd8159146a85a2c94bd4761fd8d68e9bd56b1dd0a"
     },
     {
       "group": "rendered",
       "viewport": "1440x900",
       "theme": "dark",
       "pane": "harness",
-      "path": "/tmp/f28/rendered-1440x900-dark-harness.png",
-      "sha256": "f84982f8e26070bb500045ff25275ea13cc76b252761ec948cd4ba887efc4076"
+      "path": "/tmp/ev/rendered-1440x900-dark-harness.png",
+      "sha256": "b546d32ef3f356dbe2d718e87be94011fbae76736c88249fe237fd6805a23c61"
     },
     {
       "group": "rendered",
       "viewport": "1440x900",
       "theme": "dark",
       "pane": "hall",
-      "path": "/tmp/f28/rendered-1440x900-dark-hall.png",
-      "sha256": "a9a85e7fb5eb530d40ae4d614363e20c9779d386e48621ea743cb2c006d5d8d2"
+      "path": "/tmp/ev/rendered-1440x900-dark-hall.png",
+      "sha256": "0b51d1987b844b3e745966ccb710f57e7ca4909fd294116e52dd7d6c9b979f0c"
     },
     {
       "group": "rendered",
       "viewport": "1440x900",
       "theme": "dark",
       "pane": "council",
-      "path": "/tmp/f28/rendered-1440x900-dark-council.png",
-      "sha256": "263ae57915ec0ffb9ffe23318c5faac2afff225484aec0b31e3bb191580e2ddb"
+      "path": "/tmp/ev/rendered-1440x900-dark-council.png",
+      "sha256": "b86037965171ee232e596a4f3a35071d9127da0b796dc4894276285939928e09"
     },
     {
       "group": "rendered",
       "viewport": "1440x900",
       "theme": "dark",
       "pane": "debate",
-      "path": "/tmp/f28/rendered-1440x900-dark-debate.png",
-      "sha256": "cd0fc52f76e0c2db5e34db20f3d8e224ae35517bd50ef6e7c3f5979c7be07bba"
+      "path": "/tmp/ev/rendered-1440x900-dark-debate.png",
+      "sha256": "67396a7df5063f7e29e4d891e38b87189fd1af3e86c15fc250c08f9195567286"
     },
     {
       "group": "rendered",
       "viewport": "1440x900",
       "theme": "dark",
       "pane": "chat",
-      "path": "/tmp/f28/rendered-1440x900-dark-chat.png",
-      "sha256": "fd7107e5cca66fd905c3a5ecf0911d91beec8a7b09de2cd5d32605c3a8304582"
+      "path": "/tmp/ev/rendered-1440x900-dark-chat.png",
+      "sha256": "26e412db8ae6dbddcb8018812668b987d5dd06ddd48b8df6cc24ab1cca1d20eb"
     },
     {
       "group": "zoom-200",
       "viewport": "1640x900",
       "theme": "light",
       "pane": "start",
-      "path": "/tmp/f28/zoom-200-1640x900-light-start.png",
-      "sha256": "4ca3c7203b8818d7df5f4251c1ed26f431a71c6d9c29b4e3cc6e129e325aa5a8"
+      "path": "/tmp/ev/zoom-200-1640x900-light-start.png",
+      "sha256": "9655ef3fc487a1a03da67dab4d651139f474a73b41235bef5a1ed4aadff26159"
     },
     {
       "group": "zoom-200",
       "viewport": "1640x900",
       "theme": "light",
       "pane": "harness",
-      "path": "/tmp/f28/zoom-200-1640x900-light-harness.png",
-      "sha256": "c403c508a3056749ff209ac9e8f67d0b94c1db76f07b5d4a61851bf0baa18132"
+      "path": "/tmp/ev/zoom-200-1640x900-light-harness.png",
+      "sha256": "f3137b719fccd2138621fe17e7018fa883e3eef0b303330ec8e85451303fec54"
     },
     {
       "group": "zoom-200",
       "viewport": "1640x900",
       "theme": "light",
       "pane": "hall",
-      "path": "/tmp/f28/zoom-200-1640x900-light-hall.png",
-      "sha256": "df898909e129f684ad3b8049d5728602cd10a964c786ff679c7896a334dd1e21"
+      "path": "/tmp/ev/zoom-200-1640x900-light-hall.png",
+      "sha256": "016c9b974b45124062e43cdfdeaf8612f6986399a37d34ecf2ef096554437e42"
     },
     {
       "group": "zoom-200",
       "viewport": "1640x900",
       "theme": "light",
       "pane": "council",
-      "path": "/tmp/f28/zoom-200-1640x900-light-council.png",
-      "sha256": "af3cde863d80cc8d88082a39a2fc9a3bcb6a98a99c737a00b65d854a6b1c586a"
+      "path": "/tmp/ev/zoom-200-1640x900-light-council.png",
+      "sha256": "a97532040dd17346d4d5974a3bad6982024c77224b0f4bb54222bdb2e86b3108"
     },
     {
       "group": "zoom-200",
       "viewport": "1640x900",
       "theme": "light",
       "pane": "debate",
-      "path": "/tmp/f28/zoom-200-1640x900-light-debate.png",
-      "sha256": "93bbf9e4e17419bef4a143985a95b2da92553b763387d66e41c2cf30e2ec2854"
+      "path": "/tmp/ev/zoom-200-1640x900-light-debate.png",
+      "sha256": "7aab8ab3f842f83431c0fdf7f0abda99a948841474a27b1f22c23a83f13c5415"
     },
     {
       "group": "zoom-200",
       "viewport": "1640x900",
       "theme": "light",
       "pane": "chat",
-      "path": "/tmp/f28/zoom-200-1640x900-light-chat.png",
-      "sha256": "a06cef6669671081855e3fc807d88e3f2c9da02163b39b020bc9ae32177afecc"
+      "path": "/tmp/ev/zoom-200-1640x900-light-chat.png",
+      "sha256": "d813ba739c81a447c86d9b5de7fe5900f24db3d9ea03de1225ef402d030e4482"
     },
     {
       "group": "zoom-200",
       "viewport": "1640x900",
       "theme": "dark",
       "pane": "start",
-      "path": "/tmp/f28/zoom-200-1640x900-dark-start.png",
-      "sha256": "46729b96d321c6041408ac9ba3b8326550c7eaa67aaa64639f8ee1d8fe491fc7"
+      "path": "/tmp/ev/zoom-200-1640x900-dark-start.png",
+      "sha256": "eafff77a8d26c724428c8d948242f6cc9fc6bf0134c43e0974f6d7045c8d6ea7"
     },
     {
       "group": "zoom-200",
       "viewport": "1640x900",
       "theme": "dark",
       "pane": "harness",
-      "path": "/tmp/f28/zoom-200-1640x900-dark-harness.png",
-      "sha256": "656b63c973b9b0f5f568de47616b3f05aab710d4a2e8bb3fa0ece46616677e92"
+      "path": "/tmp/ev/zoom-200-1640x900-dark-harness.png",
+      "sha256": "213ea85f5b6e65219f7816411379a90778e248a85d2c489e4fc82732903032cc"
     },
     {
       "group": "zoom-200",
       "viewport": "1640x900",
       "theme": "dark",
       "pane": "hall",
-      "path": "/tmp/f28/zoom-200-1640x900-dark-hall.png",
-      "sha256": "cdd91ad14809486b22f426813b1b669c401a37bfa4d5420ce28cd54298eaaa7c"
+      "path": "/tmp/ev/zoom-200-1640x900-dark-hall.png",
+      "sha256": "ac512296b7821f4ebe90f80901ba03489eef9311e04e66631bdd31177d047676"
     },
     {
       "group": "zoom-200",
       "viewport": "1640x900",
       "theme": "dark",
       "pane": "council",
-      "path": "/tmp/f28/zoom-200-1640x900-dark-council.png",
-      "sha256": "38f3c663c6efeb99e1a99d80805e0c15c88588f641bfb7b387204a04d107c114"
+      "path": "/tmp/ev/zoom-200-1640x900-dark-council.png",
+      "sha256": "a679d93292247a3fa3f8d1ad90d2d55b00fdd6c0c4493490d441ecd44d072d83"
     },
     {
       "group": "zoom-200",
       "viewport": "1640x900",
       "theme": "dark",
       "pane": "debate",
-      "path": "/tmp/f28/zoom-200-1640x900-dark-debate.png",
-      "sha256": "e183264d0ddac9684edef93a58dab42d23b90b62fd211b0cb9a0096912253fb1"
+      "path": "/tmp/ev/zoom-200-1640x900-dark-debate.png",
+      "sha256": "0a0d7f6744c9eb1ff0b81ea4adacc9614c84d95873da37c37792b819775ce1b2"
     },
     {
       "group": "zoom-200",
       "viewport": "1640x900",
       "theme": "dark",
       "pane": "chat",
-      "path": "/tmp/f28/zoom-200-1640x900-dark-chat.png",
-      "sha256": "c491bac692ed6b33429ea76b1bb1b96cdf55b4b439b0fb4ad2d586340cdca402"
+      "path": "/tmp/ev/zoom-200-1640x900-dark-chat.png",
+      "sha256": "8d324c3575e64a5b4d10e792da121f2ac6d8af6205371b8dec796af03d28ee37"
     },
     {
       "group": "zoom-200",
       "viewport": "1440x900",
       "theme": "light",
       "pane": "start",
-      "path": "/tmp/f28/zoom-200-1440x900-light-start.png",
-      "sha256": "220ce984ff2a46a4bac95183c0fdb6df94f054c57ec82a80a6d54a9fa4b0e1bb"
+      "path": "/tmp/ev/zoom-200-1440x900-light-start.png",
+      "sha256": "c2dfc1955aae60eb77b7cc10686f04ad847144815f689841465dec057633bbc7"
     },
     {
       "group": "zoom-200",
       "viewport": "1440x900",
       "theme": "light",
       "pane": "harness",
-      "path": "/tmp/f28/zoom-200-1440x900-light-harness.png",
-      "sha256": "807a9a23a28feb747ff7249f048512bd348f7da04d64892a587489b5eee89a3e"
+      "path": "/tmp/ev/zoom-200-1440x900-light-harness.png",
+      "sha256": "a2677806353464d811481f1530ea887b17bf98ab1925272c7a8d79f044aa82db"
     },
     {
       "group": "zoom-200",
       "viewport": "1440x900",
       "theme": "light",
       "pane": "hall",
-      "path": "/tmp/f28/zoom-200-1440x900-light-hall.png",
-      "sha256": "261f088c901b97024d919268628c810e150a517997bba382f6f60d3df7916b9c"
+      "path": "/tmp/ev/zoom-200-1440x900-light-hall.png",
+      "sha256": "c1c568d6abdece14598cd62d80120a54cd63347ea1ba6cf3792ad3cf6cba2ae5"
     },
     {
       "group": "zoom-200",
       "viewport": "1440x900",
       "theme": "light",
       "pane": "council",
-      "path": "/tmp/f28/zoom-200-1440x900-light-council.png",
-      "sha256": "7c33c4ff4df0bb70990a2b799b456ed6ee9b2a7cb8a63f6139d893caf2c0bf58"
+      "path": "/tmp/ev/zoom-200-1440x900-light-council.png",
+      "sha256": "5f056f613aed50581966b9dcf47bce18a0535eb2006a8936e3820f45bc9023e7"
     },
     {
       "group": "zoom-200",
       "viewport": "1440x900",
       "theme": "light",
       "pane": "debate",
-      "path": "/tmp/f28/zoom-200-1440x900-light-debate.png",
-      "sha256": "d6aa91d3d8372908d494baf52080f796c9f03ae213a78ab59a0c56a4ee5567f0"
+      "path": "/tmp/ev/zoom-200-1440x900-light-debate.png",
+      "sha256": "871bede31307be0be41a81b90efd674ca5f44c2ceadb35bf8fb2286db072cd04"
     },
     {
       "group": "zoom-200",
       "viewport": "1440x900",
       "theme": "light",
       "pane": "chat",
-      "path": "/tmp/f28/zoom-200-1440x900-light-chat.png",
-      "sha256": "56de73c4667fae9e306c341a66566f1fc7a90732cbed7c59b8093a9d491ba2a9"
+      "path": "/tmp/ev/zoom-200-1440x900-light-chat.png",
+      "sha256": "1443968c805cf3655e161334a0130cbcc706d7a4a6475e5d4d801b23a5a82d82"
     },
     {
       "group": "zoom-200",
       "viewport": "1440x900",
       "theme": "dark",
       "pane": "start",
-      "path": "/tmp/f28/zoom-200-1440x900-dark-start.png",
-      "sha256": "6d4eb86ed7992c8a3726b9036d7c0773338a32080c09e38e7d8088bec80c24a8"
+      "path": "/tmp/ev/zoom-200-1440x900-dark-start.png",
+      "sha256": "faa729034468fb3bba49c224986add19c6147b123ec386bb29f3cfcd6c09ca64"
     },
     {
       "group": "zoom-200",
       "viewport": "1440x900",
       "theme": "dark",
       "pane": "harness",
-      "path": "/tmp/f28/zoom-200-1440x900-dark-harness.png",
-      "sha256": "eba6e268f86a89e0da22bd8b71ed184e52dc4639379e7e97f9e9843f27a7ea1d"
+      "path": "/tmp/ev/zoom-200-1440x900-dark-harness.png",
+      "sha256": "4c5533f4dc7e0845460a7c6a16c3d7809225ce9214794771e34b5afd4b248801"
     },
     {
       "group": "zoom-200",
       "viewport": "1440x900",
       "theme": "dark",
       "pane": "hall",
-      "path": "/tmp/f28/zoom-200-1440x900-dark-hall.png",
-      "sha256": "4ee5d99bf0e2e9e0847b17517d25e22eb7cbfdbc09b6fabb57a16e3ab5aa33e9"
+      "path": "/tmp/ev/zoom-200-1440x900-dark-hall.png",
+      "sha256": "55d130f5d5a8bc448613ac28767cbe5f8558784058f403535093199a3be54752"
     },
     {
       "group": "zoom-200",
       "viewport": "1440x900",
       "theme": "dark",
       "pane": "council",
-      "path": "/tmp/f28/zoom-200-1440x900-dark-council.png",
-      "sha256": "6dcf6db9355c2acd02cc1328e47e4b63da379f8e7ce5e33ab3257ef1106f1a4e"
+      "path": "/tmp/ev/zoom-200-1440x900-dark-council.png",
+      "sha256": "e585ac5eb3a6aeb8c73eea2a460809d072d575c8df29c6f4fe63d633c151a7ad"
     },
     {
       "group": "zoom-200",
       "viewport": "1440x900",
       "theme": "dark",
       "pane": "debate",
-      "path": "/tmp/f28/zoom-200-1440x900-dark-debate.png",
-      "sha256": "b71023240203fed23f8be08921330a92d7d859ae499d2936516b5147bad42c3c"
+      "path": "/tmp/ev/zoom-200-1440x900-dark-debate.png",
+      "sha256": "0a8a93d1ba89103bf85facad659b11a2fbf82b2448e6d3d99be9befb7675ce50"
     },
     {
       "group": "zoom-200",
       "viewport": "1440x900",
       "theme": "dark",
       "pane": "chat",
-      "path": "/tmp/f28/zoom-200-1440x900-dark-chat.png",
-      "sha256": "d0280bf89ec9a5da3664b10940d3644b3ae65749d171b7bf9e8a2b1642ae78de"
+      "path": "/tmp/ev/zoom-200-1440x900-dark-chat.png",
+      "sha256": "cf8aeedcd47aa713d38f4fc59de7d8f4c4346c4c6e518dc4078fd46185c7a956"
     },
     {
       "group": "zoom-200",
       "viewport": "1280x800",
       "theme": "light",
       "pane": "start",
-      "path": "/tmp/f28/zoom-200-1280x800-light-start.png",
-      "sha256": "6e5893f652665add2cfacfe39bbf784fc6f6de85dcfcd7a6a651bc44e48c17af"
+      "path": "/tmp/ev/zoom-200-1280x800-light-start.png",
+      "sha256": "f2de69ff2bf53a58e3416a0ce70490941339b27f89f5e0dd30b9058a72e2f5b4"
     },
     {
       "group": "zoom-200",
       "viewport": "1280x800",
       "theme": "light",
       "pane": "harness",
-      "path": "/tmp/f28/zoom-200-1280x800-light-harness.png",
-      "sha256": "5ce709fefc15898413456583f9fcbaf8447b88f6e97685c7191f5603b73d1b79"
+      "path": "/tmp/ev/zoom-200-1280x800-light-harness.png",
+      "sha256": "17792cbdb245c176bbb7c7a77208d465afaa8b3409ddf1003c1a800bb441f8f9"
     },
     {
       "group": "zoom-200",
       "viewport": "1280x800",
       "theme": "light",
       "pane": "hall",
-      "path": "/tmp/f28/zoom-200-1280x800-light-hall.png",
-      "sha256": "f4c280c0d80ee849dd5084143eaa1d1d59cd909e42c2a68a36b100ae06f51355"
+      "path": "/tmp/ev/zoom-200-1280x800-light-hall.png",
+      "sha256": "2cb7f98365a564d2799e1332ed5f3ff898cbbb9bde6bf10db5eca14b3d8f41c4"
     },
     {
       "group": "zoom-200",
       "viewport": "1280x800",
       "theme": "light",
       "pane": "council",
-      "path": "/tmp/f28/zoom-200-1280x800-light-council.png",
-      "sha256": "9f96608678d274f4d6897ec9b5404c89a10aa37c137de47c3665242c0d12dcbe"
+      "path": "/tmp/ev/zoom-200-1280x800-light-council.png",
+      "sha256": "4aff273cc624a979f5dc868ec56c5f9f9d2d92ae8753411cd77480265ddf02dc"
     },
     {
       "group": "zoom-200",
       "viewport": "1280x800",
       "theme": "light",
       "pane": "debate",
-      "path": "/tmp/f28/zoom-200-1280x800-light-debate.png",
-      "sha256": "e2b59299b66defda7bef572d79aed708fc355e9103b1c68e881ca97469cab3ce"
+      "path": "/tmp/ev/zoom-200-1280x800-light-debate.png",
+      "sha256": "a8223b4208e5394560feea006c40549751cf0cd56ffe46957fd2980964858aed"
     },
     {
       "group": "zoom-200",
       "viewport": "1280x800",
       "theme": "light",
       "pane": "chat",
-      "path": "/tmp/f28/zoom-200-1280x800-light-chat.png",
-      "sha256": "bf26299ccd792ef65f5d5b24224debb0d8bdcd109e6cb3a2b9a28d9aac83135a"
+      "path": "/tmp/ev/zoom-200-1280x800-light-chat.png",
+      "sha256": "a41dd9ed2229c074e8b66a33f14c37ea37ac2753a3e4692f7a2775ce1394b232"
     },
     {
       "group": "zoom-200",
       "viewport": "1280x800",
       "theme": "dark",
       "pane": "start",
-      "path": "/tmp/f28/zoom-200-1280x800-dark-start.png",
-      "sha256": "f38d0b9c1bbd117908d37c867e057a864ed9087ba4992c6fe23558bc2f16b734"
+      "path": "/tmp/ev/zoom-200-1280x800-dark-start.png",
+      "sha256": "11df15f8cccdef0197d2de6ad7e480b487e843aca8eac1dcaa8222a7c1bb5c4d"
     },
     {
       "group": "zoom-200",
       "viewport": "1280x800",
       "theme": "dark",
       "pane": "harness",
-      "path": "/tmp/f28/zoom-200-1280x800-dark-harness.png",
-      "sha256": "fca359ce3c0ce305822781a5aa0021264d2db5e4750a04bb999a441401a73817"
+      "path": "/tmp/ev/zoom-200-1280x800-dark-harness.png",
+      "sha256": "98f73638d8c49044cf9ca0b4ea23b7d30eb323b4ed61459dc1491ac27af8fa58"
     },
     {
       "group": "zoom-200",
       "viewport": "1280x800",
       "theme": "dark",
       "pane": "hall",
-      "path": "/tmp/f28/zoom-200-1280x800-dark-hall.png",
-      "sha256": "36a01de35ea27777e99a4684116ab9fe9a92dfdca2bec4bebd7db2380bf16910"
+      "path": "/tmp/ev/zoom-200-1280x800-dark-hall.png",
+      "sha256": "af126ab50d0a8730843ea526914d3d07576be6e90b81480cdb62aed197ec989b"
     },
     {
       "group": "zoom-200",
       "viewport": "1280x800",
       "theme": "dark",
       "pane": "council",
-      "path": "/tmp/f28/zoom-200-1280x800-dark-council.png",
-      "sha256": "5e613413316e6cd57596ca5437ae18aac535558093744ccdf50f90aae24050d0"
+      "path": "/tmp/ev/zoom-200-1280x800-dark-council.png",
+      "sha256": "6e2f0759dfb2fc6d8e8d41c6b167167e9bf279bd07add6c146b1c156d8b57175"
     },
     {
       "group": "zoom-200",
       "viewport": "1280x800",
       "theme": "dark",
       "pane": "debate",
-      "path": "/tmp/f28/zoom-200-1280x800-dark-debate.png",
-      "sha256": "cbcb9e74952bd1e4f2ce176024b47b7bcbe9405ca3a69903b322491aac76ed40"
+      "path": "/tmp/ev/zoom-200-1280x800-dark-debate.png",
+      "sha256": "6fca6f9d2e809a7504a008f45e9c08fda1a7380bbe09b52407162c13ed94b956"
     },
     {
       "group": "zoom-200",
       "viewport": "1280x800",
       "theme": "dark",
       "pane": "chat",
-      "path": "/tmp/f28/zoom-200-1280x800-dark-chat.png",
-      "sha256": "8001c9137644887a0b3feec2c7d7bf9034f9263a4f2a993a341923d76aacd59c"
+      "path": "/tmp/ev/zoom-200-1280x800-dark-chat.png",
+      "sha256": "ea9e310ecbc42591db7d1583714c82cca5bbe92ac94f6ce1aadc46ae99e944c8"
     },
     {
       "group": "zoom-200",
       "viewport": "390x844",
       "theme": "light",
       "pane": "start",
-      "path": "/tmp/f28/zoom-200-390x844-light-start.png",
-      "sha256": "305999f4e8f25951a8f776b40a1676652eb68eefe3cbf10b495543019b97abf2"
+      "path": "/tmp/ev/zoom-200-390x844-light-start.png",
+      "sha256": "68accb8ec6eb92febf4751a2a3eeaef26a4ba4316724c80b2740af38135cb89c"
     },
     {
       "group": "zoom-200",
       "viewport": "390x844",
       "theme": "light",
       "pane": "harness",
-      "path": "/tmp/f28/zoom-200-390x844-light-harness.png",
-      "sha256": "2caead7c8d7a06d6777939dd0d81013c9b6f398e490badaeea235d457bc1e6d8"
+      "path": "/tmp/ev/zoom-200-390x844-light-harness.png",
+      "sha256": "a75826677965b43b9f4755d22c6f6552c8f29818f2eb752a3cb467c5c6a4f2c2"
     },
     {
       "group": "zoom-200",
       "viewport": "390x844",
       "theme": "light",
       "pane": "hall",
-      "path": "/tmp/f28/zoom-200-390x844-light-hall.png",
-      "sha256": "efa3c114591554e4a16f0f156a5cf413404ac1f48a9419943b00eedc85ee1961"
+      "path": "/tmp/ev/zoom-200-390x844-light-hall.png",
+      "sha256": "557d58993992bdcff40439da2c9ddf3b3ca667ab40d356986686f403578b5bde"
     },
     {
       "group": "zoom-200",
       "viewport": "390x844",
       "theme": "light",
       "pane": "council",
-      "path": "/tmp/f28/zoom-200-390x844-light-council.png",
-      "sha256": "3104e1a210202cbfa454d41aba24b7e4093290cb51495e9bf7e98eedf35fc180"
+      "path": "/tmp/ev/zoom-200-390x844-light-council.png",
+      "sha256": "37deb7b35422b921b8e1aac3d4500c72556eb241391b7a058de49667ef1a222d"
     },
     {
       "group": "zoom-200",
       "viewport": "390x844",
       "theme": "light",
       "pane": "debate",
-      "path": "/tmp/f28/zoom-200-390x844-light-debate.png",
-      "sha256": "1eb8fc1a111d3df0874e250de33c1d8fe5a30201efca63138f2d87b5c4256a58"
+      "path": "/tmp/ev/zoom-200-390x844-light-debate.png",
+      "sha256": "5825035281bebea818331689d0727264e3b3fc0c19239bce1cedd1268873a790"
     },
     {
       "group": "zoom-200",
       "viewport": "390x844",
       "theme": "light",
       "pane": "chat",
-      "path": "/tmp/f28/zoom-200-390x844-light-chat.png",
-      "sha256": "6516829e69d857a640b8820012eafc4344cca408183c5015bd43429557867811"
+      "path": "/tmp/ev/zoom-200-390x844-light-chat.png",
+      "sha256": "531235815fd76c801c3ddff67d34dfddd226b6d59ac44f3546e32af628ddf752"
     },
     {
       "group": "zoom-200",
       "viewport": "390x844",
       "theme": "dark",
       "pane": "start",
-      "path": "/tmp/f28/zoom-200-390x844-dark-start.png",
-      "sha256": "40267c149b8d16a66615726c4bf142e53753307cc69beb8179cb76faca67df5f"
+      "path": "/tmp/ev/zoom-200-390x844-dark-start.png",
+      "sha256": "12b2425d2325bda60fac4d58b2d427868195ac8416faf597f5769fbb91051a99"
     },
     {
       "group": "zoom-200",
       "viewport": "390x844",
       "theme": "dark",
       "pane": "harness",
-      "path": "/tmp/f28/zoom-200-390x844-dark-harness.png",
-      "sha256": "445a5d1aea920d9556f467bd34683aaef69a4a1dda9f22090123895a2dc2d4cd"
+      "path": "/tmp/ev/zoom-200-390x844-dark-harness.png",
+      "sha256": "979af0c2b5653be3ec0cfa49770d666558eee44244ffa751897e5bda62db7d76"
     },
     {
       "group": "zoom-200",
       "viewport": "390x844",
       "theme": "dark",
       "pane": "hall",
-      "path": "/tmp/f28/zoom-200-390x844-dark-hall.png",
-      "sha256": "f8d9d8c224f9729b1d2f7f183338fc2e5fce450f68da591a7a2ea6c02e092fbf"
+      "path": "/tmp/ev/zoom-200-390x844-dark-hall.png",
+      "sha256": "d7bcee214ca612e50549e12659f8e8bea46bce874b7984d7fbe7732fa793af79"
     },
     {
       "group": "zoom-200",
       "viewport": "390x844",
       "theme": "dark",
       "pane": "council",
-      "path": "/tmp/f28/zoom-200-390x844-dark-council.png",
-      "sha256": "40764bc5b7f4c757096ce671406e22195e243a435fab67950ee3b8ba86bcfa87"
+      "path": "/tmp/ev/zoom-200-390x844-dark-council.png",
+      "sha256": "377b338ef572e0cadf7b369b9efa906f74592ef7d922f78905ba21f89e94cd6b"
     },
     {
       "group": "zoom-200",
       "viewport": "390x844",
       "theme": "dark",
       "pane": "debate",
-      "path": "/tmp/f28/zoom-200-390x844-dark-debate.png",
-      "sha256": "23994d35c041630b3ebb57a25d8f8e5a591e0e9db572cf1549a1e3e470ff6fc7"
+      "path": "/tmp/ev/zoom-200-390x844-dark-debate.png",
+      "sha256": "91700d8087fcc99f8e08f104a3db856ae94eb1e87cb95f358449b0ee889d6327"
     },
     {
       "group": "zoom-200",
       "viewport": "390x844",
       "theme": "dark",
       "pane": "chat",
-      "path": "/tmp/f28/zoom-200-390x844-dark-chat.png",
-      "sha256": "855927d7fdb1415657a0e03222c884e045fd11d1f7494ac6aac7e860b69ee466"
+      "path": "/tmp/ev/zoom-200-390x844-dark-chat.png",
+      "sha256": "b90a7ab16f976821250367d1d2d570de9d0c135828a8692786c75fae7e3d0551"
     },
     {
       "group": "long-recovery",
       "viewport": "1280x800",
       "theme": "dark",
       "pane": "conclusion-modal",
-      "path": "/tmp/f28/long-recovery-1280x800-dark-conclusion-modal.png",
-      "sha256": "f4c210a3db8b800b5000431e07d64df40b951fdd3406a12ec8cbd7461c64405a"
+      "path": "/tmp/ev/long-recovery-1280x800-dark-conclusion-modal.png",
+      "sha256": "6a6d3d6ca49a5010fc2ccdea7b0c1c84444860c3d4d0be0e3154e171b2b811b1"
     },
     {
       "group": "long-recovery",
       "viewport": "390x844",
       "theme": "light",
       "pane": "conclusion-modal",
-      "path": "/tmp/f28/long-recovery-390x844-light-conclusion-modal.png",
-      "sha256": "4525380239def17590a45346539dc4595a8f3e456faeea7b29171768c7cbf6f7"
+      "path": "/tmp/ev/long-recovery-390x844-light-conclusion-modal.png",
+      "sha256": "e28289eabdb5bb9806a9b6669c56d15354e478f56e29514c31f2869de43cbcf1"
     }
   ]
 }

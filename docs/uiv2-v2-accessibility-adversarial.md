@@ -15,7 +15,7 @@ Measured runtime accessibility and recovery evidence, not a screen-reader certif
 
 **120/120 checks passed; 62 captures; 0 failures.**
 
-Run Git head: `0037008aedde9b1ff9f37698ff8dd9d7452fdd97`; dirty worktree during evidence capture: `false`.
+Run Git head: `b6134c56aac555379685a300247021a3dcc913c2`; dirty worktree during evidence capture: `true`.
 
 Local after evidence: `/tmp/uiv2-28-adversarial-after/capture-manifest.json` and its 62 PNGs. Original baselines are `/tmp/uiv2-28-before-a11y.log`, `/tmp/uiv2-28-before-responsive.log`, and `/tmp/uiv2-28-contrast-before.json`; these `/tmp` paths are review evidence, not release inputs.
 
@@ -29,7 +29,7 @@ The final long-recovery pass added four checks beyond the initial 116-check matr
 | `#harnessProjectSummary` | 113×18 CSS px | 24px minimum target height; responsive walk passes |
 | `#hallClearSessionBtn` | right=430px at a 360px viewport | contained horizontal action scrolling; the control remains reachable |
 | `#chatPersona` | 20×44 CSS px at 200% phone zoom | 140px group minimum wraps only when two columns cannot fit |
-| `#monitorToggleBtn` | clipped at a 195px effective viewport | wrapping workspace toolbar; reachable at 200% |
+| `#monitorToggleBtn` | clipped at a 195px effective viewport | the header is one row and scrolls horizontally at narrow widths, so the toggle stays reachable at 200%; #hallClearSessionBtn uses the same contained-scroll remedy |
 | `#startTaskInput` | 220px fixed minimum caused horizontal overflow | zero flex minimum with the desktop basis retained |
 | `Start / Council / Chat recovery` | short-height content had no reachable scroll path | native Start-shell and Council/Chat main overflow recovery |
 

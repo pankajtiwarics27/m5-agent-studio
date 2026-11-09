@@ -60,6 +60,7 @@ DIALOG_IDS = {
     "harnessGrantsModal",
     "harnessEvidenceModal",
     "hallConclusionModal",  # UIV2-12: expanded pinned conclusion
+    "settingsModal",  # UIV2-P7-07: theme and telemetry moved off the header
 }
 
 
@@ -109,7 +110,7 @@ def test_every_dialog_is_named_labelled_and_wired() -> None:
     payload = _payload()
     ids = {dialog["id"] for dialog in payload["dialogs"]}
     assert ids == DIALOG_IDS
-    assert payload["totals"]["dialogs_via_controller"] == 13
+    assert payload["totals"]["dialogs_via_controller"] == 14  # UIV2-P7-07: + settingsModal
     for dialog in payload["dialogs"]:
         assert dialog["role"] == "dialog", dialog["id"]
         assert dialog["label"], dialog["id"]

@@ -12,9 +12,9 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "7a938b83e3b512b80b20ed006436763117acb4445ce13b463bcc93f72699c6f6",
-      "bytes": 1055526,
-      "lines": 18043
+      "sha256": "2bf80b669dff0202201dbe15fce36034290ea4a13bb0b4286d30d8e788ee5e44",
+      "bytes": 1063844,
+      "lines": 18157
     },
     {
       "path": "app.py",
@@ -460,8 +460,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "7a938b83e3b512b80b20ed006436763117acb4445ce13b463bcc93f72699c6f6",
-    "lines": 18043,
+    "sha256": "2bf80b669dff0202201dbe15fce36034290ea4a13bb0b4286d30d8e788ee5e44",
+    "lines": 18157,
     "tab_count": 6,
     "tabs": [
       {
