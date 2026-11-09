@@ -24134,8 +24134,20 @@ async def api_unload_model(model_id: str, request: Request) -> JSONResponse:
         if _demo_loaded_model == model_id:
             _demo_loaded_model = None
         return JSONResponse({"status": "ok", "model_id": model_id, "demo": True})
-    r = await client.post(f"{OMLX_BASE}/v1/models/{model_id}/unload", timeout=30.0)
-    return JSONResponse({"status": "ok"} if r.status_code == 400 else r.json())
+    try:
+        response = await client.post(f"{OMLX_BASE}/v1/models/{model_id}/unload", timeout=30.0)
+        _reject_redirect_response(response, f"{OMLX_BASE}/v1/models/{model_id}/unload")
+        if not 200 <= response.status_code < 300:
+            raise RuntimeError("legacy unload was not confirmed")
+        payload = response.json()
+    except asyncio.CancelledError:
+        raise
+    except Exception:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "legacy_unload_unconfirmed", "retryable": False},
+        ) from None
+    return JSONResponse(payload)
 
 
 @app.post("/api/cache/clear-ssd")
