@@ -1213,3 +1213,15 @@ interruption and dormant warm native/fit kernels with synthetic facts. No folder
 is created or workspace switched by a suggestion; original limits/options and
 legacy defaults remain unchanged. LC09, paused test8, proposed ADR and independent
 acceptance boundaries are not advanced.
+
+
+## Bounded legacy cleanup failure handling
+
+After merged PR267, a focused audit of `_unload_omlx_model` reproduced normal
+return after every HTTP status and swallowed transport failures in its online
+legacy branch. It now rejects redirects/non-2xx and fails privately on transport
+errors, preserving cancellation; coordinated dispatch still fails closed. See the
+[legacy cleanup audit](lc08-legacy-cleanup-audit.md). A 2xx plus the existing delay
+is not measured physical release. Offline/demo behavior, legacy defaults, direct
+unload route owners and hardware/acceptance status are unchanged. The matrix has
+29 owners/54 static sites, six bounded assessments and23inventory-only owners.

@@ -11,7 +11,7 @@ is introduced. Legacy remains the default.
 The [owner matrix](../tests/fixtures/runtime_dispatch/workflow_coverage.json)
 retains **29 owners / 54 static sites**: two shared Council/Debate adapter owners,
 one HTTP Hall owner, one MCP owner and now one workspace-suggestion owner have
-bounded assessments; **24 owners remain inventory-only**. Council/Debate assembly
+bounded assessments at that audit point; later owner coverage is summarized in the [legacy cleanup audit](lc08-legacy-cleanup-audit.md). Council/Debate assembly
 closures remain separately named. This accounting is not a permission or native
 qualification oracle.
 

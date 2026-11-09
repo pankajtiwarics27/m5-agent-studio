@@ -239,6 +239,11 @@ fixed options, tool-context restoration and suggestion-only/no-filesystem-action
 semantics. See the [workspace suggestion audit](../lc08-workspace-suggestion-audit.md);
 no canonical tool consumer, producer or review activation is introduced.
 
+A bounded legacy online cleanup audit now refuses redirect, non-2xx, and
+transport-error responses rather than returning normally, while preserving the
+coordinated fail-closed boundary. Its HTTP response is not physical-release
+evidence; see [legacy cleanup evidence](../lc08-legacy-cleanup-audit.md).
+
 ## Alternatives
 
 - Replace served routing immediately: would activate unqualified transports and

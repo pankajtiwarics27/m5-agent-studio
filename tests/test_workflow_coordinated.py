@@ -462,6 +462,7 @@ def test_owner_matrix_matches_current_static_inventory_without_promoting_coverag
             "api_hall_summon.event_gen": "bounded_hall_http_summon",
             "_mcp_summon_model": "bounded_mcp_stdio_summon",
             "api_workspace_picker_suggest": "bounded_workspace_suggestion",
+            "_unload_omlx_model": "bounded_legacy_cleanup_failure",
         }
         assert row["assessment"] == assessments.get(
             row["owner"], "inventory_only_in_this_audit"
@@ -498,6 +499,9 @@ from test_workflow_coordinated import test_coordinated_reasoning_only_workflow_n
 from test_workflow_hall_coordinated import test_hall_reasoning_only_never_retries_changed_budget_in_coordinated_mode,test_hall_close_or_disconnect_immediately_closes_source_without_saving,test_hall_cleanup_failure_keeps_completed_transcript_but_never_reports_summon_success
 from test_workflow_mcp_coordinated import test_mcp_consumer_error_closes_owned_source_before_client_exit,test_mcp_preserves_full_matter_chronicle_role_and_original_options,test_mcp_unconfirmed_cleanup_never_appends_or_returns_success
 from test_workflow_picker_coordinated import test_picker_oversize_output_closes_source_before_return_and_restores_tools,test_picker_preserves_entire_valid_description_and_fixed_options_without_authority,test_picker_native_tool_call_is_refused_not_executed
+from test_workflow_unload_legacy import test_online_legacy_cleanup_rejects_unconfirmed_http_status_without_leaking_body
+with pytest.MonkeyPatch.context() as patch:
+ test_online_legacy_cleanup_rejects_unconfirmed_http_status_without_leaking_body(patch,500)
 with pytest.MonkeyPatch.context() as patch:
  test_picker_oversize_output_closes_source_before_return_and_restores_tools(patch)
 with pytest.MonkeyPatch.context() as patch:

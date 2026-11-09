@@ -6035,10 +6035,18 @@ async def _unload_omlx_model(client: httpx.AsyncClient, model_id: str) -> None:
         await asyncio.sleep(0.15)
         return
     try:
-        await client.post(f"{OMLX_BASE}/v1/models/{model_id}/unload", timeout=20.0)
+        response = await client.post(f"{OMLX_BASE}/v1/models/{model_id}/unload", timeout=20.0)
+        _reject_redirect_response(response, f"{OMLX_BASE}/v1/models/{model_id}/unload")
+        if not 200 <= response.status_code < 300:
+            raise RuntimeError("legacy cleanup was not confirmed")
         await asyncio.sleep(1.0)
+    except asyncio.CancelledError:
+        raise
     except Exception:
-        pass
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "legacy_cleanup_unconfirmed", "retryable": False},
+        ) from None
 
 
 async def _unload_other_omlx_models(client: httpx.AsyncClient, keep_model_id: str) -> list[str]:
