@@ -224,13 +224,18 @@ inference completion, physical release, retry permission or fit approval.
 
 ## Tradeoffs
 
-LC-08 remains incomplete: cold acquisition/control orchestration, pre-disruption
-metadata gates, remaining all-path canonical consumption and complete cross-runtime
-cold-control races still need implementation/proof. The warm executor is not a
-production producer or cold scheduler. The continuation step driver adds real
-cold source-to-target bridge/memory consumption and both-direction cross-runtime
-release/race tests with fake facts; app scheduling, full controls and remaining
-workflow consumption are still open.
+LC-08 remains incomplete, but the warm-only limitations recorded in earlier
+checkpoints are not the current implementation boundary. Dormant bounded
+cold-to-warm inference, optional explicit load/unload actors, pre-disruption
+readiness, selected cross-runtime/control races, durable native completion receipts
+and atomic native/fit-counter holds now exist. They use synthetic qualification
+facts and are not production-installed producers or all-workflow enforcement.
+Remaining work includes per-owner complete-input/canonical consumption evidence,
+production composition, unsupported target/control policies, broader adversarial
+coverage and separately gated LC09 recovery. See the
+[current status and gap review](../lc08-current-status.md) for source/test anchors
+and the recommended bounded workflow-coverage increment. This status clarification
+does not change the proposed decision, review metadata or acceptance requirements.
 Coordinated combos, unqualified private/proxy providers and unowned evictions
 currently refuse. Legacy behavior remains served by default, so no cross-runtime
 guarantee is claimed for it. Static inventory cannot prove dynamic/native
