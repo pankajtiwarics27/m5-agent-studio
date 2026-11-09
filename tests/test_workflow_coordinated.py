@@ -467,6 +467,9 @@ def test_owner_matrix_matches_current_static_inventory_without_promoting_coverag
             "api_load_model": "bounded_legacy_load_route",
             "api_unload_all": "bounded_legacy_unload_all_route",
             "api_clear_ssd_cache": "bounded_legacy_cache_clear_route",
+            "AnthropicProviderAdapter.stream": "bounded_provider_stream_consumer_close",
+            "OpenAICompatibleProviderAdapter.stream": "bounded_provider_stream_consumer_close",
+            "_stream_cloud_openai": "bounded_provider_stream_consumer_close",
         }
         assert row["assessment"] == assessments.get(
             row["owner"], "inventory_only_in_this_audit"

@@ -1271,3 +1271,16 @@ valid 2xx JSON, coordinated routing and the explicitly marked demo branch remain
 unchanged. See the [cache-clear audit](lc08-cache-clear-route-audit.md). Mock
 responses are not evidence of actual cache deletion. Matrix:29owners/54sites, ten
 bounded assessments and19inventory-only; no runtime or acceptance advancement.
+
+
+## Bounded provider-stream consumer-close handling
+
+Consumer cancellation of the existing OpenAI-compatible and Anthropic provider
+streams now explicitly closes delegated async iterators down to the client-owned
+HTTP response body. Synthetic `httpx.MockTransport` regressions reproduce the
+previously open body and verify closure before `stream_any_model.aclose()`
+returns. See the [provider-stream closure audit](lc08-provider-stream-close-audit.md).
+This does not assert provider-side work cancellation or physical resource
+release. The matrix remains at 29 owners / 54 sites, with twelve bounded
+assessments and 17 inventory-only owners; no activation, hardware, acceptance,
+test8, or LC09–11 status advancement.
