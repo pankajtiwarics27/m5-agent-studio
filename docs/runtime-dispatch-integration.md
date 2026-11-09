@@ -954,3 +954,65 @@ UIV2-30 --check remains deliberately blocked under that inherited owner decision
 this is not a new waiver or fresh release acceptance. Live isolation remains
 unqualified/blocked. Full regression and new exact combined-head CI must be rerun;
 earlier source-only results do not validate the merged tree.
+
+## Claimed operation/FIFO identity before transition consumers
+
+The previous integrated checkpoint130552c passed **4871 local tests,53 skips,
+one warning**; PR CI42517972609 and push CI42517967305 were green. PR260
+comment6726656408 supersedes its chronological pending notes. Those are historical
+results, not validation of this continuation. The local rehydrated files matched
+that remote tree exactly before branch/index metadata was restored; no working
+content was discarded.
+
+A follow-on offline audit reproduced a transition-level ownership gap. Acquire
+claims carry a target but no durable requesting-owner column; a same-target
+queued waiter could previously reach another FIFO caller's stage. Actor producer
+failure and wrong-purpose refusal could also mark a foreign acquire/release stage
+uncertain. The initial16-case audit reproduced12 failures, with4 refusals already
+safe. This is trusted composition fault injection, not an activated remote exploit.
+
+The driver now supplies a **read-only claim identity/FIFO check**. It requires the
+exact concrete queued/step types, queued request/domain/target/deadline, actual
+current queued FIFO head, dispatched active operation/stage/epoch/generation,
+source/instance and current domain operation identity. Acquire additionally checks
+its exact durable target and acquire goal; release checks its durable request and
+source-memory reference with no target. A shared target alone is not ownership.
+
+Each actor invokes this check before transition/release producers, wrong-purpose
+marking or cleanup ownership. Direct acquire/release drivers repeat it in the SAME
+current-gate transaction, before effectful native/current checks. Foreign claims
+refuse without probe/count/send, memory pause, stage mutation or cancellation of
+the foreign request; only the actor's own queued waiter is cancelled. No stale
+callback is permission to expire another owner's operation.
+
+This is identity validation, **not** native authority or a new persistent acquire
+owner/grant. Native purpose/cancellation/deadline, physical proof, fit, source
+memory/profile and settlement gates remain separate and mandatory. It adds no
+operation handoff, polling, cancellation recovery, implicit coalescence or schema
+change. Existing genuinely owned producer failures retain conservative holds.
+
+Initial evidence: **38 new offline tests;1248 passed,one upstream warning** in the
+combined23-module lifecycle/native/dispatch/fit/persistence suite (126.17s).
+Coverage includes all three actors, both providers and operation goals, same-target
+foreign FIFO, direct-driver repeat checks, stale foreign stages, forged operation
+identity and concrete-type refusals. Private standalone rejects same-target foreign
+acquire claims for both load and inference, without public native sibling fallback.
+All installed/native facts and transports remain synthetic. Full regression and
+exact-head CI are recorded separately after execution. No activation/defaults,
+HTTP redirection, oMLX target/inference, unload-all/cache, already-absent policy,
+LC09 recovery or independent acceptance is added. Inherited P7-PARK-01 remains
+unchanged; historical UIV2-30 review artifacts are not regenerated or relabelled.
+
+
+Pre-full operation-ownership checkpoint: five disposable mutations caught skipped
+actor pre-producer checks (14 failures), missing atomic driver repeats (two),
+ignored FIFO head (six), ignored source/instance (two), and ignored release source
+hold (two). A harness substitution initially produced invalid Python in a lambda;
+that harness-only error was repaired and all five valid mutations rerun. Source
+worktree was never mutated by the harness. Ruff/mypy75, compile, scopes200/13,
+docs259/ADR, baseline/governance/deferred security, frontend JavaScript and both
+app/standalone auth/origin smokes passed. Standalone4,276,877bytes; fresh backend
+302/16, source64/6/121, preservation21/272/50, performance21/21 and demo/screenshot
+6/6 passed. Inherited P7-PARK-01/release-review artifacts remain untouched, not a
+current green approval. Full regression and fresh exact-head CI remain pending
+at this chronological note; no activation or independent acceptance is claimed.

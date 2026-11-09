@@ -182,6 +182,17 @@ native/fit/physical/recovery authority, and preserve existing generation/instanc
 profile/current-state gates. Do not infer general operation ownership or enable
 new native targets, producers, routes or migration/recovery through this check.
 
+Extend consumer ownership checks to claimed lifecycle stages: verify exact current
+queued FIFO head and durable operation/domain/source/target/stage/epoch/generation
+identity before actor producers, wrong-purpose mutation or cleanup ownership.
+Release additionally binds its durable request and source-memory ID; acquire's
+shared target alone is not ownership. Repeat the same read-only check in each
+concrete driver's current-gate transaction, before native/current checks. Refuse
+foreign claims without mutation, pause, cancellation or expiry of foreign work.
+This is not a new persistent acquire-owner/grant, native authorization, coalescing
+or recovery protocol. Preserve separate purpose/cancellation/deadline/native/fit/
+physical/memory gates and owned failure holding; no schema or activation change.
+
 ## Alternatives
 
 - Replace served routing immediately: would activate unqualified transports and

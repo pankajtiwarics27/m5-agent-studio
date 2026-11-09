@@ -715,6 +715,11 @@ from test_native_scheduler_ownership import test_real_foreign_inference_lease_ca
 for backend in ('ollama','lmstudio'):
  with pytest.MonkeyPatch.context() as patch:
   test_real_foreign_inference_lease_cannot_send_this_call_under_another_request(pathlib.Path('private-foreign-lease-'+backend),patch,backend)
+from test_native_transition_ownership import test_same_target_does_not_make_another_fifo_acquire_claim_ours
+for backend in ('ollama','lmstudio'):
+ for actor in ('inference','load'):
+  with pytest.MonkeyPatch.context() as patch:
+   test_same_target_does_not_make_another_fifo_acquire_claim_ours(pathlib.Path('private-foreign-transition-'+backend+'-'+actor),patch,backend,actor)
 print('isolated native executor and shared transaction guards passed')
 """.replace("REPO", repr(str(root)))
     env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}

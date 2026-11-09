@@ -26,8 +26,8 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "57911c50d4ec0817496d3dadf04b0e8a5e95b4d670c376dc1aacd0bcf6f7cf40",
-      "bytes": 4272345,
+      "sha256": "222f10697864dc28739b292c42d0c7165a5288f851959a890cf08e4f9091c5be",
+      "bytes": 4276877,
       "lines": 83105
     },
     {

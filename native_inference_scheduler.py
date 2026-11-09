@@ -140,6 +140,8 @@ class NativeInferenceScheduler:
                     now_ms=self.driver._now(),
                     request_id=queued.request_id,
                 )
+                if isinstance(item, (TransitionStep, ReleaseStep)):
+                    self.driver.check_claim_owner(item, queued)
                 if isinstance(item, LoadLease):
                     self._check_lease_owner(queued, item)
                     control = item
@@ -402,6 +404,8 @@ class NativeInferenceScheduler:
                     now_ms=self.driver._now(),
                     request_id=queued.request_id,
                 )
+                if isinstance(item, (TransitionStep, ReleaseStep)):
+                    self.driver.check_claim_owner(item, queued)
                 if isinstance(item, (RequestLease, LoadLease)):
                     self._check_lease_owner(queued, item)
                 if type(item) is not ReleaseStep:
@@ -536,6 +540,8 @@ class NativeInferenceScheduler:
                     now_ms=self.driver._now(),
                     request_id=queued.request_id,
                 )
+                if isinstance(item, (TransitionStep, ReleaseStep)):
+                    self.driver.check_claim_owner(item, queued)
                 if item is None:
                     raise RuntimeDispatchDenied("coordinated_execution_unavailable")
                 if isinstance(item, (RequestLease, LoadLease)):
