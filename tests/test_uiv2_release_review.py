@@ -173,10 +173,13 @@ def test_ci_teardown_failure_is_disclosed_and_process_group_cleanup_is_fixed(pay
 def test_uiv2_29_final_summary_uses_actual_metrics_not_flat_transcription(payload: dict) -> None:
     memory = payload["measured_performance"]["memory"]
     nodes = [memory[key]["Nodes"] for key in ("baseline", "after_cycle_1", "after_cycle_2")]
-    assert nodes == [8481, 8481, 8481]
+    # Node counts are deterministic for a given markup, so the plateau is pinned rather than
+    # derived: UIV2-P7-07's single-row header and Settings overlay moved it from 8481 to 8544
+    # without repeated-cycle growth. The summary must quote the newest committed run.
+    assert nodes == [8544, 8544, 8544]
     tracking = next(story for story in roadmap()["stories"] if story["id"] == "UIV2-29")["tracking"]
-    final = next(row for row in tracking["tests_executed"] if row.startswith("Final full-window timing"))
-    assert "8481 -> 8481 -> 8481" in final
+    final = [row for row in tracking["tests_executed"] if row.startswith("Final full-window timing")][-1]
+    assert "8544 -> 8544 -> 8544" in final
     # The heap figures vary run to run, so the property worth asserting is that the ledger
     # quotes *the committed run*, not one particular sample. Hardcoding a sample meant any
     # legitimate regeneration of the UIV2-29 record failed this test for no real reason.

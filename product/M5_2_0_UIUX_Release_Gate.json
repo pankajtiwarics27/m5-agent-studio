@@ -51,9 +51,9 @@
           "artifact": "product/M5_2_0_UIUX_Control_Inventory.json",
           "totals": {
             "panes": 6,
-            "markup_controls": 272,
+            "markup_controls": 273,
             "pane_controls": 110,
-            "chrome_controls": 162,
+            "chrome_controls": 163,
             "script_rendered_controls": 74,
             "script_rendered_by_function": {
               "debateModelPageFooter": 2,
@@ -215,8 +215,8 @@
           "totals": {
             "panes": 6,
             "preserved_capabilities": 21,
-            "markup_controls": 272,
-            "chrome_controls": 162,
+            "markup_controls": 273,
+            "chrome_controls": 163,
             "pane_controls": 110,
             "script_rendered_controls": 74,
             "routes": 121,
@@ -252,7 +252,7 @@
           "totals": {
             "tokens": 58,
             "groups": 8,
-            "references": 1637,
+            "references": 1645,
             "theme_overrides": 20,
             "density_overrides": 5,
             "contrast_pairs": 28,
@@ -300,8 +300,8 @@
         {
           "artifact": "product/M5_2_0_UIUX_Overlays.json",
           "totals": {
-            "dialogs": 13,
-            "dialogs_via_controller": 13,
+            "dialogs": 14,
+            "dialogs_via_controller": 14,
             "registry_entries": 4,
             "rail_shortcuts": 6,
             "advertised_controls": 1,
@@ -822,7 +822,7 @@
         {
           "artifact": "product/M5_2_0_UIUX_Polish.json",
           "totals": {
-            "radius_rules": 143,
+            "radius_rules": 144,
             "motion_rules": 18,
             "press_rules": 2,
             "hover_rules": 36,
@@ -1148,8 +1148,8 @@
   "inventory": {
     "tabs": 6,
     "routes": 121,
-    "markup_controls": 272,
-    "chrome_controls": 162,
+    "markup_controls": 273,
+    "chrome_controls": 163,
     "script_rendered_controls": 74,
     "capabilities": 21,
     "e2e_rows": 21,

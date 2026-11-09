@@ -93,7 +93,7 @@ The adversarial walk supplies the common seeded state and route-created long/rec
 
 The UIV2-26 48-variant actual/reference/annotated matrix remains mandatory. Accessibility changes that alter the approved structural signature require a fresh candidate and explicit human approval; a passing accessibility walk cannot approve its own pixels.
 
-The source-derived UIV2-02 control/API map (currently 272 controls and 121 mounted routes) and the UIV2-27 21-row preservation run remain mandatory. No backend route, payload, session/workspace rule, authorization, sandbox, action-ledger, lease-fencing or model-memory boundary is changed by this story.
+The source-derived UIV2-02 control/API map (currently 273 controls and 121 mounted routes) and the UIV2-27 21-row preservation run remain mandatory. No backend route, payload, session/workspace rule, authorization, sandbox, action-ledger, lease-fencing or model-memory boundary is changed by this story.
 
 ## Reproduce
 
