@@ -54,7 +54,9 @@ jobs:
           LD_LIBRARY_PATH="$RUNNER_TEMP/m5-browser/libs/lib" "$chrome" --version
       - name: UIV2-29 browser walk (real SSE, DOM/heap, layout)
         run: node scripts/uiv2_performance_safety_walk.mjs --screenshots "$RUNNER_TEMP/uiv2-29"
-      - name: UIV2-29 import, backend run and regenerate
+      - name: UIV2-29 import and regenerate
+        # The backend half of UIV2-29 needs no browser, so it is run and committed from the
+        # developer checkout; only the walk half has to happen here.
         # Job logs and artifacts are unreachable from the sandbox that drives this branch, so a
         # failure here has to say why in a place the API can read: check-run annotations.
         run: |
@@ -67,7 +69,6 @@ jobs:
             fi
           }
           step python scripts/uiv2_performance_safety.py --import-evidence "$RUNNER_TEMP/uiv2-29/capture-manifest.json" || exit 1
-          step python scripts/uiv2_performance_safety.py --run-backend || exit 1
           step python scripts/uiv2_performance_safety.py || exit 1
           step python scripts/uiv2_performance_safety.py --check
       - name: UIV2-28 browser walk (keyboard, responsive, adversarial)
