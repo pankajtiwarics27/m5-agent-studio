@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "scope": "Static owner mapping plus bounded Council/Debate adapters, Hall HTTP/MCP summon, workspace suggestion, cleanup helper, and direct load/unload route audits; not all-workflow or native qualification.",
+  "scope": "Static owner mapping plus bounded Council/Debate adapters, Hall HTTP/MCP summon, workspace suggestion, legacy cleanup, and direct load/unload/cache-clear routes; not all-workflow or native qualification.",
   "assembly_owners": [
     "api_council_stream.event_gen",
     "api_debate_stream.event_gen"
@@ -11,16 +11,16 @@
       "seams": [
         "_stream_cloud_anthropic"
       ],
-      "assessment": "inventory_only_in_this_audit",
-      "evidence": "docs/runtime-dispatch-entry-points.md"
+      "assessment": "bounded_provider_stream_consumer_close",
+      "evidence": "tests/test_workflow_provider_stream_close.py"
     },
     {
       "owner": "OpenAICompatibleProviderAdapter.stream",
       "seams": [
         "_stream_cloud_openai"
       ],
-      "assessment": "inventory_only_in_this_audit",
-      "evidence": "docs/runtime-dispatch-entry-points.md"
+      "assessment": "bounded_provider_stream_consumer_close",
+      "evidence": "tests/test_workflow_provider_stream_close.py"
     },
     {
       "owner": "_coordinated_gateway_chat.events",
@@ -53,8 +53,8 @@
       "seams": [
         "guarded legacy HTTP (not coordinated authority)"
       ],
-      "assessment": "inventory_only_in_this_audit",
-      "evidence": "docs/runtime-dispatch-entry-points.md"
+      "assessment": "bounded_provider_stream_consumer_close",
+      "evidence": "tests/test_workflow_provider_stream_close.py"
     },
     {
       "owner": "_stream_omlx_completion",
@@ -62,8 +62,8 @@
         "_unload_other_omlx_models",
         "guarded legacy HTTP (not coordinated authority)"
       ],
-      "assessment": "inventory_only_in_this_audit",
-      "evidence": "docs/runtime-dispatch-entry-points.md"
+      "assessment": "bounded_local_stream_consumer_close",
+      "evidence": "tests/test_workflow_local_stream_close.py"
     },
     {
       "owner": "_unload_omlx_model",
@@ -111,8 +111,8 @@
       "seams": [
         "guarded legacy HTTP (not coordinated authority)"
       ],
-      "assessment": "inventory_only_in_this_audit",
-      "evidence": "docs/runtime-dispatch-entry-points.md"
+      "assessment": "bounded_legacy_cache_clear_route",
+      "evidence": "tests/test_workflow_cache_clear_route.py"
     },
     {
       "owner": "api_hall_summon.event_gen",
@@ -172,8 +172,8 @@
       "seams": [
         "guarded legacy HTTP (not coordinated authority)"
       ],
-      "assessment": "inventory_only_in_this_audit",
-      "evidence": "docs/runtime-dispatch-entry-points.md"
+      "assessment": "bounded_legacy_unload_all_route",
+      "evidence": "tests/test_workflow_unload_all_route.py"
     },
     {
       "owner": "api_unload_model",

@@ -1,14 +1,14 @@
 {
   "story": "UIV2-29",
   "kind": "backend-safety-run",
-  "generated_at": "2026-11-09T09:52:18.913083+00:00",
+  "generated_at": "2026-11-09T14:19:00.698821+00:00",
   "git": {
-    "head": "06d0eeed88f908a3e43cf632abad2e8223e2f7de",
-    "dirty": true
+    "head": "67a545db8101bbffc9ac6fac7b58e5582262e065",
+    "dirty": false
   },
   "source_sha256": {
     "static/index.html": "7a938b83e3b512b80b20ed006436763117acb4445ce13b463bcc93f72699c6f6",
-    "app.py": "69bf6b75da0ee043c763becf8e7889bc88c72ec6733a928a29f023ba5e5da8f7",
+    "app.py": "ee1d3a22de343a0a7484406141bbb605d3f6f011d74c5919ee87701e711adb09",
     "task_events.py": "59ab9597bed3a497de995cf775354c5b6dff57a4009c19e232e33d0f6b8d31d7",
     "scoped_grants.py": "b14f49e39a684f7a6c18b681ed68622b0bdbaa98ce7ba1c0dc2f37d2dfcd83ec",
     "recovery_guard.py": "73fd90ed2ecd819876a7acc5f10a199b84c6439823833095ff2608acf2e44593",
@@ -73,7 +73,7 @@
       "    from starlette.testclient import TestClient as TestClient  # noqa",
       "",
       "-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html",
-      "302 passed, 1 warning in 62.67s (0:01:02)"
+      "302 passed, 1 warning in 56.90s"
     ]
   },
   "isolation": {
@@ -90,7 +90,7 @@
       "  platform: Linux-6.1.158+-x86_64-with-glibc2.36",
       "  machine: x86_64  python: 3.11.2  cpus: 2",
       "  memory_total: 4034452 kB",
-      "  runtime_available: no ('docker' not on PATH)",
+      "  runtime_available: no ('arena-no-runtime-probe' not on PATH)",
       "",
       "== 2. Sandbox invocation invariants (as constructed by app._sandbox_command) ==",
       "  [PASS] no network — --network=none",
@@ -99,7 +99,7 @@
       "  [PASS] no new privileges — --security-opt=no-new-privileges",
       "  [PASS] no implicit image pull — --pull=never",
       "  [PASS] resource limits — --pids-limit=128 --memory=2g --cpus=2",
-      "  [PASS] single workspace bind mount — type=bind,source=/tmp/m5-isolation-smoke-aym1f1c9,target=/workspace",
+      "  [PASS] single workspace bind mount — type=bind,source=/tmp/m5-isolation-smoke-5c6pib86,target=/workspace",
       "",
       "== 3. Skill-code execution gates (app._run_skill_script) ==",
       "  [PASS] default-off skill-code denial — PermissionError",
@@ -155,7 +155,7 @@
       "scripts/isolation_smoke.py"
     ]
   },
-  "duration_seconds": 63.833,
+  "duration_seconds": 57.921,
   "totals": {
     "test_modules": 13,
     "tests_passed": 302,

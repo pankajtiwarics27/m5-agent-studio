@@ -1249,3 +1249,51 @@ dispatch and the explicit offline/demo branch. See the
 [direct load-route audit](lc08-direct-load-route-audit.md); it makes no physical
 load claim. The matrix currently records29owners/54sites, eight bounded
 assessments and21inventory-only owners; no activation or acceptance advancement.
+
+
+## Bounded unload-all route failure handling
+
+The direct `api_unload_all` route previously returned model IDs after any per-model
+HTTP status and ignored redirects/inventory failures. Its online legacy path now
+requires a valid inventory and 2xx for each selected unload, returning a private
+503 on uncertainty and propagating cancellation. Earlier successful per-model
+responses are not rolled back if a later item fails; callers should refresh the
+inventory. The [unload-all audit](lc08-unload-all-route-audit.md) does not claim
+physical unload or release. The matrix is bounded at29owners/54sites, nine
+assessed and20inventory-only owners; no acceptance advancement.
+
+
+## Bounded SSD-cache clear failure handling
+
+The existing `api_clear_ssd_cache` online legacy branch now rejects redirects and
+non-2xx results and privately normalizes transport/JSON failures; cancellation,
+valid 2xx JSON, coordinated routing and the explicitly marked demo branch remain
+unchanged. See the [cache-clear audit](lc08-cache-clear-route-audit.md). Mock
+responses are not evidence of actual cache deletion. Matrix:29owners/54sites, ten
+bounded assessments and19inventory-only; no runtime or acceptance advancement.
+
+
+## Bounded provider-stream consumer-close handling
+
+Consumer cancellation of the existing OpenAI-compatible and Anthropic provider
+streams now explicitly closes delegated async iterators down to the client-owned
+HTTP response body. Synthetic `httpx.MockTransport` regressions reproduce the
+previously open body and verify closure before `stream_any_model.aclose()`
+returns. See the [provider-stream closure audit](lc08-provider-stream-close-audit.md).
+This does not assert provider-side work cancellation or physical resource
+release. The matrix remains at 29 owners / 54 sites, with twelve bounded
+assessments and 17 inventory-only owners; no activation, hardware, acceptance,
+test8, or LC09–11 status advancement.
+
+
+## Bounded local-stream consumer-close handling
+
+The existing local oMLX-compatible stream now explicitly closes its delegated
+async iterator when `stream_any_model` consumers stop early. A deterministic
+`httpx.MockTransport` regression reproduces the previously open client-owned
+response body without accessing a local runtime. See the
+[local-stream closure audit](lc08-local-stream-close-audit.md). This makes no
+physical unload/release or provider-side cancellation claim. The matrix now
+contains 29 owners / 54 sites, thirteen bounded assessments and 16
+inventory-only owners; no activation, hardware, acceptance, test8, or LC09–11
+status advancement.

@@ -22272,8 +22272,9 @@ async def _normalize_provider_errors(
     stream: AsyncIterator[dict[str, Any]], provider_alias: str
 ) -> AsyncIterator[dict[str, Any]]:
     try:
-        async for item in stream:
-            yield item
+        async with contextlib.aclosing(stream) as source:
+            async for item in source:
+                yield item
     except ProviderAdapterError:
         raise
     except httpx.HTTPError:
@@ -22587,8 +22588,11 @@ class OpenAICompatibleProviderAdapter:
     ) -> AsyncIterator[dict[str, Any]]:
         del reasoning_mode  # The current OpenAI-compatible wire request does not map this option.
         stream = _stream_cloud_openai(client, provider, remote_model, messages, temperature, max_tokens)
-        async for item in _normalize_provider_errors(stream, str(provider.get("alias") or "provider")):
-            yield item
+        async with contextlib.aclosing(
+            _normalize_provider_errors(stream, str(provider.get("alias") or "provider"))
+        ) as normalized:
+            async for item in normalized:
+                yield item
 
 
 class AnthropicProviderAdapter:
@@ -22607,8 +22611,11 @@ class AnthropicProviderAdapter:
         stream = _stream_cloud_anthropic(
             client, provider, remote_model, messages, temperature, max_tokens, reasoning_mode
         )
-        async for item in _normalize_provider_errors(stream, str(provider.get("alias") or "anthropic")):
-            yield item
+        async with contextlib.aclosing(
+            _normalize_provider_errors(stream, str(provider.get("alias") or "anthropic"))
+        ) as normalized:
+            async for item in normalized:
+                yield item
 
 
 PROVIDER_ADAPTERS: dict[str, ProviderAdapter] = {
@@ -22983,16 +22990,24 @@ async def stream_any_model(
         adapter = PROVIDER_ADAPTERS.get(wire)
         if adapter is None:
             raise RuntimeError(f"Unsupported provider wire: {wire or '(empty)'}")
-        async for item in adapter.stream(
-            client, meta, rem_model, clean_messages, temperature, max_tokens, reasoning_mode
-        ):
-            yield item
+        async with contextlib.aclosing(
+            adapter.stream(
+                client, meta, rem_model, clean_messages, temperature, max_tokens, reasoning_mode
+            )
+        ) as provider_source:
+            async for item in provider_source:
+                yield item
         return
 
     # Local inference is heavy: hold the single heavy-model slot for the stream.
     async with _heavy_model_slot(rem_model):
-        async for item in _stream_omlx_completion(client, rem_model, clean_messages, temperature, max_tokens, reasoning_mode):
-            yield item
+        async with contextlib.aclosing(
+            _stream_omlx_completion(
+                client, rem_model, clean_messages, temperature, max_tokens, reasoning_mode
+            )
+        ) as local_source:
+            async for item in local_source:
+                yield item
 
 
 def _workflow_orchestrator(client: httpx.AsyncClient, workflow: str) -> WorkflowOrchestrator:
@@ -24097,12 +24112,39 @@ async def api_unload_all(request: Request) -> JSONResponse:
     if not await _omlx_is_online(client):
         _demo_loaded_model = None
         return JSONResponse({"status": "ok", "unloaded": ["demo"]})
-    unloaded = []
-    res = await client.get(f"{OMLX_BASE}/admin/api/models", timeout=5.0)
-    for m in res.json().get("models", []):
-        if m.get("loaded") and not m.get("virtual"):
-            await client.post(f"{OMLX_BASE}/v1/models/{m['id']}/unload", timeout=30.0)
-            unloaded.append(m["id"])
+    try:
+        endpoint = f"{OMLX_BASE}/admin/api/models"
+        response = await client.get(endpoint, timeout=5.0)
+        _reject_redirect_response(response, endpoint)
+        if not 200 <= response.status_code < 300:
+            raise RuntimeError("model inventory was not confirmed")
+        inventory = response.json()
+        models = inventory.get("models") if isinstance(inventory, dict) else None
+        if not isinstance(models, list):
+            raise RuntimeError("model inventory was malformed")
+        unloaded = []
+        for model in models:
+            if not isinstance(model, dict):
+                raise RuntimeError("model inventory was malformed")
+            if model.get("loaded") and not model.get("virtual"):
+                model_id = model.get("id")
+                if not isinstance(model_id, str) or not model_id:
+                    raise RuntimeError("model inventory was malformed")
+                unload_endpoint = f"{OMLX_BASE}/v1/models/{model_id}/unload"
+                unload_response = await client.post(
+                    f"{OMLX_BASE}/v1/models/{model_id}/unload", timeout=30.0
+                )
+                _reject_redirect_response(unload_response, unload_endpoint)
+                if not 200 <= unload_response.status_code < 300:
+                    raise RuntimeError("model cleanup was not confirmed")
+                unloaded.append(model_id)
+    except asyncio.CancelledError:
+        raise
+    except Exception:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "legacy_unload_all_unconfirmed", "retryable": False},
+        ) from None
     return JSONResponse({"status": "ok", "unloaded": unloaded})
 
 
@@ -24168,8 +24210,21 @@ async def api_clear_ssd_cache(request: Request) -> JSONResponse:
     client: httpx.AsyncClient = request.app.state.http
     if not await _omlx_is_online(client):
         return JSONResponse({"status": "ok", "total_deleted": 46, "demo": True})
-    r = await client.post(f"{OMLX_BASE}/admin/api/ssd-cache/clear", timeout=20.0)
-    return JSONResponse(r.json())
+    endpoint = f"{OMLX_BASE}/admin/api/ssd-cache/clear"
+    try:
+        response = await client.post(f"{OMLX_BASE}/admin/api/ssd-cache/clear", timeout=20.0)
+        _reject_redirect_response(response, endpoint)
+        if not 200 <= response.status_code < 300:
+            raise RuntimeError("legacy cache clear was not confirmed")
+        payload = response.json()
+    except asyncio.CancelledError:
+        raise
+    except Exception:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "legacy_cache_clear_unconfirmed", "retryable": False},
+        ) from None
+    return JSONResponse(payload)
 
 
 @app.get("/api/history/export")
