@@ -239,6 +239,11 @@ step that the profile names:
 - A run is never restarted to look faster. Report the run id, the unfinished
   job, and the queue-versus-execute split instead.
 
+Banked results, the current baseline, and the single owner of the next
+critical-path experiment are recorded in
+[`docs/verification-critical-path-plan.md`](docs/verification-critical-path-plan.md).
+Do not start a competing CI optimisation while an owner is named there.
+
 ## 6. Branch, commit, and merge rules
 
 - **Branches:** one story per branch, named `as-XXX-short-slug` (e.g.
