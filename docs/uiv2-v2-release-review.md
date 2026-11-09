@@ -10,12 +10,12 @@ The first decision covers only merge/handoff of the UI/UX V2 program. It is not 
 
 | Field | Verified value |
 | --- | --- |
-| Implementation HEAD | `dfa6647a45d19d75e731799a2e21450ea3399673` (dirty=`false`) |
-| Frontend SHA-256 | `3033a0211ca3739298e1e751d0fe89c68edf97b1fa66645a63307a158f2eca97` |
+| Implementation HEAD | `5fb978bbfa03ac13dd3d4f4b8885da994fb2558f` (dirty=`false`) |
+| Frontend SHA-256 | `7a938b83e3b512b80b20ed006436763117acb4445ce13b463bcc93f72699c6f6` |
 | Evidence scope | `current-browser-sources`; current-browser-sources=`true` |
 | Post-handoff #185 evidence | `current` |
 | Roadmap at generation | 30/30 done, 0 in progress, 0 blocked |
-| Critical CI | [`dfa6647a45d19d75e731799a2e21450ea3399673`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42475581227) — success |
+| Critical CI | [`5fb978bbfa03ac13dd3d4f4b8885da994fb2558f`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42517037242) — success |
 | Local executed checks | 7/7 exit 0 |
 | Production release | `release-blocked`; release_ready=`false` |
 
@@ -39,21 +39,21 @@ Post-handoff #185 has current clean implementation and matching CI evidence.
 
 | Evidence | Actual result | Binding |
 | --- | --- | --- |
-| Approved structural matrix | 2200/2200 checks; 48 variants / 144 PNGs | manifest `bf3db7b76fc2f2e4d6b2a96eeec50057ccb94099dcd9812773dfe9ba6c57f328` |
-| Human approval | approved-check | `user:Arena sidebar-243-recaptured-approval=approve; unchanged source55dff2b7c73f2064c7a649ceb1edfa9a9052d5a7; candidate7186910f9c46979e6320a6e2fa84f53e84067159f2b4d92ea5e03a6b59f884b8; visual baseline only, not merge authorization` |
-| Compare restore/export continuity | 15/15 checks; six PNGs | run `8d95ce3b2711c103cd439cda5f3b97642250a3d20295e3f6947e34110977b803` |
+| Approved structural matrix | 2200/2200 checks; 48 variants / 144 PNGs | manifest `e8543e5d378a4ca52eb82aa6f99bc6140b5bf9f79660207e81f6d3923d9afae5` |
+| Human approval | approved-check | `user:PR 258 owner review 2026-11-08 "1. Approved" - re-baseline the debate-pane #debateCriteriaDetails.y shift caused by UIV2-P7-03 label truncation (32px at >=1280, 48px at 390)` |
+| Compare restore/export continuity | 15/15 checks; six PNGs | run `193e4f4b276c39be4f9f09190ac1019282da51bacc39139f36ccf6f9190b1f73` |
 | Browser / fonts | HeadlessChrome/153.0.8010.0 | three font digests recorded in the release evidence |
 
-Local review manifests: `/tmp/issue185-final-visual/check-manifest.json` and `/tmp/issue185-final-compare/compare.json`. PNGs are not committed; their hashes, source digests and actual outcomes are. Approval is structural fidelity, not pixel identity or self-certification.
+Local review manifests: `/tmp/uiv2-30-visual/check-manifest.json` and `/tmp/uiv2-30-compare.json`. PNGs are not committed; their hashes, source digests and actual outcomes are. Approval is structural fidelity, not pixel identity or self-certification.
 
 ### Compare captures
 
-- `compare-record-forgotten.png` — `a364a2db933642b86eb2636ba1f8e7efc49193f6b5b681d1fce7e1497738c67c` (19952 bytes)
-- `compare-record-light.png` — `d929b762d00ac7fc2aa83094d5c0c36c2d6f9c930b5079ca11d085aca9105224` (59077 bytes)
-- `compare-record-live.png` — `c7324a16e5cfae29dca203e39a13d25ec18080264dc26260ca9061ee27612c66` (93879 bytes)
-- `compare-record-narrow.png` — `af7997476afdf02e2aeedf07c16d7f39b44a0d18f7913c57910c64350371a26a` (72972 bytes)
-- `compare-record-restored.png` — `de4835cc0b9eca6934ed5b755bd9e84076c1fceab44cf3a3ca45d469cfbe8b98` (70359 bytes)
-- `compare-record-server.png` — `72c87b58a0cd4c1bc046a0fd7808d39aa34fe2a377a1829ba459be208f94a9a1` (22094 bytes)
+- `compare-record-forgotten.png` — `a4540f9261db07d57b7b973b589190d01308fc936ea80b687c2a08d1241038d9` (19957 bytes)
+- `compare-record-light.png` — `baa224e8393240caa797b554b3a2560e9d33b2e163822eb46c7e06d8b86e61a3` (59183 bytes)
+- `compare-record-live.png` — `7e455a244565a5100cfac211fe2bcf94ec6ac987d3d87eb6556f30427546555a` (94205 bytes)
+- `compare-record-narrow.png` — `8d06f3b058c17ecf00ed76fc746c67d085cdc7fae7299500289527f923e05b81` (68023 bytes)
+- `compare-record-restored.png` — `32aa8794a493b242e7d304e7d6731ea153bb0319dd32fc032bf7ae4c2ae86b1d` (70569 bytes)
+- `compare-record-server.png` — `a3d837e2288e24352dfd64f61ff3e5a93f803281148b08f8f2b040daacdd5243` (22097 bytes)
 
 ## Critical checks that actually ran
 
@@ -69,10 +69,10 @@ Local review manifests: `/tmp/issue185-final-visual/check-manifest.json` and `/t
 
 CI jobs in the imported merged-release run:
 
-- **test (3.11)** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42475581227/job/128716081696))
-- **Browser safety regressions** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42475581227/job/128716081864))
-- **test (3.12)** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42475581227/job/128716081892))
-- **test (3.13)** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42475581227/job/128716082064))
+- **test (3.13)** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42517037242/job/128842210730))
+- **Browser safety regressions** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42517037242/job/128842210911))
+- **test (3.11)** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42517037242/job/128842211021))
+- **test (3.12)** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42517037242/job/128842211052))
 
 The older 40-story UI/UX gate remains separately owned by `scripts/uiux_release_gate.py`; this review requires its committed 37/37 checks and 7/7 gates and also runs it during final verification. It does not pretend that artifact generation is a full browser or three-interpreter test run.
 
@@ -82,10 +82,10 @@ Environment: `linux` / `x64`, 2 CPUs, `HeadlessChrome/153.0.8010.0`; disposable 
 
 | Metric | Actual | Gate/scope |
 | --- | ---: | --- |
-| Fast real SSE | 58 schedules in 331.1ms = 175.17/s | at least 50/s, complete reply retained |
-| Full-window frame | mean 1.77ms; p95 2.70ms; max 3.40ms | unchanged mean ≤4ms |
+| Fast real SSE | 58 schedules in 329.8ms = 175.86/s | at least 50/s, complete reply retained |
+| Full-window frame | mean 1.48ms; p95 2.10ms; max 2.60ms | unchanged mean ≤4ms |
 | Post-GC nodes | 8481 → 8481 → 8481 | no repeated-cycle growth beyond the declared budget |
-| Post-GC JS heap | 3375100 → 3337896 → 3342772 bytes | repeated-cycle plateau, not zero allocation |
+| Post-GC JS heap | 3378912 → 3328912 → 3348040 bytes | repeated-cycle plateau, not zero allocation |
 | Backend safety | 302 tests; 16 isolation checks | zero failures |
 | Local container isolation | unqualified; blocked (fail closed) | live probes not requested; not advertised as qualified |
 
@@ -117,7 +117,7 @@ These are not hidden behind the handoff decision. Historical roadmap entries rem
 | --- | --- |
 | Quickstart and documentation links resolve | scripts/uiux_docs_verification.py --check and scripts/validate_docs.py |
 | UI/UX V2 review is scoped to merge/handoff, not production security approval | scripts/security_release_gate.py --json remains release-blocked |
-| Visual conformity is structural, not a pixel-perfect or self-approved claim | user:Arena sidebar-243-recaptured-approval=approve; unchanged source55dff2b7c73f2064c7a649ceb1edfa9a9052d5a7; candidate7186910f9c46979e6320a6e2fa84f53e84067159f2b4d92ea5e03a6b59f884b8; visual baseline only, not merge authorization |
+| Visual conformity is structural, not a pixel-perfect or self-approved claim | user:PR 258 owner review 2026-11-08 "1. Approved" - re-baseline the debate-pane #debateCriteriaDetails.y shift caused by UIV2-P7-03 label truncation (32px at >=1280, 48px at 390) |
 | No new runtime behavior is asserted by UIV2-30 | static/index.html and both browser walks match the imported source digests |
 
 README deliberately does not say production-ready, fully accessible, all-tests-pass, pixel-perfect, or qualified container isolation. Its release link points here, and its safety section continues to describe opt-in execution and external-provider data sharing.

@@ -1077,3 +1077,28 @@ sensitivity to those local defects, not hardware or independent acceptance.
 Bundle4,277,676bytes; app/standalone auth/startup smokes, standalone sibling-import
 isolation, Ruff/mypy75sources, docs259files/ADRs, scope map201modules/13areas,
 source/preservation/backend/performance contracts and screenshots6/6 pass.
+
+### Main integration after96e602d (supersedes parked status above)
+
+Exact96e602d push CI42547042617 passed, including all Python and browser jobs.
+PR CI42547047347 passed browser checks but failed all three Python jobs at
+`test_committed_contract_and_handoff_are_exactly_generated`. The actual merge
+included main's newly merged PR261 (`c52fac9`, implementation14b1b1f): the owner
+had met P7-PARK-01's unblock condition, imported real5fb978b browser/CI evidence
+and restored all21 release-review assertions. This was not reflected in this
+branch's still-parked local tree. The old full local run was stopped before
+completion rather than conflated with validation of the integrated source.
+
+Integrating main reproduces **1failed,20passed** in the now-live review module.
+The only derived mismatch is its embedded isolation-smoke temporary workspace
+path: main's `sny7xz1t` versus this branch's committed backend run `n_6txc80`.
+Regenerating the derived release-review JSON resolves this single field; no
+browser evidence import, approval SHA, pass claim, pin, assertion, skip or policy
+is altered. The imported evidence, measured roadmap, restored tests and resolved
+parking register are inherited unchanged from main. Production security remains
+blocked; historical review is not LC08 native or independent acceptance.
+
+The restored review/performance/new interruption tests pass **120/120**; all21
+restored assertions are enabled. Full integrated regression and exact-head CI
+must be recorded separately after execution. This integration does not merge
+PR260, enable native dispatch or complete LC08/LC09.
