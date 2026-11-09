@@ -381,16 +381,12 @@ class RequestFitAdmission:
             raise RequestFitDenied("binding_unverified")
 
     def _hold(self, permit: FitPermit, lease: MemoryLease) -> None:
-        try:
-            self.coord.mark_request_uncertain(
-                permit.lease,
-                reference="request_fit_count_uncertain",
-                now_ms=self._now(),
-            )
-        finally:
-            self.memory.mark_uncertain(
-                lease, reference="request_fit_count_uncertain", now_ms=self._now()
-            )
+        self.memory.hold_model(
+            permit.lease,
+            lease,
+            reference="request_fit_count_uncertain",
+            now_ms=self._now(),
+        )
 
     def revoke(self, lease: RequestLease) -> None:
         with self._mutex:

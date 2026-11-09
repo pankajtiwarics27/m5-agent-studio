@@ -205,6 +205,13 @@ halves on journal failure. Reuse this accounting-only seam in actors/drivers and
 native failure paths; do not mint native/dispatch/recovery authority or alter
 schema, qualification, proof, settlement, production defaults or parked review.
 
+The full-request fit-counter's post-dispatch cleanup uses that same atomic
+current-request/model hold, not a second split uncertainty path. Late counter,
+receipt or post-count observation failure after independently proved terminal
+scope cannot pause a successor. Current cancelled/expired counts remain held and
+charged, and ledger failure rolls back both halves. Count facts do not become
+inference completion, physical release, retry permission or fit approval.
+
 ## Alternatives
 
 - Replace served routing immediately: would activate unqualified transports and
