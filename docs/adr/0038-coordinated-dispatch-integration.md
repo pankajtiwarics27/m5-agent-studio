@@ -283,3 +283,10 @@ in progress and test8 paused/unpassed. See the
 [integration record](../runtime-dispatch-integration.md) and generated
 [entry inventory](../runtime-dispatch-entry-points.md). ADR-0031--0037 and acceptance
 ledgers are unchanged.
+
+
+The adjacent direct unload HTTP route received a bounded online failure/privacy
+audit: redirect, non-2xx, transport, and malformed JSON responses fail privately,
+with coordinated dispatch and the explicit offline/demo branch unchanged. See
+[direct unload route evidence](../lc08-direct-unload-route-audit.md); this remains
+non-physical and does not qualify unload behavior.

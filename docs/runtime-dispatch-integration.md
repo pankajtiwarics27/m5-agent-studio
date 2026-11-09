@@ -1225,3 +1225,15 @@ errors, preserving cancellation; coordinated dispatch still fails closed. See th
 is not measured physical release. Offline/demo behavior, legacy defaults, direct
 unload route owners and hardware/acceptance status are unchanged. The matrix has
 29 owners/54 static sites, six bounded assessments and23inventory-only owners.
+
+
+## Bounded direct unload-route failure handling
+
+A follow-up audit of the separate direct `api_unload_model` owner found that
+legacy HTTP 400 was converted to generic success and 500/503 bodies were returned
+as response payloads. The online route now rejects redirects/non-2xx and transport
+or invalid-JSON failures privately, while preserving cancellation, 2xx JSON,
+coordinated routing and the explicit offline/demo branch. The
+[route audit](lc08-direct-unload-route-audit.md) makes no physical-release claim.
+The matrix remains bounded at29owners/54sites, with seven assessed and22
+inventory-only owners; no runtime activation or acceptance advancement is implied.

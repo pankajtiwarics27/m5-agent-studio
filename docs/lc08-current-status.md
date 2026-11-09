@@ -23,10 +23,10 @@ existing defaults, not HTTP Hall session/retention parity or native activation.
 
 The bounded [workspace suggestion audit](lc08-workspace-suggestion-audit.md)
 closes the source on suggestion-output rejection without adding folder authority.
-The newer [legacy cleanup audit](lc08-legacy-cleanup-audit.md) requires a successful
-HTTP response for online legacy cleanup and refuses redirects/errors privately;
-it is not physical unload evidence. Current static coverage remains bounded, with
-23 inventory-only owners. No folder authorization or native activation is added.
+The [legacy cleanup audit](lc08-legacy-cleanup-audit.md) and [direct unload-route
+audit](lc08-direct-unload-route-audit.md) refuse unconfirmed online cleanup replies
+privately; neither is physical unload evidence. Current static coverage remains
+bounded, with 22 inventory-only owners. No folder authorization or native activation is added.
 
 ## Scope of this snapshot
 
