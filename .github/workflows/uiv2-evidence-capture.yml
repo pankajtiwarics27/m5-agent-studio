@@ -66,6 +66,11 @@ jobs:
             { echo "compare-walk exit non-zero"; tail -n 60 "$RUNNER_TEMP/compare.err"; echo "--- stdout tail"; tail -n 40 "$RUNNER_TEMP/compare.json"; } > .uiv2-evidence/error.txt
           else
             cp "$RUNNER_TEMP/compare.json" .uiv2-evidence/compare.json
+            # The evidence import hashes the six captures it sits next to: capture_root is
+            # <json parent>/<json stem>, falling back to the parent directory.
+            mkdir -p .uiv2-evidence/compare
+            cp "$RUNNER_TEMP"/compare/*.png .uiv2-evidence/compare/
+            ls -l .uiv2-evidence/compare
           fi
 
           echo "== approved cross-tab structure walk"
