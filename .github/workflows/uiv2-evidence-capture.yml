@@ -1,9 +1,9 @@
 name: UIV2 evidence capture (temporary)
 
-# TEMPORARY. The UIV2-30 release-evidence import needs two browser walks, and this container cannot
+# TEMPORARY. The UIV2-30 release-evidence import needs two browser walks, and this checkout cannot
 # render in Chromium. This push-only job runs them on the pinned build and commits their small JSON
-# outputs to the branch, where the evidence import can read them. Deleted before merge, together
-# with the JSON files it publishes.
+# outputs (and, if a walk fails, its stderr) to the branch, where they can be read. Deleted before
+# merge, together with the files it publishes.
 
 on:
   workflow_dispatch:
@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   capture:
-    if: "!startsWith(github.event.head_commit.message, 'chore(uiv2): publish the release-evidence inputs')"
+    if: "!startsWith(github.event.head_commit.message, 'chore(uiv2): publish the release-evidence inputs') && !startsWith(github.event.head_commit.message, 'chore(uiv2): publish the evidence capture')"
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -51,32 +51,38 @@ jobs:
             echo "STUDIO_PYTHON=python"
           } >> "$GITHUB_ENV"
           LD_LIBRARY_PATH="$RUNNER_TEMP/m5-browser/libs/lib" "$chrome" --version
-      - name: Compare continuity walk
+      - name: Run both walks and publish whatever they produce
         run: |
           set -uo pipefail
           mkdir -p .uiv2-evidence
-          node scripts/compare_continuity_walk.mjs --screenshots "$RUNNER_TEMP/compare" --json > "$RUNNER_TEMP/compare.json" 2> "$RUNNER_TEMP/compare.err"
-          rc=$?
-          echo "exit=$rc bytes=$(wc -c < "$RUNNER_TEMP/compare.json")"
-          if [ "$rc" -ne 0 ]; then
-            while IFS= read -r line; do echo "::error title=compare-walk::${line}"; done < <(tail -n 20 "$RUNNER_TEMP/compare.err")
-            while IFS= read -r line; do echo "::error title=compare-output::${line}"; done < <(tail -n 20 "$RUNNER_TEMP/compare.json")
-            exit "$rc"
+          status=0
+
+          echo "== compare continuity walk"
+          if ! node scripts/compare_continuity_walk.mjs --screenshots "$RUNNER_TEMP/compare" --json > "$RUNNER_TEMP/compare.json" 2> "$RUNNER_TEMP/compare.err"; then
+            echo "compare walk failed"
+            status=1
+            { echo "compare-walk exit non-zero"; tail -n 60 "$RUNNER_TEMP/compare.err"; echo "--- stdout tail"; tail -n 40 "$RUNNER_TEMP/compare.json"; } > .uiv2-evidence/error.txt
+          else
+            cp "$RUNNER_TEMP/compare.json" .uiv2-evidence/compare.json
           fi
-          cp "$RUNNER_TEMP/compare.json" .uiv2-evidence/compare.json
-          python -c "import json;d=json.load(open('.uiv2-evidence/compare.json'));print('compare:', d.get('totals') or d.get('checks'))"
-      - name: Approved cross-tab structure walk
-        run: |
-          node scripts/uiux_v2_cross_tab_reference_walk.mjs \
-            --check \
-            --out "$RUNNER_TEMP/visual" \
-            --timeout-ms 60000
-          cp "$RUNNER_TEMP/visual/check-manifest.json" .uiv2-evidence/check-manifest.json
-      - name: Publish the evidence inputs on the branch
-        run: |
-          set -eu
+
+          echo "== approved cross-tab structure walk"
+          if ! node scripts/uiux_v2_cross_tab_reference_walk.mjs --check --out "$RUNNER_TEMP/visual" --timeout-ms 60000 > "$RUNNER_TEMP/visual.log" 2>&1; then
+            echo "cross-tab walk failed"
+            status=1
+            { echo "cross-tab check exit non-zero"; tail -n 60 "$RUNNER_TEMP/visual.log"; } > .uiv2-evidence/error.txt
+          elif [ -f "$RUNNER_TEMP/visual/check-manifest.json" ]; then
+            cp "$RUNNER_TEMP/visual/check-manifest.json" .uiv2-evidence/check-manifest.json
+            cp "$RUNNER_TEMP/visual.log" .uiv2-evidence/cross-tab-walk.log
+          fi
+
           git config user.name "uiv2-evidence"
           git config user.email "uiv2-evidence@users.noreply.github.com"
           git add -f .uiv2-evidence
-          git commit -q -m "chore(uiv2): publish the release-evidence inputs captured at ${GITHUB_SHA}" -m "Compare continuity and cross-tab check manifests from real runs on the pinned Chromium 153 build, committed where the sandbox that drives this branch can read them (artifacts and logs are unreachable from there). Deleted before merge."
-          git push origin "HEAD:${GITHUB_REF_NAME}"
+          if git diff --cached --quiet; then
+            echo "nothing captured"
+          else
+            git commit -q -m "chore(uiv2): publish the evidence capture from ${GITHUB_SHA}" -m "Compare continuity and cross-tab check outputs from real runs on the pinned Chromium 153 build, committed where the sandbox that drives this branch can read them (artifacts and job logs are unreachable from there). Deleted before merge."
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
+          exit "$status"
