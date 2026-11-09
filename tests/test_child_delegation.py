@@ -226,6 +226,56 @@ def test_authority_subset_refuses_policy_escalation_out_of_scope_tools_and_recur
     assert exc_info.value.code == "child_recursive_delegation_forbidden"
 
 
+def test_model_backed_child_closes_stream_when_consumer_fails(
+    isolated_env: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An error consuming a provider item must close the iterator before child cleanup."""
+    parent_ctx, _, _ = _create_parent_session(isolated_env, policy="autonomous")
+    spawned = asyncio.run(
+        studio.spawn_child_delegation_async(
+            parent_ctx,
+            objective="Inspect the allowed source file",
+            role="critic",
+            requested_tools=["read_file"],
+        )
+    )
+    stream_started = asyncio.Event()
+    stream_closed = asyncio.Event()
+    retained_sources: list[AsyncIterator[Any]] = []
+
+    def _fake_stream(
+        _http: Any,
+        _model: str,
+        _msgs: list[dict[str, Any]],
+        **_kwargs: Any,
+    ) -> AsyncIterator[Any]:
+        async def _source() -> AsyncIterator[Any]:
+            try:
+                stream_started.set()
+                yield None  # The consumer's item.get call fails before the source is exhausted.
+                await asyncio.Event().wait()
+            finally:
+                stream_closed.set()
+
+        source = _source()
+        retained_sources.append(source)
+        return source
+
+    monkeypatch.setattr(studio, "stream_any_model", _fake_stream)
+
+    async def _run_child() -> None:
+        result, _ = await studio.execute_child_delegation_async(
+            None, spawned.delegation_id
+        )
+        assert result.status == "failed_unjoined"
+        assert result.failure_reason
+        await asyncio.wait_for(stream_started.wait(), timeout=2)
+        await asyncio.wait_for(stream_closed.wait(), timeout=2)
+
+    asyncio.run(_run_child())
+
+
 def test_live_parent_policy_downgrade_and_grant_revocation_block_already_spawned_child(
     isolated_env: Path,
 ) -> None:

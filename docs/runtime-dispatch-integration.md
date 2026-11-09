@@ -2,10 +2,12 @@
 
 ## Current status first
 
-Latest bounded follow-up: [Council/Debate adapter audit](lc08-workflow-adapter-audit.md).
-It records the static-owner coverage matrix, coordinated reasoning-only retry
-finding, iterator-close fix and offline evidence. Other workflow owners and
-production/native qualification remain open.
+Latest bounded follow-up: [child-delegation stream-close audit](lc08-child-stream-close-audit.md).
+It records an early-consumer-failure iterator-close fix for one child stream
+owner, with a focused offline regression and regenerated UI/UX-pinned source and
+authorization evidence. Other child callbacks, workflow owners and
+production/native qualification remain open. The earlier [Council/Debate adapter audit](lc08-workflow-adapter-audit.md)
+remains a separate bounded checkpoint.
 
 For a consolidated source/test-backed snapshot at merged PR262 (`fc6a304`), read
 [LC08 current status and gap review](lc08-current-status.md). Cold-to-warm inference,
@@ -1312,3 +1314,16 @@ runtime activation, hardware, release acceptance, test8, or LC09–11. The matri
 remains 29 owners / 54 sites, nineteen bounded assessments and 10
 inventory-only owners. The bounded legacy cleanup check verifies response-status
 handling only; HTTP acknowledgment is not proof of physical resource release.
+
+
+## Bounded child-delegation stream-close audit
+
+A bounded offline counterfactual reproduced an open source iterator when
+`execute_child_delegation_async._stream_sub` consumer processing failed before
+exhaustion. Explicit `contextlib.aclosing` now owns that source, with a permanent
+focused regression; the affected UI/UX-pinned source and authorization evidence
+were regenerated without changing story status or approvals. See the
+[child-stream audit](lc08-child-stream-close-audit.md). The matrix assesses this
+owner, leaving nine of 29 owners inventory-only. The sibling unload callbacks,
+complete child workflow, provider or native cancellation, physical resource
+release, LC-08 completion, acceptance, test8, and LC09–11 are not advanced.

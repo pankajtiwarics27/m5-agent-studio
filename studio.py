@@ -34921,18 +34921,21 @@ async def execute_child_delegation_async(
 
             async def _stream_sub(http_c: httpx.AsyncClient) -> None:
                 nonlocal used_toks
-                async for item in stream_any_model(
-                    http_c,
-                    target_model,
-                    sub_msgs,
-                    temperature=0.0,
-                    max_tokens=max_toks,
-                    reasoning_mode="off",
-                ):
-                    if item.get("type") == "content" and isinstance(item.get("text"), str):
-                        buf.append(item["text"])
-                    elif item.get("type") == "usage":
-                        used_toks += int(item.get("total_tokens") or item.get("completion_tokens") or 0)
+                async with contextlib.aclosing(
+                    stream_any_model(
+                        http_c,
+                        target_model,
+                        sub_msgs,
+                        temperature=0.0,
+                        max_tokens=max_toks,
+                        reasoning_mode="off",
+                    )
+                ) as source:
+                    async for item in source:
+                        if item.get("type") == "content" and isinstance(item.get("text"), str):
+                            buf.append(item["text"])
+                        elif item.get("type") == "usage":
+                            used_toks += int(item.get("total_tokens") or item.get("completion_tokens") or 0)
 
             if client is not None:
                 await _stream_sub(client)
