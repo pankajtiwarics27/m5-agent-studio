@@ -50,7 +50,7 @@ from ollama_protocol import (
     validate_prepared,
 )
 from runtime_persistence import assert_no_active_write_transaction
-from shared_memory_admission import MemoryLease, MemorySample, SharedMemoryAdmission
+from shared_memory_admission import MemoryLease, MemorySample, SharedMemoryAdmission, _load_confirmation_reference
 
 Intent = TransitionStep | RequestLease | LoadLease | ReleaseStep
 REQUIRED_CAPABILITIES = (
@@ -641,30 +641,7 @@ class OllamaLifecycleBridge:
             self.memory._admission_call(commit, sample, now)
 
     def _failure(self, permit: OllamaPermit, lease: MemoryLease | None) -> None:
-        now = self._now()
-        intent = permit.intent
-        try:
-            if isinstance(intent, ReleaseStep):
-                self.coordinator.mark_release_uncertain(
-                    intent, reference="native_release_uncertain", now_ms=now
-                )
-            elif isinstance(intent, TransitionStep):
-                self.coordinator.mark_uncertain(
-                    intent, reference="ollama_native_uncertain", now_ms=now
-                )
-            elif isinstance(intent, LoadLease):
-                self.coordinator.mark_load_uncertain(
-                    intent, reference="native_load_uncertain", now_ms=now
-                )
-            else:
-                self.coordinator.mark_request_uncertain(
-                    intent, reference="ollama_native_uncertain", now_ms=now
-                )
-        finally:
-            if lease is not None:
-                self.memory.mark_uncertain(
-                    lease, reference="ollama_native_uncertain", now_ms=now
-                )
+        self.memory.hold_model(permit.intent, lease, reference="ollama_native_uncertain", now_ms=self._now())
 
     def drain(self, permit: OllamaPermit, activity: OllamaActivity) -> bool:
         if (
@@ -896,9 +873,13 @@ class OllamaLifecycleBridge:
 
         def finish(conn: sqlite3.Connection) -> bool:
             current(conn, after)
-            return self.coordinator._finish_load(
+            if not self.coordinator._finish_load(
                 conn, intent, evidence, reference=observed.reference, now_ms=now
-            )
+            ):
+                return False
+            self.coordinator._event(conn, intent.domain_id, 'ollama_load_verified', intent.lease_id,
+                           _load_confirmation_reference(intent, lease))
+            return True
 
         return self.coordinator._call(finish, now_ms=now)
 

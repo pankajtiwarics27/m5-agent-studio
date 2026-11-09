@@ -649,6 +649,18 @@ async def native_load_command():
    assert len(b.driver.mutations(b))==1 and getattr(b,'count_calls',0)==0
    assert (await collect(execute.stream(admission(b).call)))[-1]['type']=='usage'
    assert b.count_calls==1 and b.memory.view('shared').committed_bytes==600
+   cls=pkg.native_transition_driver.OllamaLoadCompletion if backend=='ollama' else pkg.native_transition_driver.LmLoadCompletion
+   original=cls.complete
+   async def missing_receipt(job):
+    assert await original(job) is True
+    b.coord._call(lambda conn:conn.execute('DELETE FROM journal WHERE operation_id=? AND event=?',(job.permit.intent.lease_id,backend+'_load_verified')))
+    return True
+   cls.complete=missing_receipt
+   try:
+    await execute.command(load_call(b))
+    raise AssertionError('missing private native receipt accepted')
+   except pkg.runtime_dispatch_boundary.RuntimeDispatchDenied: pass
+   finally: cls.complete=original
 asyncio.run(native_load_command())
 from test_model_lifecycle_release import opened as release_opened,loaded as release_loaded,release as release_step,physical as release_physical,sample as release_sample
 coord,memory,fleet=release_opened(pathlib.Path('release-only-kernel'))
@@ -698,6 +710,21 @@ async def native_omlx_unload_command():
   assert env[1].view('shared').committed_bytes==0 and env[0].snapshot('shared').state=='idle'
   assert len(env[4].posts)==1 and not env[2].models
 asyncio.run(native_omlx_unload_command())
+import pytest
+from test_native_scheduler_ownership import test_real_foreign_inference_lease_cannot_send_this_call_under_another_request
+for backend in ('ollama','lmstudio'):
+ with pytest.MonkeyPatch.context() as patch:
+  test_real_foreign_inference_lease_cannot_send_this_call_under_another_request(pathlib.Path('private-foreign-lease-'+backend),patch,backend)
+from test_native_transition_ownership import test_same_target_does_not_make_another_fifo_acquire_claim_ours
+for backend in ('ollama','lmstudio'):
+ for actor in ('inference','load'):
+  with pytest.MonkeyPatch.context() as patch:
+   test_same_target_does_not_make_another_fifo_acquire_claim_ours(pathlib.Path('private-foreign-transition-'+backend+'-'+actor),patch,backend,actor)
+from test_native_interruption_holds import test_late_native_failure_cannot_pause_a_successors_live_model,test_owned_interruption_atomically_holds_slot_and_actual_model_without_retiring
+for backend in ('ollama','lmstudio'):
+ for old in ('request','operation'):
+  test_late_native_failure_cannot_pause_a_successors_live_model(pathlib.Path('private-late-hold-'+backend+'-'+old),backend,old)
+ test_owned_interruption_atomically_holds_slot_and_actual_model_without_retiring(pathlib.Path('private-owned-hold-'+backend),backend,'request','live')
 print('isolated native executor and shared transaction guards passed')
 """.replace("REPO", repr(str(root)))
     env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}

@@ -160,6 +160,51 @@ A pending200/202 ACK remains insufficient. Preserve cancelled/expired cleanup,
 uncertainty/no-replay and later target budget fencing. Do not qualify oMLX target/
 inference, install producers, redirect HTTP, activate or complete LC09 recovery.
 
+Harden explicit-load confirmation symmetrically with unload: record a native
+provider-specific verified control/memory identity receipt atomically with actual
+terminal slot completion, after native profile/instance/physical/memory checks.
+Require the actor's own request/domain/target/epoch before producer execution and
+exact completed uncancelled/unexpired request/deadline, released control slot,
+actual model binding and unique native receipt before canonical success. A generic
+kernel finish, boolean or request status cannot manufacture native qualification.
+Roll back slot completion on receipt-write failure. Preserve historical completion
+after independent successors without a new probe or poisoning their ownership or
+memory. Keep pure identity hashing distinct from proof/authority; no schema,
+backfill, migration/reset, activation or new native target support is implied.
+
+Fence claimed request/control leases to the actor's exact queued request, domain,
+target and owner epoch before producer execution or cleanup assignment. Foreign
+wrong-purpose slots must not be marked uncertain or cancelled by this actor;
+owned wrong-purpose slots retain conservative holding semantics. Require warm
+fit services to share the scheduler's actual coordinator and memory-owner objects
+before counter/native execution. Treat this consumer fence as identity only, not
+native/fit/physical/recovery authority, and preserve existing generation/instance/
+profile/current-state gates. Do not infer general operation ownership or enable
+new native targets, producers, routes or migration/recovery through this check.
+
+Extend consumer ownership checks to claimed lifecycle stages: verify exact current
+queued FIFO head and durable operation/domain/source/target/stage/epoch/generation
+identity before actor producers, wrong-purpose mutation or cleanup ownership.
+Release additionally binds its durable request and source-memory ID; acquire's
+shared target alone is not ownership. Repeat the same read-only check in each
+concrete driver's current-gate transaction, before native/current checks. Refuse
+foreign claims without mutation, pause, cancellation or expiry of foreign work.
+This is not a new persistent acquire-owner/grant, native authorization, coalescing
+or recovery protocol. Preserve separate purpose/cancellation/deadline/native/fit/
+physical/memory gates and owned failure holding; no schema or activation change.
+
+Couple current-intent and model-memory interruption holds in one fenced ledger
+transaction. A stale/completed request or advanced acquire phase must not pause a
+successor's model after a failed ownership mark. Preserve genuine cancelled/
+expired uncertainty, exact current release-barrier ownership across its phases,
+and the physically completed acquire unload's exact unpaid source settlement
+until independent zero. Bind that exception to current operation/source/epoch/
+generation/target and durable physical-completion receipt; never a released hold
+or successor. Validate actual model identity before writes and roll back both
+halves on journal failure. Reuse this accounting-only seam in actors/drivers and
+native failure paths; do not mint native/dispatch/recovery authority or alter
+schema, qualification, proof, settlement, production defaults or parked review.
+
 ## Alternatives
 
 - Replace served routing immediately: would activate unqualified transports and

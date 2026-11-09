@@ -649,15 +649,22 @@ class LifecycleCoordinator:
             return TransitionStep(operation["id"], domain_id, operation["generation"], self._epoch, operation["stage"], _decode(operation["source"]), operation["source_instance_id"], target)
         return self._call(claim, now_ms=now_ms)
 
-    def _active_step(self, conn: sqlite3.Connection, step: TransitionStep, now_ms: int) -> sqlite3.Row | None:
+    def _transition_operation(self, conn: sqlite3.Connection, step: TransitionStep, *, allow_uncertain: bool = False) -> sqlite3.Row | None:
         if type(step) is not TransitionStep:
             return None
         row = conn.execute("SELECT * FROM operations WHERE id=?", (step.operation_id,)).fetchone()
         if (row is None or row["goal"] != "acquire" or step.owner_epoch != self._epoch or row["owner_epoch"] != self._epoch
                 or row["domain"] != step.domain_id or row["generation"] != step.generation
-                or row["stage"] != step.kind or not row["dispatched"] or row["status"] != "active"
+                or row["stage"] != step.kind or not row["dispatched"]
+                or row["status"] not in (("active", "uncertain") if allow_uncertain else ("active",))
                 or _decode(row["source"]) != step.source or row["source_instance_id"] != step.source_instance_id
                 or _decode(row["target"]) != step.target):
+            return None
+        return row
+
+    def _active_step(self, conn: sqlite3.Connection, step: TransitionStep, now_ms: int) -> sqlite3.Row | None:
+        row = self._transition_operation(conn, step)
+        if row is None:
             return None
         if now_ms >= row["deadline"]:
             self._uncertain(conn, step.domain_id, step.operation_id, "late_completion")

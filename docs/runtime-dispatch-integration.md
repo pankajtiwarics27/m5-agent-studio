@@ -814,3 +814,291 @@ security, JavaScript and both app/standalone auth/origin smokes passed. Bundle
 passed, zero findings. Demo/screenshot6/6 and visual pins unchanged. Live isolation
 remains unqualified/blocked; full regression and exact-head CI still pending at
 this chronological note. No activation/acceptance/merge is claimed.
+
+## Exact durable explicit-load confirmation (dormant hardening)
+
+Merged PR259 at0637760 passed **4789 local tests,32 skips,one warning** with
+exact-head PR CI42511757760 and push CI42511753659 green. PR259 comment6725824019
+supersedes that head's chronological pre-full notes. This is historical evidence,
+not validation for the present continuation.
+
+An offline adversarial audit reproduced a narrower explicit-load gap in both
+providers: a concrete completion callback returningTrue plus a request row marked
+completed could produce canonical confirmed without durable native completion.
+The actor now verifies an exact durable completion chain, like the unload actor,
+without expanding load authority or qualifying new target types.
+
+Ollama/LM Studio native load completion writes a provider-specific
+`ollama_load_verified`/`lmstudio_load_verified` receipt in the **same transaction**
+as terminal control-slot completion, only after its existing current authorization,
+loaded native profile/instance, full-runtime physical proof and independent memory
+budget checks. The journal operation-id field scopes this event to the actual
+control-lease ID. Its reference is a bounded SHA-256 identity fingerprint of the
+complete control lease and actual model-memory lease. The shared pure hash helper
+is neither a proof generator nor an authorizer. Generic kernel `finish_load`, a
+callback boolean or a completed request row cannot substitute for native checks.
+Receipt-write failure rolls back request/slot completion and retains charged
+uncertainty. Cancelled/expired native cleanup may have a verification receipt;
+that is not API success.
+
+Before a completion producer runs, the actor requires its own queued request,
+domain, target and owner epoch. After the native callback, canonical success
+requires that exact uncancelled,unexpired completed load request and original
+deadline, released control lease with matching epoch/generation, exact actual model
+hold/profile, and exactly one matching provider-scoped receipt. Missing, duplicated
+or cross-scope receipts refuse without fallback or retry. No schema change,
+backfill, historical receipt synthesis or history reset is introduced.
+
+Confirmation is point-in-time completion, **not a continuing promise of residency
+or readiness**. A separately owned successor may already have admitted inference,
+become uncertain, unloaded the old hold or loaded a successor. An unchanged old
+verified identity remains historically valid even if its actual hold is now
+uncertain/released; the actor must not require the domain to remain idle, probe
+again, cancel that successor, or pause its new memory. A foreign FIFO control
+returned by a miswired claim is refused before producer/native I/O and left owned
+by its original caller.
+
+Initial evidence: **48 new offline tests;1178 passed,one upstream warning** in the
+combined21-module suite (55.78s), including atomic receipt-write rollback, generic
+kernel completion refusal and historical successor races. Private standalone
+coverage also rejects missing native receipts for both providers. Native facts
+and producers remain fakes; full regression and exact-head CI are recorded
+separately when executed. No routes/default producers/settings/transport activation,
+oMLX target load/inference, already-absent policy, unload-all/cache or LC09 recovery
+is added. LC08 remains incomplete; independent acceptance is not advanced.
+
+
+Pre-full load-confirmation checkpoint: five disposable mutations were caught
+(skipped durable confirmation, active slot accepted, duplicate receipt accepted,
+constant identity hash, foreign FIFO control producer), two failures each; no
+worktree source mutation. Ruff/mypy75, scope196/13, docs/ADR, baseline/governance/
+deferred security, JavaScript, app and standalone auth/origin smokes passed.
+Standalone4,264,025bytes; fresh backend302/16 and source/preservation/performance/
+release/demo/screenshot checks passed with zero findings. The initial release
+artifact generation was blocked by missing shallow Git history; fetching complete
+history and regenerating resolved that evidence lookup, without changing approval
+pins. Live isolation remains unqualified/blocked. Full regression and fresh
+exact-head CI remain pending at this chronological note, not inherited from
+merged PR259. No independent acceptance or activation is claimed.
+
+## Claimed lease ownership before warm handoff and refusal cleanup
+
+The preceding durable-load checkpoint5ed0809 passed **4837 local tests,32 skips,
+one warning**, exact-head PR CI42514617279 and push CI42514591565 green. PR260
+comment6726200217 supersedes its chronological pre-full notes. Those are historical
+results, not validation for this continuation.
+
+An offline fault audit reproduced inference accepting another FIFO caller's real
+request lease for its warm producer, and inference/unload wrong-purpose refusal
+marking a foreign admitted request/control uncertain. The actor now shares a
+small request/control **lease identity fence** across load, inference and unload.
+It requires concrete request/control lease type, exact queued request/domain/
+target and current owner epoch **before** invoking a warm/completion producer,
+assigning cleanup ownership or marking an unexpected lease uncertain. Refusing
+another caller's claim cancels only the actor's own queued waiter; the foreign
+admitted slot and ready model hold remain unchanged, without probe/count/send.
+An owned wrong-purpose slot still follows the existing conservative hold path.
+
+The fence is consumer identity validation, not current native/fit/lease authority
+or a replacement for their generation/instance/profile/freshness checks. The warm
+handoff separately requires its fit service to use the scheduler's **actual**
+coordinator and memory-owner objects, not merely compatible objects or an equal
+lease from a copied owner. Failure before count/native execution retains only the
+owned request's uncertainty and charge. No new recovery, operation ownership,
+claim semantics or inference terminal-completion policy is introduced.
+
+Initial evidence: **32 new offline tests;1210 passed,one upstream warning** in the
+combined22-module suite (59.62s). The initial18-case audit reproduced14 failures
+(foreign producer/cleanup and owner-object faults), with4 existing load-fence cases
+passing. Cases include all three actors/both request and control purposes, real
+foreign inference send refusal, scope/subclass mismatch, exact owner objects and
+owned wrong-purpose holds. Private isolated standalone rejects the real foreign
+inference lease for both providers without public native sibling fallback.
+Native facts/transports remain synthetic; full regression and exact-head CI must
+be recorded separately. No routes/default producers/settings/transport activation,
+schema change, oMLX target/inference, already-absent success, unload-all/cache,
+LC09 recovery or independent acceptance is added. LC08 remains incomplete.
+
+
+Pre-full claimed-lease checkpoint: all five disposable mutations were caught
+(foreign request identity:10 failures; domain, epoch, fit coordinator and memory
+owner:two failures each), without worktree source mutation. Ruff/mypy75, scope197/
+13, docs/ADR, compile, baseline/governance/deferred security, JavaScript, app and
+standalone auth/origin smokes passed. The new ownership test module is explicitly
+mapped to models.providers. Standalone4,265,001bytes; fresh backend302/16,
+source64/6/121, preservation21/272/50, performance21/21 and release7/7 with2200
+visual/15Compare passed, zero findings, demo/screenshot6/6 and approval pins
+unchanged. Live isolation remains unqualified/blocked. Full regression and fresh
+exact-head CI are pending at this chronological note; earlier5ed0809 results are
+not current-source validation. No acceptance or activation is claimed.
+
+### Integration with concurrent merged UI/P7 work
+
+Main advanced to5fb978b (merged PR258) while the f5a4d38 checkpoint was validating,
+creating generated-artifact conflicts and preventing a current PR CI run. Its
+partial local full run was deliberately stopped; it is **not** a passed regression.
+Merge main into the same assigned branch, preserve static/index.html and UI/P7
+changes exactly from main, and rebuild the native standalone plus affected source,
+preservation, backend and performance records rather than hand-editing conflicts.
+The combined standalone is4,272,345bytes; scope199/13 and docs259 files. Focused
+P7/native ownership/load/standalone tests:155 passed (11.17s). Both app/standalone
+smokes, source/preservation/performance, JavaScript and demo/screenshot checks pass.
+
+The inherited `P7-PARK-01` register in
+[parked P7 work](uiux-2-0-p7-parked.md) deliberately retires21 release-review tests
+and instructs retaining historical release-review artifacts, not regenerating
+current approval. A diagnostic regeneration exposed3 expected stale source/metric
+findings; restore those two artifacts exactly from main, as that register requires.
+Do not relabel old release evidence as current or silently unpark/change assertions.
+UIV2-30 --check remains deliberately blocked under that inherited owner decision;
+this is not a new waiver or fresh release acceptance. Live isolation remains
+unqualified/blocked. Full regression and new exact combined-head CI must be rerun;
+earlier source-only results do not validate the merged tree.
+
+## Claimed operation/FIFO identity before transition consumers
+
+The previous integrated checkpoint130552c passed **4871 local tests,53 skips,
+one warning**; PR CI42517972609 and push CI42517967305 were green. PR260
+comment6726656408 supersedes its chronological pending notes. Those are historical
+results, not validation of this continuation. The local rehydrated files matched
+that remote tree exactly before branch/index metadata was restored; no working
+content was discarded.
+
+A follow-on offline audit reproduced a transition-level ownership gap. Acquire
+claims carry a target but no durable requesting-owner column; a same-target
+queued waiter could previously reach another FIFO caller's stage. Actor producer
+failure and wrong-purpose refusal could also mark a foreign acquire/release stage
+uncertain. The initial16-case audit reproduced12 failures, with4 refusals already
+safe. This is trusted composition fault injection, not an activated remote exploit.
+
+The driver now supplies a **read-only claim identity/FIFO check**. It requires the
+exact concrete queued/step types, queued request/domain/target/deadline, actual
+current queued FIFO head, dispatched active operation/stage/epoch/generation,
+source/instance and current domain operation identity. Acquire additionally checks
+its exact durable target and acquire goal; release checks its durable request and
+source-memory reference with no target. A shared target alone is not ownership.
+
+Each actor invokes this check before transition/release producers, wrong-purpose
+marking or cleanup ownership. Direct acquire/release drivers repeat it in the SAME
+current-gate transaction, before effectful native/current checks. Foreign claims
+refuse without probe/count/send, memory pause, stage mutation or cancellation of
+the foreign request; only the actor's own queued waiter is cancelled. No stale
+callback is permission to expire another owner's operation.
+
+This is identity validation, **not** native authority or a new persistent acquire
+owner/grant. Native purpose/cancellation/deadline, physical proof, fit, source
+memory/profile and settlement gates remain separate and mandatory. It adds no
+operation handoff, polling, cancellation recovery, implicit coalescence or schema
+change. Existing genuinely owned producer failures retain conservative holds.
+
+Initial evidence: **38 new offline tests;1248 passed,one upstream warning** in the
+combined23-module lifecycle/native/dispatch/fit/persistence suite (126.17s).
+Coverage includes all three actors, both providers and operation goals, same-target
+foreign FIFO, direct-driver repeat checks, stale foreign stages, forged operation
+identity and concrete-type refusals. Private standalone rejects same-target foreign
+acquire claims for both load and inference, without public native sibling fallback.
+All installed/native facts and transports remain synthetic. Full regression and
+exact-head CI are recorded separately after execution. No activation/defaults,
+HTTP redirection, oMLX target/inference, unload-all/cache, already-absent policy,
+LC09 recovery or independent acceptance is added. Inherited P7-PARK-01 remains
+unchanged; historical UIV2-30 review artifacts are not regenerated or relabelled.
+
+
+Pre-full operation-ownership checkpoint: five disposable mutations caught skipped
+actor pre-producer checks (14 failures), missing atomic driver repeats (two),
+ignored FIFO head (six), ignored source/instance (two), and ignored release source
+hold (two). A harness substitution initially produced invalid Python in a lambda;
+that harness-only error was repaired and all five valid mutations rerun. Source
+worktree was never mutated by the harness. Ruff/mypy75, compile, scopes200/13,
+docs259/ADR, baseline/governance/deferred security, frontend JavaScript and both
+app/standalone auth/origin smokes passed. Standalone4,276,877bytes; fresh backend
+302/16, source64/6/121, preservation21/272/50, performance21/21 and demo/screenshot
+6/6 passed. Inherited P7-PARK-01/release-review artifacts remain untouched, not a
+current green approval. Full regression and fresh exact-head CI remain pending
+at this chronological note; no activation or independent acceptance is claimed.
+
+## Atomic model interruption holds, not stale callback ownership
+
+The preceding81656c2 checkpoint passed **4909 local tests,53 skips,one warning**;
+PR CI42543358826 and push CI42543353459 were green. PR260 comment6730019432
+supersedes its chronological pending notes. Those are historical results, not
+validation of this new source.
+
+A further offline audit found that split failure handling could ignore a failed
+current-intent mark and still pause model memory after the old stage/slot advanced.
+The initial10-case run had8 actual memory-poisoning failures and2 fixture permit
+construction errors; those fixture errors were repaired, not counted as safety
+regressions. The completed tests exercise old native callbacks, a real load moving
+to verify, and real verify completing before an independent successor is claimed.
+
+`SharedMemoryAdmission.hold_model` now checks exact current intent/resource scope
+and writes coordinator uncertainty plus actual model uncertainty/paused ledger in
+**one fenced transaction**. Actor and acquire/release-driver cleanup and all three
+native bridges use this seam instead of split writes. It creates no native action,
+producer or recovery authority. The coordinator's current-step metadata selector
+is factored from its deadline gate; native active-step semantics stay unchanged.
+A completed/stale request or acquire stage returnsFalse before touching old memory
+or a successor. Genuine current request/load slots, active or already uncertain
+acquire stages and still-owned release barriers remain held even when their
+request was cancelled/expired. Repeated failures never retire a slot or charge.
+
+Ownership is not always a phase check. A targetless release owns its exact durable
+request/source-memory barrier across drain/unload until retirement. Similarly,
+a physically proved acquire-source unload may advance to load before independent
+source-attributed zero settlement. Its exact still-charged source hold remains
+fenceable only with the same current operation/epoch/generation/source/target and
+durable complete_unload receipt. A released hold or completed successor is not
+unpaid settlement and cannot be paused by the old callback. This exception keeps
+nonzero/failed settlement conservative, without polling, implicit recovery or a
+new target hold. Physical proof, ACK and cancellation still do not prove zero.
+
+Actual model ID/binding/work/epoch/domain/kind/target are validated before writes;
+release additionally requires the exact source-memory ID. A failed memory/journal
+write rolls back both halves, avoiding a partially held slot or ledger. No model
+sample or native operation is performed under the transaction. This is accounting
+and failure containment, not dispatch/native qualification or schema migration.
+
+Initial evidence: **56 new offline tests;1304 passed,one upstream warning** in the
+combined24-module suite (66.07s), including current cancelled/expired holds, atomic
+rollback, wrong model identity, release barrier advancement and unpaid versus
+retired source memory, plus current/stale source-only oMLX callbacks. Private standalone exercises both real current holds and
+late native callback refusal without public sibling fallback. Native facts and
+transports remain synthetic. Full regression and exact-head CI are recorded
+separately after execution. No defaults/HTTP redirection/native activation,
+oMLX target/inference, already-absent/unload-all/cache policy, LC09 recovery or
+independent acceptance is added. Schema staysv4; inherited P7-PARK-01 and its
+historical release-review artifacts remain unchanged.
+
+Five valid isolated mutations were caught: ignore current slot (2failures), ignore
+acquire stage/dispatch (2), split the fenced hold with an early commit (8), drop
+unpaid-source fencing (1) and reuse a released source hold (1). Each ran against
+a temporary shadow module, leaving tracked kernels unchanged. These prove test
+sensitivity to those local defects, not hardware or independent acceptance.
+Bundle4,277,676bytes; app/standalone auth/startup smokes, standalone sibling-import
+isolation, Ruff/mypy75sources, docs259files/ADRs, scope map201modules/13areas,
+source/preservation/backend/performance contracts and screenshots6/6 pass.
+
+### Main integration after96e602d (supersedes parked status above)
+
+Exact96e602d push CI42547042617 passed, including all Python and browser jobs.
+PR CI42547047347 passed browser checks but failed all three Python jobs at
+`test_committed_contract_and_handoff_are_exactly_generated`. The actual merge
+included main's newly merged PR261 (`c52fac9`, implementation14b1b1f): the owner
+had met P7-PARK-01's unblock condition, imported real5fb978b browser/CI evidence
+and restored all21 release-review assertions. This was not reflected in this
+branch's still-parked local tree. The old full local run was stopped before
+completion rather than conflated with validation of the integrated source.
+
+Integrating main reproduces **1failed,20passed** in the now-live review module.
+The only derived mismatch is its embedded isolation-smoke temporary workspace
+path: main's `sny7xz1t` versus this branch's committed backend run `n_6txc80`.
+Regenerating the derived release-review JSON resolves this single field; no
+browser evidence import, approval SHA, pass claim, pin, assertion, skip or policy
+is altered. The imported evidence, measured roadmap, restored tests and resolved
+parking register are inherited unchanged from main. Production security remains
+blocked; historical review is not LC08 native or independent acceptance.
+
+The restored review/performance/new interruption tests pass **120/120**; all21
+restored assertions are enabled. Full integrated regression and exact-head CI
+must be recorded separately after execution. This integration does not merge
+PR260, enable native dispatch or complete LC08/LC09.

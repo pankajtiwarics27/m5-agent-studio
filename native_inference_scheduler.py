@@ -37,6 +37,8 @@ from native_transition_driver import (
     UnloadAdmission,
     OmlxUnloadAdmission,
     QueuedUnloadRequest,
+    QueuedLoadRequest,
+    QueuedColdRequest,
     ReleaseJob,
     ReleaseResult,
     LoadCompletion,
@@ -48,7 +50,7 @@ from native_transition_driver import (
 from request_fit import RequestFitDenied, decode
 from runtime_dispatch_boundary import RuntimeDispatchCall, RuntimeDispatchDenied
 from runtime_persistence import assert_no_active_write_transaction
-from shared_memory_admission import MemoryLease
+from shared_memory_admission import MemoryLease, _lease, _load_confirmation_reference
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -138,7 +140,10 @@ class NativeInferenceScheduler:
                     now_ms=self.driver._now(),
                     request_id=queued.request_id,
                 )
+                if isinstance(item, (TransitionStep, ReleaseStep)):
+                    self.driver.check_claim_owner(item, queued)
                 if isinstance(item, LoadLease):
+                    self._check_lease_owner(queued, item)
                     control = item
                     memory = self._memory(plan.domain_id, item.target)
                     assert_no_active_write_transaction(
@@ -164,21 +169,7 @@ class NativeInferenceScheduler:
                         raise RuntimeDispatchDenied("coordinated_execution_unavailable")
                     if await job.complete() is not True:
                         raise RuntimeDispatchDenied("coordinated_execution_unavailable")
-                    row = self.driver.coord._call(
-                        lambda conn: conn.execute(
-                            "SELECT status,purpose,deadline,cancel_requested FROM requests WHERE id=?",
-                            (item.request_id,),
-                        ).fetchone(),
-                        now_ms=self.driver._now(),
-                    )
-                    if (
-                        row is None
-                        or row["status"] != "completed"
-                        or row["purpose"] != "load"
-                        or row["cancel_requested"]
-                        or row["deadline"] <= self.driver._now()
-                    ):
-                        raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+                    self._confirmed_load(queued, item, memory)
                     return {"status": "confirmed"}
                 if not isinstance(item, TransitionStep):
                     if isinstance(item, ReleaseStep):
@@ -200,17 +191,12 @@ class NativeInferenceScheduler:
                         item, queued, plan.transition(item, memory)
                     )
                 except BaseException:
-                    self.driver.coord.mark_uncertain(
+                    self.driver.memory.hold_model(
                         item,
+                        memory,
                         reference="native_load_stage_interrupted",
                         now_ms=self.driver._now(),
                     )
-                    if memory is not None:
-                        self.driver.memory.mark_uncertain(
-                            memory,
-                            reference="native_load_stage_interrupted",
-                            now_ms=self.driver._now(),
-                        )
                     raise
                 memory = result.memory
             raise RuntimeDispatchDenied("coordinated_execution_unavailable")
@@ -221,17 +207,12 @@ class NativeInferenceScheduler:
         finally:
             try:
                 if control is not None:
-                    changed = self.driver.coord.mark_load_uncertain(
+                    self.driver.memory.hold_model(
                         control,
+                        memory,
                         reference="native_load_control_interrupted",
                         now_ms=self.driver._now(),
                     )
-                    if changed and memory is not None:
-                        self.driver.memory.mark_uncertain(
-                            memory,
-                            reference="native_load_control_interrupted",
-                            now_ms=self.driver._now(),
-                        )
                 elif queued is not None:
                     self.driver.coord.cancel(
                         queued.request_id, now_ms=self.driver._now()
@@ -239,6 +220,87 @@ class NativeInferenceScheduler:
             finally:
                 if locked:
                     self._lock.release()
+
+    def _check_lease_owner(
+        self,
+        queued: QueuedColdRequest | QueuedLoadRequest | QueuedUnloadRequest,
+        lease: RequestLease | LoadLease,
+    ) -> None:
+        """Consumer identity fence, not native/fit/current-lease authority.
+
+        Must run BEFORE assigning cleanup ownership or invoking a producer.
+        A wrong-purpose lease belonging to THIS request can still be held by
+        the existing refusal path; another caller's lease must not be touched.
+        """
+        if (
+            type(lease) not in (RequestLease, LoadLease)
+            or lease.request_id != queued.request_id
+            or lease.domain_id != queued.domain_id
+            or lease.target != queued.admission.memory.target
+            or lease.owner_epoch != self.driver.coord._epoch
+        ):
+            raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+
+    def _confirmed_load(
+        self, queued: QueuedLoadRequest, control: LoadLease, memory: MemoryLease
+    ) -> None:
+        # Point-in-time completion, NOT a promise that the model stays current.
+        # An independent successor may already have claimed/retired this hold.
+        # Never re-probe, require a currently idle domain or poison its new owner.
+        def confirmed(conn):
+            request = conn.execute(
+                "SELECT * FROM requests WHERE id=?", (queued.request_id,)
+            ).fetchone()
+            slot = conn.execute(
+                "SELECT * FROM leases WHERE id=?", (control.lease_id,)
+            ).fetchone()
+            held = conn.execute(
+                "SELECT * FROM memory_reservations WHERE id=?", (memory.lease_id,)
+            ).fetchone()
+            receipts = conn.execute(
+                "SELECT reference FROM journal WHERE domain=? AND operation_id=? AND owner_epoch=? AND generation=? AND event=?",
+                (
+                    control.domain_id,
+                    control.lease_id,
+                    control.owner_epoch,
+                    control.generation,
+                    queued.admission.call.runtime + "_load_verified",
+                ),
+            ).fetchall()
+            if (
+                control.request_id != queued.request_id
+                or control.domain_id != queued.domain_id
+                or control.target != queued.admission.memory.target
+                or control.owner_epoch != self.driver.coord._epoch
+                or request is None
+                or request["status"] != "completed"
+                or request["purpose"] != "load"
+                or request["cancel_requested"]
+                or request["domain"] != queued.domain_id
+                or request["target"] != _encode(control.target)
+                or request["deadline"] != queued.deadline_ms
+                or request["deadline"] <= self.driver._now()
+                or slot is None
+                or slot["status"] != "released"
+                or slot["request_id"] != queued.request_id
+                or slot["domain"] != control.domain_id
+                or slot["owner_epoch"] != control.owner_epoch
+                or slot["generation"] != control.generation
+                or held is None
+                or held["status"] not in ("dispatched", "released", "uncertain")
+                or _lease(held) != memory
+                or memory.domain_id != control.domain_id
+                or memory.owner_epoch != control.owner_epoch
+                or memory.kind != "model"
+                or decode(memory.binding.encode())["profile"]
+                != asdict(queued.admission.memory)
+                or len(receipts) != 1
+                or receipts[0]["reference"]
+                != _load_confirmation_reference(control, memory)
+            ):
+                raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+
+        self.driver.coord._call(confirmed, now_ms=self.driver._now())
 
     def _confirmed_unload(self, queued: QueuedUnloadRequest, step: ReleaseStep) -> None:
         # Historical completion is authoritative even if an independent actor has
@@ -332,6 +394,10 @@ class NativeInferenceScheduler:
                     now_ms=self.driver._now(),
                     request_id=queued.request_id,
                 )
+                if isinstance(item, (TransitionStep, ReleaseStep)):
+                    self.driver.check_claim_owner(item, queued)
+                if isinstance(item, (RequestLease, LoadLease)):
+                    self._check_lease_owner(queued, item)
                 if type(item) is not ReleaseStep:
                     # A miswired purpose may not leak an admitted slot or turn
                     # inference/acquire authority into release authority.
@@ -389,17 +455,12 @@ class NativeInferenceScheduler:
         finally:
             try:
                 if step is not None and not retired:
-                    changed = self.driver.coord.mark_release_uncertain(
+                    self.driver.memory.hold_model(
                         step,
+                        memory,
                         reference="native_unload_interrupted",
                         now_ms=self.driver._now(),
                     )
-                    if changed and memory is not None:
-                        self.driver.memory.mark_uncertain(
-                            memory,
-                            reference="native_unload_interrupted",
-                            now_ms=self.driver._now(),
-                        )
                 if queued is not None and not retired:
                     self.driver.coord.cancel(
                         queued.request_id, now_ms=self.driver._now()
@@ -464,8 +525,12 @@ class NativeInferenceScheduler:
                     now_ms=self.driver._now(),
                     request_id=queued.request_id,
                 )
+                if isinstance(item, (TransitionStep, ReleaseStep)):
+                    self.driver.check_claim_owner(item, queued)
                 if item is None:
                     raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+                if isinstance(item, (RequestLease, LoadLease)):
+                    self._check_lease_owner(queued, item)
                 if isinstance(item, RequestLease):
                     request = item
                     memory = self._memory(plan.domain_id, item.target)
@@ -479,6 +544,8 @@ class NativeInferenceScheduler:
                         or warm.fit.profile != plan.admission.profile
                         or warm.fit.qualification != plan.admission.counter
                         or warm.permit.qualification != plan.admission.native
+                        or warm.fit.service.coord is not self.driver.coord
+                        or warm.fit.service.memory is not self.driver.memory
                     ):
                         raise RuntimeDispatchDenied("coordinated_execution_unavailable")
                     async with aclosing(
@@ -528,17 +595,12 @@ class NativeInferenceScheduler:
                 except BaseException:
                     # A producer can fail AFTER claim but BEFORE the concrete
                     # driver starts. Do not strand a dispatched stage or retry.
-                    self.driver.coord.mark_uncertain(
+                    self.driver.memory.hold_model(
                         item,
+                        memory,
                         reference="native_scheduler_stage_interrupted",
                         now_ms=self.driver._now(),
                     )
-                    if memory is not None:
-                        self.driver.memory.mark_uncertain(
-                            memory,
-                            reference="native_scheduler_stage_interrupted",
-                            now_ms=self.driver._now(),
-                        )
                     raise
                 memory = result.memory
             raise RuntimeDispatchDenied("coordinated_execution_unavailable")
@@ -553,17 +615,12 @@ class NativeInferenceScheduler:
                 if request is not None:
                     # Independent native completion releases its request before
                     # usage/tools. A close AFTER that is not new uncertainty.
-                    changed = self.driver.coord.mark_request_uncertain(
+                    self.driver.memory.hold_model(
                         request,
+                        memory,
                         reference="native_scheduler_interrupted",
                         now_ms=self.driver._now(),
                     )
-                    if changed and memory is not None:
-                        self.driver.memory.mark_uncertain(
-                            memory,
-                            reference="native_scheduler_interrupted",
-                            now_ms=self.driver._now(),
-                        )
                 elif queued is not None:
                     # Only this actor's queued waiter; never cancel another
                     # request, settle its memory or claim native cancellation.

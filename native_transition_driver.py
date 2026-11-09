@@ -579,6 +579,92 @@ class NativeTransitionDriver:
         except Exception:
             raise RuntimeDispatchDenied("coordinated_execution_unavailable") from None
 
+    def _check_claim_owner(
+        self,
+        conn,
+        step: TransitionStep | ReleaseStep,
+        queued: QueuedColdRequest | QueuedLoadRequest | QueuedUnloadRequest,
+    ) -> None:
+        """Read-only identity/FIFO gate; never expire or mark a foreign effect.
+
+        Acquire operations have no request owner column. Their existing identity
+        is therefore usable only by the exact current queued FIFO head. Release
+        additionally binds its durable request and source hold. This is NOT
+        native authority, a transferable grant, or recovery after cancellation.
+        """
+        if type(queued) not in (
+            QueuedColdRequest,
+            QueuedLoadRequest,
+            QueuedUnloadRequest,
+        ) or type(step) not in (TransitionStep, ReleaseStep):
+            raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+        request = conn.execute(
+            "SELECT * FROM requests WHERE id=?", (queued.request_id,)
+        ).fetchone()
+        head = conn.execute(
+            "SELECT id FROM requests WHERE domain=? AND status='queued' ORDER BY seq LIMIT 1",
+            (queued.domain_id,),
+        ).fetchone()
+        operation = conn.execute(
+            "SELECT * FROM operations WHERE id=?", (step.operation_id,)
+        ).fetchone()
+        domain = self.coord._domain(conn, queued.domain_id)
+        if (
+            step.domain_id != queued.domain_id
+            or step.owner_epoch != self.coord._epoch
+            or request is None
+            or request["status"] != "queued"
+            or request["domain"] != queued.domain_id
+            or request["target"] != _encode(queued.admission.memory.target)
+            or request["deadline"] != queued.deadline_ms
+            or head is None
+            or head["id"] != queued.request_id
+            or operation is None
+            or operation["status"] != "active"
+            or not operation["dispatched"]
+            or operation["domain"] != step.domain_id
+            or operation["owner_epoch"] != step.owner_epoch
+            or operation["generation"] != step.generation
+            or operation["stage"] != step.kind
+            or operation["source"] != _encode(step.source)
+            or operation["source_instance_id"] != step.source_instance_id
+            or domain["operation_id"] != step.operation_id
+            or domain["generation"] != step.generation
+            or domain["state"] != "switching"
+        ):
+            raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+        if isinstance(step, ReleaseStep):
+            if (
+                operation["goal"] != "release"
+                or operation["target"] is not None
+                or step.request_id != queued.request_id
+                or operation["request_id"] != step.request_id
+                or operation["source_memory_id"] != step.memory_id
+                or step.source != queued.admission.memory.target
+            ):
+                raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+        elif (
+            operation["goal"] != "acquire"
+            or operation["target"] != _encode(step.target)
+            or step.target != queued.admission.memory.target
+        ):
+            raise RuntimeDispatchDenied("coordinated_execution_unavailable")
+
+    def check_claim_owner(
+        self,
+        step: TransitionStep | ReleaseStep,
+        queued: QueuedColdRequest | QueuedLoadRequest | QueuedUnloadRequest,
+    ) -> None:
+        """Before actor producer/cleanup ownership; driver repeats atomically."""
+        assert_no_active_write_transaction("native claimed operation ownership")
+        try:
+            self.coord._call(
+                lambda conn: self._check_claim_owner(conn, step, queued),
+                now_ms=self._now(),
+            )
+        except Exception:
+            raise RuntimeDispatchDenied("coordinated_execution_unavailable") from None
+
     async def advance_release(
         self, step: ReleaseStep, queued: QueuedUnloadRequest, job: ReleaseJob
     ) -> ReleaseResult:
@@ -595,6 +681,7 @@ class NativeTransitionDriver:
                 raise RuntimeDispatchDenied("invalid_dispatch_request")
 
             def current(conn):
+                self._check_claim_owner(conn, step, queued)
                 if self.coord._active_release(conn, step, self._now()) is None:
                     raise RuntimeDispatchDenied("coordinated_execution_unavailable")
                 request = conn.execute(
@@ -679,13 +766,12 @@ class NativeTransitionDriver:
             return ReleaseResult(step, None, True)
         except BaseException as exc:
             if valid:
-                self.coord.mark_release_uncertain(
-                    step, reference="native_release_interrupted", now_ms=self._now()
+                self.memory.hold_model(
+                    step,
+                    held,
+                    reference="native_release_interrupted",
+                    now_ms=self._now(),
                 )
-                if held is not None:
-                    self.memory.mark_uncertain(
-                        held, reference="native_release_interrupted", now_ms=self._now()
-                    )
             if not isinstance(exc, Exception):
                 raise
             raise RuntimeDispatchDenied("coordinated_execution_unavailable") from None
@@ -706,6 +792,7 @@ class NativeTransitionDriver:
 
             # Check the actual dispatched step before accepting any supplied job.
             def current(conn):
+                self._check_claim_owner(conn, step, queued)
                 if self.coord._active_step(conn, step, self._now()) is None:
                     raise RuntimeDispatchDenied("coordinated_execution_unavailable")
                 row = conn.execute(
@@ -844,15 +931,12 @@ class NativeTransitionDriver:
             # No retry/release/next-step inference on an interrupted stage. Native
             # bridges additionally retain their own send markers and late effects.
             if valid:
-                self.coord.mark_uncertain(
-                    step, reference="native_transition_uncertain", now_ms=self._now()
+                self.memory.hold_model(
+                    step,
+                    held,
+                    reference="native_transition_uncertain",
+                    now_ms=self._now(),
                 )
-                if held is not None:
-                    self.memory.mark_uncertain(
-                        held,
-                        reference="native_transition_uncertain",
-                        now_ms=self._now(),
-                    )
             if not isinstance(exc, Exception):
                 raise
             if isinstance(exc, RequestFitDenied):
