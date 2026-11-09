@@ -166,7 +166,8 @@
           "Local post-merge closeout validation against main 6aca516fc9afce5bbe1f8276b72407c69a00d0c1: AP invariants, docs, governance, security-record consistency and baseline passed; scoped docs/CI tests reported 497 passed and 21 intentional P7-PARK-02 skips."
         ],
         "completion_branch": "arena/bf895de2-m5-agent-studio",
-        "completion_pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/278"
+        "completion_pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/278",
+        "post_completion_authorization": "On 2026-11-09T16:09:30Z the owner authorized AP-002 and AP-003 sequentially. This supersedes only the earlier downstream-authorization blocker; AP-001 evidence and no-runtime-activation limits remain unchanged."
       },
       "implementation_prompt": "Implement AP-001: Reconcile programs and trace current production gaps. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
@@ -176,7 +177,7 @@
       "title": "Resolve mission scope and operating-envelope decisions",
       "priority": "P0",
       "optional": false,
-      "status": "not_started",
+      "status": "in_progress",
       "authorization": "owner_decisions_for_real_hardware_accounts_and_budgets",
       "dependencies": [
         "AP-001"
@@ -234,18 +235,32 @@
         "Push/PR state; owner/independent approvals where required"
       ],
       "tracking": {
-        "owner": null,
-        "branch": null,
-        "base_sha": null,
-        "head_sha": null,
-        "claimed_at": null,
-        "heartbeat_at": null,
+        "owner": "arena/5779cf5f-m5-agent-studio",
+        "branch": "arena/5779cf5f-m5-agent-studio",
+        "base_sha": "fecd51faec7cf636d38c7ef5340a14d4f98f9f92",
+        "head_sha": "fecd51faec7cf636d38c7ef5340a14d4f98f9f92",
+        "claimed_at": "2026-11-09T16:09:30Z",
+        "heartbeat_at": "2026-11-09T16:09:30Z",
         "pr_url": null,
         "delivery_status": "not_pushed",
         "acceptance_evidence": [],
         "tests_executed": [],
-        "blockers": [],
-        "handoff": null
+        "blockers": [
+          "U01-U06 real-owner values remain explicitly pending unless supplied; absence must deny affected live actions rather than be inferred.",
+          "This Linux x86_64 sandbox cannot measure the owner-stated Apple M5/24 GB/1 TB host, installed runtime versions or qualified headroom.",
+          "AP-003 is authorized sequentially but must remain not_started and use a separate later branch/PR; AP-004 through AP-032 remain unauthorized.",
+          "No runtime, provider, account, file, egress, spending, promotion or lifecycle activation is authorized by this claim."
+        ],
+        "handoff": "AP-002 is the sole active claim on the fixed Arena branch. Build a versioned U01-U06 decision register, owner-host inventory recipe and deny-by-default fictional policy/budget examples without activating product paths. Keep real values explicitly pending. AP-003 is authorized only as the next separate story after AP-002 delivery; do not claim it here.",
+        "blast_radius": {
+          "objective_and_gap": "Turn U01-U06 into versioned, machine-validated current state that distinguishes owner statements, measured facts and explicitly pending choices; current roadmap prose alone is not a consumable configuration or denial fixture.",
+          "options": "Reject a runtime control plane or hard-coded owner machine profile. Prefer additive AP-owned schema/data, validation/tests and documentation; reuse existing hardware/grant/routing concepts without activating them.",
+          "anticipated_files": "AP ledger plus new AP decision/config documentation, versioned fictional fixtures, a validation boundary and focused tests; exact files will be narrowed after source audit. No generated runtime/UI artifact is intentionally changed.",
+          "contracts_and_data": "Additive offline AP records only. No API, route, UI control, persistence migration or user-data rewrite is planned.",
+          "authority_and_resources": "No credentials, provider calls, network, private files, spending, model load or host execution. Missing grants and unresolved decisions deny affected actions.",
+          "compatibility_and_rollback": "No feature flag or migration. Revert the AP-002 additive records and validator; preserve AP-001 history and all owning-program ledgers.",
+          "required_evidence": "Positive, negative, schema/version, unknown-field, missing-grant, pending-decision and host-inventory separation tests; docs/governance/CI and generated-drift checks. Installed owner-host measurements remain blocked."
+        }
       },
       "implementation_prompt": "Implement AP-002: Resolve mission scope and operating-envelope decisions. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
@@ -2592,11 +2607,35 @@
     "reconciliation_evidence": "docs/autonomous-production-ap001-reconciliation.md",
     "registered_by_story": "AP-001",
     "owner_authorized_date": "2026-11-09",
-    "activation_scope": "AP-001 reconciliation, registration and evidence only",
+    "activation_scope": "AP-002 and AP-003 are owner-authorized sequential story work after AP-001 completion; claim one story per branch/PR; no product runtime activation.",
     "runtime_activation_authorized": false,
-    "authorized_downstream_stories": [],
+    "authorized_downstream_stories": [
+      "AP-002",
+      "AP-003"
+    ],
     "claim_authority": "A pushed draft pull request plus the matching story tracking block is the remote coordination claim; a local JSON edit alone is not atomic.",
     "fixed_branch_exception": "Arena sessions use their assigned arena/<session>-m5-agent-studio branch instead of renaming to the proposed ap-XXX-short-slug convention.",
-    "stale_claim_rule": "No automatic timeout is inferred. Inspect remote activity, coordinate explicitly, preserve work and record the takeover reason before superseding a claim."
+    "stale_claim_rule": "No automatic timeout is inferred. Inspect remote activity, coordinate explicitly, preserve work and record the takeover reason before superseding a claim.",
+    "authorization_history": [
+      {
+        "authorized_at": "2026-11-09",
+        "stories": [
+          "AP-001"
+        ],
+        "mode": "single_story",
+        "scope": "reconciliation, registration and evidence only",
+        "source": "Owner instruction recorded by AP-001."
+      },
+      {
+        "authorized_at": "2026-11-09T16:09:30Z",
+        "stories": [
+          "AP-002",
+          "AP-003"
+        ],
+        "mode": "sequential_one_story_per_branch_and_pr",
+        "scope": "AP-002 decision-register/inventory/policy-fixture work, followed by AP-003 evaluation-brief/fixture work; no runtime activation or external action.",
+        "source": "Owner selected “Authorize both sequentially” after AP-001 completion."
+      }
+    ]
   }
 }
