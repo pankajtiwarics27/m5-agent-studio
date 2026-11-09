@@ -3,12 +3,55 @@
 **Owner:** repository owner
 **Parked:** 2026-11-08
 **Tracker:** PR #258
-**Status:** 0 items parked — P7-PARK-01 resolved 2026-11-08, P7-PARK-02 resolved 2026-11-09 (entries are deleted once their unblock condition is met)
+**Status:** 1 item parked — P7-PARK-03 (P7-PARK-01 resolved 2026-11-08, P7-PARK-02 resolved 2026-11-09)
 
 This page exists so that work deliberately parked during `UIV2-P7` has an owner, a
 reason and a fix procedure written down in the repository rather than a merged PR
 description. Each entry names the exact unblock condition; when it is met, the entry
 is deleted rather than annotated.
+
+---
+
+## P7-PARK-03 — UIV2-30 release review assertions parked during the phone Hall fix — **PARKED 2026-11-09**
+
+| Field | Value |
+|---|---|
+| Artifact | `tests/test_uiv2_release_review.py` (21 assertions) |
+| Generator | `scripts/uiv2_release_review.py` (left in place, still runnable) |
+| Decision | owner, 2026-11-09 — asked after the re-captured phone Hall baseline was approved, answered "Park tests/test_uiv2_release_review.py again" |
+| Mechanism | module-level `pytest.mark.skip`; no test deleted, no assertion edited |
+| Unblock condition | a green CI run of a commit that already contains the phone Hall fix, with fresh Compare and cross-tab evidence imported against that run |
+| Blocks | nothing in P7; the module is the release-handoff contract, not product behaviour |
+
+### Why it cannot pass as written
+
+Same bootstrap as P7-PARK-02, for a different reason. `validate_evidence()` requires the
+committed evidence to cite the green CI run of the commit that contains it. The phone Hall fix
+changes `static/index.html`, so the evidence imported at merge commit `6aca516` no longer binds
+the current browser sources and `findings` is non-empty. The module runs on every push, so it
+asserts "the evidence is current" while being the thing that runs before the evidence can be
+current. Satisfying it inside one commit would mean writing a `ci.headSha` for a run that never
+happened.
+
+**Nothing here is a product regression, and nothing here relaxes a visual claim.** The change it
+waits on was measured, not assumed: the cross-tab walk captured at a clean HEAD with
+2104/2104 structural checks passing, and exactly two of 48 captures moved — one field each,
+`required.#hallStream.y` 2273.61 -> 1740.42 at 390x844, in both themes. The owner approved that
+re-capture on 2026-11-09 and the approval is committed as
+`product/M5_2_0_UIUX_V2_Cross_Tab_Approval.json`, pinned to head `99fada2`.
+
+### Unblock procedure
+
+1. Merge the fix; note the merge commit's green run.
+2. Run `scripts/compare_continuity_walk.mjs` and
+   `scripts/uiux_v2_cross_tab_reference_walk.mjs --check` at that commit (both need a browser).
+3. `scripts/uiv2_release_review.py --import-evidence --compare-run … --visual-run … --ci-run …`,
+   then regenerate and `--check`.
+4. Delete the `pytestmark` block and this entry, and re-run the module: 21 assertions, unedited.
+
+While parked, `scripts/uiv2_release_review.py --check` reports the contract as stale — read
+`findings` before concluding anything, and do not regenerate
+`product/M5_2_0_UIUX_V2_Release_Review.json` while parked.
 
 ---
 

@@ -9,7 +9,7 @@
   "statement": "The actual app and the explicitly approved UIV2-03 wireframe are captured at the same six-tab viewport/theme matrix. Pixel differences are measured and annotated, never hidden by a blanket tolerance. Independent structural rules must pass, and future --check runs also require a live structural baseline approved by a human. New PNGs are local evidence, not Git inputs.",
   "source": {
     "static": "static/index.html",
-    "static_sha256": "b37f117dd620b8a2d5b3a285eceb1e8738368e57b1ed187e52ce13b51337fe0d",
+    "static_sha256": "397c3ae069fe281d8150485e1b88e73c7970de8a1ac07841c6790f7fe685da0f",
     "walk": "scripts/uiux_v2_cross_tab_reference_walk.mjs",
     "walk_sha256": "f84f40cbd9007909f272f851dcee94d45d9e2ef5b7e1eb0d9e5da3c26e5cb81a"
   },
@@ -957,17 +957,17 @@
     "rule": "A human must approve the annotated candidate; the agent cannot infer or self-certify this decision.",
     "human_approval": {
       "decision": "approved",
-      "reference": "user:PR 268 owner review 2026-11-09 \"approved the re-captured baseline\"",
-      "recorded_at": "2026-11-09T13:46:21.464435+00:00",
+      "reference": "user:Arena review 2026-11-09 \"approved the re-captured phone Hall baseline; re-capture the two 390x844 hall captures\"",
+      "recorded_at": "2026-11-09T17:22:37.569589+00:00",
       "scope": "Structural fidelity of all 48 annotated live/reference comparisons; not a pixel-clone claim."
     },
     "candidate": {
-      "manifest": "/home/user/uiv2-fold-recapture/candidate-manifest.json",
-      "manifest_sha256": "bde31a3073e9a05ba53fc41ca1b2ce1301f1e04a9fcff6bd00209b7f677ec2d7",
-      "git_head": "f64842a5a23b723f7ae7124e04ea14d1aa48fe28"
+      "manifest": "/home/runner/work/_temp/candidate/candidate-manifest.json",
+      "manifest_sha256": "e69a16a6a2b1c5711a77c1798b956ef67f418a46f9b835af96c6a99a6a778bea",
+      "git_head": "3bea54dd9572e9ee710f1d2b758b46dedd2f4677"
     },
     "captures": 48,
-    "approval_sha256": "b7e0224688b2d56b6f11d5d900cf6fdf9a8b7761e860e722966c19312c50a61c"
+    "approval_sha256": "fe8f233b8b168a74aa4208de1bd6430d2d2339a3dba2c682c1c5b8d3029027af"
   },
   "totals": {
     "panes": 6,
