@@ -24081,25 +24081,25 @@ async def _unload_omlx_model(client: httpx.AsyncClient, model_id: str) -> None:
 
 
 async def _unload_other_omlx_models(client: httpx.AsyncClient, keep_model_id: str) -> list[str]:
-    """Proactively evict any other resident local oMLX models so `keep_model_id` has maximum 24GB unified RAM headroom."""
-    unloaded: list[str] = []
+    """Return IDs with 2xx unload acknowledgments only, not verified residency release."""
+    acknowledged: list[str] = []
     if _local_runtime_dispatch().coordinated:
         raise runtime_dispatch_boundary.RuntimeDispatchDenied("unowned_eviction_forbidden")
     if not await _omlx_is_online(client):
-        return unloaded
+        return acknowledged
     try:
-        res = await client.get(f"{OMLX_BASE}/admin/api/models", timeout=2.5)
-        if res.status_code == 200:
-            for m in res.json().get("models", []):
-                mid = str(m.get("id") or "")
-                if mid and mid != keep_model_id and m.get("loaded") and not m.get("virtual"):
-                    await client.post(f"{OMLX_BASE}/v1/models/{mid}/unload", timeout=15.0)
-                    unloaded.append(mid)
-            if unloaded:
-                await asyncio.sleep(0.4)
+        res = await client.get(f"{OMLX_BASE}/admin/api/models", timeout=2.5, follow_redirects=False)
+        for m in (res.json().get("models", []) if res.status_code == 200 else []):
+            mid = str(m.get("id") or "")
+            if mid and mid != keep_model_id and m.get("loaded") and not m.get("virtual"):
+                response = await client.post(f"{OMLX_BASE}/v1/models/{mid}/unload", timeout=15.0, follow_redirects=False)
+                acknowledged.extend([mid] if 200 <= response.status_code < 300 else [])
+        if acknowledged:
+            await asyncio.sleep(0.4)
     except Exception:
         pass
-    return unloaded
+
+    return acknowledged
 
 
 @app.get("/api/models/admission")
