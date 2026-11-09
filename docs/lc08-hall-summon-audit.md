@@ -85,6 +85,17 @@ and restored V2 review remains 0 findings with imported evidence unchanged.
 Ruff, mypy (75 sources), documentation/ADR checks, frontend syntax, pinned baseline
 and scope-map validation (204 modules / 13 areas) pass. Full regression and exact-head
 CI results must be recorded after execution; a started process is not a pass.
+The first full local run against `34b9698` caught an older Council-participants
+contract that required the literal direct `async for` spelling. That incomplete
+run was stopped at roughly23% and is not a full result. The contract now checks
+the AST instead: both initial/retry sources must be closed scopes, both must end
+before the direct transcript save, and the direct success yield must follow that
+save. This strengthens ownership/save-order coverage rather than dropping the
+protected behavior. The expanded seven-module focused suite passes
+**223 tests, 1 upstream warning in32.97s**. Runtime and generated app artifacts
+are unchanged by this test-only correction; a fresh full run and exact-head CI
+remain pending.
+
 The complete app-derived artifact dependency graph is refreshed, without changing
 historical approval pins, imported browser evidence or security-release decisions.
 

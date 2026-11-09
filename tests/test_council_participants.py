@@ -13,6 +13,7 @@ runtime rather than editing the payload, and check that the walk's claims are re
 
 from __future__ import annotations
 
+import ast
 import importlib.util
 import json
 import subprocess
@@ -395,10 +396,26 @@ def test_the_doc_names_the_limits_it_refuses_to_cross():
 
 
 def test_the_summon_route_still_saves_after_the_stream():
-    server = APP.read_text(encoding="utf-8")
-    body = inventory.python_function(server, "api_hall_summon")
-    assert 0 <= body.find("async for item in stream_any_model(") < body.find("append_hall_message(")
-    assert body.find("append_hall_message(") < body.find('_sse("summon_done"')
+    tree = ast.parse(APP.read_text(encoding="utf-8"))
+    route = next(node for node in tree.body if isinstance(node, ast.AsyncFunctionDef) and node.name == "api_hall_summon")
+    events = next(node for node in route.body if isinstance(node, ast.AsyncFunctionDef) and node.name == "event_gen")
+    success = next(node for node in events.body if isinstance(node, ast.Try)).body
+    saved = next(node for node in success if isinstance(node, ast.Assign)
+                 and isinstance(node.value, ast.Call) and ast.unparse(node.value.func) == "append_hall_message")
+    done = next(node for node in success if isinstance(node, ast.Expr) and isinstance(node.value, ast.Yield)
+                and isinstance(node.value.value, ast.Call) and ast.unparse(node.value.value.func) == "_sse"
+                and node.value.value.args[0].value == "summon_done")
+    calls = [node for node in ast.walk(events) if isinstance(node, ast.Call) and ast.unparse(node.func) == "stream_any_model"]
+    scopes = [node for node in ast.walk(events) if isinstance(node, ast.AsyncWith)
+              and len(node.items) == 1 and isinstance(node.items[0].context_expr, ast.Call)
+              and ast.unparse(node.items[0].context_expr.func) == "contextlib.aclosing"
+              and node.items[0].context_expr.args[0] in calls]
+    assert len(calls) == len(scopes) == 2  # both initial and legacy retry are owned
+    for scope in scopes:
+        assert scope.end_lineno < saved.lineno < done.lineno
+        assert any(isinstance(node, ast.AsyncFor)
+                   and ast.unparse(node.iter) == ast.unparse(scope.items[0].optional_vars)
+                   for node in scope.body)
 
 
 def test_the_demo_branch_still_writes_the_same_text_and_only_gains_a_flag():
