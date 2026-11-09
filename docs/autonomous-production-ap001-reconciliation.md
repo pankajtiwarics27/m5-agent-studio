@@ -1,7 +1,10 @@
 # AP-001 — Program reconciliation and production gap map
 
-**Story:** AP-001 • **State:** in progress • **Originally claimed:** 2026-11-09T14:34:22Z  
-**Current main/base:** `2f91bd3a7d9e835818f31a9005d5fc648e207182` • **Replacement claim:** [PR #275](https://github.com/pankajtiwarics27/m5-agent-studio/pull/275)
+**Story:** AP-001 • **State:** in review • **Originally claimed:** 2026-11-09T14:34:22Z
+
+**Current main/base:** `2f91bd3a7d9e835818f31a9005d5fc648e207182` • **Implementation evidence head:** `f35417da46f2a0bd6c5e6364ff875987fb237ee7`
+
+**Replacement claim:** [PR #275](https://github.com/pankajtiwarics27/m5-agent-studio/pull/275)
 
 ## 1. Authority, scope and pre-edit record
 
@@ -372,7 +375,9 @@ The full local pytest suite was not re-run because this documentation/ledger
 change maps to the 518-test docs/CI scope; the 607 focused source-grounding run
 adds the audited capability contracts. Pull-request CI remains responsible for
 the full Python 3.11/3.12/3.13 and browser-safety matrix at the pushed head.
-Until those checks finish, CI is pending rather than green. No current-host
-isolation, installed native runtime, physical load/unload, real browser task,
-playable video, owner artifact review or independent security acceptance is
-claimed.
+AP-001 moved to `in_review` only after the implementation/evidence commit was
+pinned; the earlier invariant run correctly recorded `in_progress` during
+construction. Until PR checks finish, CI is pending rather than green. No
+current-host isolation, installed native runtime, physical load/unload, real
+browser task, playable video, owner artifact review or independent security
+acceptance is claimed.
