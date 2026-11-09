@@ -372,7 +372,7 @@
         "  [PASS] no new privileges — --security-opt=no-new-privileges",
         "  [PASS] no implicit image pull — --pull=never",
         "  [PASS] resource limits — --pids-limit=128 --memory=2g --cpus=2",
-        "  [PASS] single workspace bind mount — type=bind,source=/tmp/m5-isolation-smoke-qdtrs2q5,target=/workspace",
+        "  [PASS] single workspace bind mount — type=bind,source=/tmp/m5-isolation-smoke-0r2lpgpv,target=/workspace",
         "",
         "== 3. Skill-code execution gates (app._run_skill_script) ==",
         "  [PASS] default-off skill-code denial — PermissionError",
