@@ -105,6 +105,65 @@ def test_ci_keeps_full_pull_request_gate_and_scopes_only_feature_pushes() -> Non
     assert "Browser safety regressions" in workflow
 
 
+def test_ci_does_not_run_the_heavy_jobs_twice_for_one_commit() -> None:
+    """A push and the pull request for it used to run the same commit twice.
+
+    The push run is the duplicate: the pull request run is the one carrying the
+    full suite, so a pushed branch that already has an open pull request must not
+    pay for the heavy jobs again. `main`, schedules, manual runs and every pull
+    request still run, and a failed lookup must fail open.
+    """
+    workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+
+    assert "preflight:" in workflow
+    assert "gh api \"repos/$REPO/pulls?state=open&head=$OWNER:$BRANCH\"" in workflow
+    # Fail open: a broken token or API call must cost minutes, never coverage.
+    assert 'reason="pull request lookup failed ($open); running to keep coverage"' in workflow
+    assert '[ "$BRANCH" != "main" ]' in workflow
+    assert "needs: preflight" in workflow
+    assert "if: needs.preflight.outputs.run == 'true'" in workflow
+    # The required check names are the merge gate; they must not change.
+    assert "name: Browser safety regressions" in workflow
+    assert 'python-version: ["3.11", "3.12", "3.13"]' in workflow
+
+
+def test_ci_concurrency_supersedes_within_an_event_lane_only() -> None:
+    """Supersession must never trade the full pull request run for a scoped push.
+
+    Keying the group on `github.ref` put `refs/heads/X` and `refs/pull/N/merge`
+    in unrelated groups, so the two runs never superseded each other. Keying it
+    on the branch alone would let a cheap push cancel the authoritative pull
+    request run. The group therefore carries the event name, and the scheduled
+    and manual lanes are excluded from cancellation.
+    """
+    workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+
+    assert "group: ci-${{ format('{0}-{1}', github.event_name," in workflow
+    assert "github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'" in workflow
+    assert "github.run_id" in workflow
+    assert "cancel-in-progress: ${{ github.ref != 'refs/heads/main'" in workflow
+    assert "github.event_name != 'schedule'" in workflow
+    assert "github.event_name != 'workflow_dispatch'" in workflow
+    # The old ref-only group is what let the duplicate pair run side by side.
+    assert "group: ci-${{ github.ref }}" not in workflow
+
+
+def test_ci_streams_pytest_and_reports_its_own_timing() -> None:
+    """A ten-minute step that prints only its last 40 lines is unobservable."""
+    workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+
+    assert 'tee "$log"' in workflow
+    # GitHub runs `run:` with `bash -e`; without turning it off, the first
+    # failing command (the pytest pipeline itself) skips every diagnostic below.
+    assert "set +e\n          set -uo pipefail" in workflow
+    assert "PYTHONUNBUFFERED" in workflow
+    assert "--durations=15" in workflow
+    assert "::notice title=Pytest ${mode} suite" in workflow
+    assert "status=${PIPESTATUS[0]}" in workflow
+    # The slowest measured leg is 13.6 minutes; 15 left almost no headroom.
+    assert "timeout-minutes: 25" in workflow
+
+
 def test_local_scope_selector_includes_staged_unstaged_and_untracked_changes(tmp_path: Path) -> None:
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     tracked = tmp_path / "tracked.py"

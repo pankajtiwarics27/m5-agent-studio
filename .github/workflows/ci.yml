@@ -9,15 +9,72 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
+# Supersession is scoped per event lane, not per ref. Keying on `github.ref`
+# alone made `refs/heads/X` and `refs/pull/N/merge` distinct groups, so a push
+# and the pull request for the same commit ran side by side and neither ever
+# superseded the other. Keying every event on the branch name instead would let
+# a cheap scoped push run cancel an in-flight full-suite pull request run, which
+# loses coverage; the lanes stay separate so only same-kind runs supersede.
+# - push:            supersedes earlier pushes of the same branch, never `main`
+# - pull_request:    supersedes the earlier run for the same PR branch
+# - schedule/manual: unique per run, so a nightly is never cancelled
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ format('{0}-{1}', github.event_name, (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.run_id || github.head_ref || github.ref_name) }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.event_name != 'schedule' && github.event_name != 'workflow_dispatch' }}
 
 jobs:
-  test:
+  # A branch push and the pull request opened for it run the same commit twice.
+  # The pull request run is the authoritative full-suite one (it is what branch
+  # protection sees at merge time), so a branch push that already has an open
+  # pull request skips the heavy jobs instead of paying for the same work twice.
+  # Everything else still runs: `main` pushes, scheduled runs, manual runs, and
+  # every pull request. Job-level `if:` reports the required checks as skipped,
+  # which branch protection treats as passing; the check names never change.
+  # Any failure of this probe returns `run=true`, so a broken token or API call
+  # costs runner minutes rather than coverage.
+  preflight:
+    name: ci-preflight
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 3
+    outputs:
+      run: ${{ steps.decide.outputs.run }}
+    steps:
+      - name: Decide whether this run owns the work
+        id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          REPO: ${{ github.repository }}
+          OWNER: ${{ github.repository_owner }}
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          set -uo pipefail
+          run=true
+          reason="event '$EVENT_NAME' always runs"
+          if [ "$EVENT_NAME" = "push" ] && [ "$BRANCH" != "main" ]; then
+            if open=$(gh api "repos/$REPO/pulls?state=open&head=$OWNER:$BRANCH" --jq 'length' 2>&1); then
+              if [ "$open" != "0" ]; then
+                run=false
+                reason="push to '$BRANCH' has $open open pull request(s); the pull request run owns this commit"
+              else
+                reason="push to '$BRANCH' has no open pull request"
+              fi
+            else
+              reason="pull request lookup failed ($open); running to keep coverage"
+            fi
+          fi
+          echo "::notice title=CI preflight::run=$run - $reason"
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+
+  test:
+    needs: preflight
+    if: needs.preflight.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    # Worst measured leg is 13.6 min of work; the old 15 min ceiling left under
+    # 10% headroom, so a slow pip resolve or runner hiccup killed a healthy run.
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
@@ -60,26 +117,48 @@ jobs:
         # Pushes to feature branches run the affected mapped areas. Pull requests,
         # main pushes, scheduled runs, and manual runs retain the full suite.
         # Unknown or high-risk changes fall back to the full suite in the selector.
+        # Failing tests are echoed as check annotations as well as logged, so a
+        # red run names the test even when its job log is not reachable. The log
+        # is also streamed while the suite runs: the previous version buffered
+        # everything to a file and printed only the last 40 lines at the end, so
+        # a 10-minute step showed nothing until it finished and a killed run
+        # showed nothing at all. `tee` plus unbuffered Python keeps the file for
+        # annotation, and --durations names the slow tests in the same log.
         env:
           SCOPE_ON_PUSH: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/heads/') && github.ref != 'refs/heads/main' }}
           SCOPE_BASE: ${{ github.event.before || '' }}
           SCOPE_HEAD: ${{ github.sha }}
-        # Failing tests are echoed as check annotations as well as logged, so a
-        # red run names the test even when its job log is not reachable.
+          PYTHONUNBUFFERED: "1"
+          PYTEST_ADDOPTS: "--durations=15 --durations-min=1.0"
         run: |
+          # GitHub runs `run:` blocks with `bash -e`, which aborts on the first
+          # failing command - including the pytest pipeline. That would skip the
+          # annotations, the timing notice and the log tail below on exactly the
+          # runs that need them, so the errexit is turned off on purpose.
           set +e
+          set -uo pipefail
+          log="${RUNNER_TEMP:-/tmp}/pytest.log"
+          started=$SECONDS
           if [ "$SCOPE_ON_PUSH" = "true" ]; then
-            python scripts/run_scoped_tests.py --base "$SCOPE_BASE" --head "$SCOPE_HEAD" > "${RUNNER_TEMP:-/tmp}/pytest.log" 2>&1
+            mode="scoped"
+            python scripts/run_scoped_tests.py --base "$SCOPE_BASE" --head "$SCOPE_HEAD" 2>&1 | tee "$log"
           else
-            python -m pytest -q --tb=short -rf > "${RUNNER_TEMP:-/tmp}/pytest.log" 2>&1
+            mode="full"
+            python -m pytest -q --tb=short -rf 2>&1 | tee "$log"
           fi
-          status=$?
+          status=${PIPESTATUS[0]}
+          elapsed=$((SECONDS - started))
+          summary=$(grep -E '[0-9]+ (passed|failed)' "$log" | tail -n 1)
+          echo "::notice title=Pytest ${mode} suite (${elapsed}s, python ${{ matrix.python-version }})::${summary:-no summary line}"
+          echo "Slowest tests (wall clock, seconds):"
+          grep -E '^[0-9]+\.[0-9]+s (call|setup|teardown)' "$log" | head -n 20 || true
           if [ "$status" -ne 0 ]; then
-            grep -E '^(FAILED|ERROR)' "${RUNNER_TEMP:-/tmp}/pytest.log" | head -25 | while IFS= read -r line; do
+            grep -E '^(FAILED|ERROR)' "$log" | head -25 | while IFS= read -r line; do
               echo "::error title=Pytest failure::${line}"
             done
           fi
-          tail -n 40 "${RUNNER_TEMP:-/tmp}/pytest.log"
+          echo "--- pytest tail ---"
+          tail -n 40 "$log"
           exit "$status"
       - name: Check the demo transcript and screenshot manifest
         run: |
@@ -112,7 +191,10 @@ jobs:
 
   browser-safety:
     name: Browser safety regressions
+    needs: preflight
+    if: needs.preflight.outputs.run == 'true'
     runs-on: ubuntu-latest
+    # Measured 7.7 min of work; the ceiling only guards against a hung browser.
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
