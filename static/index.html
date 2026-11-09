@@ -2185,6 +2185,14 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
 .studio-tools > summary, .harness-task-settings > summary, .harness-run-review > summary, .harness-examples > summary { cursor: pointer; color: var(--text-dim); font-size: 12px; padding: 7px 9px; border-radius: var(--radius-sm); }
 .studio-tools > summary:hover, .harness-task-settings > summary:hover, .harness-run-review > summary:hover { background: var(--bg-hover); color: var(--text); }
 .studio-tools > .skills-strip { position: absolute; right: 16px; top: calc(100% + 4px); width: min(720px, calc(100vw - 40px)); max-height: 60dvh; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px; box-shadow: 0 12px 36px rgba(0,0,0,.14); }
+/* UIV2-P7-07: that panel is a viewport-wide box, so its containing block has to stay the header.
+   The workspace toolbar used to be a full-width row and is now a flex item after the brand, so
+   anchoring the panel to the toolbar dragged it 264px left at every desktop width (right edge
+   1000 instead of viewport-16 at 1280) and hung it under the caption instead of the header's
+   right side, which is where the approved layout puts it. <=390px still switches the panel to
+   fixed, because there the header is an overflow-clipping scroll container. */
+.topbar { position: relative; }
+.topbar > .workspace-toolbar { position: static; }
 .sessions-toggle { display: none; }
 .inspector-title-row { display: flex; align-items: center; justify-content: space-between; }
 #pane-harness > .pane-title { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); }
@@ -2245,13 +2253,8 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
   .workspace-toolbar { padding: 4px 12px; gap: 6px; }
   .workspace-caption { display: none; }
   .studio-tools { margin-left: auto; }
-  /* UIV2-P7-07: the panel is a viewport-wide box at these widths by contract, but its containing
-     block used to be the full-width toolbar row. Folded into the header, the toolbar starts after
-     the brand, so at 600px the 584px panel hung 82px off the left edge (measured with the real
-     browser). The header becomes the anchor; <=390px still switches the panel to fixed, because
-     there the header is an overflow-clipping scroll container. */
-  .topbar { position: relative; }
-  .topbar > .workspace-toolbar { position: static; }
+  /* UIV2-P7-07: phones take the full width minus the header padding; the header anchor that keeps
+     the panel on the viewport's right edge is declared with the panel itself. */
   .studio-tools > .skills-strip { right: 8px; width: calc(100vw - 16px); }
   #pane-harness .task-composer { width: calc(100% - 24px); margin-bottom: 12px; padding: 14px; gap: 8px; }
   #pane-harness .harness-stream { padding: 16px 12px; }

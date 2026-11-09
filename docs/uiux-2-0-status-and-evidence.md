@@ -45,30 +45,30 @@ through `setStatus()`, so the state, the tone and the label cannot disagree.
 
 | Element | Tone | Announced | Line |
 |---|---|---|---|
-| (unnamed) | `ok` | no | 2482 |
-| `#dockerStateBadge` | `neutral` | no | 2529 |
-| `#sdlcProgressBadge` | `neutral` | no | 3190 |
-| `#startReadinessPill` | `neutral` | yes | 3317 |
-| `#startRecentSummary` | `neutral` | yes | 3345 |
-| `#onboardingSummary` | `neutral` | yes | 3363 |
-| `#startHealthSummary` | `neutral` | yes | 3404 |
-| `#startWorkspaceSummary` | `neutral` | yes | 3424 |
-| `#harnessActiveStatusBadge` | `info` | yes | 3481 |
-| `#hallStatusBadge` | `info` | yes | 3655 |
-| `#councilReadinessCount` | `neutral` | no | 3669 |
-| `#pipelineWorkspaceState` | `info` | no | 3829 |
-| (unnamed) | `warn` | no | 7374 |
-| (unnamed) | `warn` | no | 7472 |
-| (unnamed) | `neutral` | no | 11477 |
-| (unnamed) | `busy` | no | 11478 |
-| (unnamed) | `ok` | no | 11479 |
-| (unnamed) | `warn` | no | 11480 |
-| (unnamed) | `warn` | no | 11481 |
-| (unnamed) | `warn` | no | 11482 |
-| (unnamed) | `danger` | no | 11483 |
+| (unnamed) | `ok` | no | 2485 |
+| `#dockerStateBadge` | `neutral` | no | 2532 |
+| `#sdlcProgressBadge` | `neutral` | no | 3193 |
+| `#startReadinessPill` | `neutral` | yes | 3320 |
+| `#startRecentSummary` | `neutral` | yes | 3348 |
+| `#onboardingSummary` | `neutral` | yes | 3366 |
+| `#startHealthSummary` | `neutral` | yes | 3407 |
+| `#startWorkspaceSummary` | `neutral` | yes | 3427 |
+| `#harnessActiveStatusBadge` | `info` | yes | 3484 |
+| `#hallStatusBadge` | `info` | yes | 3658 |
+| `#councilReadinessCount` | `neutral` | no | 3672 |
+| `#pipelineWorkspaceState` | `info` | no | 3832 |
+| (unnamed) | `warn` | no | 7377 |
+| (unnamed) | `warn` | no | 7475 |
+| (unnamed) | `neutral` | no | 11480 |
+| (unnamed) | `busy` | no | 11481 |
+| (unnamed) | `ok` | no | 11482 |
+| (unnamed) | `warn` | no | 11483 |
 | (unnamed) | `warn` | no | 11484 |
 | (unnamed) | `warn` | no | 11485 |
-| (unnamed) | `neutral` | no | 11486 |
+| (unnamed) | `danger` | no | 11486 |
+| (unnamed) | `warn` | no | 11487 |
+| (unnamed) | `warn` | no | 11488 |
+| (unnamed) | `neutral` | no | 11489 |
 
 ## Writers
 
