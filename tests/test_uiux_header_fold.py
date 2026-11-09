@@ -168,7 +168,10 @@ def test_the_tools_panel_escapes_the_headers_overflow_clip() -> None:
     assert "position: fixed" in rule.group(1)
     # fixed needs an explicit anchor: the panel used to be anchored to its summary's box.
     assert "top: calc(var(--header-height)" in rule.group(1)
-    assert "max-height: calc(100dvh" in rule.group(1)
+    # And the fixed box still has to honour the preserved short-viewport cap, not only the
+    # viewport: a viewport-only bound let the 390x900 panel reach 616px against the 542px
+    # budget tests/browser/integrations_strip_walk.mjs keeps.
+    assert "max-height: min(60dvh, calc(100dvh" in rule.group(1)
 
 
 def test_the_folded_toolbar_keeps_its_width_instead_of_compressing() -> None:

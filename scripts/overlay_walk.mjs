@@ -243,7 +243,9 @@ async function run(args) {
     record("the controller is exported for the walk", initial.hook === true, "window.M5Overlays");
 
     const dialogs = inventory.dialogs || [];
-    record("the inventory lists every dialog", dialogs.length === 13, `${dialogs.length} dialogs`);
+    // UIV2-P7-07 moved Theme and Telemetry into #settingsModal, which is the fourteenth dialog in
+    // product/M5_2_0_UIUX_Overlays.json and is opened from the header by #settingsBtn.
+    record("the inventory lists every dialog", dialogs.length === 14, `${dialogs.length} dialogs`);
 
     for (const dialog of dialogs) {
       const id = dialog.id;

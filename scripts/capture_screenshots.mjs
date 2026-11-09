@@ -333,12 +333,11 @@ async function capture(args, manifest) {
       args.token,
       url.origin,
     );
-    if (args.emulateTheme || args.emulateDensity) {
-      await page.evaluateOnNewDocument((theme, density, origin) => {
+    if (args.emulateTheme) {
+      await page.evaluateOnNewDocument((theme, origin) => {
         if (window.top !== window || location.origin !== origin) return;
-        if (theme) window.localStorage.setItem("m5_theme", theme);
-        if (density) window.localStorage.setItem("m5_ui_density", density);
-      }, args.emulateTheme, args.emulateDensity, url.origin);
+        window.localStorage.setItem("m5_theme", theme);
+      }, args.emulateTheme, url.origin);
     }
     const response = await page.goto(url.href, { waitUntil: "domcontentloaded", timeout: args.timeoutMs });
     if (!response || response.status() !== 200 || response.request().redirectChain().length ||
@@ -352,6 +351,16 @@ async function capture(args, manifest) {
       return typeof data.workspace_dir === 'string' && Array.isArray(data.recent_dirs);
     });
     if (!browserAuth) throw new Error("browser could not authenticate to the demo API");
+    // Density is no longer a stored preference the shell reads at boot: UIV2-P7-05 retired the
+    // control and the boot path, because a saved "compact" would otherwise strand a reader in
+    // spacing with no way back. Emulation therefore applies the attribute the stylesheet still
+    // reads (body[data-density]) instead of a preference nothing consumes - which is what this
+    // flag's contract always said it did.
+    if (args.emulateDensity) {
+      await page.evaluate((density) => {
+        document.body.dataset.density = density;
+      }, args.emulateDensity);
+    }
     // The shell holds streaming connections open, so networkidle never arrives.
     await new Promise((done) => setTimeout(done, args.settleMs));
     for (const shot of shots) {

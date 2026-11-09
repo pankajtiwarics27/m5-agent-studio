@@ -473,12 +473,13 @@ def test_real_isolated_demo_captures_all_six_panes(
         assert overlays.returncode == 0, overlays.stderr
         overlay_result = json.loads(overlays.stdout)
         assert overlay_result["failed"] == 0
-        # Ten of the thirteen dialogs are reachable with no session; the remaining ones
+        # Eleven of the fourteen dialogs are reachable with no session; the remaining ones
         # (UIUX-P3-04's verification record, the diff dialog, P3-03's permissions surface)
         # are blocked for the same reason: each describes a Harness session and refuses to
         # open without one, and the walk opens none. UIV2-12's expanded-conclusion dialog
-        # is reachable through its command-palette row.
-        assert overlay_result["passed"] == 98
+        # is reachable through its command-palette row, and UIV2-P7-07's Settings dialog
+        # through the header's #settingsBtn.
+        assert overlay_result["passed"] == 107
         assert overlay_result["blocked"] == 3
         assert banner["token"] not in overlays.stdout + overlays.stderr
         assert sentinel.read_bytes() == before

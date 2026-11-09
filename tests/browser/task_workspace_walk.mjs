@@ -66,7 +66,10 @@ try {
   for (const theme of ['light', 'dark']) for (const compact of [false, true]) {
     for (const width of [390, 799, 800, 820, 1279, 1280, 1568]) {
       await page.setViewport({width, height: 900});
-      await page.evaluate(({theme, compact}) => { applyTheme(theme); applyDensity(compact); }, {theme, compact});
+      // Density is retired as a control (UIV2-P7-05) and the boot path no longer reads a stored
+      // preference, so the walk drives the attribute the stylesheet still reads rather than the
+      // preference nothing consumes. The compact token block is the contract under test.
+      await page.evaluate(({theme, compact}) => { applyTheme(theme); document.body.dataset.density = compact ? 'compact' : 'comfortable'; }, {theme, compact});
       const navigation = async tab => {
         await page.evaluate(tab => switchTab(tab), tab);
         // Keep navigation snapshots frame-aligned, then require the real measured
@@ -107,7 +110,7 @@ try {
       for (const width of [390, 820, 1280, 1568]) {
         const height = width === 390 ? 844 : width === 1280 ? 720 : 900;
         await page.setViewport({ width, height });
-        await page.evaluate(({ theme, compact }) => { applyTheme(theme); applyDensity(compact); }, { theme, compact });
+        await page.evaluate(({ theme, compact }) => { applyTheme(theme); document.body.dataset.density = compact ? 'compact' : 'comfortable'; }, { theme, compact });
         // ResizeObserver delivers asynchronously, before paint but not necessarily
         // before this next protocol evaluation after a breakpoint/density change.
         await waitForHarnessSidebarLayout(page);
@@ -139,7 +142,7 @@ try {
   }
   // Real handlers and live controls: no run request or provider call is needed.
   await page.setViewport({ width: 1280, height: 800 });
-  await page.evaluate(() => { applyTheme('light'); applyDensity(false); });
+  await page.evaluate(() => { applyTheme('light'); document.body.dataset.density = 'comfortable'; });
   await page.click('#harnessProjectSummary');
   check('project opens settings', await page.$eval('#harnessTaskSettings', el => el.open));
   const settings = await page.$eval('.harness-settings-body', el => { const b = el.getBoundingClientRect(); return { top: b.top, bottom: b.bottom, right: b.right }; });

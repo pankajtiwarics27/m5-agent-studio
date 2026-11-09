@@ -6176,6 +6176,13 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
   .workspace-toolbar { padding: 4px 12px; gap: 6px; }
   .workspace-caption { display: none; }
   .studio-tools { margin-left: auto; }
+  /* UIV2-P7-07: the panel is a viewport-wide box at these widths by contract, but its containing
+     block used to be the full-width toolbar row. Folded into the header, the toolbar starts after
+     the brand, so at 600px the 584px panel hung 82px off the left edge (measured with the real
+     browser). The header becomes the anchor; <=390px still switches the panel to fixed, because
+     there the header is an overflow-clipping scroll container. */
+  .topbar { position: relative; }
+  .topbar > .workspace-toolbar { position: static; }
   .studio-tools > .skills-strip { right: 8px; width: calc(100vw - 16px); }
   #pane-harness .task-composer { width: calc(100% - 24px); margin-bottom: 12px; padding: 14px; gap: 8px; }
   #pane-harness .harness-stream { padding: 16px 12px; }
@@ -6280,9 +6287,28 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
      the telemetry popover uses fixed too. */
   .studio-tools > .skills-strip {
     position: fixed; top: calc(var(--header-height) + 4px); right: 8px;
-    width: calc(100vw - 16px); max-height: calc(100dvh - var(--header-height) - 16px);
+    width: calc(100vw - 16px);
+    /* Escaping the header's clip must not lift the panel's height cap: the preserved
+       short-viewport budget (tests/browser/integrations_strip_walk.mjs caps the panel at 60dvh)
+       still applies, so the fixed box takes whichever bound is smaller. Measured at 390x900:
+       the viewport-only bound let the panel grow to 616px against a 542px budget. */
+    max-height: min(60dvh, calc(100dvh - var(--header-height) - 16px));
     overflow-y: auto;
   }
+}
+
+/* UIV2-P7-07: the fold consumes horizontal room the caption used to have. Between 800 and 1024px
+   the header's natural width (brand + caption + Tools + Inspector + Settings + Search) left the
+   workspace caption zero pixels, which is a real regression rather than a style question:
+   tests/browser/task_workspace_walk.mjs asserts from 800px up that the caption keeps a positive
+   width and ends before the Tools summary. The two action buttons keep their icon, aria-label,
+   title, handlers and focus ring; only their text labels fold away, which is the pattern the
+   existing <=600px rule already applies to the first of them. Nothing becomes unreachable: the
+   command palette is still inline in the header and still bound to Cmd+K. */
+@media (max-width: 1024px) {
+  .top-actions .btn span { display: none; }
+  .top-actions .btn { padding: 6px 8px; }
+  .workspace-toolbar #monitorToggleBtn span { display: none; }
 }
 
 /* UIV2-P7-09: the Council pane at a 195px effective viewport (390x844 at 200% zoom). Three
