@@ -134,3 +134,38 @@ are untouched. App/standalone startup/auth/origin smokes, screenshots6/6, fronte
 syntax, Ruff/mypy75sources, docs261/ADRs and scope map203/13 pass. These are author
 checks, not native/hardware/independent acceptance. Full local regression and
 exact-head CI remain pending until separately recorded.
+
+## CI artifact-cascade correction after bc2da21
+
+The initial exact-head PR42564048187 and push42564020144 failed all3Python
+jobs; Browser safety passed in both. Their annotations name stale UI artifacts,
+including nested documented test commands, not an additional native runtime
+failure. The initial local subset did not validate the full app-derived graph.
+The incomplete bc2da21 full local run was stopped before regeneration and has
+no completed result; it must not be counted as a full pass.
+
+The handler line moves/app digest also require the UI route map, authorization
+trace, Recent Work, Start Health and Pipeline Workspace inventories to be refreshed.
+Seven failures reproduced locally (107passed alongside them); route-map --check
+then independently identified the remaining upstream stale digest. Regenerate in
+this dependency order: UI route map → authorization trace → preservation signoff;
+Recent Work/Start Health/Pipeline Workspace inventories; then the37-check UI gate
+and dependent V2 review. Existing generators update only current source hashes,
+handler/refusal lines and their downstream bindings. The signoff remains
+`historical-approval-unbound`; no approval is relabelled current, and source pins,
+imported browser/CI evidence, assertions, production-security block and runtime
+source remain unchanged.
+
+The corrected five-module route/authorization/Start/Pipeline suite passes
+**157tests,1warning in13.37s**. Aggregate regeneration now reports37/37artifact
+checks,7/7gates,0findings; V2 review reports7/7local/2200visual/15Compare,0findings.
+The complete CI-failure regression suite, fresh full local run and exact-head CI
+are recorded separately after they execute. This corrects the incomplete artifact
+refresh, not LC08 completion or native/independent qualification.
+
+The full targeted CI-failure regression suite subsequently completed:
+**290passed,1upstream warning in317.46s**, including aggregate gate consistency,
+all documented commands, source-bound route/authorization/Start/Pipeline checks,
+restored review and the36workflow regressions. No test assertion or production
+source changed for this correction. Exact-head CI and the restarted full local
+run remain pending until their own final results are available.
