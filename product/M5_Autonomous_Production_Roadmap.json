@@ -1,0 +1,2550 @@
+{
+  "schema_version": 1,
+  "document_type": "proposed_autonomous_production_execution_ledger",
+  "product": "M5 Agent Studio",
+  "program": "AP",
+  "revision": "1.2",
+  "prepared_date": "2026-11-08",
+  "lifecycle": "proposed_awaiting_program_reconciliation",
+  "source_snapshot": "a67e8b291614f8afdac7c8d38ba51bcc8926d695",
+  "source_repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
+  "specification": "docs/autonomous-production-roadmap.md",
+  "agent_prompt": "M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md",
+  "authority": {
+    "precedence": "AGENTS.md, existing security/approval rules and owning program ledgers remain binding.",
+    "scope": "Drafting/recording this plan is not runtime activation, installed qualification, or blanket code/story execution authorization.",
+    "registration_gate": "AP-001 reconciles ownership and records approved program activation before implementation claims.",
+    "other_ledgers": "Do not alter AS/M5/UIUX/UIV2/LC tracking without the owning protocol.",
+    "approval": "Agents cannot fabricate owner, screenshot, independent security or release approval."
+  },
+  "open_decisions": {
+    "U01": "Initial specialisation/audience/format and launch order",
+    "U02": "Installed runtime versions, measured free memory/storage and qualified headroom; owner hardware is M5/24 GB/1 TB",
+    "U03": "Permitted external services/providers, data scopes and spending grants; external reasoning-model use requires a separate explicit policy decision",
+    "U04": "Folders/accounts/network/retention and operating grants",
+    "U05": "Promotion classes, thresholds and owner review policy",
+    "U06": "Current lifecycle/sandbox qualification and activation"
+  },
+  "status_protocol": {
+    "states": [
+      "not_started",
+      "in_progress",
+      "blocked",
+      "in_review",
+      "done",
+      "deferred"
+    ],
+    "delivery_states": [
+      "not_pushed",
+      "delivery_pending",
+      "pushed",
+      "pr_open",
+      "merged"
+    ],
+    "done_requires": [
+      "Every acceptance criterion has executable or appropriate review evidence",
+      "Applicable tests/artifacts/CI current and passing",
+      "Required actual owner/independent approvals recorded",
+      "PR merged or repository owner-defined completion convention satisfied"
+    ],
+    "claims": "Use established repository claim protocol; branch/owner/base/head/heartbeat/PR are required when work begins. No local JSON edit is an atomic remote claim.",
+    "stale_claims": "Coordinate before takeover; record prior owner, last heartbeat, reason and preserved work.",
+    "satisfied_by_existing": "Record consumer/evidence and scope; do not silently mark done from module names.",
+    "scope_changes": "Owner-authorised ledger revision with rationale, effects and preservation; never delete history to hide missing work."
+  },
+  "non_negotiable_invariants": [
+    "Preserve existing functionality, privacy, auth, origin checks, grants, audit and safe defaults.",
+    "Network/billable/private-data/external actions need applicable explicit policy and consent.",
+    "No safety boundary or evaluator self-modification by ordinary agents.",
+    "No automatic host fallback or unqualified isolation/runtime activation.",
+    "Resource and spending budgets propagate to all nested workers.",
+    "Accepted references and approval history are versioned, scoped and never forged.",
+    "Real artifacts and quality evidence determine success, not messages or agent counts.",
+    "Model inference is local-only; no hosted-model fallback, including evaluation and improvement jobs.",
+    "Sequential load/unload is existing intended architecture; verify wiring/physical qualification rather than add another coordinator."
+  ],
+  "stories": [
+    {
+      "id": "AP-001",
+      "phase": "P0",
+      "title": "Reconcile programs and trace current production gaps",
+      "priority": "P0",
+      "optional": false,
+      "status": "not_started",
+      "authorization": "owner_authorizes_program_registration_and_scope",
+      "dependencies": [],
+      "objective": "Create a source-grounded delta map; prevent duplicate implementations and unauthorized LC activation.",
+      "deliverables": [
+        "AP-to-existing-program reconciliation",
+        "Producer/authority/executor/consumer matrix",
+        "Program registration proposal and story claim convention"
+      ],
+      "acceptance_criteria": [
+        "Every required capability is labelled reuse, extend, missing, dormant or blocked with file/test/caller evidence",
+        "Existing runtime/UI/LC claims and blockers are preserved; no other program is silently reopened",
+        "MoneyPrinter, lesson promotion, routing and durable delegation are explicitly assessed before wrappers are proposed",
+        "Current security/installed qualification and generated-file obligations are recorded",
+        "One authoritative AP tracking source and owner-approved activation scope are identified; no code activation in this story"
+      ],
+      "likely_files_to_inspect": [
+        "AGENTS.md",
+        "IMPLEMENTATION_STATUS.md",
+        "docs/lc08-current-status.md",
+        "docs/runtime-dispatch-entry-points.md",
+        "product/M5_2_0_Autonomous_Roadmap.json",
+        "product/M5_2_0_UIUX_Autonomous_Roadmap.json"
+      ],
+      "existing_test_anchors": [],
+      "reference_ids": [
+        "R07",
+        "R13",
+        "R25"
+      ],
+      "blocked_by_decisions": [],
+      "implementation_rules": [
+        "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
+        "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
+        "Reuse existing authority and persistence; no bypass or competing control plane.",
+        "Add positive, negative and failure/recovery coverage appropriate to the change.",
+        "Preserve existing features, regenerate affected artifacts and report skipped/blocked evidence honestly."
+      ],
+      "required_evidence": [
+        "Exact base/head SHA and changed-file list",
+        "Acceptance criterion to test/artifact mapping",
+        "Executed commands, exit codes, environment and sanitized evidence paths",
+        "Permission/egress/resource implications and rollback/migration evidence",
+        "Generated artifact freshness and applicable CI results",
+        "Push/PR state; owner/independent approvals where required"
+      ],
+      "tracking": {
+        "owner": null,
+        "branch": null,
+        "base_sha": null,
+        "head_sha": null,
+        "claimed_at": null,
+        "heartbeat_at": null,
+        "pr_url": null,
+        "delivery_status": "not_pushed",
+        "acceptance_evidence": [],
+        "tests_executed": [],
+        "blockers": [],
+        "handoff": null
+      },
+      "implementation_prompt": "Implement AP-001: Reconcile programs and trace current production gaps. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
+    },
+    {
+      "id": "AP-002",
+      "phase": "P0",
+      "title": "Resolve mission scope and operating-envelope decisions",
+      "priority": "P0",
+      "optional": false,
+      "status": "not_started",
+      "authorization": "owner_decisions_for_real_hardware_accounts_and_budgets",
+      "dependencies": [
+        "AP-001"
+      ],
+      "objective": "Turn open decisions into explicit scoped configuration without blocking unrelated offline work.",
+      "deliverables": [
+        "Decision register U01-U06",
+        "Hardware/runtime inventory recipe",
+        "Policy and budget examples using fictional fixtures"
+      ],
+      "acceptance_criteria": [
+        "Primary/next specialisation and audience are owner-selected or explicitly pending",
+        "Owner-stated M5/24 GB/1 TB is recorded; runtime versions, actual free resources and qualified headroom are measured separately without hard-coding the platform",
+        "Provider spending/egress/account/file grants are explicit and versioned; absence denies access",
+        "Automatic promotion classes and review boundaries are documented without inferred consent",
+        "Unresolved decisions list exactly which stories/actions are blocked and what safe work can proceed"
+      ],
+      "likely_files_to_inspect": [
+        "hardware_capabilities.py",
+        "onboarding_preflight.py",
+        "routing_policy.py",
+        "scoped_grants.py",
+        "docs/model-lifecycle-capability-feasibility.md"
+      ],
+      "existing_test_anchors": [
+        "tests/test_scoped_grants.py",
+        "tests/test_routing_consent_policy.py"
+      ],
+      "reference_ids": [
+        "R15",
+        "R40",
+        "R41"
+      ],
+      "blocked_by_decisions": [
+        "U01",
+        "U02",
+        "U03",
+        "U04",
+        "U05",
+        "U06"
+      ],
+      "implementation_rules": [
+        "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
+        "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
+        "Reuse existing authority and persistence; no bypass or competing control plane.",
+        "Add positive, negative and failure/recovery coverage appropriate to the change.",
+        "Preserve existing features, regenerate affected artifacts and report skipped/blocked evidence honestly."
+      ],
+      "required_evidence": [
+        "Exact base/head SHA and changed-file list",
+        "Acceptance criterion to test/artifact mapping",
+        "Executed commands, exit codes, environment and sanitized evidence paths",
+        "Permission/egress/resource implications and rollback/migration evidence",
+        "Generated artifact freshness and applicable CI results",
+        "Push/PR state; owner/independent approvals where required"
+      ],
+      "tracking": {
+        "owner": null,
+        "branch": null,
+        "base_sha": null,
+        "head_sha": null,
+        "claimed_at": null,
+        "heartbeat_at": null,
+        "pr_url": null,
+        "delivery_status": "not_pushed",
+        "acceptance_evidence": [],
+        "tests_executed": [],
+        "blockers": [],
+        "handoff": null
+      },
+      "implementation_prompt": "Implement AP-002: Resolve mission scope and operating-envelope decisions. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
+    },
+    {
+      "id": "AP-003",
+      "phase": "P0",
+      "title": "Establish versioned evaluation briefs and failure fixtures",
+      "priority": "P0",
+      "optional": false,
+      "status": "not_started",
+      "authorization": "normal_story_authorization",
+      "dependencies": [
+        "AP-001"
+      ],
+      "objective": "Define the output-quality evidence bar before optimising models or swarms.",
+      "deliverables": [
+        "Versioned briefs/rubrics and baseline protocol",
+        "Development/validation/held-out partition",
+        "Fault/security fixture inventory"
+      ],
+      "acceptance_criteria": [
+        "Technical, factual, creative and practical criteria are separately represented",
+        "Baseline includes a single-agent strategy and comparable resource accounting",
+        "Fixtures include injection, invalid artifacts, uncertain writes, cancellation, stale workers and lost context",
+        "Small initial dataset sizes and acceptance targets are labelled provisional until calibrated",
+        "Held-out answers cannot be modified/read by ordinary optimisers; real private traces are scrubbed before use"
+      ],
+      "likely_files_to_inspect": [
+        "workflow_evaluation.py",
+        "failure_injection.py",
+        "benchmarks",
+        "tests/test_workflow_evaluation.py"
+      ],
+      "existing_test_anchors": [
+        "tests/test_workflow_evaluation.py"
+      ],
+      "reference_ids": [
+        "R16",
+        "R24",
+        "R28",
+        "R33"
+      ],
+      "blocked_by_decisions": [],
+      "implementation_rules": [
+        "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
+        "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
+        "Reuse existing authority and persistence; no bypass or competing control plane.",
+        "Add positive, negative and failure/recovery coverage appropriate to the change.",
+        "Preserve existing features, regenerate affected artifacts and report skipped/blocked evidence honestly."
+      ],
+      "required_evidence": [
+        "Exact base/head SHA and changed-file list",
+        "Acceptance criterion to test/artifact mapping",
+        "Executed commands, exit codes, environment and sanitized evidence paths",
+        "Permission/egress/resource implications and rollback/migration evidence",
+        "Generated artifact freshness and applicable CI results",
+        "Push/PR state; owner/independent approvals where required"
+      ],
+      "tracking": {
+        "owner": null,
+        "branch": null,
+        "base_sha": null,
+        "head_sha": null,
+        "claimed_at": null,
+        "heartbeat_at": null,
+        "pr_url": null,
+        "delivery_status": "not_pushed",
+        "acceptance_evidence": [],
+        "tests_executed": [],
+        "blockers": [],
+        "handoff": null
+      },
+      "implementation_prompt": "Implement AP-003: Establish versioned evaluation briefs and failure fixtures. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
+    },
+    {
+      "id": "AP-004",
+      "phase": "P1",
+      "title": "Enforce a mission-wide authority and budget envelope",
+      "priority": "P0",
+      "optional": false,
+      "status": "not_started",
+      "authorization": "normal_story_authorization",
+      "dependencies": [
+        "AP-001",
+        "AP-002",
+        "AP-003"
+      ],
+      "objective": "Extend the existing admission path so every project action is scoped and root-budgeted.",
+      "deliverables": [
+        "Mission-to-existing-task authority mapping",
+        "Nested budget/grant propagation",
+        "Revocation and envelope tests"
+      ],
+      "acceptance_criteria": [
+        "API, MCP, scripts, browser and media dispatch use the same authority checks",
+        "Child/retry/provider changes cannot reset or expand root budget and scopes",
+        "Revocation/policy generation invalidates queued and stale operations",
+        "Network-free startup and deny-by-default behaviour remain intact",
+        "Positive/negative tests exercise actual application consumers, not just standalone contract helpers"
+      ],
+      "likely_files_to_inspect": [
+        "execution_spine.py",
+        "execution_budget.py",
+        "execution_profiles.py",
+        "scoped_grants.py",
+        "app.py"
+      ],
+      "existing_test_anchors": [
+        "tests/test_execution_spine.py",
+        "tests/test_execution_budget.py",
+        "tests/test_scoped_grants.py"
+      ],
+      "reference_ids": [
+        "R07",
+        "R25"
+      ],
+      "blocked_by_decisions": [
+        "U03",
+        "U04",
+        "U06"
+      ],
+      "implementation_rules": [
+        "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
+        "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
+        "Reuse existing authority and persistence; no bypass or competing control plane.",
+        "Add positive, negative and failure/recovery coverage appropriate to the change.",
+        "Preserve existing features, regenerate affected artifacts and report skipped/blocked evidence honestly."
+      ],
+      "required_evidence": [
+        "Exact base/head SHA and changed-file list",
+        "Acceptance criterion to test/artifact mapping",
+        "Executed commands, exit codes, environment and sanitized evidence paths",
+        "Permission/egress/resource implications and rollback/migration evidence",
+        "Generated artifact freshness and applicable CI results",
+        "Push/PR state; owner/independent approvals where required"
+      ],
+      "tracking": {
+        "owner": null,
+        "branch": null,
+        "base_sha": null,
+        "head_sha": null,
+        "claimed_at": null,
+        "heartbeat_at": null,
+        "pr_url": null,
+        "delivery_status": "not_pushed",
+        "acceptance_evidence": [],
+        "tests_executed": [],
+        "blockers": [],
+        "handoff": null
+      },
+      "implementation_prompt": "Implement AP-004: Enforce a mission-wide authority and budget envelope. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
+    },
+    {
+      "id": "AP-005",
+      "phase": "P1",
+      "title": "Compose durable mission tasks and recoverable joins",
+      "priority": "P0",
+      "optional": false,
+      "status": "not_started",
+      "authorization": "normal_story_authorization",
+      "dependencies": [
+        "AP-004"
+      ],
+      "objective": "Reuse durable task/checkpoint primitives for versioned project plans and task dependencies.",
+      "deliverables": [
+        "Mission graph/state mapping",
+        "Lease/checkpoint integration",
+        "Restart and false-completion tests"
+      ],
+      "acceptance_criteria": [
+        "Dependency cycles and illegal transitions are rejected",
+        "Completed artifacts survive restart and resume validates current grants/budget/input versions",
+        "Stale workers cannot overwrite successors or mark incomplete work successful",
+        "Parent joins validate required outputs and report partial/failed children explicitly",
+        "Populated-store migrations preserve sessions and user data; no destructive reset fallback"
+      ],
+      "likely_files_to_inspect": [
+        "workflow_state.py",
+        "workflow_checkpoints.py",
+        "recovery_guard.py",
+        "task_events.py",
+        "child_delegation.py"
+      ],
+      "existing_test_anchors": [
+        "tests/test_workflow_state.py",
+        "tests/test_workflow_checkpoints.py",
+        "tests/test_child_delegation.py"
+      ],
+      "reference_ids": [
+        "R06",
+        "R22",
+        "R25"
+      ],
+      "blocked_by_decisions": [],
+      "implementation_rules": [
+        "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
+        "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
+        "Reuse existing authority and persistence; no bypass or competing control plane.",
+        "Add positive, negative and failure/recovery coverage appropriate to the change.",
+        "Preserve existing features, regenerate affected artifacts and report skipped/blocked evidence honestly."
+      ],
+      "required_evidence": [
+        "Exact base/head SHA and changed-file list",
+        "Acceptance criterion to test/artifact mapping",
+        "Executed commands, exit codes, environment and sanitized evidence paths",
+        "Permission/egress/resource implications and rollback/migration evidence",
+        "Generated artifact freshness and applicable CI results",
+        "Push/PR state; owner/independent approvals where required"
+      ],
+      "tracking": {
+        "owner": null,
+        "branch": null,
+        "base_sha": null,
+        "head_sha": null,
+        "claimed_at": null,
+        "heartbeat_at": null,
+        "pr_url": null,
+        "delivery_status": "not_pushed",
+        "acceptance_evidence": [],
+        "tests_executed": [],
+        "blockers": [],
+        "handoff": null
+      },
+      "implementation_prompt": "Implement AP-005: Compose durable mission tasks and recoverable joins. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
+    },
+    {
+      "id": "AP-006",
+      "phase": "P1",
+      "title": "Extend artifact identity, provenance and selective invalidation",
+      "priority": "P0",
+      "optional": false,
+      "status": "not_started",
+      "authorization": "normal_story_authorization",
+      "dependencies": [
+        "AP-005"
+      ],
+      "objective": "Make useful, checked artifacts the unit of delivery and collaboration.",
+      "deliverables": [
+        "Typed artifact/evidence records",
+        "Confined preview/export references",
+        "Dependency invalidation and retention tests"
+      ],
+      "acceptance_criteria": [
+        "Artifact bytes, input versions, producer/config and checks have verifiable identities",
+        "Input changes invalidate affected descendants without deleting unrelated work",
+        "Path traversal, symlink escape, mismatched hashes and unsafe active previews are refused",
+        "Partial outputs and missing checks cannot appear accepted or complete",
+        "Retention/export/delete preserve privacy and scoped reference history"
+      ],
+      "likely_files_to_inspect": [
+        "artifact_lineage.py",
+        "verification_evidence.py",
+        "workspace_paths.py",
+        "history_privacy.py",
+        "static/index.html"
+      ],
+      "existing_test_anchors": [
+        "tests/test_artifact_lineage.py"
+      ],
+      "reference_ids": [
+        "R10",
+        "R18"
+      ],
+      "blocked_by_decisions": [],
+      "implementation_rules": [
+        "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
+        "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
+        "Reuse existing authority and persistence; no bypass or competing control plane.",
+        "Add positive, negative and failure/recovery coverage appropriate to the change.",
+        "Preserve existing features, regenerate affected artifacts and report skipped/blocked evidence honestly."
+      ],
+      "required_evidence": [
+        "Exact base/head SHA and changed-file list",
+        "Acceptance criterion to test/artifact mapping",
+        "Executed commands, exit codes, environment and sanitized evidence paths",
+        "Permission/egress/resource implications and rollback/migration evidence",
+        "Generated artifact freshness and applicable CI results",
+        "Push/PR state; owner/independent approvals where required"
+      ],
+      "tracking": {
+        "owner": null,
+        "branch": null,
+        "base_sha": null,
+        "head_sha": null,
+        "claimed_at": null,
+        "heartbeat_at": null,
+        "pr_url": null,
+        "delivery_status": "not_pushed",
+        "acceptance_evidence": [],
+        "tests_executed": [],
+        "blockers": [],
+        "handoff": null
+      },
+      "implementation_prompt": "Implement AP-006: Extend artifact identity, provenance and selective invalidation. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
+    },
+    {
+      "id": "AP-007",
+      "phase": "P1",
+      "title": "Implement bounded execution, cancellation and truthful recovery",
+      "priority": "P0",
+      "optional": false,
+      "status": "not_started",
+      "authorization": "normal_story_authorization",
+      "dependencies": [
+        "AP-004",
+        "AP-005",
+        "AP-006"
+      ],
+      "objective": "Make autonomous work stop, resume and report failure honestly.",
+      "deliverables": [
+        "Owned subprocess/browser job lifecycle",
+        "No-progress and repair-attempt limits",
+        "Fault/restart/cancellation evidence"
+      ],
+      "acceptance_criteria": [
+        "Cancellation stops dispatch and terminates owned work with measured cleanup latency",
+        "Late outputs are fenced; unresolved external effects remain uncertain and require reconciliation",
+        "No-progress, repeated repair, deadline and memory/storage exhaustion stop boundedly",
+        "Runtime isolation absence blocks dependent execution rather than switching to host shell",
+        "User receives retained partial artifacts and an actionable limitation instead of false success"
+      ],
+      "likely_files_to_inspect": [
+        "process_supervision.py",
+        "execution_budget.py",
+        "sandbox_boundary.py",
+        "side_effect_ledger.py",
+        "recovery_guard.py"
+      ],
+      "existing_test_anchors": [
+        "tests/test_execution_budget.py",
+        "tests/test_side_effect_ledger.py",
+        "tests/test_sandbox_boundary.py"
+      ],
+      "reference_ids": [
+        "R06",
+        "R13"
+      ],
+      "blocked_by_decisions": [
+        "U06"
+      ],
+      "implementation_rules": [
+        "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
+        "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
+        "Reuse existing authority and persistence; no bypass or competing control plane.",
+        "Add positive, negative and failure/recovery coverage appropriate to the change.",
+        "Preserve existing features, regenerate affected artifacts and report skipped/blocked evidence honestly."
+      ],
+      "required_evidence": [
+        "Exact base/head SHA and changed-file list",
+        "Acceptance criterion to test/artifact mapping",
+        "Executed commands, exit codes, environment and sanitized evidence paths",
+        "Permission/egress/resource implications and rollback/migration evidence",
+        "Generated artifact freshness and applicable CI results",
+        "Push/PR state; owner/independent approvals where required"
+      ],
+      "tracking": {
+        "owner": null,
+        "branch": null,
+        "base_sha": null,
+        "head_sha": null,
+        "claimed_at": null,
+        "heartbeat_at": null,
+        "pr_url": null,
+        "delivery_status": "not_pushed",
+        "acceptance_evidence": [],
+        "tests_executed": [],
+        "blockers": [],
+        "handoff": null
+      },
+      "implementation_prompt": "Implement AP-007: Implement bounded execution, cancellation and truthful recovery. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
+    },
+    {
+      "id": "AP-008",
+      "phase": "P1",
+      "title": "Expose clean mission controls and artifact-first status",
+      "priority": "P0",
+      "optional": false,
+      "status": "not_started",
+      "authorization": "normal_story_authorization",
+      "dependencies": [
+        "AP-005",
+        "AP-006",
+        "AP-007"
+      ],
+      "objective": "Provide a legible progress/review surface without undoing the approved UI simplification.",
+      "deliverables": [
+        "Progress/artifact views",
+        "Pause/stop/needs-input UX",
+        "Accessible narrow and reconnect evidence",
+        "Applicable integrated UX behaviour and regression evidence per revision 1.2 UX plan"
+      ],
+      "acceptance_criteria": [
+        "Status derives from durable backend state and recovers after reconnect",
+        "Preview/files/sources and resource use are available without a permanent control-heavy toolbar",
+        "Pause, stop and pending decisions preserve drafts and show real outcomes",
+        "Keyboard/focus, light/dark, actual phone widths and 200-percent zoom remain usable",
+        "Untrusted artifact previews cannot access Studio credentials or privileged origin/network APIs",
+        "Existing six-pane feature/control routes remain mapped and working",
+        "Satisfy applicable requirements in docs/autonomous-production-ux-direction.md; preserve existing features and obtain actual implementation review, not concept-derived approval"
+      ],
+      "likely_files_to_inspect": [
+        "static/index.html",
+        "app.py",
+        "task_events.py",
+        "scripts/uiux_source_manifest.py"
+      ],
+      "existing_test_anchors": [],
+      "reference_ids": [
+        "R06",
+        "R10",
+        "R18"
+      ],
+      "blocked_by_decisions": [],
+      "implementation_rules": [
+        "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
+        "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
+        "Reuse existing authority and persistence; no bypass or competing control plane.",
+        "Add positive, negative and failure/recovery coverage appropriate to the change.",
+        "Preserve existing features, regenerate affected artifacts and report skipped/blocked evidence honestly."
+      ],
+      "required_evidence": [
+        "Exact base/head SHA and changed-file list",
+        "Acceptance criterion to test/artifact mapping",
+        "Executed commands, exit codes, environment and sanitized evidence paths",
+        "Permission/egress/resource implications and rollback/migration evidence",
+        "Generated artifact freshness and applicable CI results",
+        "Push/PR state; owner/independent approvals where required"
+      ],
+      "tracking": {
+        "owner": null,
+        "branch": null,
+        "base_sha": null,
+        "head_sha": null,
+        "claimed_at": null,
+        "heartbeat_at": null,
+        "pr_url": null,
+        "delivery_status": "not_pushed",
+        "acceptance_evidence": [],
+        "tests_executed": [],
+        "blockers": [],
+        "handoff": null
+      },
+      "implementation_prompt": "Implement AP-008: Expose clean mission controls and artifact-first status. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
+    },
+    {
+      "id": "AP-009",
+      "phase": "P2",
+      "title": "Add source-backed safe search, reading and repository inspection",
+      "priority": "P1",
+      "optional": false,
+      "status": "not_started",
+      "authorization": "normal_story_authorization",
+      "dependencies": [
+        "AP-003",
+        "AP-004",
+        "AP-006",
+        "AP-007"
+      ],
+      "objective": "Research missing information with provenance and enforced public-source boundaries.",
+      "deliverables": [
+        "Search/read adapters",
+        "Claim/source and contradiction records",
+        "Hostile-source/redirect/download tests"
+      ],
+      "acceptance_criteria": [
+        "Sources record URL, retrieval date, publication date if known and supporting excerpts/provenance",
+        "Unsupported facts, missing dates and contradictions remain explicit",
+        "Private/loopback/link-local/metadata access and redirect/DNS bypasses are blocked at the network boundary",
+        "External instructions cannot expand grants or trigger installation",
+        "Repository inspection is read-only and respects request/download/storage budgets",
+        "Provider access failure yields honest incomplete research, not invented citations"
+      ],
+      "likely_files_to_inspect": [
+        "private_network_gateway.py",
+        "mcp_client.py",
+        "scoped_grants.py",
+        "artifact_lineage.py"
+      ],
+      "existing_test_anchors": [],
+      "reference_ids": [
+        "R09",
+        "R15",
+        "R23",
+        "R40"
+      ],
+      "blocked_by_decisions": [
+        "U03",
+        "U04"
+      ],
+      "implementation_rules": [
+        "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
+        "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
+        "Reuse existing authority and persistence; no bypass or competing control plane.",
+        "Add positive, negative and failure/recovery coverage appropriate to the change.",
+        "Preserve existing features, regenerate affected artifacts and report skipped/blocked evidence honestly."
+      ],
+      "required_evidence": [
+        "Exact base/head SHA and changed-file list",
+        "Acceptance criterion to test/artifact mapping",
+        "Executed commands, exit codes, environment and sanitized evidence paths",
+        "Permission/egress/resource implications and rollback/migration evidence",
+        "Generated artifact freshness and applicable CI results",
+        "Push/PR state; owner/independent approvals where required"
+      ],
+      "tracking": {
+        "owner": null,
+        "branch": null,
+        "base_sha": null,
+        "head_sha": null,
+        "claimed_at": null,
+        "heartbeat_at": null,
+        "pr_url": null,
+        "delivery_status": "not_pushed",
+        "acceptance_evidence": [],
+        "tests_executed": [],
+        "blockers": [],
+        "handoff": null
+      },
+      "implementation_prompt": "Implement AP-009: Add source-backed safe search, reading and repository inspection. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
+    },
+    {
+      "id": "AP-010",
+      "phase": "P2",
+      "title": "Qualify a controlled browser worker and human takeover",
+      "priority": "P1",
+      "optional": false,
+      "status": "not_started",
+      "authorization": "normal_story_authorization",
+      "dependencies": [
+        "AP-007",
+        "AP-009"
+      ],
+      "objective": "Evaluate Browser Use/direct Playwright through a narrow governed worker interface.",
+      "deliverables": [
+        "Browser adapter bake-off",
+        "Dedicated session and takeover controls",
+        "Real-browser cancellation/privacy evidence"
+      ],
+      "acceptance_criteria": [
+        "Compare candidate versus deterministic browser baseline on the same tasks",
+        "Each project uses an isolated profile/context; no automatic personal-profile reuse",
+        "All navigation/download/tool activity remains within grants and nested budgets",
+        "Authenticated takeover pauses conflicting agent actions and safely resumes",
+        "Hostile pages, private-network attempts and unexpected popups cannot obtain added authority",
+        "Stop/restart closes or recovers owned browser jobs and session state without secret leakage"
+      ],
+      "likely_files_to_inspect": [
+        "mcp_client.py",
+        "private_network_gateway.py",
+        "process_supervision.py",
+        "sandbox_boundary.py"
+      ],
+      "existing_test_anchors": [],
+      "reference_ids": [
+        "R05",
+        "R06",
+        "R38"
+      ],
+      "blocked_by_decisions": [
+        "U04",
+        "U06"
+      ],
+      "implementation_rules": [
+        "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
+        "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
+        "Reuse existing authority and persistence; no bypass or competing control plane.",
+        "Add positive, negative and failure/recovery coverage appropriate to the change.",
+        "Preserve existing features, regenerate affected artifacts and report skipped/blocked evidence honestly."
+      ],
+      "required_evidence": [
+        "Exact base/head SHA and changed-file list",
+        "Acceptance criterion to test/artifact mapping",
+        "Executed commands, exit codes, environment and sanitized evidence paths",
+        "Permission/egress/resource implications and rollback/migration evidence",
+        "Generated artifact freshness and applicable CI results",
+        "Push/PR state; owner/independent approvals where required"
+      ],
+      "tracking": {
+        "owner": null,
+        "branch": null,
+        "base_sha": null,
+        "head_sha": null,
+        "claimed_at": null,
+        "heartbeat_at": null,
+        "pr_url": null,
+        "delivery_status": "not_pushed",
+        "acceptance_evidence": [],
+        "tests_executed": [],
+        "blockers": [],
+        "handoff": null
+      },
+      "implementation_prompt": "Implement AP-010: Qualify a controlled browser worker and human takeover. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
+    },
+    {
+      "id": "AP-011",
+      "phase": "P2",
+      "title": "Discover and inspect capability candidates without activation",
+      "priority": "P1",
+      "optional": false,
+      "status": "not_started",
+      "authorization": "normal_story_authorization",
+      "dependencies": [
+        "AP-009"
+      ],
+      "objective": "Diagnose gaps and produce structured tool/model/skill/service proposals.",
+      "deliverables": [
+        "Capability-gap classifier",
+        "Candidate registry/proposal schema",
+        "License/permission/dependency assessment"
+      ],
+      "acceptance_criteria": [
+        "Distinguish missing facts, method, model capability, context, tool and hardware gaps",
+        "Discovery can conclude that no new dependency is needed",
+        "Candidates record source revision, maintenance, license, install hooks, resource cost, egress and privileges",
+        "Directory stars and MCP annotations never establish trust",
+        "Unlicensed/unknown or incompatible candidates are blocked for affected reuse, not silently installed",
+        "Discovery itself has no execution or production activation authority"
+      ],
+      "likely_files_to_inspect": [
+        "capability_negotiation.py",
+        "model_discovery.py",
+        "supply_chain.py",
+        "scoped_grants.py"
+      ],
+      "existing_test_anchors": [
+        "tests/test_model_discovery.py"
+      ],
+      "reference_ids": [
+        "R01",
+        "R11",
+        "R12",
+        "R15",
+        "R16",
+        "R17",
+        "R23",
+        "R32",
+        "R43"
+      ],
+      "blocked_by_decisions": [],
+      "implementation_rules": [
+        "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
+        "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
+        "Reuse existing authority and persistence; no bypass or competing control plane.",
+        "Add positive, negative and failure/recovery coverage appropriate to the change.",
+        "Preserve existing features, regenerate affected artifacts and report skipped/blocked evidence honestly."
+      ],
+      "required_evidence": [
+        "Exact base/head SHA and changed-file list",
+        "Acceptance criterion to test/artifact mapping",
+        "Executed commands, exit codes, environment and sanitized evidence paths",
+        "Permission/egress/resource implications and rollback/migration evidence",
+        "Generated artifact freshness and applicable CI results",
+        "Push/PR state; owner/independent approvals where required"
+      ],
+      "tracking": {
+        "owner": null,
+        "branch": null,
+        "base_sha": null,
+        "head_sha": null,
+        "claimed_at": null,
+        "heartbeat_at": null,
+        "pr_url": null,
+        "delivery_status": "not_pushed",
+        "acceptance_evidence": [],
+        "tests_executed": [],
+        "blockers": [],
+        "handoff": null
+      },
+      "implementation_prompt": "Implement AP-011: Discover and inspect capability candidates without activation. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
+    },
+    {
+      "id": "AP-012",
+      "phase": "P2",
+      "title": "Run disposable capability experiments with receipts",
+      "priority": "P1",
+      "optional": false,
+      "status": "not_started",
+      "authorization": "normal_story_authorization",
+      "dependencies": [
+        "AP-007",
+        "AP-010",
+        "AP-011"
+      ],
+      "objective": "Permit broad safe experimentation only inside a qualified, explicitly granted lab.",
+      "deliverables": [
+        "Experiment environment/lifecycle",
+        "Pinned install and artifact receipts",
+        "Quarantine/revoke/cleanup paths"
+      ],
+      "acceptance_criteria": [
+        "Package/model/skill install and execution require the applicable experiment/network/resource grants",
+        "Untrusted candidates have no host mounts, production credentials or privileged runtime sockets",
+        "Install hooks/custom loaders and binaries are inspected and constrained",
+        "Every trial records exact versions, effects, checks, cost and cleanup outcome",
+        "Failure or unavailable qualification blocks trial; no host fallback",
+        "Successful task-local use does not silently become global capability or policy"
+      ],
+      "likely_files_to_inspect": [
+        "sandbox_boundary.py",
+        "supply_chain.py",
+        "workspace_quarantine.py",
+        "scoped_grants.py",
+        "process_supervision.py"
+      ],
+      "existing_test_anchors": [
+        "tests/test_sandbox_boundary.py",
+        "tests/test_scoped_grants.py"
+      ],
+      "reference_ids": [
+        "R02",
+        "R04",
+        "R07",
+        "R13",
+        "R32"
+      ],
+      "blocked_by_decisions": [
+        "U02",
+        "U04",
+        "U06"
+      ],
+      "implementation_rules": [
+        "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
+        "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
+        "Reuse existing authority and persistence; no bypass or competing control plane.",
+        "Add positive, negative and failure/recovery coverage appropriate to the change.",
+        "Preserve existing features, regenerate affected artifacts and report skipped/blocked evidence honestly."
+      ],
+      "required_evidence": [
+        "Exact base/head SHA and changed-file list",
+        "Acceptance criterion to test/artifact mapping",
+        "Executed commands, exit codes, environment and sanitized evidence paths",
+        "Permission/egress/resource implications and rollback/migration evidence",
+        "Generated artifact freshness and applicable CI results",
+        "Push/PR state; owner/independent approvals where required"
+      ],
+      "tracking": {
+        "owner": null,
+        "branch": null,
+        "base_sha": null,
+        "head_sha": null,
+        "claimed_at": null,
+        "heartbeat_at": null,
+        "pr_url": null,
+        "delivery_status": "not_pushed",
+        "acceptance_evidence": [],
+        "tests_executed": [],
+        "blockers": [],
+        "handoff": null
+      },
+      "implementation_prompt": "Implement AP-012: Run disposable capability experiments with receipts. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
+    },
+    {
+      "id": "AP-013",
+      "phase": "P3",
+      "title": "Build measured model capability and compatibility profiles",
+      "priority": "P1",
+      "optional": false,
+      "status": "not_started",
+      "authorization": "normal_story_authorization",
+      "dependencies": [
+        "AP-003",
+        "AP-004",
+        "AP-011"
+      ],
+      "objective": "Evaluate exact model configurations instead of routing by brand or parameter count.",
+      "deliverables": [
+        "Model/profile schema extensions",
+        "Task-quality probes",
+        "Version/hardware-calibration evidence"
+      ],
+      "acceptance_criteria": [
+        "Profiles include runtime/checkpoint/quantisation/template/context/tool/vision support and measurement provenance",
+        "Separate model companions/artifacts, installed disk inventory, readiness and residency",
+        "Writing, coding, architecture, source handling and schema/tool reliability are measured separately",
+        "Model-card claims/imported benchmarks are not local qualification",
+        "Unknown capabilities fail explicitly and manual overrides remain bounded",
+        "Mistral/TwIL/Qwen/Gemma role suggestions remain hypotheses until tested",
+        "Dense and MoE candidates are compared on total resident memory, active computation, context/KV-cache, exact runtime support and actual task quality; low active parameters do not establish low RAM use",
+        "MoE internal experts are not treated as separately loadable coding/writing agents without a specifically verified runtime capability"
+      ],
+      "likely_files_to_inspect": [
+        "model_registry.py",
+        "model_calibration.py",
+        "model_recommendation.py",
+        "benchmark_import.py",
+        "benchmark_publication.py"
+      ],
+      "existing_test_anchors": [
+        "tests/test_model_calibration.py",
+        "tests/test_model_recommendation.py",
+        "tests/test_model_discovery.py"
+      ],
+      "reference_ids": [
+        "R25",
+        "R33",
+        "R40",
+        "R41"
+      ],
+      "blocked_by_decisions": [
+        "U02",
+        "U03"
+      ],
+      "implementation_rules": [
+        "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
+        "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
+        "Reuse existing authority and persistence; no bypass or competing control plane.",
+        "Add positive, negative and failure/recovery coverage appropriate to the change.",
+        "Preserve existing features, regenerate affected artifacts and report skipped/blocked evidence honestly."
+      ],
+      "required_evidence": [
+        "Exact base/head SHA and changed-file list",
+        "Acceptance criterion to test/artifact mapping",
+        "Executed commands, exit codes, environment and sanitized evidence paths",
+        "Permission/egress/resource implications and rollback/migration evidence",
+        "Generated artifact freshness and applicable CI results",
+        "Push/PR state; owner/independent approvals where required"
+      ],
+      "tracking": {
+        "owner": null,
+        "branch": null,
+        "base_sha": null,
+        "head_sha": null,
+        "claimed_at": null,
+        "heartbeat_at": null,
+        "pr_url": null,
+        "delivery_status": "not_pushed",
+        "acceptance_evidence": [],
+        "tests_executed": [],
+        "blockers": [],
+        "handoff": null
+      },
+      "implementation_prompt": "Implement AP-013: Build measured model capability and compatibility profiles. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
+    },
+    {
+      "id": "AP-014",
+      "phase": "P3",
+      "title": "Compose policy-aware routing and resource-safe scheduling",
+      "priority": "P1",
+      "optional": false,
+      "status": "not_started",
+      "authorization": "normal_story_authorization",
+      "dependencies": [
+        "AP-004",
+        "AP-007",
+        "AP-013"
+      ],
+      "objective": "Select eligible models per task stage without bypassing existing lifecycle qualification.",
+      "deliverables": [
+        "Routing evidence/decision records",
+        "Warm/cold and affinity-aware scheduling",
+        "Fit/ownership/fallback tests"
+      ],
+      "acceptance_criteria": [
+        "Compatibility, measured quality, grants and actual resource fit all precede dispatch",
+        "No unsupported simultaneous residency or dormant native activation is introduced",
+        "All model inference remains local; hosted-model fallback is refused even when local fit or quality is insufficient; report a scoped limitation instead",
+        "Load/unload accounting is not confused with physical completion; uncertainty remains charged",
+        "Routing explains selected/rejected models and preserves manual override boundaries",
+        "Compare end-to-end quality, latency, switch count and cost with existing baseline"
+      ],
+      "likely_files_to_inspect": [
+        "model_lifecycle_coordinator.py",
+        "native_inference_scheduler.py",
+        "request_fit_admission.py",
+        "routing_policy.py",
+        "routing_experiments.py",
+        "resource_admission.py"
+      ],
+      "existing_test_anchors": [
+        "tests/test_request_fit.py",
+        "tests/test_request_fit_admission.py",
+        "tests/test_routing_experiments.py",
+        "tests/test_routing_policy.py"
+      ],
+      "reference_ids": [
+        "R25",
+        "R40",
+        "R41"
+      ],
+      "blocked_by_decisions": [
+        "U02",
+        "U03",
+        "U06"
+      ],
+      "implementation_rules": [
+        "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
+        "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
+        "Reuse existing authority and persistence; no bypass or competing control plane.",
+        "Add positive, negative and failure/recovery coverage appropriate to the change.",
+        "Preserve existing features, regenerate affected artifacts and report skipped/blocked evidence honestly."
+      ],
+      "required_evidence": [
+        "Exact base/head SHA and changed-file list",
+        "Acceptance criterion to test/artifact mapping",
+        "Executed commands, exit codes, environment and sanitized evidence paths",
+        "Permission/egress/resource implications and rollback/migration evidence",
+        "Generated artifact freshness and applicable CI results",
+        "Push/PR state; owner/independent approvals where required"
+      ],
+      "tracking": {
+        "owner": null,
+        "branch": null,
+        "base_sha": null,
+        "head_sha": null,
+        "claimed_at": null,
+        "heartbeat_at": null,
+        "pr_url": null,
+        "delivery_status": "not_pushed",
+        "acceptance_evidence": [],
+        "tests_executed": [],
+        "blockers": [],
+        "handoff": null
+      },
+      "implementation_prompt": "Implement AP-014: Compose policy-aware routing and resource-safe scheduling. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
+    },
+    {
+      "id": "AP-015",
+      "phase": "P3",
+      "title": "Preserve context, preferences and artifact continuity",
+      "priority": "P1",
+      "optional": false,
+      "status": "not_started",
+      "authorization": "normal_story_authorization",
+      "dependencies": [
+        "AP-005",
+        "AP-006",
+        "AP-014"
+      ],
+      "objective": "Test the ability to continue correctly after compression, retrieval and model handoff.",
+      "deliverables": [
+        "Context selection and reassembly integration",
+        "Continuation probe bank",
+        "Privacy and project-isolation tests"
+      ],
+      "acceptance_criteria": [
+        "Required brief, unresolved failures, current artifacts, approvals and authority survive or are explicitly reconstructed",
+        "No silent truncation of required input to force fit",
+        "Continuation probes verify decisions and artifact trails, not only summary readability",
+        "Retrieved memory/skills retain provenance and cannot upgrade untrusted instructions",
+        "Cross-project/private information cannot leak through recall",
+        "Model switch/restart tests validate portable state without assuming KV-cache portability"
+      ],
+      "likely_files_to_inspect": [
+        "context_store.py",
+        "context_reassembly.py",
+        "request_fit.py",
+        "routing_policy.py",
+        "evidence_lessons.py",
+        "history_privacy.py"
+      ],
+      "existing_test_anchors": [
+        "tests/test_context_reassembly.py",
+        "tests/test_evidence_lessons.py"
+      ],
+      "reference_ids": [
+        "R23",
+        "R25",
+        "R29",
+        "R31"
+      ],
+      "blocked_by_decisions": [],
+      "implementation_rules": [
+        "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
+        "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
+        "Reuse existing authority and persistence; no bypass or competing control plane.",
+        "Add positive, negative and failure/recovery coverage appropriate to the change.",
+        "Preserve existing features, regenerate affected artifacts and report skipped/blocked evidence honestly."
+      ],
+      "required_evidence": [
+        "Exact base/head SHA and changed-file list",
+        "Acceptance criterion to test/artifact mapping",
+        "Executed commands, exit codes, environment and sanitized evidence paths",
+        "Permission/egress/resource implications and rollback/migration evidence",
+        "Generated artifact freshness and applicable CI results",
+        "Push/PR state; owner/independent approvals where required"
+      ],
+      "tracking": {
+        "owner": null,
+        "branch": null,
+        "base_sha": null,
+        "head_sha": null,
+        "claimed_at": null,
+        "heartbeat_at": null,
+        "pr_url": null,
+        "delivery_status": "not_pushed",
+        "acceptance_evidence": [],
+        "tests_executed": [],
+        "blockers": [],
+        "handoff": null
+      },
+      "implementation_prompt": "Implement AP-015: Preserve context, preferences and artifact continuity. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
+    },
+    {
+      "id": "AP-016",
+      "phase": "P3",
+      "title": "Implement reproducible challenger and workflow evaluations",
+      "priority": "P1",
+      "optional": false,
+      "status": "not_started",
+      "authorization": "normal_story_authorization",
+      "dependencies": [
+        "AP-003",
+        "AP-006",
+        "AP-013",
+        "AP-015"
+      ],
+      "objective": "Compare models, tools, prompts and teams without self-grading or hidden budget differences.",
+      "deliverables": [
+        "Evaluation runner/report integration",
+        "Blinded/held-out comparisons",
+        "Metric and scorer failure tests"
+      ],
+      "acceptance_criteria": [
+        "Run records pin exact task/config/tool/model/environment and include all failures",
+        "Compare single-agent and specialist strategies under reported comparable budgets",
+        "Deterministic checks and independent factual/user evidence accompany model scores",
+        "No-op incumbent and held-out regression tasks participate",
+        "Scorer failure, missing evidence and stale source hashes fail closed",
+        "Report variability and intervention/cost/latency metrics; never promote on a fabricated score"
+      ],
+      "likely_files_to_inspect": [
+        "workflow_evaluation.py",
+        "model_comparison.py",
+        "verification_evidence.py",
+        "benchmarks"
+      ],
+      "existing_test_anchors": [
+        "tests/test_workflow_evaluation.py"
+      ],
+      "reference_ids": [
+        "R24",
+        "R27",
+        "R28",
+        "R33",
+        "R35",
+        "R36"
+      ],
+      "blocked_by_decisions": [],
+      "implementation_rules": [
+        "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
+        "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
+        "Reuse existing authority and persistence; no bypass or competing control plane.",
+        "Add positive, negative and failure/recovery coverage appropriate to the change.",
+        "Preserve existing features, regenerate affected artifacts and report skipped/blocked evidence honestly."
+      ],
+      "required_evidence": [
+        "Exact base/head SHA and changed-file list",
+        "Acceptance criterion to test/artifact mapping",
+        "Executed commands, exit codes, environment and sanitized evidence paths",
+        "Permission/egress/resource implications and rollback/migration evidence",
+        "Generated artifact freshness and applicable CI results",
+        "Push/PR state; owner/independent approvals where required"
+      ],
+      "tracking": {
+        "owner": null,
+        "branch": null,
+        "base_sha": null,
+        "head_sha": null,
+        "claimed_at": null,
+        "heartbeat_at": null,
+        "pr_url": null,
+        "delivery_status": "not_pushed",
+        "acceptance_evidence": [],
+        "tests_executed": [],
+        "blockers": [],
+        "handoff": null
+      },
+      "implementation_prompt": "Implement AP-016: Implement reproducible challenger and workflow evaluations. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
+    },
+    {
+      "id": "AP-017",
+      "phase": "P4",
+      "title": "Integrate bounded specialists and versioned handoffs",
+      "priority": "P1",
+      "optional": false,
+      "status": "not_started",
+      "authorization": "normal_story_authorization",
+      "dependencies": [
+        "AP-005",
+        "AP-006",
+        "AP-007",
+        "AP-014",
+        "AP-015",
+        "AP-016"
+      ],
+      "objective": "Enable useful collaboration without a second coordinator or uncontrolled fan-out.",
+      "deliverables": [
+        "Typed specialist tasks and joins",
+        "Worktree/scoped-write ownership",
+        "Team versus baseline evidence"
+      ],
+      "acceptance_criteria": [
+        "Authority and remaining budget are strict parent subsets",
+        "Workers use versioned input/output artifacts and cannot overwrite conflicting scopes",
+        "Cancellation/failure/restart joins are durable and bounded",
+        "Reviewer receives brief/evidence rather than an instruction to endorse the builder",
+        "Logical parallelism does not imply concurrent local inference",
+        "Retain a team topology only where measured trade-off improves over simpler execution"
+      ],
+      "likely_files_to_inspect": [
+        "child_delegation.py",
+        "workflow_orchestration.py",
+        "artifact_lineage.py",
+        "execution_budget.py"
+      ],
+      "existing_test_anchors": [
+        "tests/test_child_delegation.py",
+        "tests/test_workflow_evaluation.py"
+      ],
+      "reference_ids": [
+        "R07",
+        "R10",
+        "R21",
+        "R22",
+        "R25",
+        "R30"
+      ],
+      "blocked_by_decisions": [],
+      "implementation_rules": [
+        "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
+        "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
+        "Reuse existing authority and persistence; no bypass or competing control plane.",
+        "Add positive, negative and failure/recovery coverage appropriate to the change.",
+        "Preserve existing features, regenerate affected artifacts and report skipped/blocked evidence honestly."
+      ],
+      "required_evidence": [
+        "Exact base/head SHA and changed-file list",
+        "Acceptance criterion to test/artifact mapping",
+        "Executed commands, exit codes, environment and sanitized evidence paths",
+        "Permission/egress/resource implications and rollback/migration evidence",
+        "Generated artifact freshness and applicable CI results",
+        "Push/PR state; owner/independent approvals where required"
+      ],
+      "tracking": {
+        "owner": null,
+        "branch": null,
+        "base_sha": null,
+        "head_sha": null,
+        "claimed_at": null,
+        "heartbeat_at": null,
+        "pr_url": null,
+        "delivery_status": "not_pushed",
+        "acceptance_evidence": [],
+        "tests_executed": [],
+        "blockers": [],
+        "handoff": null
+      },
+      "implementation_prompt": "Implement AP-017: Integrate bounded specialists and versioned handoffs. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
+    },
+    {
+      "id": "AP-018",
+      "phase": "P4",
+      "title": "Present early direction samples before expensive production",
+      "priority": "P1",
+      "optional": false,
+      "status": "not_started",
+      "authorization": "normal_story_authorization",
+      "dependencies": [
+        "AP-008",
+        "AP-016"
+      ],
+      "objective": "Let users establish direction without supervising every operation.",
+      "deliverables": [
+        "Direction-checkpoint logic",
+        "Representative sample and focused question UX",
+        "Continue/redirect/resume tests",
+        "Applicable integrated UX behaviour and regression evidence per revision 1.2 UX plan"
+      ],
+      "acceptance_criteria": [
+        "Unbenchmarked tasks propose a small relevant sample before expensive full production",
+        "Sample has passed basic technical checks and names what feedback is needed",
+        "Feedback pause preserves artifacts, job state and draft",
+        "Direction approval does not imply final acceptance or publish permission",
+        "Benchmarked similar tasks skip unnecessary check-ins but escalate material uncertainty",
+        "Satisfy applicable requirements in docs/autonomous-production-ux-direction.md; preserve existing features and obtain actual implementation review, not concept-derived approval"
+      ],
+      "likely_files_to_inspect": [
+        "static/index.html",
+        "workflow_state.py",
+        "workflow_checkpoints.py",
+        "artifact_lineage.py"
+      ],
+      "existing_test_anchors": [],
+      "reference_ids": [
+        "R06",
+        "R09",
+        "R10",
+        "R18"
+      ],
+      "blocked_by_decisions": [],
+      "implementation_rules": [
+        "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
+        "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
+        "Reuse existing authority and persistence; no bypass or competing control plane.",
+        "Add positive, negative and failure/recovery coverage appropriate to the change.",
+        "Preserve existing features, regenerate affected artifacts and report skipped/blocked evidence honestly."
+      ],
+      "required_evidence": [
+        "Exact base/head SHA and changed-file list",
+        "Acceptance criterion to test/artifact mapping",
+        "Executed commands, exit codes, environment and sanitized evidence paths",
+        "Permission/egress/resource implications and rollback/migration evidence",
+        "Generated artifact freshness and applicable CI results",
+        "Push/PR state; owner/independent approvals where required"
+      ],
+      "tracking": {
+        "owner": null,
+        "branch": null,
+        "base_sha": null,
+        "head_sha": null,
+        "claimed_at": null,
+        "heartbeat_at": null,
+        "pr_url": null,
+        "delivery_status": "not_pushed",
+        "acceptance_evidence": [],
+        "tests_executed": [],
+        "blockers": [],
+        "handoff": null
+      },
+      "implementation_prompt": "Implement AP-018: Present early direction samples before expensive production. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
+    },
+    {
+      "id": "AP-019",
+      "phase": "P4",
+      "title": "Capture lightweight scoped review and preference corrections",
+      "priority": "P1",
+      "optional": false,
+      "status": "not_started",
+      "authorization": "normal_story_authorization",
+      "dependencies": [
+        "AP-018"
+      ],
+      "objective": "Translate natural feedback into explicit bounded revisions without global preference drift.",
+      "deliverables": [
+        "Feedback records and optional annotation UX",
+        "Revision/interpretation workflow",
+        "Conflict/scope/accessibility tests",
+        "Applicable integrated UX behaviour and regression evidence per revision 1.2 UX plan"
+      ],
+      "acceptance_criteria": [
+        "Free text and optional selected region/passage/timecode/quick actions are available without mandatory scoring",
+        "Feedback pins artifact version and preserves original user wording",
+        "Material interpretation is confirmed; ambiguity/conflicts are not silently generalised",
+        "Revision invalidates only affected downstream evidence/approvals",
+        "A user can correct/delete a retained preference and inspect its scope",
+        "Keyboard/mobile/zoom remain usable and paused work resumes correctly",
+        "Satisfy applicable requirements in docs/autonomous-production-ux-direction.md; preserve existing features and obtain actual implementation review, not concept-derived approval"
+      ],
+      "likely_files_to_inspect": [
+        "static/index.html",
+        "context_store.py",
+        "history_privacy.py",
+        "artifact_lineage.py",
+        "workflow_state.py"
+      ],
+      "existing_test_anchors": [],
+      "reference_ids": [
+        "R09",
+        "R10",
+        "R18"
+      ],
+      "blocked_by_decisions": [],
+      "implementation_rules": [
+        "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
+        "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
+        "Reuse existing authority and persistence; no bypass or competing control plane.",
+        "Add positive, negative and failure/recovery coverage appropriate to the change.",
+        "Preserve existing features, regenerate affected artifacts and report skipped/blocked evidence honestly."
+      ],
+      "required_evidence": [
+        "Exact base/head SHA and changed-file list",
+        "Acceptance criterion to test/artifact mapping",
+        "Executed commands, exit codes, environment and sanitized evidence paths",
+        "Permission/egress/resource implications and rollback/migration evidence",
+        "Generated artifact freshness and applicable CI results",
+        "Push/PR state; owner/independent approvals where required"
+      ],
+      "tracking": {
+        "owner": null,
+        "branch": null,
+        "base_sha": null,
+        "head_sha": null,
+        "claimed_at": null,
+        "heartbeat_at": null,
+        "pr_url": null,
+        "delivery_status": "not_pushed",
+        "acceptance_evidence": [],
+        "tests_executed": [],
+        "blockers": [],
+        "handoff": null
+      },
+      "implementation_prompt": "Implement AP-019: Capture lightweight scoped review and preference corrections. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
+    },
+    {
+      "id": "AP-020",
+      "phase": "P4",
+      "title": "Create versioned owner-approved reference benchmarks",
+      "priority": "P1",
+      "optional": false,
+      "status": "not_started",
+      "authorization": "normal_story_authorization_plus_real_owner_approval_for_reference_records",
+      "dependencies": [
+        "AP-006",
+        "AP-016",
+        "AP-019"
+      ],
+      "objective": "Reuse accepted examples while preserving approval scope and history.",
+      "deliverables": [
+        "Accepted-output/reference schema",
+        "Relevant retrieval and versioned refinement",
+        "Approval/invalidation audit tests",
+        "Applicable integrated UX behaviour and regression evidence per revision 1.2 UX plan"
+      ],
+      "acceptance_criteria": [
+        "Record original brief, exact artifact, user provenance, approval scope, checks and configuration",
+        "Continue-direction, final-acceptance, use-as-reference and publish grants are separate",
+        "Enhancements create a new version; prior acceptance cannot be silently rewritten",
+        "References are retrieved by relevant audience/language/task/style and do not force identical layouts",
+        "Agent cannot synthesize owner approval, security sign-off or screenshot approval",
+        "Changed facts/code/assets still require new verification despite a style reference",
+        "Satisfy applicable requirements in docs/autonomous-production-ux-direction.md; preserve existing features and obtain actual implementation review, not concept-derived approval"
+      ],
+      "likely_files_to_inspect": [
+        "artifact_lineage.py",
+        "evidence_lessons.py",
+        "verification_evidence.py",
+        "context_store.py"
+      ],
+      "existing_test_anchors": [
+        "tests/test_artifact_lineage.py",
+        "tests/test_evidence_lessons.py"
+      ],
+      "reference_ids": [
+        "R10",
+        "R25",
+        "R31"
+      ],
+      "blocked_by_decisions": [],
+      "implementation_rules": [
+        "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
+        "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
+        "Reuse existing authority and persistence; no bypass or competing control plane.",
+        "Add positive, negative and failure/recovery coverage appropriate to the change.",
+        "Preserve existing features, regenerate affected artifacts and report skipped/blocked evidence honestly."
+      ],
+      "required_evidence": [
+        "Exact base/head SHA and changed-file list",
+        "Acceptance criterion to test/artifact mapping",
+        "Executed commands, exit codes, environment and sanitized evidence paths",
+        "Permission/egress/resource implications and rollback/migration evidence",
+        "Generated artifact freshness and applicable CI results",
+        "Push/PR state; owner/independent approvals where required"
+      ],
+      "tracking": {
+        "owner": null,
+        "branch": null,
+        "base_sha": null,
+        "head_sha": null,
+        "claimed_at": null,
+        "heartbeat_at": null,
+        "pr_url": null,
+        "delivery_status": "not_pushed",
+        "acceptance_evidence": [],
+        "tests_executed": [],
+        "blockers": [],
+        "handoff": null
+      },
+      "implementation_prompt": "Implement AP-020: Create versioned owner-approved reference benchmarks. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
+    },
+    {
+      "id": "AP-021",
+      "phase": "P5",
+      "title": "Deliver a complete website draft workflow",
+      "priority": "P1",
+      "optional": false,
+      "status": "not_started",
+      "authorization": "normal_story_authorization",
+      "dependencies": [
+        "AP-009",
+        "AP-010",
+        "AP-012",
+        "AP-017",
+        "AP-018",
+        "AP-019"
+      ],
+      "objective": "Produce a useful runnable website package, not just generated code or a plan.",
+      "deliverables": [
+        "Bounded website recipe and direction sample",
+        "Source/preview/config package",
+        "Artifact and functional checks"
+      ],
+      "acceptance_criteria": [
+        "Chosen audience/website scope is explicit; sample direction is reviewed when no relevant benchmark exists",
+        "Requested interactions work or are honestly marked unsupported; no fake testimonials/integrations",
+        "Research/assets have provenance and applicable rights",
+        "Code executes in authorised environment with real browser tests",
+        "Repair loop is bounded and partial failure is visible",
+        "No deployment, DNS or production credentials are used without separate grants"
+      ],
+      "likely_files_to_inspect": [
+        "app.py",
+        "static/index.html",
+        "child_delegation.py",
+        "sandbox_boundary.py",
+        "artifact_lineage.py"
+      ],
+      "existing_test_anchors": [],
+      "reference_ids": [
+        "R13",
+        "R18",
+        "R19",
+        "R21",
+        "R38"
+      ],
+      "blocked_by_decisions": [
+        "U01",
+        "U02",
+        "U03",
+        "U04",
+        "U06"
+      ],
+      "implementation_rules": [
+        "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
+        "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
+        "Reuse existing authority and persistence; no bypass or competing control plane.",
+        "Add positive, negative and failure/recovery coverage appropriate to the change.",
+        "Preserve existing features, regenerate affected artifacts and report skipped/blocked evidence honestly."
+      ],
+      "required_evidence": [
+        "Exact base/head SHA and changed-file list",
+        "Acceptance criterion to test/artifact mapping",
+        "Executed commands, exit codes, environment and sanitized evidence paths",
+        "Permission/egress/resource implications and rollback/migration evidence",
+        "Generated artifact freshness and applicable CI results",
+        "Push/PR state; owner/independent approvals where required"
+      ],
+      "tracking": {
+        "owner": null,
+        "branch": null,
+        "base_sha": null,
+        "head_sha": null,
+        "claimed_at": null,
+        "heartbeat_at": null,
+        "pr_url": null,
+        "delivery_status": "not_pushed",
+        "acceptance_evidence": [],
+        "tests_executed": [],
+        "blockers": [],
+        "handoff": null
+      },
+      "implementation_prompt": "Implement AP-021: Deliver a complete website draft workflow. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
+    },
+    {
+      "id": "AP-022",
+      "phase": "P5",
+      "title": "Qualify website output quality and delivery",
+      "priority": "P1",
+      "optional": false,
+      "status": "not_started",
+      "authorization": "normal_story_authorization_plus_owner_creative_acceptance",
+      "dependencies": [
+        "AP-020",
+        "AP-021"
+      ],
+      "objective": "Validate technical, visual, factual and audience fitness before declaring website support.",
+      "deliverables": [
+        "Website rubric/fixtures and rendered evidence",
+        "Independent review/repair path",
+        "Owner-accepted pilot report"
+      ],
+      "acceptance_criteria": [
+        "Critical forms/links/navigation/input flows pass real tests",
+        "Actual phone/tablet/desktop and zoom layouts have no clipped or overlapping content",
+        "Keyboard/focus/contrast and reduced-motion checks pass applicable criteria",
+        "Console/network/secrets/dependency problems and placeholder content are checked",
+        "Owner reviews creative usefulness; accepted references are scoped/versioned",
+        "Report all evaluated runs, intervention/cost/time and limitations; no revenue claims"
+      ],
+      "likely_files_to_inspect": [
+        "benchmarks",
+        "workflow_evaluation.py",
+        "verification_evidence.py",
+        "static/index.html"
+      ],
+      "existing_test_anchors": [],
+      "reference_ids": [
+        "R18",
+        "R19",
+        "R21",
+        "R38"
+      ],
+      "blocked_by_decisions": [
+        "U01"
+      ],
+      "implementation_rules": [
+        "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
+        "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
+        "Reuse existing authority and persistence; no bypass or competing control plane.",
+        "Add positive, negative and failure/recovery coverage appropriate to the change.",
+        "Preserve existing features, regenerate affected artifacts and report skipped/blocked evidence honestly."
+      ],
+      "required_evidence": [
+        "Exact base/head SHA and changed-file list",
+        "Acceptance criterion to test/artifact mapping",
+        "Executed commands, exit codes, environment and sanitized evidence paths",
+        "Permission/egress/resource implications and rollback/migration evidence",
+        "Generated artifact freshness and applicable CI results",
+        "Push/PR state; owner/independent approvals where required"
+      ],
+      "tracking": {
+        "owner": null,
+        "branch": null,
+        "base_sha": null,
+        "head_sha": null,
+        "claimed_at": null,
+        "heartbeat_at": null,
+        "pr_url": null,
+        "delivery_status": "not_pushed",
+        "acceptance_evidence": [],
+        "tests_executed": [],
+        "blockers": [],
+        "handoff": null
+      },
+      "implementation_prompt": "Implement AP-022: Qualify website output quality and delivery. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
+    },
+    {
+      "id": "AP-023",
+      "phase": "P5",
+      "title": "Deliver sourced original short-video drafts",
+      "priority": "P1",
+      "optional": false,
+      "status": "not_started",
+      "authorization": "normal_story_authorization",
+      "dependencies": [
+        "AP-009",
+        "AP-010",
+        "AP-012",
+        "AP-017",
+        "AP-018",
+        "AP-019"
+      ],
+      "objective": "Connect topic evidence to a coherent script, visuals, narration and actual rendered output.",
+      "deliverables": [
+        "Video research/script/storyboard workflow",
+        "Evaluated media adapter and sample",
+        "MP4/captions/source/rights package"
+      ],
+      "acceptance_criteria": [
+        "Topic popularity is supported by dated region/source signals or labelled candidate/unknown",
+        "Important claims link to appropriate evidence and contradictions/uncertainty remain visible",
+        "Script/storyboard preserve original angle, voice and visual direction",
+        "Reuse/audit existing MoneyPrinter contracts before adding a second integration",
+        "Every asset/music/font/voice has rights/provenance; no unauthorised voice cloning",
+        "Actual playable draft and captions are returned; upload remains separate authority"
+      ],
+      "likely_files_to_inspect": [
+        "moneyprinter_tool.py",
+        "moneyprinter_mcp.py",
+        "docs/moneyprinter-turbo-integration.md",
+        "artifact_lineage.py"
+      ],
+      "existing_test_anchors": [
+        "tests/test_moneyprinter_tool.py",
+        "tests/test_moneyprinter_mcp.py",
+        "tests/test_moneyprinter_api.py"
+      ],
+      "reference_ids": [
+        "R03",
+        "R18",
+        "R19",
+        "R30",
+        "R31",
+        "R39"
+      ],
+      "blocked_by_decisions": [
+        "U01",
+        "U02",
+        "U03",
+        "U04",
+        "U06"
+      ],
+      "implementation_rules": [
+        "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
+        "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
+        "Reuse existing authority and persistence; no bypass or competing control plane.",
+        "Add positive, negative and failure/recovery coverage appropriate to the change.",
+        "Preserve existing features, regenerate affected artifacts and report skipped/blocked evidence honestly."
+      ],
+      "required_evidence": [
+        "Exact base/head SHA and changed-file list",
+        "Acceptance criterion to test/artifact mapping",
+        "Executed commands, exit codes, environment and sanitized evidence paths",
+        "Permission/egress/resource implications and rollback/migration evidence",
+        "Generated artifact freshness and applicable CI results",
+        "Push/PR state; owner/independent approvals where required"
+      ],
+      "tracking": {
+        "owner": null,
+        "branch": null,
+        "base_sha": null,
+        "head_sha": null,
+        "claimed_at": null,
+        "heartbeat_at": null,
+        "pr_url": null,
+        "delivery_status": "not_pushed",
+        "acceptance_evidence": [],
+        "tests_executed": [],
+        "blockers": [],
+        "handoff": null
+      },
+      "implementation_prompt": "Implement AP-023: Deliver sourced original short-video drafts. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
+    },
+    {
+      "id": "AP-024",
+      "phase": "P5",
+      "title": "Qualify video technical and editorial quality",
+      "priority": "P1",
+      "optional": false,
+      "status": "not_started",
+      "authorization": "normal_story_authorization_plus_owner_editorial_acceptance",
+      "dependencies": [
+        "AP-020",
+        "AP-023"
+      ],
+      "objective": "Ensure the entire video is valid, accurate, coherent and useful rather than merely rendered.",
+      "deliverables": [
+        "Media probes and visual/audio checks",
+        "Independent editorial review",
+        "Owner-accepted pilot and regression clips"
+      ],
+      "acceptance_criteria": [
+        "Decode, dimensions/aspect/duration, black/frozen/missing frames and subtitle timing/bounds are checked",
+        "Audio silence/clipping/levels, pronunciation and factual narration are reviewed",
+        "Scene relevance, pacing, originality and audience fit have explicit rubric evidence",
+        "Missing rights or unsupported consequential claims block readiness",
+        "Entire pilot is watched; sample approval is not substituted for final review",
+        "Report all pilot outcomes/costs/intervention and platform policy constraints without monetisation guarantees"
+      ],
+      "likely_files_to_inspect": [
+        "moneyprinter_tool.py",
+        "verification_evidence.py",
+        "workflow_evaluation.py",
+        "benchmarks"
+      ],
+      "existing_test_anchors": [
+        "tests/test_moneyprinter_tool.py"
+      ],
+      "reference_ids": [
+        "R03",
+        "R18",
+        "R19",
+        "R30",
+        "R33",
+        "R39"
+      ],
+      "blocked_by_decisions": [
+        "U01",
+        "U03"
+      ],
+      "implementation_rules": [
+        "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
+        "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
+        "Reuse existing authority and persistence; no bypass or competing control plane.",
+        "Add positive, negative and failure/recovery coverage appropriate to the change.",
+        "Preserve existing features, regenerate affected artifacts and report skipped/blocked evidence honestly."
+      ],
+      "required_evidence": [
+        "Exact base/head SHA and changed-file list",
+        "Acceptance criterion to test/artifact mapping",
+        "Executed commands, exit codes, environment and sanitized evidence paths",
+        "Permission/egress/resource implications and rollback/migration evidence",
+        "Generated artifact freshness and applicable CI results",
+        "Push/PR state; owner/independent approvals where required"
+      ],
+      "tracking": {
+        "owner": null,
+        "branch": null,
+        "base_sha": null,
+        "head_sha": null,
+        "claimed_at": null,
+        "heartbeat_at": null,
+        "pr_url": null,
+        "delivery_status": "not_pushed",
+        "acceptance_evidence": [],
+        "tests_executed": [],
+        "blockers": [],
+        "handoff": null
+      },
+      "implementation_prompt": "Implement AP-024: Qualify video technical and editorial quality. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
+    },
+    {
+      "id": "AP-025",
+      "phase": "P6",
+      "title": "Extract evidence-backed reusable skills from work",
+      "priority": "P1",
+      "optional": false,
+      "status": "not_started",
+      "authorization": "normal_story_authorization",
+      "dependencies": [
+        "AP-012",
+        "AP-016",
+        "AP-020"
+      ],
+      "objective": "Turn successful methods into scoped candidates, not unverified automatic instructions.",
+      "deliverables": [
+        "Skill/lesson extraction and schema",
+        "Scope/retrieval/revalidation metadata",
+        "Positive/negative promotion tests"
+      ],
+      "acceptance_criteria": [
+        "Skills record provenance, prerequisites, permissions, versions, examples/tests and limitations",
+        "One task success can justify task-local use but not automatic global superiority",
+        "Failed approaches and corrections can be retained safely without becoming executable instructions",
+        "Private data and cross-project authority do not leak into shared skills",
+        "Existing evidence_lessons promotion contracts are reused and actual consumers tested",
+        "Revoked/outdated skills are quarantined or revalidated; running tasks retain stable versions"
+      ],
+      "likely_files_to_inspect": [
+        "evidence_lessons.py",
+        "artifact_lineage.py",
+        "context_store.py",
+        "trusted_transformations.py"
+      ],
+      "existing_test_anchors": [
+        "tests/test_evidence_lessons.py"
+      ],
+      "reference_ids": [
+        "R16",
+        "R25",
+        "R31",
+        "R32",
+        "R42"
+      ],
+      "blocked_by_decisions": [],
+      "implementation_rules": [
+        "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
+        "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
+        "Reuse existing authority and persistence; no bypass or competing control plane.",
+        "Add positive, negative and failure/recovery coverage appropriate to the change.",
+        "Preserve existing features, regenerate affected artifacts and report skipped/blocked evidence honestly."
+      ],
+      "required_evidence": [
+        "Exact base/head SHA and changed-file list",
+        "Acceptance criterion to test/artifact mapping",
+        "Executed commands, exit codes, environment and sanitized evidence paths",
+        "Permission/egress/resource implications and rollback/migration evidence",
+        "Generated artifact freshness and applicable CI results",
+        "Push/PR state; owner/independent approvals where required"
+      ],
+      "tracking": {
+        "owner": null,
+        "branch": null,
+        "base_sha": null,
+        "head_sha": null,
+        "claimed_at": null,
+        "heartbeat_at": null,
+        "pr_url": null,
+        "delivery_status": "not_pushed",
+        "acceptance_evidence": [],
+        "tests_executed": [],
+        "blockers": [],
+        "handoff": null
+      },
+      "implementation_prompt": "Implement AP-025: Extract evidence-backed reusable skills from work. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
+    },
+    {
+      "id": "AP-026",
+      "phase": "P6",
+      "title": "Research model/paper/tool improvements and evaluate candidates",
+      "priority": "P1",
+      "optional": false,
+      "status": "not_started",
+      "authorization": "normal_story_authorization",
+      "dependencies": [
+        "AP-011",
+        "AP-012",
+        "AP-013",
+        "AP-016",
+        "AP-025"
+      ],
+      "objective": "Create a budgeted improvement lab driven by useful hypotheses and real failure traces.",
+      "deliverables": [
+        "Authorised watch jobs and candidate reports",
+        "Prompt/skill/config optimisation experiments",
+        "Held-out regression and resource evidence"
+      ],
+      "acceptance_criteria": [
+        "No implicit startup/background outbound requests; schedules require explicit grant",
+        "Model cards/papers/repos capture dates, exact versions, license and limitations",
+        "Experiments start from diagnosed problems and measurable hypotheses",
+        "Installed/runtime compatibility and download/resource limits precede trials",
+        "Held-out tasks/evaluators/authority controls cannot be edited by the optimiser",
+        "Distinguish memory/skill/config updates from weight training; no automatic RL rollout",
+        "Candidate generation, judge/evaluation and optimisation inference remain local; reference projects requiring hosted models must be adapted or remain reference-only"
+      ],
+      "likely_files_to_inspect": [
+        "model_discovery.py",
+        "model_updates.py",
+        "model_calibration.py",
+        "evidence_lessons.py",
+        "supply_chain.py"
+      ],
+      "existing_test_anchors": [
+        "tests/test_model_updates.py",
+        "tests/test_model_calibration.py"
+      ],
+      "reference_ids": [
+        "R15",
+        "R25",
+        "R26",
+        "R28",
+        "R34",
+        "R35",
+        "R36",
+        "R37",
+        "R40",
+        "R41"
+      ],
+      "blocked_by_decisions": [
+        "U02",
+        "U03",
+        "U04",
+        "U05"
+      ],
+      "implementation_rules": [
+        "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
+        "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
+        "Reuse existing authority and persistence; no bypass or competing control plane.",
+        "Add positive, negative and failure/recovery coverage appropriate to the change.",
+        "Preserve existing features, regenerate affected artifacts and report skipped/blocked evidence honestly."
+      ],
+      "required_evidence": [
+        "Exact base/head SHA and changed-file list",
+        "Acceptance criterion to test/artifact mapping",
+        "Executed commands, exit codes, environment and sanitized evidence paths",
+        "Permission/egress/resource implications and rollback/migration evidence",
+        "Generated artifact freshness and applicable CI results",
+        "Push/PR state; owner/independent approvals where required"
+      ],
+      "tracking": {
+        "owner": null,
+        "branch": null,
+        "base_sha": null,
+        "head_sha": null,
+        "claimed_at": null,
+        "heartbeat_at": null,
+        "pr_url": null,
+        "delivery_status": "not_pushed",
+        "acceptance_evidence": [],
+        "tests_executed": [],
+        "blockers": [],
+        "handoff": null
+      },
+      "implementation_prompt": "Implement AP-026: Research model/paper/tool improvements and evaluate candidates. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
+    },
+    {
+      "id": "AP-027",
+      "phase": "P6",
+      "title": "Bound refinement with incumbent preservation and stopping",
+      "priority": "P1",
+      "optional": false,
+      "status": "not_started",
+      "authorization": "normal_story_authorization",
+      "dependencies": [
+        "AP-016",
+        "AP-017",
+        "AP-025"
+      ],
+      "objective": "Improve outputs without endless criticism, scope growth or degraded rewrites.",
+      "deliverables": [
+        "Incumbent/revision/synthesis comparison",
+        "Plateau/no-progress stop policy",
+        "Blind comparison and failure fixtures"
+      ],
+      "acceptance_criteria": [
+        "Unchanged output is always an eligible candidate",
+        "Independent-context comparison records potential shared-model bias",
+        "Hard factual/functional/safety requirements cannot be traded for style scores",
+        "Iterations and total budget are bounded across all reviewers/variants",
+        "Stop when evidence does not justify change and preserve best accepted version",
+        "Insufficient capability produces honest partial result and precise escalation, not fabricated success"
+      ],
+      "likely_files_to_inspect": [
+        "workflow_evaluation.py",
+        "execution_budget.py",
+        "verification_evidence.py"
+      ],
+      "existing_test_anchors": [
+        "tests/test_workflow_evaluation.py",
+        "tests/test_execution_budget.py"
+      ],
+      "reference_ids": [
+        "R27",
+        "R30",
+        "R31"
+      ],
+      "blocked_by_decisions": [],
+      "implementation_rules": [
+        "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
+        "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
+        "Reuse existing authority and persistence; no bypass or competing control plane.",
+        "Add positive, negative and failure/recovery coverage appropriate to the change.",
+        "Preserve existing features, regenerate affected artifacts and report skipped/blocked evidence honestly."
+      ],
+      "required_evidence": [
+        "Exact base/head SHA and changed-file list",
+        "Acceptance criterion to test/artifact mapping",
+        "Executed commands, exit codes, environment and sanitized evidence paths",
+        "Permission/egress/resource implications and rollback/migration evidence",
+        "Generated artifact freshness and applicable CI results",
+        "Push/PR state; owner/independent approvals where required"
+      ],
+      "tracking": {
+        "owner": null,
+        "branch": null,
+        "base_sha": null,
+        "head_sha": null,
+        "claimed_at": null,
+        "heartbeat_at": null,
+        "pr_url": null,
+        "delivery_status": "not_pushed",
+        "acceptance_evidence": [],
+        "tests_executed": [],
+        "blockers": [],
+        "handoff": null
+      },
+      "implementation_prompt": "Implement AP-027: Bound refinement with incumbent preservation and stopping. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
+    },
+    {
+      "id": "AP-028",
+      "phase": "P6",
+      "title": "Promote and roll back improvements by risk and evidence",
+      "priority": "P1",
+      "optional": false,
+      "status": "not_started",
+      "authorization": "normal_story_authorization_plus_owner_approval_of_promotion_policy",
+      "dependencies": [
+        "AP-014",
+        "AP-020",
+        "AP-025",
+        "AP-026",
+        "AP-027"
+      ],
+      "objective": "Choose automatic or human review according to change scope and consequences.",
+      "deliverables": [
+        "Enforced promotion policy/classifier",
+        "Task/project/canary/default stages",
+        "Rollback/quarantine/revocation evidence"
+      ],
+      "acceptance_criteria": [
+        "Risk/authority classification is enforced outside the proposing model",
+        "Automatic promotion needs approved thresholds and relevant held-out results",
+        "New egress/accounts/spending and sensitive defaults need existing explicit grant or owner review",
+        "A candidate cannot modify its evaluator/approval/sandbox/audit controls to pass",
+        "Canary regressions trigger bounded rollback and invalidate affected downstream evidence",
+        "Prior configurations/references remain recoverable; in-flight tasks stay version-consistent"
+      ],
+      "likely_files_to_inspect": [
+        "evidence_lessons.py",
+        "model_updates.py",
+        "routing_policy.py",
+        "scoped_grants.py",
+        "artifact_lineage.py"
+      ],
+      "existing_test_anchors": [
+        "tests/test_evidence_lessons.py",
+        "tests/test_model_updates.py",
+        "tests/test_scoped_grants.py"
+      ],
+      "reference_ids": [
+        "R25",
+        "R26",
+        "R27",
+        "R32"
+      ],
+      "blocked_by_decisions": [
+        "U05"
+      ],
+      "implementation_rules": [
+        "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
+        "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
+        "Reuse existing authority and persistence; no bypass or competing control plane.",
+        "Add positive, negative and failure/recovery coverage appropriate to the change.",
+        "Preserve existing features, regenerate affected artifacts and report skipped/blocked evidence honestly."
+      ],
+      "required_evidence": [
+        "Exact base/head SHA and changed-file list",
+        "Acceptance criterion to test/artifact mapping",
+        "Executed commands, exit codes, environment and sanitized evidence paths",
+        "Permission/egress/resource implications and rollback/migration evidence",
+        "Generated artifact freshness and applicable CI results",
+        "Push/PR state; owner/independent approvals where required"
+      ],
+      "tracking": {
+        "owner": null,
+        "branch": null,
+        "base_sha": null,
+        "head_sha": null,
+        "claimed_at": null,
+        "heartbeat_at": null,
+        "pr_url": null,
+        "delivery_status": "not_pushed",
+        "acceptance_evidence": [],
+        "tests_executed": [],
+        "blockers": [],
+        "handoff": null
+      },
+      "implementation_prompt": "Implement AP-028: Promote and roll back improvements by risk and evidence. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
+    },
+    {
+      "id": "AP-029",
+      "phase": "P7",
+      "title": "Add governed recurring missions and external delivery",
+      "priority": "P1",
+      "optional": false,
+      "status": "not_started",
+      "authorization": "normal_story_authorization_plus_explicit_external_action_grants",
+      "dependencies": [
+        "AP-007",
+        "AP-020",
+        "AP-028"
+      ],
+      "objective": "Run useful recurring work and optional publish/deploy without duplicate or unauthorised effects.",
+      "deliverables": [
+        "Schedule/draft queue and notifications",
+        "Scoped external action adapter pilot",
+        "Replay/reconciliation and global pause tests"
+      ],
+      "acceptance_criteria": [
+        "Schedules grant only their explicit purpose; draft creation never implies publication",
+        "External action binds account/destination/content hash/policy/expiry and invalidates on changes",
+        "Provider-supported idempotency and local ledger handle retries; unknown outcome reconciles rather than resends",
+        "Restart/missed schedule/revocation tests avoid duplicate effects",
+        "Global pause, per-project stop and notification thresholds prevent runaway activity",
+        "Metrics/analytics suggestions do not claim causal business success or silently change public output"
+      ],
+      "likely_files_to_inspect": [
+        "side_effect_ledger.py",
+        "scoped_grants.py",
+        "execution_budget.py",
+        "workflow_checkpoints.py",
+        "app.py"
+      ],
+      "existing_test_anchors": [
+        "tests/test_side_effect_ledger.py",
+        "tests/test_scoped_grants.py"
+      ],
+      "reference_ids": [
+        "R08",
+        "R25"
+      ],
+      "blocked_by_decisions": [
+        "U03",
+        "U04"
+      ],
+      "implementation_rules": [
+        "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
+        "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
+        "Reuse existing authority and persistence; no bypass or competing control plane.",
+        "Add positive, negative and failure/recovery coverage appropriate to the change.",
+        "Preserve existing features, regenerate affected artifacts and report skipped/blocked evidence honestly."
+      ],
+      "required_evidence": [
+        "Exact base/head SHA and changed-file list",
+        "Acceptance criterion to test/artifact mapping",
+        "Executed commands, exit codes, environment and sanitized evidence paths",
+        "Permission/egress/resource implications and rollback/migration evidence",
+        "Generated artifact freshness and applicable CI results",
+        "Push/PR state; owner/independent approvals where required"
+      ],
+      "tracking": {
+        "owner": null,
+        "branch": null,
+        "base_sha": null,
+        "head_sha": null,
+        "claimed_at": null,
+        "heartbeat_at": null,
+        "pr_url": null,
+        "delivery_status": "not_pushed",
+        "acceptance_evidence": [],
+        "tests_executed": [],
+        "blockers": [],
+        "handoff": null
+      },
+      "implementation_prompt": "Implement AP-029: Add governed recurring missions and external delivery. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
+    },
+    {
+      "id": "AP-030",
+      "phase": "P7",
+      "title": "Evaluate optional guest-desktop capability",
+      "priority": "P1",
+      "optional": true,
+      "status": "not_started",
+      "authorization": "normal_story_authorization",
+      "dependencies": [
+        "AP-010",
+        "AP-012"
+      ],
+      "objective": "Enable GUI-only tasks only when simpler APIs/browser workers are insufficient.",
+      "deliverables": [
+        "Use-case-specific driver/guest bake-off",
+        "Platform qualification and takeover evidence",
+        "Host/guest/clipboard/file/egress boundary tests"
+      ],
+      "acceptance_criteria": [
+        "Chosen task justifies desktop control instead of existing API/browser tools",
+        "Exact supported platform/version/resources and setup are verified",
+        "Host desktop/files/accounts/clipboard remain outside untrusted guest authority unless separately granted",
+        "Shared folders, credentials, networking and screenshots are scoped/redacted",
+        "Guest failure cannot fall back to controlling the host",
+        "Publish maturity/limitations and keep optional adapter disabled unless qualified"
+      ],
+      "likely_files_to_inspect": [
+        "sandbox_boundary.py",
+        "process_supervision.py",
+        "mcp_client.py",
+        "hardware_capabilities.py"
+      ],
+      "existing_test_anchors": [
+        "tests/test_sandbox_boundary.py"
+      ],
+      "reference_ids": [
+        "R02",
+        "R04",
+        "R07"
+      ],
+      "blocked_by_decisions": [
+        "U01",
+        "U02",
+        "U04",
+        "U06"
+      ],
+      "implementation_rules": [
+        "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
+        "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
+        "Reuse existing authority and persistence; no bypass or competing control plane.",
+        "Add positive, negative and failure/recovery coverage appropriate to the change.",
+        "Preserve existing features, regenerate affected artifacts and report skipped/blocked evidence honestly."
+      ],
+      "required_evidence": [
+        "Exact base/head SHA and changed-file list",
+        "Acceptance criterion to test/artifact mapping",
+        "Executed commands, exit codes, environment and sanitized evidence paths",
+        "Permission/egress/resource implications and rollback/migration evidence",
+        "Generated artifact freshness and applicable CI results",
+        "Push/PR state; owner/independent approvals where required"
+      ],
+      "tracking": {
+        "owner": null,
+        "branch": null,
+        "base_sha": null,
+        "head_sha": null,
+        "claimed_at": null,
+        "heartbeat_at": null,
+        "pr_url": null,
+        "delivery_status": "not_pushed",
+        "acceptance_evidence": [],
+        "tests_executed": [],
+        "blockers": [],
+        "handoff": null
+      },
+      "implementation_prompt": "Implement AP-030: Evaluate optional guest-desktop capability. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
+    },
+    {
+      "id": "AP-031",
+      "phase": "P7",
+      "title": "Ship progressive configuration, onboarding and operations",
+      "priority": "P1",
+      "optional": false,
+      "status": "not_started",
+      "authorization": "normal_story_authorization",
+      "dependencies": [
+        "AP-008",
+        "AP-019",
+        "AP-020",
+        "AP-028",
+        "AP-029"
+      ],
+      "objective": "Expose powerful capabilities without sacrificing a clear low-supervision experience.",
+      "deliverables": [
+        "Capability readiness and policy UI",
+        "Reference/skill/model controls",
+        "Accurate help/export/operations UX"
+      ],
+      "acceptance_criteria": [
+        "Configured, tested, qualified, experimental, blocked and unavailable states are distinct",
+        "Users can inspect/revoke grants and correct/export/delete preferences/references",
+        "Readiness reports actual provider/runtime results and avoids hidden paid/network setup",
+        "Power settings are progressively disclosed; all existing features remain accessible",
+        "Costs/limits and pauses/failures are understandable without reading logs",
+        "Help and examples describe actual enabled capabilities and separate artifact acceptance from external authority"
+      ],
+      "likely_files_to_inspect": [
+        "static/index.html",
+        "onboarding_preflight.py",
+        "start_command_center.py",
+        "app.py",
+        "README.md"
+      ],
+      "existing_test_anchors": [],
+      "reference_ids": [
+        "R06",
+        "R07",
+        "R10",
+        "R18",
+        "R25"
+      ],
+      "blocked_by_decisions": [],
+      "implementation_rules": [
+        "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
+        "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
+        "Reuse existing authority and persistence; no bypass or competing control plane.",
+        "Add positive, negative and failure/recovery coverage appropriate to the change.",
+        "Preserve existing features, regenerate affected artifacts and report skipped/blocked evidence honestly."
+      ],
+      "required_evidence": [
+        "Exact base/head SHA and changed-file list",
+        "Acceptance criterion to test/artifact mapping",
+        "Executed commands, exit codes, environment and sanitized evidence paths",
+        "Permission/egress/resource implications and rollback/migration evidence",
+        "Generated artifact freshness and applicable CI results",
+        "Push/PR state; owner/independent approvals where required"
+      ],
+      "tracking": {
+        "owner": null,
+        "branch": null,
+        "base_sha": null,
+        "head_sha": null,
+        "claimed_at": null,
+        "heartbeat_at": null,
+        "pr_url": null,
+        "delivery_status": "not_pushed",
+        "acceptance_evidence": [],
+        "tests_executed": [],
+        "blockers": [],
+        "handoff": null
+      },
+      "implementation_prompt": "Implement AP-031: Ship progressive configuration, onboarding and operations. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
+    },
+    {
+      "id": "AP-032",
+      "phase": "P7",
+      "title": "Qualify the production release and independent-agent handoff",
+      "priority": "P1",
+      "optional": false,
+      "status": "not_started",
+      "authorization": "owner_release_acceptance_and_existing_independent_security_visual_gates",
+      "dependencies": [
+        "AP-022",
+        "AP-024",
+        "AP-028",
+        "AP-029",
+        "AP-031"
+      ],
+      "objective": "Release only the selected, evidenced scope with preservation, safety and reproducible delivery.",
+      "deliverables": [
+        "End-to-end pilot acceptance pack",
+        "Preservation/security/CI/supply-chain evidence",
+        "Runbooks, rollback and final handoff"
+      ],
+      "acceptance_criteria": [
+        "If only one specialisation is owner-selected for launch, explicitly defer the other pilot through an authorised ledger revision rather than fake completion",
+        "Existing API/UI/session/workspace features and standalone remain verified",
+        "Selected workflows pass versioned held-out/hostile/failure/restart/resource cases and actual artifact review",
+        "Installed qualification and independent security/screenshot approvals are real and current; author evidence is not substituted",
+        "Applicable CI is green at the implementation head and artifacts/docs claim no more than tested scope",
+        "Rollback/migration/restore are exercised; branch/PR and owner acceptance are recorded; no secrets/unlicensed outputs committed"
+      ],
+      "likely_files_to_inspect": [
+        "AGENTS.md",
+        "IMPLEMENTATION_STATUS.md",
+        "security_release_gate.py",
+        "scripts",
+        "product",
+        "docs"
+      ],
+      "existing_test_anchors": [
+        "tests/test_security_release_gate.py"
+      ],
+      "reference_ids": [
+        "R24",
+        "R28"
+      ],
+      "blocked_by_decisions": [],
+      "implementation_rules": [
+        "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
+        "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
+        "Reuse existing authority and persistence; no bypass or competing control plane.",
+        "Add positive, negative and failure/recovery coverage appropriate to the change.",
+        "Preserve existing features, regenerate affected artifacts and report skipped/blocked evidence honestly."
+      ],
+      "required_evidence": [
+        "Exact base/head SHA and changed-file list",
+        "Acceptance criterion to test/artifact mapping",
+        "Executed commands, exit codes, environment and sanitized evidence paths",
+        "Permission/egress/resource implications and rollback/migration evidence",
+        "Generated artifact freshness and applicable CI results",
+        "Push/PR state; owner/independent approvals where required"
+      ],
+      "tracking": {
+        "owner": null,
+        "branch": null,
+        "base_sha": null,
+        "head_sha": null,
+        "claimed_at": null,
+        "heartbeat_at": null,
+        "pr_url": null,
+        "delivery_status": "not_pushed",
+        "acceptance_evidence": [],
+        "tests_executed": [],
+        "blockers": [],
+        "handoff": null
+      },
+      "implementation_prompt": "Implement AP-032: Qualify the production release and independent-agent handoff. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
+    }
+  ],
+  "confirmed_owner_environment": {
+    "chip": "Apple M5",
+    "unified_memory_gb": 24,
+    "storage_tb": 1,
+    "evidence": "owner-stated; runtime versions and available memory/storage not yet measured",
+    "portable_architecture_required": true
+  },
+  "inference_policy": {
+    "location": "local_only",
+    "hosted_model_fallback": false,
+    "scheduling": "sequential load/unload using existing qualified lifecycle path",
+    "model_architectures": [
+      "dense",
+      "MoE"
+    ],
+    "selection": "measured task quality, exact runtime compatibility, total resident memory, context fit and latency; internal experts are not independently selectable application roles",
+    "external_non_inference_services": "separate explicit decision; network research is not hosted inference; do not assume hosted speech/image/video generation is approved"
+  },
+  "revision_precedence": {
+    "policy": "Revision 1.2 overrides earlier blanket hosted-media exclusions. Local inference is default; explicitly granted external cloud/media capabilities are feasible. No silent fallback. External reasoning-model use requires a separate policy decision.",
+    "ux_direction": "docs/autonomous-production-ux-direction.md",
+    "approval_scope": "Concept direction only; no implementation, screenshot, security or release acceptance."
+  }
+}
