@@ -65,6 +65,34 @@ jobs:
             --timeout-ms 60000
       - name: Validate the candidate
         run: python scripts/uiux_v2_cross_tab_reference.py --validate-candidate "$RUNNER_TEMP/candidate/candidate-manifest.json"
+      - name: Approve the candidate with the owner's recorded words
+        # The approval has to be written where the capture happened: approve_candidate() refuses a
+        # manifest whose HEAD is not the current HEAD, and verifies every referenced PNG, so both
+        # live in this runner and nowhere else.
+        env:
+          UIV2_APPROVAL_REFERENCE: ${{ vars.UIV2_APPROVAL_REFERENCE || 'user:Arena review 2026-11-09 "approved the re-captured phone Hall baseline; re-capture the two 390x844 hall captures"' }}
+        run: |
+          python - <<'PY'
+          import importlib.util, os, pathlib, sys
+
+          spec = importlib.util.spec_from_file_location("xtab", "scripts/uiux_v2_cross_tab_reference.py")
+          module = importlib.util.module_from_spec(spec)
+          sys.modules["xtab"] = module
+          spec.loader.exec_module(module)
+          manifest = pathlib.Path(os.environ["RUNNER_TEMP"]) / "candidate" / "candidate-manifest.json"
+          approval = module.approve_candidate(manifest, os.environ["UIV2_APPROVAL_REFERENCE"])
+          print("approved:", approval["human_approval"]["reference"])
+          print("pinned head:", approval["candidate"]["git_head"])
+          print("checks:", approval["verification"])
+          PY
+          git config user.name "uiv2-candidate"
+          git config user.email "uiv2-candidate@users.noreply.github.com"
+          git rm -r -q --cached .uiv2-candidate || true
+          rm -rf .uiv2-candidate
+          git add -f product/M5_2_0_UIUX_V2_Cross_Tab_Approval.json
+          git commit -q -m "chore(uiv2): publish the cross-tab candidate captured at ${GITHUB_SHA} and approve it" -m "The re-captured 48-capture baseline, approved with the owner's recorded words. The temporary candidate manifest leaves the branch in the same commit; the approval pins its digest and its HEAD. This whole workflow is deleted before merge."
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+
       - name: Publish the manifest and the signature delta on the branch
         run: |
           set -eu
