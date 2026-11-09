@@ -27,10 +27,11 @@ implementation passes. In addition to rebuilding `studio.py`, the affected UI/UX
 source manifest, route map, authorization trace, preservation package, and
 runtime-dispatch inventory were regenerated. UIV2-29 backend safety evidence was
 rerun and its source-bound summary regenerated. The 40-story UI/UX release gate
-checks at 37/37 artifacts and 7/7 phase gates. The derived UIV2-30 review was
-regenerated to match the backend evidence and now truthfully reports three
-existing stale browser-source/metric findings; it remains blocked. No UIV2 story
-ledger, owner approval, visual signoff, or acceptance verdict was advanced.
+checks at 37/37 artifacts and 7/7 phase gates. After merging the latest main
+source/evidence updates, the derived UIV2-30 review was regenerated and matches
+the refreshed backend evidence with zero findings; its scope remains UI/UX
+handoff only, while production security remains blocked. No story ledger, owner
+approval, visual signoff, or acceptance verdict was changed by this audit.
 
 ## Verification and limits
 

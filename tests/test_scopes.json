@@ -422,6 +422,13 @@
       "autonomous.production",
       "security.execution",
       "security.network"
+    ],
+    "autonomous_production_evaluation.py": [
+      "autonomous.production",
+      "ui.pipeline",
+      "ui.compare",
+      "storage.history",
+      "security.execution"
     ]
   }
 }
