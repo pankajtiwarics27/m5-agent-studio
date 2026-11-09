@@ -88,7 +88,7 @@ The cross-tab matrix is the common empty/seeded state. Populated, long-content, 
 
 - Candidate: `/home/runner/work/_temp/candidate/candidate-manifest.json`
 - Candidate SHA-256: `e69a16a6a2b1c5711a77c1798b956ef67f418a46f9b835af96c6a99a6a778bea`
-- HEAD: `99fada2a21e4a2e9d8b59dcd8ead09e467adad76`
+- HEAD: `3bea54dd9572e9ee710f1d2b758b46dedd2f4677`
 
 Future `--check` runs compare all 48 live structural signatures with this approval and still rerun every independent reference/layout assertion.
 

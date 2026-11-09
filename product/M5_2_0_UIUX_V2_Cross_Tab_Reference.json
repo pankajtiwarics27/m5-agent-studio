@@ -964,10 +964,10 @@
     "candidate": {
       "manifest": "/home/runner/work/_temp/candidate/candidate-manifest.json",
       "manifest_sha256": "e69a16a6a2b1c5711a77c1798b956ef67f418a46f9b835af96c6a99a6a778bea",
-      "git_head": "99fada2a21e4a2e9d8b59dcd8ead09e467adad76"
+      "git_head": "3bea54dd9572e9ee710f1d2b758b46dedd2f4677"
     },
     "captures": 48,
-    "approval_sha256": "50a66933ad65d03a25f97a17d1db4a7dd7e48f982a2f8e3877996ce9ddfb30db"
+    "approval_sha256": "fe8f233b8b168a74aa4208de1bd6430d2d2339a3dba2c682c1c5b8d3029027af"
   },
   "totals": {
     "panes": 6,

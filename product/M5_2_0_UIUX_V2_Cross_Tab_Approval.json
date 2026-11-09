@@ -11,7 +11,7 @@
   "candidate": {
     "manifest": "/home/runner/work/_temp/candidate/candidate-manifest.json",
     "manifest_sha256": "e69a16a6a2b1c5711a77c1798b956ef67f418a46f9b835af96c6a99a6a778bea",
-    "git_head": "99fada2a21e4a2e9d8b59dcd8ead09e467adad76"
+    "git_head": "3bea54dd9572e9ee710f1d2b758b46dedd2f4677"
   },
   "contract_sha256": "caf0e5543c6e644eae4a12a6db0ed38a169ad361a96af75cdb04cbfa0f4c2435",
   "wireframe_sha256": "f1232a0ea81fccbfb343f6f16d8f8878edbcc20a478a96dbea8b45a44cba8a17",
