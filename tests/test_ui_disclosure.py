@@ -28,13 +28,18 @@ class Elements(HTMLParser):
 
 def test_harness_disclosure_keeps_essential_and_stop_controls_visible():
     parser = Elements()
-    parser.feed((Path(__file__).resolve().parents[1] / "static/index.html").read_text())
+    source = (Path(__file__).resolve().parents[1] / "static/index.html").read_text()
+    parser.feed(source)
     for element in ("harnessEfficiencyMode", "harnessReasoning", "harnessMaxSteps"):
         assert ("details", "harnessAdvanced") in parser.parents[element]
     for element in ("harnessLeadModel", "harnessCriticModel", "harnessPolicy", "harnessAbortBtn", "harnessRunBtn"):
         assert ("details", "harnessAdvanced") not in parser.parents[element]
     assert "open" not in parser.attrs["harnessAdvanced"]
-    assert parser.attrs["densityToggleBtn"]["aria-pressed"] == "false"
+    # UIV2-P7-05: the Density control is retired (owner decision 2026-11-09), so this test no
+    # longer has an aria-pressed state to protect. The assertion is inverted into a guard: if the
+    # control ever comes back it must come back deliberately, with its own disclosure test.
+    # See tests/test_uiux_density_retirement.py for what replaced it.
+    assert "densityToggleBtn" not in source
 
 
 def test_harness_run_settings_summary_is_live_and_names_the_group():

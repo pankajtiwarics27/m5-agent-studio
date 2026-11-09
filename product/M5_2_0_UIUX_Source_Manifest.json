@@ -12,9 +12,9 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "7a938b83e3b512b80b20ed006436763117acb4445ce13b463bcc93f72699c6f6",
-      "bytes": 1055526,
-      "lines": 18043
+      "sha256": "b37f117dd620b8a2d5b3a285eceb1e8738368e57b1ed187e52ce13b51337fe0d",
+      "bytes": 1065973,
+      "lines": 18186
     },
     {
       "path": "app.py",
@@ -26,9 +26,9 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "a78eb99ff7eafc2212c8c08d95eff8691c055fd89ff0eaef4e1508a3f5d1f3d1",
-      "bytes": 4283597,
-      "lines": 83231
+      "sha256": "08dcc92ea5ec0d7f9058163c165c422b58c29a81d2c4a6f38351471b50e39e2e",
+      "bytes": 4294044,
+      "lines": 83374
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -54,9 +54,9 @@
     {
       "path": "scripts/capture_screenshots.mjs",
       "role": "the only accepted way to capture visual evidence",
-      "sha256": "03b6974531ebb16fd8cbd63665b3f4dc1a151dcc60b96c32f4caf790671edc72",
-      "bytes": 19798,
-      "lines": 445
+      "sha256": "79c68341de1c6bf27d7ed964e79da5d7c67842b584d750473f0c178c2d2293c7",
+      "bytes": 20242,
+      "lines": 454
     },
     {
       "path": "scripts/validate_screenshots.py",
@@ -299,9 +299,9 @@
     {
       "path": "tests/browser/accessibility_walk.mjs",
       "role": "browser accessibility walk with the current-main Chat handoff checks",
-      "sha256": "104897886b6dd7b3260b6e4a5b89372c1b9b2480f4683422867b176a6d4d3392",
-      "bytes": 25038,
-      "lines": 454
+      "sha256": "35e279ca00a6949649f210fa0871a562b1ae8bd6639fba95a546650d9ff27feb",
+      "bytes": 25284,
+      "lines": 457
     },
     {
       "path": "tests/test_presentations.py",
@@ -327,9 +327,9 @@
     {
       "path": "tests/test_screenshot_capture_browser.py",
       "role": "runs browser-backed UI and screenshot safety regressions",
-      "sha256": "d558d382dfbb5d53410eea845f789573b24d9a15646298f1607d32a390e3f4a9",
-      "bytes": 28532,
-      "lines": 711
+      "sha256": "313a740028656ef9267a5aa108918744700655d5b2fd6081fd589881a6df6bc0",
+      "bytes": 28614,
+      "lines": 712
     },
     {
       "path": "tests/test_uiux_source_manifest.py",
@@ -460,8 +460,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "7a938b83e3b512b80b20ed006436763117acb4445ce13b463bcc93f72699c6f6",
-    "lines": 18043,
+    "sha256": "b37f117dd620b8a2d5b3a285eceb1e8738368e57b1ed187e52ce13b51337fe0d",
+    "lines": 18186,
     "tab_count": 6,
     "tabs": [
       {

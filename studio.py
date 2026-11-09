@@ -5816,7 +5816,6 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   .top-actions { margin-left: auto; gap: 4px; }
   .top-actions .btn span { display: none; }
   .top-actions .btn { padding: 6px 8px; }
-  .top-actions #densityToggleBtn { display: none; }
 }
 @media (max-width: 880px) {
   .harness-shell { grid-template-columns: 1fr; grid-template-rows: minmax(132px, 22vh) minmax(0, 1fr); }
@@ -5891,6 +5890,7 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
   .topbar { padding: 5px 8px; overflow-x: auto; overflow-y: hidden; }
   .topbar > * { flex-shrink: 0; }
   .workspace-toolbar { flex-wrap: wrap; }
+  .topbar > .workspace-toolbar { flex-wrap: nowrap; }
   .presentation { flex-wrap: wrap; }
   .presentation > div { flex: 1 1 160px; min-width: 0; }
   .brand { gap: 4px; }
@@ -6085,11 +6085,45 @@ body[data-theme="light"] .status-pill.demo { background: #fff5df; color: #704d0b
     #pane-council .pipeline-recovery[data-state="recorded"] .presentation > div { align-items: flex-start; }
   }
 /* Owner-requested task-first desktop layout. Existing controls remain the source of truth. */
+/* UIV2-P7-07: the toolbar is a child of the header now, not a second bar under it. It keeps its
+   own class and its own wrap rule (the narrow contract pins that literal), but as a header child
+   it gives up its bar treatment: no min-height, no padding, no divider. The header is one row. */
+.topbar > .workspace-toolbar { flex: 1 1 auto; min-width: 0; min-height: 0; padding: 0; border-bottom: 0; background: transparent; }
+
+/* UIV2-P7-08: two consequences of folding the toolbar into the header, both narrow-only. They are
+   declared here, after the base rule, because a media query adds no specificity - the earlier
+   max-width:390px block cannot override a rule that comes later in the sheet.
+
+   1. .topbar becomes a scroll container at <=390px (overflow-x:auto; overflow-y:hidden - the pinned
+      narrow contract). Anything absolutely positioned inside it is clipped to the header box, so the
+      Tools & integrations panel (top:calc(100% + 4px), anchored to .workspace-toolbar) would open
+      entirely off-screen. Fixed positioning is the escape: it is not clipped by an ancestor's
+      overflow, which is the same reason the telemetry popover uses it.
+   2. The header pins flex-shrink:0 on its children so nothing is squeezed out of reach. The base
+      rule above asks the folded toolbar to grow and shrink (flex:1 1 auto, min-width:0); left
+      unopposed at 195px that compresses the toolbar to nothing and lets its nowrap contents paint
+      over Search and Settings. Natural width + the header's horizontal scroll is the pinned remedy.
+
+   The @media block itself lives at the END of this stylesheet, not here: .studio-tools > .skills-strip
+   is declared with position:absolute further down, and a media query adds no specificity, so a rule
+   here would lose to a later declaration at equal weight. Being last is what makes it win. */
+.settings-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 12px; }
+.settings-row-label { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.settings-row-label span { font-size: 11.8px; color: var(--text-dim); }
+.settings-row-control { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; }
 .workspace-toolbar { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 4px 24px; border-bottom: 1px solid var(--border); flex: 0 0 auto; position: relative; z-index: 23; }
 .workspace-caption { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-dim); font-size: 12px; margin-right: auto; }
 .studio-tools > summary, .harness-task-settings > summary, .harness-run-review > summary, .harness-examples > summary { cursor: pointer; color: var(--text-dim); font-size: 12px; padding: 7px 9px; border-radius: var(--radius-sm); }
 .studio-tools > summary:hover, .harness-task-settings > summary:hover, .harness-run-review > summary:hover { background: var(--bg-hover); color: var(--text); }
 .studio-tools > .skills-strip { position: absolute; right: 16px; top: calc(100% + 4px); width: min(720px, calc(100vw - 40px)); max-height: 60dvh; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px; box-shadow: 0 12px 36px rgba(0,0,0,.14); }
+/* UIV2-P7-07: that panel is a viewport-wide box, so its containing block has to stay the header.
+   The workspace toolbar used to be a full-width row and is now a flex item after the brand, so
+   anchoring the panel to the toolbar dragged it 264px left at every desktop width (right edge
+   1000 instead of viewport-16 at 1280) and hung it under the caption instead of the header's
+   right side, which is where the approved layout puts it. <=390px still switches the panel to
+   fixed, because there the header is an overflow-clipping scroll container. */
+.topbar { position: relative; }
+.topbar > .workspace-toolbar { position: static; }
 .sessions-toggle { display: none; }
 .inspector-title-row { display: flex; align-items: center; justify-content: space-between; }
 #pane-harness > .pane-title { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); }
@@ -6142,14 +6176,16 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
   body[data-active-pane="harness"] .mode-tabs { height: auto; bottom: 0; }
   #pane-harness .harness-sidebar { display: none; }
   body[data-active-pane="harness"] .sessions-toggle { display: inline-flex; }
-  body.sessions-open #pane-harness .harness-sidebar { display: flex; width: min(280px, 85vw); top: calc(var(--header-height) + 48px); left: 64px; box-shadow: 10px 0 36px rgba(0,0,0,.18); z-index: 30; }
+  body.sessions-open #pane-harness .harness-sidebar { display: flex; width: min(280px, 85vw); top: var(--header-height); left: 64px; box-shadow: 10px 0 36px rgba(0,0,0,.18); z-index: 30; }
 }
 @media (max-width: 799px) {
   body[data-active-pane="harness"] .mode-tabs { height: 44px; }
-  body.sessions-open #pane-harness .harness-sidebar { left: 0; top: calc(var(--header-height) + 92px); }
+  body.sessions-open #pane-harness .harness-sidebar { left: 0; top: calc(var(--header-height) + 44px); }
   .workspace-toolbar { padding: 4px 12px; gap: 6px; }
   .workspace-caption { display: none; }
   .studio-tools { margin-left: auto; }
+  /* UIV2-P7-07: phones take the full width minus the header padding; the header anchor that keeps
+     the panel on the viewport's right edge is declared with the panel itself. */
   .studio-tools > .skills-strip { right: 8px; width: calc(100vw - 16px); }
   #pane-harness .task-composer { width: calc(100% - 24px); margin-bottom: 12px; padding: 14px; gap: 8px; }
   #pane-harness .harness-stream { padding: 16px 12px; }
@@ -6241,6 +6277,61 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
   .path-picker-actions { justify-content:flex-end; margin-top:12px; }
   #pathPickerStatus[data-state="error"] { color:var(--rose); }
   .path-picker-insert { margin-top:6px; }
+
+/* UIV2-P7-08: declared last on purpose. Every competing declaration of .studio-tools > .skills-strip
+   appears earlier in this sheet, and a media query does not raise specificity - so this block has to
+   be the final word or it silently loses. (It did, the first time.) */
+@media (max-width: 390px) {
+  .topbar > .workspace-toolbar { flex: 0 0 auto; flex-wrap: nowrap; }
+  /* .topbar is a scroll container here (overflow-x:auto; overflow-y:hidden - the pinned narrow
+     contract). An absolutely positioned panel is therefore clipped to the header box and would open
+     entirely off-screen, which is exactly how the fold could remove Tools & integrations on a phone
+     rather than merely move it. A fixed box is not clipped by an ancestor's overflow, which is why
+     the telemetry popover uses fixed too. */
+  .studio-tools > .skills-strip {
+    position: fixed; top: calc(var(--header-height) + 4px); right: 8px;
+    width: calc(100vw - 16px);
+    /* Escaping the header's clip must not lift the panel's height cap: the preserved
+       short-viewport budget (tests/browser/integrations_strip_walk.mjs caps the panel at 60dvh)
+       still applies, so the fixed box takes whichever bound is smaller. Measured at 390x900:
+       the viewport-only bound let the panel grow to 616px against a 542px budget. */
+    max-height: min(60dvh, calc(100dvh - var(--header-height) - 16px));
+    overflow-y: auto;
+  }
+}
+
+/* UIV2-P7-07: the fold consumes horizontal room the caption used to have. Between 800 and 1024px
+   the header's natural width (brand + caption + Tools + Inspector + Settings + Search) left the
+   workspace caption zero pixels, which is a real regression rather than a style question:
+   tests/browser/task_workspace_walk.mjs asserts from 800px up that the caption keeps a positive
+   width and ends before the Tools summary. The two action buttons keep their icon, aria-label,
+   title, handlers and focus ring; only their text labels fold away, which is the pattern the
+   existing <=600px rule already applies to the first of them. Nothing becomes unreachable: the
+   command palette is still inline in the header and still bound to Cmd+K. */
+@media (max-width: 1024px) {
+  .top-actions .btn span { display: none; }
+  .top-actions .btn { padding: 6px 8px; }
+  .workspace-toolbar #monitorToggleBtn span { display: none; }
+}
+
+/* UIV2-P7-09: the Council pane at a 195px effective viewport (390x844 at 200% zoom). Three
+   reachability defects, all pre-existing and all found by
+   scripts/uiv2_accessibility_adversarial_walk.mjs: #hallClearAllBtn, #hallSeatCoderStateAction and
+   #hallSeatJudgeStateAction. Measured: .hall-side-head lays out 359px of content in a 195px box
+   inside .hall-sidebar { overflow: hidden }, and .council-seat-grid keeps two columns at 195px, so
+   each seat cell is ~90px - narrower than its own readiness text and action - and runs past the
+   clipped edge.
+   Both are fixed with remedies this repo already records rather than new patterns: contained
+   horizontal scrolling for the sidebar head (the #hallClearSessionBtn remedy), and a single-column
+   seat grid at the narrowest width, which #pane-council already does for the other pane. */
+@media (max-width: 390px) {
+  .hall-side-head { overflow-x: auto; overflow-y: hidden; }
+  .hall-side-head > div { min-width: max-content; }
+  /* The seat grid is .council-seat-grid (not .role-grid - that is the Pipeline pane's grid,
+     a confusion the tab naming invites). Two columns at 195px leaves each seat ~90px,
+     narrower than its own readiness text and action. */
+  .council-seat-grid { grid-template-columns: minmax(0, 1fr); }
+}
 </style>
 </head>
 <body data-active-pane="harness">
@@ -6253,20 +6344,64 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     <span id="connPill" class="status-pill" role="status" aria-live="polite"><span class="dot" aria-hidden="true"></span><span id="connText">Connecting...</span></span>
   </div>
 
+  <div class="workspace-toolbar">
+        <button class="btn btn-xs sessions-toggle" type="button" id="harnessSessionsToggle" aria-expanded="false" aria-controls="harnessSessionsPanel" onclick="toggleHarnessSessions()">Sessions</button>
+        <span id="workspaceCaption" class="workspace-caption">Workspace: not selected</span>
+        <details class="studio-tools" id="studioTools">
+          <summary>Tools &amp; integrations</summary>
+          <div class="skills-strip" tabindex="0" aria-label="Configured tools and integrations">
+            <div class="integration-totals" aria-label="Configured integration counts">
+              <span>MCP servers: <strong id="mcpServersCountBadge">0</strong> (<span id="mcpEnabledCountBadge">0</span> enabled)</span>
+              <span>MCP tools: <strong id="mcpToolsCountBadge">0</strong> enabled</span>
+              <span>Skills: <strong id="skillsCountBadge">0/0</strong> enabled</span>
+              <span>Providers: <strong id="providersCountBadge">0</strong></span>
+              <span>Docs: <strong id="ocDocsCountBadge">1</strong></span>
+            </div>
+            <div class="integration-kinds" role="group" aria-label="Integration type">
+              <button class="btn btn-xs" id="integrationMcpTab" type="button" aria-pressed="true" onclick="setIntegrationKind('mcp')">MCP servers</button>
+              <button class="btn btn-xs" id="integrationSkillsTab" type="button" aria-pressed="false" onclick="setIntegrationKind('skills')">Skills</button>
+            </div>
+            <label class="integration-search" for="integrationSearch">Search configured integrations
+              <input id="integrationSearch" type="search" autocomplete="off" placeholder="Filter by name…" oninput="renderIntegrationPicker(true)" />
+            </label>
+            <div class="integration-results">
+              <div id="activeMcpPills" role="group" aria-label="Configured MCP servers"></div>
+              <div id="activeSkillsPills" role="group" aria-label="Installed skills" hidden></div>
+            </div>
+            <div class="integration-pagination">
+              <span id="integrationPageStatus" role="status" aria-live="polite" tabindex="-1"></span>
+              <button class="btn btn-xs" id="integrationPrev" type="button" aria-label="Previous integrations page" onclick="changeIntegrationPage(-1)" disabled>Previous</button>
+              <button class="btn btn-xs" id="integrationNext" type="button" aria-label="Next integrations page" onclick="changeIntegrationPage(1)" disabled>Next</button>
+            </div>
+            <div class="integration-actions">
+              <select id="integrationsQuickMenu" aria-label="Open studio tools and integrations" onchange="openIntegrationFromMenu(this)">
+                <option value="">Manage integrations…</option>
+                <option value="providers">Cloud &amp; Local Providers</option>
+                <option value="mcp">MCP Tools Hub</option>
+                <option value="skills">Agent Skills (SKILL.md)</option>
+                <option value="context">Knowledge &amp; CodeGraph</option>
+                <option value="external">External Harness CLI Bridge</option>
+              </select>
+              <button class="btn btn-xs btn-danger" onclick="unloadAllModels()" title="Unload local models to free memory" aria-label="Unload every local model to free memory">
+                <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg><span>Unload models</span>
+              </button>
+            </div>
+          </div>
+
+        </details>
+          <button id="monitorToggleBtn" class="btn btn-xs" onclick="toggleMonitorRail()" aria-controls="monitorRail" aria-expanded="false" title="Show the contextual inspector" aria-label="Toggle the contextual inspector">
+            <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span>Inspector</span>
+          </button>
+      </div>
   <div class="top-actions">
-    <button class="btn" id="telemetryPopoverBtn" type="button" onclick="toggleTelemetryPopover()" aria-expanded="false" aria-controls="telemetryPopover" title="Global telemetry, memory and model residency (header popover)">
-      <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-      <span>Telemetry</span>
+    <button class="btn" id="settingsBtn" type="button" onclick="openSettings()" aria-haspopup="dialog" aria-label="Open Settings" title="Settings: theme, telemetry and preferences">
+      <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span>Settings</span>
     </button>
     <button class="btn" data-shortcut-action="command-palette" onclick="openCommandPalette()" aria-label="Open Command Palette (Cmd+K)">
       <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       <span>Search</span>
       <span class="kbd">⌘K</span>
-    </button>
-    <button class="btn" id="densityToggleBtn" type="button" onclick="toggleDensity()" aria-pressed="false" title="Toggle workspace density">Density: comfortable</button>
-    <button class="btn" id="themeToggleBtn" type="button" onclick="toggleTheme()" aria-pressed="false" aria-label="Switch to light theme" title="Switch to light theme">
-      <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>
-      <span id="themeToggleLabel">Light</span>
     </button>
   </div>
 </header>
@@ -6334,6 +6469,50 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     </div>
   </div>
 </div>
+
+<!-- UIV2-P7-07: settings is a destination, not a row of chrome. Theme and Telemetry were the last
+     two controls standing between the header and one row, and both are preferences rather than
+     destinations - Claude keeps them behind a settings affordance, so we do too. The nodes below
+     keep their ids and their handlers, so every existing reader (`#themeToggleLabel`, the
+     aria-pressed state, the telemetry popover's aria-controls) resolves unchanged. -->
+<div id="settingsModal" class="modal-backdrop" onclick="if(event.target===this)closeOverlay('settingsModal')">
+  <div class="modal" role="dialog" aria-label="Settings">
+    <div style="padding:14px 18px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+      <div>
+        <strong style="font-size:15px;">Settings</strong>
+        <div style="font-size:11.8px; color:var(--text-dim);">Appearance, telemetry and workspace preferences.</div>
+      </div>
+      <button class="btn btn-xs" type="button" onclick="closeOverlay('settingsModal')">Close</button>
+    </div>
+    <div style="padding:15px 18px; overflow-y:auto; display:flex; flex-direction:column; gap:12px;">
+      <div class="settings-row">
+        <div class="settings-row-label">
+          <strong>Appearance</strong>
+          <span>Switch between the dark and light theme. The choice is remembered per browser.</span>
+        </div>
+        <div class="settings-row-control">
+          <button class="btn" id="themeToggleBtn" type="button" onclick="toggleTheme()" aria-pressed="false" aria-label="Switch to light theme" title="Switch to light theme">
+          <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>
+          <span id="themeToggleLabel">Light</span>
+          </button>
+        </div>
+      </div>
+      <div class="settings-row">
+        <div class="settings-row-label">
+          <strong>Telemetry</strong>
+          <span>Global telemetry, memory and model residency. Opens the same popover the header used to.</span>
+        </div>
+        <div class="settings-row-control">
+          <button class="btn" id="telemetryPopoverBtn" type="button" onclick="openTelemetryFromSettings()" aria-expanded="false" aria-controls="telemetryPopover" title="Global telemetry, memory and model residency (header popover)">
+          <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          <span>Telemetry</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 
   <!-- Six panes of one application: a tablist, not six pages. The tab ids and the
        data-tab values are the contract every handler and every screenshot uses, so
@@ -7055,55 +7234,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
 
 <div id="mainLayout" class="layout rail-collapsed">
   <main class="workspace">
-    <div class="workspace-toolbar">
-      <button class="btn btn-xs sessions-toggle" type="button" id="harnessSessionsToggle" aria-expanded="false" aria-controls="harnessSessionsPanel" onclick="toggleHarnessSessions()">Sessions</button>
-      <span id="workspaceCaption" class="workspace-caption">Workspace: not selected</span>
-      <details class="studio-tools" id="studioTools">
-        <summary>Tools &amp; integrations</summary>
-        <div class="skills-strip" tabindex="0" aria-label="Configured tools and integrations">
-          <div class="integration-totals" aria-label="Configured integration counts">
-            <span>MCP servers: <strong id="mcpServersCountBadge">0</strong> (<span id="mcpEnabledCountBadge">0</span> enabled)</span>
-            <span>MCP tools: <strong id="mcpToolsCountBadge">0</strong> enabled</span>
-            <span>Skills: <strong id="skillsCountBadge">0/0</strong> enabled</span>
-            <span>Providers: <strong id="providersCountBadge">0</strong></span>
-            <span>Docs: <strong id="ocDocsCountBadge">1</strong></span>
-          </div>
-          <div class="integration-kinds" role="group" aria-label="Integration type">
-            <button class="btn btn-xs" id="integrationMcpTab" type="button" aria-pressed="true" onclick="setIntegrationKind('mcp')">MCP servers</button>
-            <button class="btn btn-xs" id="integrationSkillsTab" type="button" aria-pressed="false" onclick="setIntegrationKind('skills')">Skills</button>
-          </div>
-          <label class="integration-search" for="integrationSearch">Search configured integrations
-            <input id="integrationSearch" type="search" autocomplete="off" placeholder="Filter by name…" oninput="renderIntegrationPicker(true)" />
-          </label>
-          <div class="integration-results">
-            <div id="activeMcpPills" role="group" aria-label="Configured MCP servers"></div>
-            <div id="activeSkillsPills" role="group" aria-label="Installed skills" hidden></div>
-          </div>
-          <div class="integration-pagination">
-            <span id="integrationPageStatus" role="status" aria-live="polite" tabindex="-1"></span>
-            <button class="btn btn-xs" id="integrationPrev" type="button" aria-label="Previous integrations page" onclick="changeIntegrationPage(-1)" disabled>Previous</button>
-            <button class="btn btn-xs" id="integrationNext" type="button" aria-label="Next integrations page" onclick="changeIntegrationPage(1)" disabled>Next</button>
-          </div>
-          <div class="integration-actions">
-            <select id="integrationsQuickMenu" aria-label="Open studio tools and integrations" onchange="openIntegrationFromMenu(this)">
-              <option value="">Manage integrations…</option>
-              <option value="providers">Cloud &amp; Local Providers</option>
-              <option value="mcp">MCP Tools Hub</option>
-              <option value="skills">Agent Skills (SKILL.md)</option>
-              <option value="context">Knowledge &amp; CodeGraph</option>
-              <option value="external">External Harness CLI Bridge</option>
-            </select>
-            <button class="btn btn-xs btn-danger" onclick="unloadAllModels()" title="Unload local models to free memory" aria-label="Unload every local model to free memory">
-              <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg><span>Unload models</span>
-            </button>
-          </div>
-        </div>
-
-      </details>
-        <button id="monitorToggleBtn" class="btn btn-xs" onclick="toggleMonitorRail()" aria-controls="monitorRail" aria-expanded="false" title="Show the contextual inspector" aria-label="Toggle the contextual inspector">
-          <svg class="svg-ico" viewBox="0 0 24 24" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span>Inspector</span>
-        </button>
-    </div>
+    
 
     <!-- ================= TAB 0: AUTONOMOUS AGENTIC HARNESS (v5.0) ================= -->
     <section id="pane-start" role="tabpanel" aria-labelledby="tab-start" class="pane">
@@ -8379,16 +8510,28 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     }
     if (label) label.textContent = chosen === "dark" ? "Light" : "Dark";
   }
-  function applyDensity(compact) {
-    document.body.dataset.density = compact ? "compact" : "comfortable";
-    const button = document.getElementById("densityToggleBtn");
-    button.setAttribute("aria-pressed", String(compact));
-    button.textContent = compact ? "Density: compact" : "Density: comfortable";
+  // UIV2-P7-05: Density is retired (owner decision 2026-11-09). The only control that reached
+  // it is gone, so the pane must not honour a value nobody can change: a stored "compact" from
+  // an earlier session would otherwise strand a reader in spacing they cannot undo, with no
+  // control to switch back. This is deliberately not "ignore the stored value" - it is "always
+  // comfortable", so the state is stable whatever the store holds.
+  //
+  // The `body[data-density="compact"]` token block stays in the stylesheet. scripts/uiux_tokens.py
+  // pins it (density must re-point exactly its own five tokens and nothing else), so deleting it
+  // would break the token contract for a UI that no longer reaches it. It is unreachable, not absent.
+  function applyDensity() {
+    document.body.dataset.density = "comfortable";
   }
-  function toggleDensity() {
-    const compact = document.body.dataset.density !== "compact";
-    applyDensity(compact);
-    try { localStorage.setItem("m5_ui_density", compact ? "compact" : "comfortable"); } catch (_) {}
+  // UIV2-P7-07: Settings is an overlay, so it goes through the shared overlay stack (focus trap,
+  // Escape, focus return) rather than hand-rolled show/hide. Opening focuses Theme, the first
+  // preference, because that is the only control here with a visible state.
+  function openSettings() { openOverlay("settingsModal", { focus: "#themeToggleBtn" }); }
+  // Telemetry is a fixed-position popover, not a dialog. Opening it under an open modal would
+  // stack two layers with their own dismissal rules, so Settings closes first and the popover
+  // then behaves exactly as it did in the header.
+  function openTelemetryFromSettings() {
+    closeOverlay("settingsModal");
+    toggleTelemetryPopover(true);
   }
   function toggleTheme() {
     const next = document.body.dataset.theme === "light" ? "dark" : "light";
@@ -21905,7 +22048,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
   try {
     window.matchMedia("(max-width: 799px)").addEventListener("change", syncTabOrientation);
   } catch (_) { /* older engines: the initial orientation still applies */ }
-  try { applyDensity(localStorage.getItem("m5_ui_density") === "compact"); } catch (_) { applyDensity(false); }
+  applyDensity();
   const advanced = document.getElementById("harnessAdvanced");
   try { advanced.open = sessionStorage.getItem("m5_harness_advanced") === "open"; } catch (_) {}
   advanced.addEventListener("toggle", () => {

@@ -41,6 +41,7 @@ no scrollbar to reach it, and a row of controls sat under the floor a finger nee
 | :--- | :--- |
 | ≤ 1439px | UIV2-05: the contextual inspector becomes a 320px drawer; the central pane keeps its width |
 | ≤ 1279px | UIV2-05: the nav collapses to a 64px icon rail; labels hide, button titles keep the names. UIV2-08: the harness session/workspace list folds away here too, per the approved reference |
+| ≤ 1024px | UIV2-P7-07: with the toolbar folded into the header, the workspace caption runs out of room at these widths; Settings, Search and Inspector fold to their icons and keep aria-labels, titles, handlers and focus rings |
 | ≤ 880px | the hall sidebar folds to a horizontal strip and the council seat grid goes to two columns (the harness sidebar already folded at 1279) |
 | ≤ 860px | the hall shell goes to one column |
 | ≤ 820px | the role grid goes to two columns |
@@ -85,7 +86,7 @@ not from this file.
 * `pass` the Start shell has a definite width, so `margin: 0 auto` cannot size it to its content
 * `pass` the Compare arbiter picker is a flex item that may shrink below its model label
 * `pass` no pane shell is pinned to a pixel width that a narrow pane would clip
-* `pass` the stylesheet has the six documented breakpoints and no others
+* `pass` the stylesheet has only documented breakpoints
 * `pass` each pane's layout is addressed at a narrow breakpoint, not only the shared shell
 * `pass` the one strip that is allowed to overflow scrolls, so the cards past the edge are reachable
 * `pass` the walk measures all five widths in all six panes

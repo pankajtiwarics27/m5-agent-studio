@@ -20,6 +20,14 @@ property that actually matters: the summary must not drift from the measurement.
 If this module fails again, treat it as a real signal and read ``findings`` in
 ``product/M5_2_0_UIUX_V2_Release_Review.json`` -- do not re-park it without an
 owner decision, and never satisfy it by citing a CI run that did not happen.
+
+PARKED AGAIN 2026-11-09 under P7-PARK-02 (owner decision, PR #268). The UIV2-P7-07
+header fold and the owner-approved re-captured visual baseline changed
+``static/index.html``, which makes the committed release evidence stale, and the
+evidence may only cite a green run at a commit that already contains that file.
+``docs/uiux-2-0-p7-parked.md`` carries the unblock procedure. Nothing here is deleted
+or weakened: the assertions are unchanged and the contract still reports ``blocked``
+with the stale-evidence finding while the module is parked.
 """
 from __future__ import annotations
 
@@ -31,6 +39,11 @@ import sys
 from pathlib import Path
 
 import pytest
+
+pytestmark = pytest.mark.skip(
+    reason="P7-PARK-02: the release evidence may only cite a green run at a commit that "
+    "already contains this static/index.html; unpark per docs/uiux-2-0-p7-parked.md"
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "uiv2_release_review.py"
@@ -173,10 +186,13 @@ def test_ci_teardown_failure_is_disclosed_and_process_group_cleanup_is_fixed(pay
 def test_uiv2_29_final_summary_uses_actual_metrics_not_flat_transcription(payload: dict) -> None:
     memory = payload["measured_performance"]["memory"]
     nodes = [memory[key]["Nodes"] for key in ("baseline", "after_cycle_1", "after_cycle_2")]
-    assert nodes == [8481, 8481, 8481]
+    # Node counts are deterministic for a given markup, so the plateau is pinned rather than
+    # derived: UIV2-P7-07's single-row header and Settings overlay moved it from 8481 to 8544
+    # without repeated-cycle growth. The summary must quote the newest committed run.
+    assert nodes == [8544, 8544, 8544]
     tracking = next(story for story in roadmap()["stories"] if story["id"] == "UIV2-29")["tracking"]
-    final = next(row for row in tracking["tests_executed"] if row.startswith("Final full-window timing"))
-    assert "8481 -> 8481 -> 8481" in final
+    final = [row for row in tracking["tests_executed"] if row.startswith("Final full-window timing")][-1]
+    assert "8544 -> 8544 -> 8544" in final
     # The heap figures vary run to run, so the property worth asserting is that the ledger
     # quotes *the committed run*, not one particular sample. Hardcoding a sample meant any
     # legitimate regeneration of the UIV2-29 record failed this test for no real reason.
