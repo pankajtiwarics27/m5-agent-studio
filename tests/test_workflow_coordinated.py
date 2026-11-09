@@ -471,6 +471,8 @@ def test_owner_matrix_matches_current_static_inventory_without_promoting_coverag
             "OpenAICompatibleProviderAdapter.stream": "bounded_provider_stream_consumer_close",
             "_stream_cloud_openai": "bounded_provider_stream_consumer_close",
             "_stream_omlx_completion": "bounded_local_stream_consumer_close",
+            "api_chat_stream.event_gen": "bounded_chat_stream_consumer_close",
+            "openai_gateway_chat.sse_gen": "bounded_chat_stream_consumer_close",
         }
         assert row["assessment"] == assessments.get(
             row["owner"], "inventory_only_in_this_audit"

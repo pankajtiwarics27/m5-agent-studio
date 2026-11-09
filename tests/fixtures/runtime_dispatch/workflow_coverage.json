@@ -103,8 +103,8 @@
         "_unload_omlx_model",
         "stream_any_model"
       ],
-      "assessment": "inventory_only_in_this_audit",
-      "evidence": "docs/runtime-dispatch-entry-points.md"
+      "assessment": "bounded_chat_stream_consumer_close",
+      "evidence": "tests/test_workflow_chat_stream_cancel.py"
     },
     {
       "owner": "api_clear_ssd_cache",
@@ -236,8 +236,8 @@
       "seams": [
         "stream_any_model"
       ],
-      "assessment": "inventory_only_in_this_audit",
-      "evidence": "docs/runtime-dispatch-entry-points.md"
+      "assessment": "bounded_chat_stream_consumer_close",
+      "evidence": "tests/test_workflow_chat_stream_cancel.py"
     },
     {
       "owner": "stream_any_model",
