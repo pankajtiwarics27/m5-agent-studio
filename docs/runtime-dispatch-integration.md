@@ -1281,8 +1281,8 @@ HTTP response body. Synthetic `httpx.MockTransport` regressions reproduce the
 previously open body and verify closure before `stream_any_model.aclose()`
 returns. See the [provider-stream closure audit](lc08-provider-stream-close-audit.md).
 This does not assert provider-side work cancellation or physical resource
-release. The matrix remains at 29 owners / 54 sites, with twelve bounded
-assessments and 17 inventory-only owners; no activation, hardware, acceptance,
+release. The matrix remains at 29 owners / 54 sites, with thirteen bounded
+assessments and 16 inventory-only owners; no activation, hardware, acceptance,
 test8, or LC09–11 status advancement.
 
 
@@ -1294,6 +1294,18 @@ async iterator when `stream_any_model` consumers stop early. A deterministic
 response body without accessing a local runtime. See the
 [local-stream closure audit](lc08-local-stream-close-audit.md). This makes no
 physical unload/release or provider-side cancellation claim. The matrix now
-contains 29 owners / 54 sites, thirteen bounded assessments and 16
+contains 29 owners / 54 sites, fourteen bounded assessments and 15
 inventory-only owners; no activation, hardware, acceptance, test8, or LC09–11
 status advancement.
+
+
+## Bounded chat-stream wrapper cancellation handling
+
+The API-chat event generator and OpenAI-compatible SSE wrapper now explicitly
+close their delegated model streams on consumer cancellation. Mock async-source
+tests cover ordinary chat, OpenAI-compatible content streaming, and its
+buffering branch without a model or network request. See the
+[chat-stream closure audit](lc08-chat-stream-close-audit.md). This does not
+qualify complete workflow, tool execution, provider-side cancellation, runtime
+activation, hardware, release acceptance, test8, or LC09–11. The matrix remains
+29 owners / 54 sites, sixteen bounded assessments and 13 inventory-only owners.
