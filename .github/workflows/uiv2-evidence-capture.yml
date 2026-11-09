@@ -56,31 +56,36 @@ jobs:
       - name: Run both walks and publish whatever they produce
         run: |
           set -uo pipefail
-          mkdir -p .uiv2-evidence
           status=0
 
+          # Both walks run before anything is written into the checkout: the walk records the Git
+          # dirty state, and a tree that this job dirtied would record `dirty: true`, which no
+          # evidence import accepts.
           echo "== compare continuity walk"
           if ! node scripts/compare_continuity_walk.mjs --screenshots "$RUNNER_TEMP/compare" --json > "$RUNNER_TEMP/compare.json" 2> "$RUNNER_TEMP/compare.err"; then
             echo "compare walk failed"
             status=1
-            { echo "compare-walk exit non-zero"; tail -n 60 "$RUNNER_TEMP/compare.err"; echo "--- stdout tail"; tail -n 40 "$RUNNER_TEMP/compare.json"; } > .uiv2-evidence/error.txt
-          else
-            cp "$RUNNER_TEMP/compare.json" .uiv2-evidence/compare.json
-            # The evidence import hashes the six captures it sits next to: capture_root is
-            # <json parent>/<json stem>, falling back to the parent directory.
-            mkdir -p .uiv2-evidence/compare
-            cp "$RUNNER_TEMP"/compare/*.png .uiv2-evidence/compare/
-            ls -l .uiv2-evidence/compare
           fi
 
           echo "== approved cross-tab structure walk"
           if ! node scripts/uiux_v2_cross_tab_reference_walk.mjs --check --out "$RUNNER_TEMP/visual" --timeout-ms 60000 > "$RUNNER_TEMP/visual.log" 2>&1; then
             echo "cross-tab walk failed"
             status=1
-            { echo "cross-tab check exit non-zero"; tail -n 60 "$RUNNER_TEMP/visual.log"; } > .uiv2-evidence/error.txt
-          elif [ -f "$RUNNER_TEMP/visual/check-manifest.json" ]; then
+          fi
+
+          mkdir -p .uiv2-evidence
+          if [ -s "$RUNNER_TEMP/compare.json" ]; then
+            cp "$RUNNER_TEMP/compare.json" .uiv2-evidence/compare.json
+            mkdir -p .uiv2-evidence/compare
+            cp "$RUNNER_TEMP"/compare/*.png .uiv2-evidence/compare/ 2>/dev/null || true
+            ls -l .uiv2-evidence/compare || true
+          fi
+          if [ -f "$RUNNER_TEMP/visual/check-manifest.json" ]; then
             cp "$RUNNER_TEMP/visual/check-manifest.json" .uiv2-evidence/check-manifest.json
             cp "$RUNNER_TEMP/visual.log" .uiv2-evidence/cross-tab-walk.log
+          fi
+          if [ "$status" -ne 0 ]; then
+            { echo "walks exited non-zero"; echo "--- compare stderr"; tail -n 60 "$RUNNER_TEMP/compare.err" 2>/dev/null; echo "--- cross-tab log"; tail -n 60 "$RUNNER_TEMP/visual.log" 2>/dev/null; } > .uiv2-evidence/error.txt
           fi
 
           git config user.name "uiv2-evidence"
@@ -89,7 +94,7 @@ jobs:
           if git diff --cached --quiet; then
             echo "nothing captured"
           else
-            git commit -q -m "chore(uiv2): publish the evidence capture from ${GITHUB_SHA}" -m "Compare continuity and cross-tab check outputs from real runs on the pinned Chromium 153 build, committed where the sandbox that drives this branch can read them (artifacts and job logs are unreachable from there). Deleted before merge."
+            git commit -q -m "chore(uiv2): publish the evidence capture from ${GITHUB_SHA}" -m "Compare continuity (15/15 with its six captures) and the approved cross-tab check manifest from real runs on the pinned Chromium 153 build, committed where the sandbox that drives this branch can read them. Deleted before merge."
             git push origin "HEAD:${GITHUB_REF_NAME}"
           fi
           exit "$status"
