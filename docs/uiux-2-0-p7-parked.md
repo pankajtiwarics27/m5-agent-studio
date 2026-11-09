@@ -3,7 +3,7 @@
 **Owner:** repository owner
 **Parked:** 2026-11-08
 **Tracker:** PR #258
-**Status:** 1 item parked, 0 items silently forgotten
+**Status:** 0 items parked — P7-PARK-01 was resolved on 2026-11-08 (see its Unparked section)
 
 This page exists so that work deliberately parked during `UIV2-P7` has an owner, a
 reason and a fix procedure written down in the repository rather than a merged PR
@@ -12,7 +12,7 @@ is deleted rather than annotated.
 
 ---
 
-## P7-PARK-01 — UIV2-30 release review assertions retired
+## P7-PARK-01 — UIV2-30 release review assertions retired — **UNPARKED 2026-11-08**
 
 | Field | Value |
 |---|---|
@@ -47,7 +47,34 @@ run record had to be regenerated (its source digest pins `static/index.html`), a
 figures move run to run, so legitimately refreshing evidence fails that assertion too.
 Its replacement must read the triple from the run record instead of hardcoding it.
 
-### Unblock procedure
+### Unparked — 2026-11-08
+
+The unblock condition was met and the assertions are live again. `main` went green at
+merge commit `5fb978b`, which gave the evidence a legitimate implementation HEAD it could
+cite, because the evidence import is now a normal follow-up commit on top of an
+already-green CI run rather than an attempt to cite a run of itself.
+
+Procedure followed, in the documented order:
+
+1. `compare_continuity_walk.mjs` — 15/15 checks, 6 captures, run from a clean tree at `5fb978b`.
+2. `uiux_v2_cross_tab_reference_walk.mjs --check` — 48 captures, 2200/2200 checks.
+3. `gh run view 42517037242` — the real green run of `5fb978b`, all four required jobs.
+4. `uiv2_release_review.py --import-evidence` — imported all three inputs.
+5. Ledger regenerated from that run's measured triples, then the contract.
+
+Result: `uiv2_release_review.py --check` reports **7/7 local checks, 2200/2200 visual,
+15/15 Compare, 0 findings**, decision `ready`. The module's 21 tests pass.
+
+One defect was fixed rather than re-parked:
+`test_uiv2_29_final_summary_uses_actual_metrics_not_flat_transcription` hardcoded a heap
+triple from a single run, so any legitimate regeneration of the UIV2-29 record broke it.
+It now asserts the ledger quotes the triple recorded in the committed run — the property
+that matters — instead of one particular sample.
+
+**Do not re-park this module without an owner decision, and never satisfy it by citing a
+CI run that did not happen.**
+
+### Unblock procedure (kept for reference if it is ever re-parked)
 
 Run these in order once CI has been green on this branch at a known commit:
 
