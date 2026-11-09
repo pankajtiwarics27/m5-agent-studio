@@ -40838,11 +40838,12 @@ async def _mcp_summon_model(session_id: str, model: str, role_key: str) -> str:
     ]
     buf, usage_info = [], {}
     async with httpx.AsyncClient(timeout=httpx.Timeout(connect=6.0, read=600.0, write=30.0, pool=10.0)) as client:
-        async for item in stream_any_model(client, model, messages, temperature=0.0, max_tokens=3200, reasoning_mode="off"):
-            if item["type"] == "content":
-                buf.append(item["text"])
-            elif item["type"] == "usage":
-                usage_info = item
+        async with contextlib.aclosing(stream_any_model(client, model, messages, temperature=0.0, max_tokens=3200, reasoning_mode="off")) as source:
+            async for item in source:
+                if item["type"] == "content":
+                    buf.append(item["text"])
+                elif item["type"] == "usage":
+                    usage_info = item
         if is_local_omlx_model(model):
             await _unload_omlx_model(client, parse_model_route(model)[2])
     text = "".join(buf).strip()

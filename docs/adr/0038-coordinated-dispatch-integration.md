@@ -227,6 +227,12 @@ unconfirmed cleanup refuses terminal success without rolling back the completed
 transcript or marking it abandoned. See the [Hall audit](../lc08-hall-summon-audit.md);
 LC09 retention/recovery and review/activation remain separate.
 
+Extend deterministic owned-source closing to the MCP stdio summon helper, with
+full matter/chronicle and original options unchanged. Preserve its distinct
+cleanup-before-append ordering and existing admission/JSON-RPC refusal; do not
+claim HTTP Hall session parity or canonical tool consumption. See the
+[MCP audit](../lc08-mcp-summon-audit.md); no producer or review activation.
+
 ## Alternatives
 
 - Replace served routing immediately: would activate unqualified transports and

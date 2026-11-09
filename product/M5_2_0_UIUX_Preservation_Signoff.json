@@ -26,10 +26,10 @@
     "approved_inputs": null,
     "current_inputs": {
       "ledger_content_sha256": "cb04b1bdf0ec9be6b39d2233496d9e9e53ffb91b0f92397824c9964af333b85f",
-      "source_manifest_sha256": "f22c49a3f1498283259d7d13d302150fcbe03257c0de3d95a968f85983875526",
+      "source_manifest_sha256": "2b26f2ea3d67ecf71c9274779186359312b7483d060b30878a5e540bc1f13e89",
       "control_inventory_sha256": "b46a3305776499fce331f34bb52d5f3c2a2bb0ec4912a64358bc504622121892",
-      "route_map_sha256": "0b0439b765dfcd47889ef75f40d9ce40a32927d7b0e251db9b7dfc20d7469c5d",
-      "authorization_trace_sha256": "4149216fb17295139b1a63b41f19003321df2c9b519b9520253dd88775b8c025",
+      "route_map_sha256": "a92ef5ea065b7a90870314c39774abf1afbec5b94cca3f67f27869e9aad6fe05",
+      "authorization_trace_sha256": "b19b21f4eabf9e8a9c374a86326f40701edfbc674eacd70d97c49961146fe96b",
       "frontend_sha256": "2bf80b669dff0202201dbe15fce36034290ea4a13bb0b4286d30d8e788ee5e44",
       "screenshot_manifest_sha256": "b488bf453ae260b6564ae592f0455e3d70cff3121dca1e7c823c7abb270b44d3",
       "screenshot_index_sha256": "16b0620ca1d02a1b181ad15b3a2b0c6aae9e7aa539654d27ed80d9147189634e",
@@ -40,10 +40,10 @@
   },
   "inputs": {
     "ledger_sha256": "96f9ca873e9d2105935e73c8df6a807095e6b11e4ab48a4d64926941e1ccd28a",
-    "source_manifest_sha256": "f22c49a3f1498283259d7d13d302150fcbe03257c0de3d95a968f85983875526",
+    "source_manifest_sha256": "2b26f2ea3d67ecf71c9274779186359312b7483d060b30878a5e540bc1f13e89",
     "control_inventory_sha256": "b46a3305776499fce331f34bb52d5f3c2a2bb0ec4912a64358bc504622121892",
-    "route_map_sha256": "0b0439b765dfcd47889ef75f40d9ce40a32927d7b0e251db9b7dfc20d7469c5d",
-    "authorization_trace_sha256": "4149216fb17295139b1a63b41f19003321df2c9b519b9520253dd88775b8c025",
+    "route_map_sha256": "a92ef5ea065b7a90870314c39774abf1afbec5b94cca3f67f27869e9aad6fe05",
+    "authorization_trace_sha256": "b19b21f4eabf9e8a9c374a86326f40701edfbc674eacd70d97c49961146fe96b",
     "frontend_sha256": "2bf80b669dff0202201dbe15fce36034290ea4a13bb0b4286d30d8e788ee5e44"
   },
   "approval_request": [

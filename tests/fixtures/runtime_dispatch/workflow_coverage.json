@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "scope": "Static owner mapping plus bounded Council/Debate adapters and Hall HTTP summon audit; not all-workflow or native qualification.",
+  "scope": "Static owner mapping plus bounded Council/Debate adapters, Hall HTTP summon and MCP stdio summon audits; not all-workflow or native qualification.",
   "assembly_owners": [
     "api_council_stream.event_gen",
     "api_debate_stream.event_gen"
@@ -36,8 +36,8 @@
         "_unload_omlx_model",
         "stream_any_model"
       ],
-      "assessment": "inventory_only_in_this_audit",
-      "evidence": "docs/runtime-dispatch-entry-points.md"
+      "assessment": "bounded_mcp_stdio_summon",
+      "evidence": "tests/test_workflow_mcp_coordinated.py"
     },
     {
       "owner": "_run_sdlc_sprints_stream",

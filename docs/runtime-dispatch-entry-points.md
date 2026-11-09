@@ -15,7 +15,7 @@ all-path inclusion validation remain required before activation.
 | `AnthropicProviderAdapter.stream` | `_stream_cloud_anthropic` | 4597 |
 | `OpenAICompatibleProviderAdapter.stream` | `_stream_cloud_openai` | 4579 |
 | `_coordinated_gateway_chat.events` | `stream_any_model` | 5175 |
-| `_mcp_summon_model` | `_unload_omlx_model` | 22723 |
+| `_mcp_summon_model` | `_unload_omlx_model` | 22724 |
 | `_mcp_summon_model` | `stream_any_model` | 22717 |
 | `_run_sdlc_sprints_stream` | `_unload_omlx_model` | 21261 |
 | `_run_sdlc_sprints_stream` | `_unload_omlx_model` | 21291 |
