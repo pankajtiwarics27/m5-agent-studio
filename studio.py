@@ -6327,9 +6327,21 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
 @media (max-width: 390px) {
   .hall-side-head { overflow-x: auto; overflow-y: hidden; }
   .hall-side-head > div { min-width: max-content; }
-  /* The seat grid is .council-seat-grid (not .role-grid - that is the Pipeline pane's grid,
-     a confusion the tab naming invites). Two columns at 195px leaves each seat ~90px,
-     narrower than its own readiness text and action. */
+}
+
+/* UIV2-P7-09 (revised 2026-11-09): the seat grid drops to one column at 340px, not at 390px.
+   The defect the rule answers is a *cell* that is too narrow for its own readiness text and
+   action - ~90px, measured at 195px, which is 390x844 at 200% zoom. The viewport is not the
+   condition, only the usual stand-in for it: at a 390px phone *without* zoom the pane is full
+   width, two columns are ~175px each, and nothing is squeezed. Keying the rule on 390px made it
+   fire there anyway and doubled an open "Council role models" panel that sits above the
+   transcript - measured at 390x844, the phone Hall transcript moved 480.19px down, which is two
+   extra seat rows less the 48px the folded header reclaimed.
+
+   340px keeps every case the rule exists for (195px zoomed, and 320px phones) and leaves 360px
+   and 390px phones with two columns. .council-seat-grid is the Hall pane's grid, not .role-grid
+   (the Pipeline pane's) - the tab naming invites that confusion. */
+@media (max-width: 340px) {
   .council-seat-grid { grid-template-columns: minmax(0, 1fr); }
 }
 </style>

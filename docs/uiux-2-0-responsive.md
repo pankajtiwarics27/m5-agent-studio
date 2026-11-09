@@ -47,7 +47,8 @@ no scrollbar to reach it, and a row of controls sat under the floor a finger nee
 | ≤ 820px | the role grid goes to two columns |
 | ≤ 799px | UIV2-05: single column with one scrollable tab row under the header; the header never wraps past 64px |
 | ≤ 600px | phones: header, tabs, composers and the full-screen modals |
-| ≤ 390px | small phones: the tightest header and rail |
+| ≤ 390px | small phones: the tightest header and rail; the header's toolbar becomes a horizontal scroll container and its Tools & integrations panel opens as a fixed overlay (UIV2-P7-08), and the Council sidebar head scrolls its own actions instead of clipping them (UIV2-P7-09) |
+| ≤ 340px | the narrowest seat grid: below this a two-column .council-seat-grid leaves each cell narrower than its readiness text and action (UIV2-P7-09, measured at the 195px effective viewport that 390x844 at 200% zoom produces). One column here, two columns at 360px and 390px phones, where the cells are ~165-175px |
 
 A new breakpoint has to be added here with its reason before the inventory will accept it, so
 the responsive story cannot grow a private set of one-off widths.

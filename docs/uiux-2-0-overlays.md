@@ -18,20 +18,20 @@ which meant a stacked dialog disappeared without returning focus to the one unde
 
 | Dialog | Label | Opens from | Controller | Line |
 |---|---|---|---|---|
-| `#settingsModal` | Settings | `, o, p, e, n, S, e, t, t, i, n, g, s, (, ), `,  , f, r, o, m,  , 1,  , c, a, l, l,  , s, i, t, e, (, s, ) | yes | 2547 |
-| `#cmdPaletteModal` | Command Palette | `, o, p, e, n, C, o, m, m, a, n, d, P, a, l, e, t, t, e, (, ), `,  , f, r, o, m,  , 2,  , c, a, l, l,  , s, i, t, e, (, s, ) | yes | 2621 |
-| `#hallConclusionModal` | Pinned Council conclusion, expanded | `, o, p, e, n, H, a, l, l, C, o, n, c, l, u, s, i, o, n, M, o, d, a, l, (, ), `,  , f, r, o, m,  , 4,  , c, a, l, l,  , s, i, t, e, (, s, ) | yes | 2635 |
-| `#contextModal` | Knowledge and code tools | `, o, p, e, n, C, o, n, t, e, x, t, M, o, d, a, l, (, ), `,  , f, r, o, m,  , 6,  , c, a, l, l,  , s, i, t, e, (, s, ) | yes | 2646 |
-| `#mcpModal` | mcpHubTitle | `, o, p, e, n, M, c, p, M, o, d, a, l, (, ), `,  , f, r, o, m,  , 3,  , c, a, l, l,  , s, i, t, e, (, s, ) | yes | 2750 |
-| `#externalHarnessModal` | Official DeepSeek Harness & OpenHarness Bridge | `, o, p, e, n, E, x, t, e, r, n, a, l, H, a, r, n, e, s, s, M, o, d, a, l, (, ), `,  , f, r, o, m,  , 2,  , c, a, l, l,  , s, i, t, e, (, s, ) | yes | 2965 |
-| `#harnessDiffModal` | Harness Git Diff | `, o, p, e, n, H, a, r, n, e, s, s, D, i, f, f, M, o, d, a, l, (, ), `,  , f, r, o, m,  , 7,  , c, a, l, l,  , s, i, t, e, (, s, ) | yes | 3004 |
-| `#harnessEvidenceModal` | What a completion claim rests on | `, o, p, e, n, H, a, r, n, e, s, s, E, v, i, d, e, n, c, e, M, o, d, a, l, (, ), `,  , f, r, o, m,  , 5,  , c, a, l, l,  , s, i, t, e, (, s, ) | yes | 3032 |
-| `#harnessGrantsModal` | Harness permissions for this session | `, o, p, e, n, H, a, r, n, e, s, s, G, r, a, n, t, s, (, ), `,  , f, r, o, m,  , 2,  , c, a, l, l,  , s, i, t, e, (, s, ) | yes | 3056 |
-| `#providersModal` | Cloud Providers & OmniRoute Router | `, o, p, e, n, P, r, o, v, i, d, e, r, s, M, o, d, a, l, (, ), `,  , f, r, o, m,  , 9,  , c, a, l, l,  , s, i, t, e, (, s, ) | yes | 3083 |
-| `#skillsModal` | Agent Skills Manager | `, o, p, e, n, S, k, i, l, l, s, M, o, d, a, l, (, ), `,  , f, r, o, m,  , 3,  , c, a, l, l,  , s, i, t, e, (, s, ) | yes | 3155 |
-| `#sdlcModal` | Autonomous Agile SDLC Product Factory | `, o, p, e, n, S, d, l, c, M, o, d, a, l, (, ), `,  , f, r, o, m,  , 3,  , c, a, l, l,  , s, i, t, e, (, s, ) | yes | 3185 |
-| `#spawnModal` | Spawn Council Session | `, o, p, e, n, S, p, a, w, n, M, o, d, a, l, (, ), `,  , f, r, o, m,  , 6,  , c, a, l, l,  , s, i, t, e, (, s, ) | yes | 3280 |
-| `#pathPickerModal` | pathPickerTitle | `, o, p, e, n, P, a, t, h, P, i, c, k, e, r, (, ), `,  , f, r, o, m,  , 9,  , c, a, l, l,  , s, i, t, e, (, s, ) | yes | 4005 |
+| `#settingsModal` | Settings | `, o, p, e, n, S, e, t, t, i, n, g, s, (, ), `,  , f, r, o, m,  , 1,  , c, a, l, l,  , s, i, t, e, (, s, ) | yes | 2559 |
+| `#cmdPaletteModal` | Command Palette | `, o, p, e, n, C, o, m, m, a, n, d, P, a, l, e, t, t, e, (, ), `,  , f, r, o, m,  , 2,  , c, a, l, l,  , s, i, t, e, (, s, ) | yes | 2633 |
+| `#hallConclusionModal` | Pinned Council conclusion, expanded | `, o, p, e, n, H, a, l, l, C, o, n, c, l, u, s, i, o, n, M, o, d, a, l, (, ), `,  , f, r, o, m,  , 4,  , c, a, l, l,  , s, i, t, e, (, s, ) | yes | 2647 |
+| `#contextModal` | Knowledge and code tools | `, o, p, e, n, C, o, n, t, e, x, t, M, o, d, a, l, (, ), `,  , f, r, o, m,  , 6,  , c, a, l, l,  , s, i, t, e, (, s, ) | yes | 2658 |
+| `#mcpModal` | mcpHubTitle | `, o, p, e, n, M, c, p, M, o, d, a, l, (, ), `,  , f, r, o, m,  , 3,  , c, a, l, l,  , s, i, t, e, (, s, ) | yes | 2762 |
+| `#externalHarnessModal` | Official DeepSeek Harness & OpenHarness Bridge | `, o, p, e, n, E, x, t, e, r, n, a, l, H, a, r, n, e, s, s, M, o, d, a, l, (, ), `,  , f, r, o, m,  , 2,  , c, a, l, l,  , s, i, t, e, (, s, ) | yes | 2977 |
+| `#harnessDiffModal` | Harness Git Diff | `, o, p, e, n, H, a, r, n, e, s, s, D, i, f, f, M, o, d, a, l, (, ), `,  , f, r, o, m,  , 7,  , c, a, l, l,  , s, i, t, e, (, s, ) | yes | 3016 |
+| `#harnessEvidenceModal` | What a completion claim rests on | `, o, p, e, n, H, a, r, n, e, s, s, E, v, i, d, e, n, c, e, M, o, d, a, l, (, ), `,  , f, r, o, m,  , 5,  , c, a, l, l,  , s, i, t, e, (, s, ) | yes | 3044 |
+| `#harnessGrantsModal` | Harness permissions for this session | `, o, p, e, n, H, a, r, n, e, s, s, G, r, a, n, t, s, (, ), `,  , f, r, o, m,  , 2,  , c, a, l, l,  , s, i, t, e, (, s, ) | yes | 3068 |
+| `#providersModal` | Cloud Providers & OmniRoute Router | `, o, p, e, n, P, r, o, v, i, d, e, r, s, M, o, d, a, l, (, ), `,  , f, r, o, m,  , 9,  , c, a, l, l,  , s, i, t, e, (, s, ) | yes | 3095 |
+| `#skillsModal` | Agent Skills Manager | `, o, p, e, n, S, k, i, l, l, s, M, o, d, a, l, (, ), `,  , f, r, o, m,  , 3,  , c, a, l, l,  , s, i, t, e, (, s, ) | yes | 3167 |
+| `#sdlcModal` | Autonomous Agile SDLC Product Factory | `, o, p, e, n, S, d, l, c, M, o, d, a, l, (, ), `,  , f, r, o, m,  , 3,  , c, a, l, l,  , s, i, t, e, (, s, ) | yes | 3197 |
+| `#spawnModal` | Spawn Council Session | `, o, p, e, n, S, p, a, w, n, M, o, d, a, l, (, ), `,  , f, r, o, m,  , 6,  , c, a, l, l,  , s, i, t, e, (, s, ) | yes | 3292 |
+| `#pathPickerModal` | pathPickerTitle | `, o, p, e, n, P, a, t, h, P, i, c, k, e, r, (, ), `,  , f, r, o, m,  , 9,  , c, a, l, l,  , s, i, t, e, (, s, ) | yes | 4017 |
 
 14 dialogs, 14 wired through the controller.
 
