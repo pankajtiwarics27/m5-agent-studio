@@ -259,7 +259,7 @@
           "security_release_gate.py --json: invariants satisfied and expected release-blocked on unsigned human review; lifecycle feasibility: offline synthetic expectations match, activation false. qualify_environment.py --all: expected exit 2, blocked outside Apple M5/24 GB target and without container runtime.",
           "Final PR #280 head af67df404f07caefb176d054672dbc80fd48c79e passed push CI run 42661850062 and pull-request CI run 42661861110 on Python 3.11, 3.12 and 3.13 plus Browser safety regressions.",
           "PR #280 merged as ce2373dd394ae1ecc86c81a58b043f7ff23e47d1; the immediate main push run 42664215927 was concurrency-cancelled by scheduled run 42665031438 on the same SHA, whose Python 3.11/3.12/3.13 and browser-safety jobs all passed.",
-          "Post-merge closeout against main ce2373dd394ae1ecc86c81a58b043f7ff23e47d1: scoped quality.docs-ci selection ran 22 modules with 518 passed and one upstream Starlette warning on Python 3.11; Ruff, mypy (76 sources), compileall, frontend syntax, AP validator, docs/governance/security-record/baseline/test-map/dashboard and diff checks passed."
+          "Post-merge closeout against main c0484cc64e4cd9934a0eb9d6775524073c217324: scoped quality.docs-ci selection ran 22 modules with 518 passed and one upstream Starlette warning on Python 3.11; Ruff, mypy (76 sources), compileall, frontend syntax, AP validator, docs/governance/security-record/baseline/test-map/dashboard and diff checks passed after merging current main; documentation validation scanned 277 files and the scope map registered 219 modules."
         ],
         "blockers": [
           "U01-U06 real-owner values remain explicitly pending; exact story/action denials and safe offline work are recorded per decision. AP-002 completion does not infer those values.",
@@ -294,7 +294,7 @@
         "merge_commit_sha": "ce2373dd394ae1ecc86c81a58b043f7ff23e47d1",
         "completion_recorded_by": "arena/841521ae-m5-agent-studio",
         "completion_recorded_at": "2026-11-09T17:46:39Z",
-        "completion_base_sha": "ce2373dd394ae1ecc86c81a58b043f7ff23e47d1",
+        "completion_base_sha": "c0484cc64e4cd9934a0eb9d6775524073c217324",
         "completion_branch": "arena/841521ae-m5-agent-studio",
         "completion_changed_files": [
           "AGENTS.md",
@@ -307,9 +307,10 @@
           "The repository owner explicitly requested the PR #280 merge after the AP-002 handoff. AP-002 requires no screenshot, playable-media or independent-security approval and claims none.",
           "The immediate post-merge push run 42664215927 was canceled only because scheduled run 42665031438 superseded it on the same merge SHA; all four jobs in the superseding run passed.",
           "All five AP-002 acceptance criteria remain mapped to versioned records, strict offline tests and documentation. Explicitly pending U01-U06 and not_measured owner-host inventory satisfy the bounded acceptance criteria without inferred consent or activation.",
-          "Local post-merge closeout validation against main ce2373dd394ae1ecc86c81a58b043f7ff23e47d1: scoped quality.docs-ci selection reported 518 passed and one upstream warning; AP invariants, Ruff, mypy, compileall, frontend syntax, validator, docs, governance, security-record consistency, baseline, test-map, dashboard and diff checks passed. Completion-record PR #281 current-head CI remains required before this completion record lands."
+          "Local post-merge closeout validation against main c0484cc64e4cd9934a0eb9d6775524073c217324: scoped quality.docs-ci selection reported 518 passed and one upstream warning; AP invariants, Ruff, mypy, compileall, frontend syntax, validator, docs, governance, security-record consistency, baseline, test-map, dashboard and diff checks passed after merging current main c0484cc64e4cd9934a0eb9d6775524073c217324. Completion-record PR #281 refreshed-head CI remains required before this completion record lands."
         ],
-        "completion_pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/281"
+        "completion_pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/281",
+        "completion_refresh_sha": "c0484cc64e4cd9934a0eb9d6775524073c217324"
       },
       "implementation_prompt": "Implement AP-002: Resolve mission scope and operating-envelope decisions. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },

@@ -168,6 +168,12 @@ The immediate post-merge push run `42664215927` was concurrency-cancelled when
 the scheduled run `42665031438` superseded it on that same merge SHA. The
 superseding run passed all four jobs. This was scheduling, not a failed test.
 
+Completion-record PR #281 was refreshed from current main
+`c0484cc64e4cd9934a0eb9d6775524073c217324` after PR #277 landed. That runtime
+and generated-evidence change does not overlap the three AP-002 closeout files.
+The refreshed scoped selection again passed all 518 tests before the closeout
+head was pushed.
+
 All five acceptance criteria below have versioned artifact, documentation and
 test evidence, so AP-002 is `done` under the repository convention. Completion
 resolves the story, not U01–U06: those owner values remain explicitly pending,
