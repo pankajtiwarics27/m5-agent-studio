@@ -6107,10 +6107,20 @@ async def api_load_model(model_id: str, request: Request) -> JSONResponse:
         _demo_loaded_model = model_id
         _demo_loaded_at = time.time()
         return JSONResponse({"status": "ok", "model_id": model_id, "demo": True})
-    r = await client.post(f"{OMLX_BASE}/admin/api/models/{model_id}/load", timeout=120.0)
-    if r.status_code >= 400:
-        raise HTTPException(status_code=r.status_code, detail=r.text)
-    return JSONResponse(r.json())
+    try:
+        response = await client.post(f"{OMLX_BASE}/admin/api/models/{model_id}/load", timeout=120.0)
+        _reject_redirect_response(response, f"{OMLX_BASE}/admin/api/models/{model_id}/load")
+        if not 200 <= response.status_code < 300:
+            raise RuntimeError("legacy load was not confirmed")
+        payload = response.json()
+    except asyncio.CancelledError:
+        raise
+    except Exception:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "legacy_load_unconfirmed", "retryable": False},
+        ) from None
+    return JSONResponse(payload)
 
 
 @app.post("/api/models/{model_id:path}/unload")

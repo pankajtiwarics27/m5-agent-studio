@@ -290,3 +290,10 @@ audit: redirect, non-2xx, transport, and malformed JSON responses fail privately
 with coordinated dispatch and the explicit offline/demo branch unchanged. See
 [direct unload route evidence](../lc08-direct-unload-route-audit.md); this remains
 non-physical and does not qualify unload behavior.
+
+
+The direct legacy model-load route also received a bounded online HTTP failure
+audit: redirects, non-2xx, transport failures, and invalid JSON now fail with
+private fixed details; cancellation, coordinated routing, and the explicit
+offline/demo path are unchanged. See [direct load evidence](../lc08-direct-load-route-audit.md).
+This remains no evidence of physical model load or memory residency.
