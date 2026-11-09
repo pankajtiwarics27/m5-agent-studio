@@ -1187,3 +1187,16 @@ and save/pin-before-cleanup semantics. Three original-source regressions reprodu
 synthetic facts, not installed qualification. The owner matrix leaves26owners
 inventory-only. Legacy defaults, native dormancy, LC09 scope, proposed ADR status,
 paused test8 and independent acceptance are unchanged.
+
+
+## Bounded MCP stdio summon continuation
+
+Following merged PR265, the [MCP audit](lc08-mcp-summon-audit.md) records one
+additional bounded owner, leaving25inventory-only owners. A reproduced consumer
+error left the dispatch source open until finalization; explicit closing repairs
+that ownership gap without changing matter/chronicle assembly, defaults or MCP's
+cleanup-before-append ordering.22offline cases include admission/audit and stdio
+framing plus dormant warm native/fit kernels with synthetic facts, not installed
+qualification. HTTP Hall's session guards and retention semantics are not copied
+into MCP. Legacy/default dormancy, LC09 scope, proposed ADR status, paused test8
+and independent acceptance are unchanged.

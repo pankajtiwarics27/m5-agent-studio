@@ -16,6 +16,11 @@ denies coordinated changed-budget retries. Hall retains save/pin-before-cleanup
 semantics; cleanup refusal cannot announce success or erase the completed reply.
 It is not an MCP summon audit, LC09 retention change or installed qualification.
 
+The bounded [MCP stdio summon audit](lc08-mcp-summon-audit.md) then adds one
+more assessed owner (25 remain inventory-only) and closes the owned dispatch
+source on consumer failure. It preserves MCP cleanup-before-save ordering and
+existing defaults, not HTTP Hall session/retention parity or native activation.
+
 ## Scope of this snapshot
 
 Reviewed against merged base `fc6a304c970fec65a8a324183a83443f71443318`

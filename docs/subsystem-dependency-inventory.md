@@ -150,7 +150,7 @@
 | Approval request lifecycle | [`app.py:L8930`](../app.py#L8930) | Creates an in-process pending approval entry and records its request event. |
 | Approval resolution API | [`app.py:L13855`](../app.py#L13855) | Authenticated operator resolves a pending approval by ID; there is no separate identity/role model. |
 | MCP tool execution | [`app.py:L13065`](../app.py#L13065) | Uses central policy and audit; requires an enabled server and enabled-tool allowlist entry, with explicit approval per server/workflow policy; stdio launch is separately opt-in. |
-| Inbound MCP bridge execution | [`app.py:L22795`](../app.py#L22795) | Routes each bundled stdio `tools/call` through the central registry, one-call authorization, and privacy-preserving audit. |
+| Inbound MCP bridge execution | [`app.py:L22796`](../app.py#L22796) | Routes each bundled stdio `tools/call` through the central registry, one-call authorization, and privacy-preserving audit. |
 | MCP approval requirement | [`app.py:L7567`](../app.py#L7567) | Applies the configured MCP approval policy; the central execution boundary enforces it for harness, direct, automated, and inbound bridge calls. |
 | MCP playground route | [`app.py:L7845`](../app.py#L7845) | Authenticated explicit playground action is treated as one-call user approval, then centrally authorized and audited against server/tool allowlists. |
 
