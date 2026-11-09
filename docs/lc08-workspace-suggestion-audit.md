@@ -89,10 +89,12 @@ artifact refresh passes backend302tests/16isolation checks (unqualified/blocked)
 UI37/37checks/7gates/0findings and restored V2review7/7local/2200visual/15Compare/
 0findings. Source64files/6tabs/121routes, preservation272controls, docs264files/
 ADRs, baseline, frontend syntax, app/standalone startup/auth/origin smokes,
-screenshots6/6 and demo checks pass. Full local regression and exact-head CI must
-be recorded after execution, not inferred from a started process. Historical
-approvals, imported browser evidence and independent security-release decisions
-are not relabelled.
+screenshots6/6 and demo checks pass. Full local regression at `2f7bd77` completed
+**5,138 passed, 32 skipped, 1 upstream warning in976.21s**. Its PR exact-head
+workflow run42579603416 passed Python3.11/3.12/3.13 and Browser safety (all four
+checks green); the report is updated in the follow-up documentation commit. No
+activation or acceptance advancement is implied. Historical approvals, imported
+browser evidence and independent security-release decisions are not relabelled.
 
 This is not canonical tool support, folder-creation authorization, all-workflow
 integration, cold multistage qualification, oMLX inference qualification, LC09
