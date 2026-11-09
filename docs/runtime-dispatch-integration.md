@@ -1213,3 +1213,27 @@ interruption and dormant warm native/fit kernels with synthetic facts. No folder
 is created or workspace switched by a suggestion; original limits/options and
 legacy defaults remain unchanged. LC09, paused test8, proposed ADR and independent
 acceptance boundaries are not advanced.
+
+
+## Bounded legacy cleanup failure handling
+
+After merged PR267, a focused audit of `_unload_omlx_model` reproduced normal
+return after every HTTP status and swallowed transport failures in its online
+legacy branch. It now rejects redirects/non-2xx and fails privately on transport
+errors, preserving cancellation; coordinated dispatch still fails closed. See the
+[legacy cleanup audit](lc08-legacy-cleanup-audit.md). A 2xx plus the existing delay
+is not measured physical release. Offline/demo behavior, legacy defaults, direct
+unload route owners and hardware/acceptance status are unchanged. The matrix has
+29 owners/54 static sites, six bounded assessments and23inventory-only owners.
+
+
+## Bounded direct unload-route failure handling
+
+A follow-up audit of the separate direct `api_unload_model` owner found that
+legacy HTTP 400 was converted to generic success and 500/503 bodies were returned
+as response payloads. The online route now rejects redirects/non-2xx and transport
+or invalid-JSON failures privately, while preserving cancellation, 2xx JSON,
+coordinated routing and the explicit offline/demo branch. The
+[route audit](lc08-direct-unload-route-audit.md) makes no physical-release claim.
+The matrix remains bounded at29owners/54sites, with seven assessed and22
+inventory-only owners; no runtime activation or acceptance advancement is implied.

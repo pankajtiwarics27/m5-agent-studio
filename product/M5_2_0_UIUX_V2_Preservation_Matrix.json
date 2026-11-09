@@ -9,7 +9,7 @@
   "statement": "Control -> DOM handler -> API route -> test coverage for every interactive control in static/index.html, plus the three UIV2-02 contract investigations. api_status is existing when every call the handler makes resolves to a mounted @app route, absent-route when a call matches no mounted route, unknown when the resolver left an edge open, no-api for handlers that never fetch, and no-handler for controls without an inline handler. The contracts distinguish existing / partial / absent / unknown and cite file evidence; the generator hard-fails if the sources drift from the classification, so --check is a gate.",
   "pinned_source_commit": "9a584a36f1fbe29ba467562dd12a705626769f00",
   "frontend_sha256": "c5bf2cf6d5e5fc5e2f6d65e5b329c7837b8fbb1050706e4d54a1410a0efec22e",
-  "app_sha256": "5749d2740294311458e8111afe8b7f73984e7f994b7d9617bb3f93e24dba21a0",
+  "app_sha256": "d6862f1ccb080a89a72ebd6ba76bb7da1b9cdb1ab274e45c17259f58e0e8092a",
   "totals": {
     "controls": 273,
     "by_pane": {

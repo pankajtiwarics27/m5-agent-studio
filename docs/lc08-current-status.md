@@ -22,10 +22,11 @@ source on consumer failure. It preserves MCP cleanup-before-save ordering and
 existing defaults, not HTTP Hall session/retention parity or native activation.
 
 The bounded [workspace suggestion audit](lc08-workspace-suggestion-audit.md)
-adds one more owner (24 remain inventory-only) and closes its source when
-rejecting overlong output. Consent, full accepted input, tool-context restoration
-and suggestion-only/no-action semantics are preserved, not folder authorization
-or native activation.
+closes the source on suggestion-output rejection without adding folder authority.
+The [legacy cleanup audit](lc08-legacy-cleanup-audit.md) and [direct unload-route
+audit](lc08-direct-unload-route-audit.md) refuse unconfirmed online cleanup replies
+privately; neither is physical unload evidence. Current static coverage remains
+bounded, with 22 inventory-only owners. No folder authorization or native activation is added.
 
 ## Scope of this snapshot
 
