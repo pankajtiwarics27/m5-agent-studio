@@ -12,16 +12,16 @@ PNG captures remain local review evidence; the committed browser record carries 
 
 **21/21 checks passed; 11 captures; 0 failures.**
 
-Environment: `linux` / `x64`, 2 CPUs, Node `v20.20.2`, `Python 3.13.16`, `HeadlessChrome/156.0.8078.4` headless Chromium.
+Environment: `linux` / `x64`, 2 CPUs, Node `v22.22.3`, `Python 3.11.2`, `HeadlessChrome/153.0.8010.0` headless Chromium.
 
 | Metric | Actual | Gate |
 | --- | ---: | ---: |
-| Fast real SSE schedules | 58 in 290.6ms (199.6/s) | ≥20 and ≥50/s |
+| Fast real SSE schedules | 58 in 336.8ms (172.2/s) | ≥20 and ≥50/s |
 | Coalesced chat renders | 18 | fewer than 58 schedules, complete text retained |
-| Full-window ten-event frame | mean 2.05ms; nearest-rank p95 3.00ms; max 3.40ms | mean ≤4ms |
+| Full-window ten-event frame | mean 1.76ms; nearest-rank p95 2.20ms; max 2.50ms | mean ≤4ms |
 | Events / cache / cards | 30,000 / 5,000 / 300 | 5,000 / 300 ceilings |
 | Post-GC document nodes | 8544 → 8544 → 8544 | repeated-cycle growth ≤64 |
-| Post-GC JS heap | 3.04 MiB → 2.98 MiB → 2.99 MiB | cycle growth ≤8 MiB; baseline growth ≤16 MiB |
+| Post-GC JS heap | 3.24 MiB → 3.20 MiB → 3.21 MiB | cycle growth ≤8 MiB; baseline growth ≤16 MiB |
 
 Memory readings use CDP `Performance.getMetrics` immediately after `HeapProfiler.collectGarbage`. They are repeated-cycle plateau checks, not a claim that a browser never allocates during a frame.
 

@@ -4,7 +4,7 @@
   "story": "UIV2-29",
   "statement": "Measured streaming, DOM/heap, layout and backend safety evidence; unprobed container isolation remains unqualified and blocked.",
   "source_sha256": {
-    "static/index.html": "2bf80b669dff0202201dbe15fce36034290ea4a13bb0b4286d30d8e788ee5e44",
+    "static/index.html": "c5bf2cf6d5e5fc5e2f6d65e5b329c7837b8fbb1050706e4d54a1410a0efec22e",
     "scripts/uiv2_performance_safety_walk.mjs": "db65e34744d881132250aba25da39f6d239adcf43c407ac4ebaf85f840070643",
     ".github/workflows/ci.yml": "1554e1d2bf5bbafc8aad972f0b590644e21b29080058d1ba08866b7a278b66ba"
   },
@@ -94,15 +94,15 @@
       "captures": 11
     },
     "environment": {
-      "node": "v20.20.2",
+      "node": "v22.22.3",
       "platform": "linux",
       "arch": "x64",
       "cpu_count": 2,
       "cpu_model": "Intel(R) Xeon(R) Processor @ 2.60GHz",
-      "chrome_version": "HeadlessChrome/156.0.8078.4",
+      "chrome_version": "HeadlessChrome/153.0.8010.0",
       "chrome_headless": true,
-      "python": "Python 3.13.16",
-      "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36",
+      "python": "Python 3.11.2",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36",
       "fixture": "council_readiness_seed.py; real loopback app and SSE provider",
       "memory_method": "CDP Performance.getMetrics after HeapProfiler.collectGarbage",
       "layout_method": "PerformanceObserver layout-shift plus shell getBoundingClientRect before/after"
@@ -116,11 +116,11 @@
         },
         "fast": {
           "model": "Gemma-4-21B-REAP-4bit",
-          "elapsed_ms": 290.6000000000058,
+          "elapsed_ms": 336.80000000074506,
           "renders": 18,
           "schedules": 58,
           "model_tokens": 58,
-          "sse_per_second": 199.587,
+          "sse_per_second": 172.209,
           "complete_chars": 330
         }
       },
@@ -130,8 +130,8 @@
             "Nodes": 8544,
             "Documents": 2,
             "JSEventListeners": 336,
-            "JSHeapUsedSize": 3186216,
-            "JSHeapTotalSize": 4456448,
+            "JSHeapUsedSize": 3395416,
+            "JSHeapTotalSize": 4194304,
             "LayoutCount": 1,
             "RecalcStyleCount": 3
           },
@@ -139,8 +139,8 @@
             "Nodes": 8544,
             "Documents": 2,
             "JSEventListeners": 336,
-            "JSHeapUsedSize": 3120328,
-            "JSHeapTotalSize": 3641344,
+            "JSHeapUsedSize": 3356232,
+            "JSHeapTotalSize": 3903488,
             "LayoutCount": 123,
             "RecalcStyleCount": 245
           },
@@ -148,13 +148,13 @@
             "Nodes": 8544,
             "Documents": 2,
             "JSEventListeners": 336,
-            "JSHeapUsedSize": 3133976,
-            "JSHeapTotalSize": 3641344,
+            "JSHeapUsedSize": 3366496,
+            "JSHeapTotalSize": 3903488,
             "LayoutCount": 245,
             "RecalcStyleCount": 487
           },
           "cycle_1": {
-            "elapsed_ms": 3976.6999999999825,
+            "elapsed_ms": 3977.5,
             "cursor": 18000,
             "cached": 5000,
             "cards": 300,
@@ -162,7 +162,7 @@
             "last": 18000
           },
           "cycle_2": {
-            "elapsed_ms": 3969.100000000006,
+            "elapsed_ms": 3976.0999999996275,
             "cursor": 30000,
             "cached": 5000,
             "cards": 300,
@@ -173,9 +173,9 @@
         },
         "steady": {
           "calls": 20,
-          "mean_ms": 2.0450000000011643,
-          "p95_ms": 3,
-          "max_ms": 3.3999999999941792,
+          "mean_ms": 1.7600000002421439,
+          "p95_ms": 2.199999999254942,
+          "max_ms": 2.5,
           "cards": 300
         }
       },
@@ -320,7 +320,7 @@
         "  [PASS] no new privileges — --security-opt=no-new-privileges",
         "  [PASS] no implicit image pull — --pull=never",
         "  [PASS] resource limits — --pids-limit=128 --memory=2g --cpus=2",
-        "  [PASS] single workspace bind mount — type=bind,source=/tmp/m5-isolation-smoke-7cfrdph8,target=/workspace",
+        "  [PASS] single workspace bind mount — type=bind,source=/tmp/m5-isolation-smoke-sq47aik1,target=/workspace",
         "",
         "== 3. Skill-code execution gates (app._run_skill_script) ==",
         "  [PASS] default-off skill-code denial — PermissionError",

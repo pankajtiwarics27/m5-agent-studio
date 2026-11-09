@@ -1,24 +1,24 @@
 {
   "story": "UIV2-29",
   "git": {
-    "head": "3871473bb1a0c9ce5f49a821cec94b3c7d29663f",
-    "dirty": true
+    "head": "e71e47a361cd4cafadaa9fe1b43bcfa6a91e9051",
+    "dirty": false
   },
   "source_sha256": {
-    "static/index.html": "2bf80b669dff0202201dbe15fce36034290ea4a13bb0b4286d30d8e788ee5e44",
+    "static/index.html": "c5bf2cf6d5e5fc5e2f6d65e5b329c7837b8fbb1050706e4d54a1410a0efec22e",
     "scripts/uiv2_performance_safety_walk.mjs": "db65e34744d881132250aba25da39f6d239adcf43c407ac4ebaf85f840070643"
   },
-  "generated_at": "2026-11-09T06:11:26.659Z",
+  "generated_at": "2026-11-09T09:16:58.159Z",
   "environment": {
-    "node": "v20.20.2",
+    "node": "v22.22.3",
     "platform": "linux",
     "arch": "x64",
     "cpu_count": 2,
     "cpu_model": "Intel(R) Xeon(R) Processor @ 2.60GHz",
-    "chrome_version": "HeadlessChrome/156.0.8078.4",
+    "chrome_version": "HeadlessChrome/153.0.8010.0",
     "chrome_headless": true,
-    "python": "Python 3.13.16",
-    "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36",
+    "python": "Python 3.11.2",
+    "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36",
     "fixture": "council_readiness_seed.py; real loopback app and SSE provider",
     "memory_method": "CDP Performance.getMetrics after HeapProfiler.collectGarbage",
     "layout_method": "PerformanceObserver layout-shift plus shell getBoundingClientRect before/after"
@@ -54,11 +54,11 @@
       },
       "fast": {
         "model": "Gemma-4-21B-REAP-4bit",
-        "elapsed_ms": 290.6000000000058,
+        "elapsed_ms": 336.80000000074506,
         "renders": 18,
         "schedules": 58,
         "model_tokens": 58,
-        "sse_per_second": 199.587,
+        "sse_per_second": 172.209,
         "complete_chars": 330
       }
     },
@@ -68,8 +68,8 @@
           "Nodes": 8544,
           "Documents": 2,
           "JSEventListeners": 336,
-          "JSHeapUsedSize": 3186216,
-          "JSHeapTotalSize": 4456448,
+          "JSHeapUsedSize": 3395416,
+          "JSHeapTotalSize": 4194304,
           "LayoutCount": 1,
           "RecalcStyleCount": 3
         },
@@ -77,8 +77,8 @@
           "Nodes": 8544,
           "Documents": 2,
           "JSEventListeners": 336,
-          "JSHeapUsedSize": 3120328,
-          "JSHeapTotalSize": 3641344,
+          "JSHeapUsedSize": 3356232,
+          "JSHeapTotalSize": 3903488,
           "LayoutCount": 123,
           "RecalcStyleCount": 245
         },
@@ -86,13 +86,13 @@
           "Nodes": 8544,
           "Documents": 2,
           "JSEventListeners": 336,
-          "JSHeapUsedSize": 3133976,
-          "JSHeapTotalSize": 3641344,
+          "JSHeapUsedSize": 3366496,
+          "JSHeapTotalSize": 3903488,
           "LayoutCount": 245,
           "RecalcStyleCount": 487
         },
         "cycle_1": {
-          "elapsed_ms": 3976.6999999999825,
+          "elapsed_ms": 3977.5,
           "cursor": 18000,
           "cached": 5000,
           "cards": 300,
@@ -100,7 +100,7 @@
           "last": 18000
         },
         "cycle_2": {
-          "elapsed_ms": 3969.100000000006,
+          "elapsed_ms": 3976.0999999996275,
           "cursor": 30000,
           "cached": 5000,
           "cards": 300,
@@ -111,9 +111,9 @@
       },
       "steady": {
         "calls": 20,
-        "mean_ms": 2.0450000000011643,
-        "p95_ms": 3,
-        "max_ms": 3.3999999999941792,
+        "mean_ms": 1.7600000002421439,
+        "p95_ms": 2.199999999254942,
+        "max_ms": 2.5,
         "cards": 300
       }
     },
@@ -245,7 +245,7 @@
       "group": "sse",
       "step": "the measured fast fixture actually exceeds fifty scheduled SSE updates per second",
       "passed": true,
-      "detail": "rate=199.6/s elapsed=290.6ms schedules=58"
+      "detail": "rate=172.2/s elapsed=336.8ms schedules=58"
     },
     {
       "group": "dom-memory",
@@ -275,7 +275,7 @@
       "group": "dom-memory",
       "step": "post-GC JS heap remains within the declared repeated-cycle plateau budgets",
       "passed": true,
-      "detail": "baseline=3186216 cycle1=3120328 cycle2=3133976 cycle_delta=13648 baseline_delta=-52240"
+      "detail": "baseline=3395416 cycle1=3356232 cycle2=3366496 cycle_delta=10264 baseline_delta=-28920"
     },
     {
       "group": "dom-memory",
@@ -287,7 +287,7 @@
       "group": "dom-memory",
       "step": "ten-event frames retain the existing four-millisecond full-window budget",
       "passed": true,
-      "detail": "{\"calls\":20,\"mean_ms\":2.0450000000011643,\"p95_ms\":3,\"max_ms\":3.3999999999941792,\"cards\":300}"
+      "detail": "{\"calls\":20,\"mean_ms\":1.7600000002421439,\"p95_ms\":2.199999999254942,\"max_ms\":2.5,\"cards\":300}"
     },
     {
       "group": "layout",
@@ -371,7 +371,7 @@
   "captures": [
     {
       "path": "chat-midstream.png",
-      "sha256": "5099bb5249242d5b04f91209730a97130aed1e4e89f0dfb3ab6e5397a59c5e9d",
+      "sha256": "1e3dcbea176fc6e9cd35f2c861fc86633aac1a46ab57696ae305d6b718ab0d3f",
       "group": "sse",
       "viewport": "1440x900",
       "theme": "dark",
@@ -380,7 +380,7 @@
     },
     {
       "path": "chat-complete.png",
-      "sha256": "783f37c008470e5c3277fdc89a148846c379cfabc99b0bb6786e586f12319913",
+      "sha256": "19cf659bfaf311b7be1944d6eb6be7fb52f9c7b7458989cd3204abfb428fecf4",
       "group": "sse",
       "viewport": "1440x900",
       "theme": "dark",
@@ -389,7 +389,7 @@
     },
     {
       "path": "chat-high-frequency-complete.png",
-      "sha256": "946e2b37ca4496c94578484c73054fbb8752267a6f2e9b5bbcef184f798aa69a",
+      "sha256": "a66edb19fe75183129bab91415c27e35ee09ff18a6e95f065e982e357d145766",
       "group": "sse",
       "viewport": "1440x900",
       "theme": "dark",
@@ -398,7 +398,7 @@
     },
     {
       "path": "layout/light/1640x900-harness.png",
-      "sha256": "604991f5cc21ecca18e3b16d079bbaf952c90d4b878b848ef23f98fc84e12a53",
+      "sha256": "670f124da3ad6534593ad9d7ee86a09802275bc441301b2eff7b2f1adf51aaee",
       "group": "layout",
       "viewport": "1640x900",
       "theme": "light",
@@ -407,7 +407,7 @@
     },
     {
       "path": "layout/dark/1640x900-harness.png",
-      "sha256": "e33131bed59869e227159c3af6dcc6ac27aa72d7b2380f5ec70adc57d69a104d",
+      "sha256": "eafa38029e71b0fbc01a9e22b73ae74dccc3d476353b1131a0340afaae616f9e",
       "group": "layout",
       "viewport": "1640x900",
       "theme": "dark",
@@ -416,7 +416,7 @@
     },
     {
       "path": "layout/light/1440x900-harness.png",
-      "sha256": "d6e6059de9fe17037a4b199996b3b0b99734944ec7e6c01f5fc24f0e2347e421",
+      "sha256": "49865d5f2b3ebf8f5dacea67cda71112a143cc81ea79ca5b65e67077a8ffa495",
       "group": "layout",
       "viewport": "1440x900",
       "theme": "light",
@@ -425,7 +425,7 @@
     },
     {
       "path": "layout/dark/1440x900-harness.png",
-      "sha256": "a4964b4ddc1cadfaf61b5b6690c6b19c1a852a1ab3fce8b40463ae15564eeeb3",
+      "sha256": "fcc5d85c52387e2c07256531a0e143e94e65ed674d09b5fc5d70170691e81d77",
       "group": "layout",
       "viewport": "1440x900",
       "theme": "dark",
@@ -434,7 +434,7 @@
     },
     {
       "path": "layout/light/1280x800-harness.png",
-      "sha256": "6562c08d7ff44310a070309554f2d8a835cc21aca3ae47e0ffbb7c1368e13670",
+      "sha256": "4679bd518987440d7560b180979add09be1a5c6caecb248cf24e06692c34651b",
       "group": "layout",
       "viewport": "1280x800",
       "theme": "light",
@@ -443,7 +443,7 @@
     },
     {
       "path": "layout/dark/1280x800-harness.png",
-      "sha256": "c5eab133102073fb86170cd379f3fd1abe74418a7210f5da0511efc242c8ab7e",
+      "sha256": "487376fae364b7bfd34f0418c7eebaca00677bcf941b5c9d9234e0b02cf5a700",
       "group": "layout",
       "viewport": "1280x800",
       "theme": "dark",

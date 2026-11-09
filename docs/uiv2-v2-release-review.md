@@ -78,14 +78,14 @@ The older 40-story UI/UX gate remains separately owned by `scripts/uiux_release_
 
 ## Measured performance and safety carried into release
 
-Environment: `linux` / `x64`, 2 CPUs, `HeadlessChrome/156.0.8078.4`; disposable loopback fixture, no external provider calls.
+Environment: `linux` / `x64`, 2 CPUs, `HeadlessChrome/153.0.8010.0`; disposable loopback fixture, no external provider calls.
 
 | Metric | Actual | Gate/scope |
 | --- | ---: | --- |
-| Fast real SSE | 58 schedules in 290.6ms = 199.59/s | at least 50/s, complete reply retained |
-| Full-window frame | mean 2.05ms; p95 3.00ms; max 3.40ms | unchanged mean ≤4ms |
+| Fast real SSE | 58 schedules in 336.8ms = 172.21/s | at least 50/s, complete reply retained |
+| Full-window frame | mean 1.76ms; p95 2.20ms; max 2.50ms | unchanged mean ≤4ms |
 | Post-GC nodes | 8544 → 8544 → 8544 | no repeated-cycle growth beyond the declared budget |
-| Post-GC JS heap | 3186216 → 3120328 → 3133976 bytes | repeated-cycle plateau, not zero allocation |
+| Post-GC JS heap | 3395416 → 3356232 → 3366496 bytes | repeated-cycle plateau, not zero allocation |
 | Backend safety | 302 tests; 16 isolation checks | zero failures |
 | Local container isolation | unqualified; blocked (fail closed) | live probes not requested; not advertised as qualified |
 
