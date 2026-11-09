@@ -1,0 +1,24 @@
+{
+ "browser": {
+  "executable": "/home/runner/work/_temp/m5-browser/tmp/chromium",
+  "fonts": {
+   "config": "/home/runner/work/_temp/m5-browser/tmp/m5-uiv2-26-fonts-tX5ZE7/fonts.conf",
+   "family": "Open Sans",
+   "files": {
+    "OpenSans-Bold.ttf": "27da758f4dcac9a65abe914c13b463b42982b9909bc65713424099f4810bd1e6",
+    "OpenSans-Italic.ttf": "93bc1bb6abf4e6b7c75d7131714061d5b57cc478abcabe4cb3519bb38fb917aa",
+    "OpenSans-Regular.ttf": "c53aceea2dcf5b4098099c0c4d0a061d17e178a049317b42a422b1a9f7f8eb59"
+   }
+  },
+  "requested_build": "153.0.8010.0",
+  "version": "HeadlessChrome/153.0.8010.0"
+ },
+ "captured_at_head": "99fada2a21e4a2e9d8b59dcd8ead09e467adad76",
+ "changed": {},
+ "checks": {
+  "failed": 0,
+  "passed": 2104,
+  "total": 2104
+ },
+ "dirty": false
+}
