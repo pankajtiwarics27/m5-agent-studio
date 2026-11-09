@@ -80,8 +80,8 @@
   },
   "visual_reference": {
     "contract": "product/M5_2_0_UIUX_V2_Cross_Tab_Reference.json",
-    "approved_manifest": "394f2129ad5c110ff0d17afb5bab64a66532a542cdfb3ebdc2b25db187410800",
-    "approval_reference": "user:PR 258 owner review 2026-11-08 \"1. Approved\" - re-baseline the debate-pane #debateCriteriaDetails.y shift caused by UIV2-P7-03 label truncation (32px at >=1280, 48px at 390)",
+    "approved_manifest": "bde31a3073e9a05ba53fc41ca1b2ce1301f1e04a9fcff6bd00209b7f677ec2d7",
+    "approval_reference": "user:PR 268 owner review 2026-11-09 \"approved the re-captured baseline\"",
     "policy": "the approved 48-variant structural gate remains mandatory; performance-only changes may not approve their own pixels"
   },
   "browser_evidence": {

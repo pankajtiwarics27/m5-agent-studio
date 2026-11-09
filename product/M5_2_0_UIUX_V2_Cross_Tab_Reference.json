@@ -957,17 +957,17 @@
     "rule": "A human must approve the annotated candidate; the agent cannot infer or self-certify this decision.",
     "human_approval": {
       "decision": "approved",
-      "reference": "user:PR 258 owner review 2026-11-08 \"1. Approved\" - re-baseline the debate-pane #debateCriteriaDetails.y shift caused by UIV2-P7-03 label truncation (32px at >=1280, 48px at 390)",
-      "recorded_at": "2026-11-08T17:32:40.331303+00:00",
+      "reference": "user:PR 268 owner review 2026-11-09 \"approved the re-captured baseline\"",
+      "recorded_at": "2026-11-09T13:46:21.464435+00:00",
       "scope": "Structural fidelity of all 48 annotated live/reference comparisons; not a pixel-clone claim."
     },
     "candidate": {
-      "manifest": "/tmp/cand/candidate-manifest.json",
-      "manifest_sha256": "394f2129ad5c110ff0d17afb5bab64a66532a542cdfb3ebdc2b25db187410800",
-      "git_head": "1d3498a80309947e95c24d68caef185fefe435fa"
+      "manifest": "/home/user/uiv2-fold-recapture/candidate-manifest.json",
+      "manifest_sha256": "bde31a3073e9a05ba53fc41ca1b2ce1301f1e04a9fcff6bd00209b7f677ec2d7",
+      "git_head": "f64842a5a23b723f7ae7124e04ea14d1aa48fe28"
     },
     "captures": 48,
-    "approval_sha256": "79182d7adea38d73435bd50cdd421a25fef4c5ff93e5e456bb5eb5222b53c2c7"
+    "approval_sha256": "b7e0224688b2d56b6f11d5d900cf6fdf9a8b7761e860e722966c19312c50a61c"
   },
   "totals": {
     "panes": 6,
