@@ -23714,11 +23714,12 @@ async def api_workspace_picker_suggest(request: Request) -> JSONResponse:
     try:
         chunks: list[str] = []
         async with asyncio.timeout(45):
-            async for item in stream_any_model(request.app.state.http, model, messages, 0.0, 128, "off"):
-                if item.get("type") == "content":
-                    chunks.append(str(item.get("text") or ""))
-                    if sum(map(len, chunks)) > 4096:
-                        raise workspace_paths.PickerError("Model suggestion was too long. Enter a folder name yourself.")
+            async with contextlib.aclosing(stream_any_model(request.app.state.http, model, messages, 0.0, 128, "off")) as source:
+                async for item in source:
+                    if item.get("type") == "content":
+                        chunks.append(str(item.get("text") or ""))
+                        if sum(map(len, chunks)) > 4096:
+                            raise workspace_paths.PickerError("Model suggestion was too long. Enter a folder name yourself.")
         return JSONResponse({"name": workspace_paths.suggestion("".join(chunks)), "created": False, "workspace_changed": False})
     except workspace_paths.PickerError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from None

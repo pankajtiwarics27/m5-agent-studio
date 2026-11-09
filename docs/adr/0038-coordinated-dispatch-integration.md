@@ -233,6 +233,12 @@ cleanup-before-append ordering and existing admission/JSON-RPC refusal; do not
 claim HTTP Hall session parity or canonical tool consumption. See the
 [MCP audit](../lc08-mcp-summon-audit.md); no producer or review activation.
 
+Extend owned-source closing to the folder-name suggestion consumer, inside its
+existing timeout. Preserve explicit model-request consent, accepted full input,
+fixed options, tool-context restoration and suggestion-only/no-filesystem-action
+semantics. See the [workspace suggestion audit](../lc08-workspace-suggestion-audit.md);
+no canonical tool consumer, producer or review activation is introduced.
+
 ## Alternatives
 
 - Replace served routing immediately: would activate unqualified transports and

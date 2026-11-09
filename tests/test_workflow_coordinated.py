@@ -456,22 +456,15 @@ def test_owner_matrix_matches_current_static_inventory_without_promoting_coverag
             {seam for owner, seam, _ in rows if owner == row["owner"]}
         )
         assert (root / row["evidence"]).is_file()
-        assessed = row["owner"] in {
-            "_workflow_orchestrator.stream_model",
-            "_workflow_orchestrator.unload_model",
+        assessments = {
+            "_workflow_orchestrator.stream_model": "bounded_workflow_adapter",
+            "_workflow_orchestrator.unload_model": "bounded_workflow_adapter",
+            "api_hall_summon.event_gen": "bounded_hall_http_summon",
+            "_mcp_summon_model": "bounded_mcp_stdio_summon",
+            "api_workspace_picker_suggest": "bounded_workspace_suggestion",
         }
-        assert row["assessment"] == (
-            "bounded_workflow_adapter"
-            if assessed
-            else (
-                "bounded_hall_http_summon"
-                if row["owner"] == "api_hall_summon.event_gen"
-                else (
-                    "bounded_mcp_stdio_summon"
-                    if row["owner"] == "_mcp_summon_model"
-                    else "inventory_only_in_this_audit"
-                )
-            )
+        assert row["assessment"] == assessments.get(
+            row["owner"], "inventory_only_in_this_audit"
         )
 
 
@@ -504,6 +497,13 @@ import pytest
 from test_workflow_coordinated import test_coordinated_reasoning_only_workflow_never_retries_with_changed_budget,test_response_consumer_close_reaches_backend_without_saving_run,test_unconfirmed_cleanup_cannot_start_next_stage_or_save_success
 from test_workflow_hall_coordinated import test_hall_reasoning_only_never_retries_changed_budget_in_coordinated_mode,test_hall_close_or_disconnect_immediately_closes_source_without_saving,test_hall_cleanup_failure_keeps_completed_transcript_but_never_reports_summon_success
 from test_workflow_mcp_coordinated import test_mcp_consumer_error_closes_owned_source_before_client_exit,test_mcp_preserves_full_matter_chronicle_role_and_original_options,test_mcp_unconfirmed_cleanup_never_appends_or_returns_success
+from test_workflow_picker_coordinated import test_picker_oversize_output_closes_source_before_return_and_restores_tools,test_picker_preserves_entire_valid_description_and_fixed_options_without_authority,test_picker_native_tool_call_is_refused_not_executed
+with pytest.MonkeyPatch.context() as patch:
+ test_picker_oversize_output_closes_source_before_return_and_restores_tools(patch)
+with pytest.MonkeyPatch.context() as patch:
+ test_picker_preserves_entire_valid_description_and_fixed_options_without_authority(patch)
+with pytest.MonkeyPatch.context() as patch:
+ test_picker_native_tool_call_is_refused_not_executed(patch)
 with pytest.MonkeyPatch.context() as patch:
  test_mcp_consumer_error_closes_owned_source_before_client_exit(patch)
 with pytest.MonkeyPatch.context() as patch:
