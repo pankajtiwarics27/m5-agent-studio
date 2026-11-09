@@ -94,6 +94,7 @@ Model and provider: [`provider-adapters.md`](provider-adapters.md),
 [`shared-memory-admission.md`](shared-memory-admission.md) (dormant LC-03 combined model/action accounting; not active admission),
 [`model-lifecycle-coordinator.md`](model-lifecycle-coordinator.md) (dormant LC-02 durable journal/queue; no active model control),
 [`model-lifecycle-research-and-proposal.md`](model-lifecycle-research-and-proposal.md) (cross-runtime audit, published research, and unimplemented single-resident coordinator proposal),
+[`lc08-current-status.md`](lc08-current-status.md) (current dormant LC08 implementation, remaining gaps, evidence and next bounded increment),
 [`cross-runtime-model-lifecycle-plan.md`](cross-runtime-model-lifecycle-plan.md) (researched implementation sequence, safety contracts, capability gates, and rollout plan; not implemented),
 [`model-lifecycle-capability-feasibility.md`](model-lifecycle-capability-feasibility.md) (LC-00 pinned capability matrix, offline synthetic spike, and unresolved qualification gates),
 [`moneyprinter-turbo-integration.md`](moneyprinter-turbo-integration.md).

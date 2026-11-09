@@ -1,5 +1,21 @@
 # LC-08 coordinated integration — in progress
 
+## Current status first
+
+For a consolidated source/test-backed snapshot at merged PR262 (`fc6a304`), read
+[LC08 current status and gap review](lc08-current-status.md). Cold-to-warm inference,
+optional explicit load/unload actors, selected cross-runtime/control races and
+atomic native/fit-counter interruption holds now exist **dormantly**. Production
+composition, all-workflow consumption and installed/independent qualification
+remain incomplete; legacy is still the default and test8 is paused/unpassed.
+
+The sections below are chronological checkpoint records, not a cumulative present
+claim. Later continuations supersede earlier statements that cold actors, controls
+or race tests are absent. Similarly, pending CI/full-suite and parked-P7 notes
+refer to their checkpoint: PR262's final local/CI result and main's restored P7
+assertions are summarized in the current snapshot. No historical number is fresh
+validation of a later head.
+
 ## Checkpoint scope (not story completion)
 
 `runtime_dispatch_boundary.py` supplies an immutable internal routing fence used
@@ -48,28 +64,28 @@ not proof of native reachability, installed behavior or runtime qualification.
 
 ## Required next work / release blocks
 
-LC-08 is **not complete**. The backend protocol is an internal dependency seam,
-not authority to perform native operations. The warm executor now uses real
-coordinator/memory/fit/native kernels with explicit fake evidence in tests; the
-initial fence tests still use fake backends for routing only. Still required:
+LC-08 is **not complete**. Current gaps, evidence anchors and a bounded next
+increment are consolidated in [the gap review](lc08-current-status.md). In brief:
 
-1. Cold acquisition/control orchestration, with pure LC-07 metadata readiness
-   before disrupting a source, actual sole-resident target binding/counting, and
-   valid domain operations for every load. The current executor refuses controls
-   and accepts only already-admitted warm jobs, never creating load authority.
-2. Canonical consumption and complete-input inclusion proof across remaining
-   workflows. The coordinated native gateway consumes structural calls; legacy
-   text tool consumers explicitly refuse before native planning when advertising
-   tools, and reject unexpected structural call events rather than dropping IDs.
-3. Full explicit-control/inference and cross-runtime cold race tests, late effects,
-   release and settlement. Current executor races cover same-lease count replay
-   and a queued control blocked by an active real dormant native stream only.
-4. Complete legacy/generic bypass/mutation coverage and final full CI. LC-09 still
-   owns session handoff/checkpoint/grant/budget/recovery semantics; LC-10 migration
-   UI and LC-11 hardware/release/security qualification stay separately gated.
+1. Per-workflow complete-input and canonical consumer proof remains incomplete.
+   Common dispatch/gateway tests and static inventory do not prove each Harness,
+   Hall, GSD/SDLC, child/critic, MCP, cleanup or probe/calibration owner's behavior.
+2. No production actor/backend/qualifier/transport/counter/live-proof producer is
+   installed. Existing cold inference and optional load/unload actors are dormant
+   compositions with synthetic qualification evidence, not missing foundations.
+3. Selected explicit-control/inference and cross-runtime races are implemented;
+   remaining all-path, external-effect and recovery races still need proof.
+   oMLX target/inference, already-absent success, unload-all/cache, coordinated
+   combos and unowned eviction remain unsupported/refused.
+4. LC09 session/checkpoint/grant/budget/recovery and populated-schema migration,
+   LC10 migration/progress UI, LC11 hardware/release/independent qualification
+   stay separately gated. CI is not acceptance or activation authority.
 
-No acceptance ledger, source screenshot approval or independent security signoff
-is advanced. Tests1--7 acceptance is unchanged; test8 remains paused/unpassed.
+The next recommended increment is an executable per-owner workflow/input/consumer
+coverage matrix, then a bounded offline audit of one non-gateway workflow. No
+acceptance ledger, screenshot approval or independent security signoff is advanced;
+test8 remains paused/unpassed. The earlier baseline/fence validation below is
+historical; current completed implementation evidence is linked in the snapshot.
 
 ## Validation recorded for this checkpoint
 
