@@ -193,6 +193,18 @@ This is not a new persistent acquire-owner/grant, native authorization, coalesci
 or recovery protocol. Preserve separate purpose/cancellation/deadline/native/fit/
 physical/memory gates and owned failure holding; no schema or activation change.
 
+Couple current-intent and model-memory interruption holds in one fenced ledger
+transaction. A stale/completed request or advanced acquire phase must not pause a
+successor's model after a failed ownership mark. Preserve genuine cancelled/
+expired uncertainty, exact current release-barrier ownership across its phases,
+and the physically completed acquire unload's exact unpaid source settlement
+until independent zero. Bind that exception to current operation/source/epoch/
+generation/target and durable physical-completion receipt; never a released hold
+or successor. Validate actual model identity before writes and roll back both
+halves on journal failure. Reuse this accounting-only seam in actors/drivers and
+native failure paths; do not mint native/dispatch/recovery authority or alter
+schema, qualification, proof, settlement, production defaults or parked review.
+
 ## Alternatives
 
 - Replace served routing immediately: would activate unqualified transports and

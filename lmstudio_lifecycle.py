@@ -649,29 +649,7 @@ class LmStudioLifecycleBridge:
             self.memory._admission_call(commit, sample, now)
 
     def _hold(self, permit: LmPermit, lease: MemoryLease | None) -> None:
-        now = self._now()
-        try:
-            if isinstance(permit.intent, ReleaseStep):
-                self.coord.mark_release_uncertain(
-                    permit.intent, reference="native_release_uncertain", now_ms=now
-                )
-            elif isinstance(permit.intent, TransitionStep):
-                self.coord.mark_uncertain(
-                    permit.intent, reference="lmstudio_effect_uncertain", now_ms=now
-                )
-            elif isinstance(permit.intent, LoadLease):
-                self.coord.mark_load_uncertain(
-                    permit.intent, reference="native_load_uncertain", now_ms=now
-                )
-            else:
-                self.coord.mark_request_uncertain(
-                    permit.intent, reference="lmstudio_effect_uncertain", now_ms=now
-                )
-        finally:
-            if lease is not None:
-                self.memory.mark_uncertain(
-                    lease, reference="lmstudio_effect_uncertain", now_ms=now
-                )
+        self.memory.hold_model(permit.intent, lease, reference="lmstudio_effect_uncertain", now_ms=self._now())
 
     def drain(self, permit: LmPermit, activity: LmActivity) -> bool:
         if (

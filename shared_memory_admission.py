@@ -14,7 +14,7 @@ from dataclasses import asdict, dataclass
 from typing import TYPE_CHECKING, Literal, TypeVar
 
 from local_runtime_lifecycle import ObservationStamp
-from model_lifecycle_coordinator import LifecycleCoordinator, LoadLease, ModelTarget, TransitionStep, _integer, _label
+from model_lifecycle_coordinator import LifecycleCoordinator, LoadLease, RequestLease, ReleaseStep, ModelTarget, TransitionStep, _encode, _integer, _label
 
 if TYPE_CHECKING:
     from execution_profiles import ResourceFootprint
@@ -464,6 +464,73 @@ class SharedMemoryAdmission:
             conn.execute("UPDATE memory_domains SET state='paused' WHERE domain=?", (lease.domain_id,))
             self._change(conn, lease.domain_id, 'memory_uncertain', reference)
         self._call(uncertain, now_ms)
+
+    def hold_model(self, intent: TransitionStep | ReleaseStep | RequestLease | LoadLease,
+                   lease: MemoryLease | None, *, reference: str, now_ms: int) -> bool:
+        """Atomically hold ONLY the still-owned intent and exact actual model.
+
+        No cancellation/expiry/unknown result proves physical release. Conversely,
+        an old callback cannot pause a successor after its stage/slot advanced.
+        Scope validation and both holds share one fenced write; no producer or
+        native I/O runs here. This is interruption accounting, never dispatch authority.
+        """
+        _label(reference)
+        if type(intent) not in (TransitionStep, ReleaseStep, RequestLease, LoadLease):
+            raise MemoryDenied('lifecycle_intent_invalid')
+        def hold(conn: sqlite3.Connection) -> bool:
+            domain = self._coordinator._domain(conn, intent.domain_id)
+            operation_id = None
+            if isinstance(intent, TransitionStep):
+                row = self._coordinator._transition_operation(conn, intent, allow_uncertain=True)
+                if row is None and intent.kind == 'unload' and lease is not None:
+                    # Physical unload may advance to load before its independent
+                    # source-memory zero sample. That unpaid source hold is still
+                    # ours to fence, never a new target's or a retired hold.
+                    pending = conn.execute('SELECT * FROM operations WHERE id=?', (intent.operation_id,)).fetchone()
+                    charged = conn.execute('SELECT status FROM memory_reservations WHERE id=?', (lease.lease_id,)).fetchone()
+                    proof = conn.execute("SELECT 1 FROM journal WHERE domain=? AND operation_id=? AND owner_epoch=? AND generation=? AND event='complete_unload'",
+                        (intent.domain_id, intent.operation_id, intent.owner_epoch, intent.generation)).fetchone()
+                    if (pending is not None and pending['goal'] == 'acquire' and pending['stage'] == 'load'
+                            and pending['status'] in ('active', 'uncertain') and pending['domain'] == intent.domain_id
+                            and pending['owner_epoch'] == intent.owner_epoch == self._coordinator._epoch
+                            and pending['generation'] == intent.generation and pending['source'] == _encode(intent.source)
+                            and pending['source_instance_id'] == intent.source_instance_id and pending['target'] == _encode(intent.target)
+                            and charged is not None and charged['status'] != 'released' and proof is not None):
+                        row = pending
+                if (row is None or domain['operation_id'] != intent.operation_id
+                        or domain['generation'] != intent.generation or domain['state'] not in ('switching', 'reconciling')):
+                    return False
+                operation_id = intent.operation_id
+                subject = intent.source if intent.kind in ('drain', 'unload') else intent.target
+            elif isinstance(intent, ReleaseStep):
+                row = self._coordinator._release_operation(conn, intent)
+                if row is None or row['status'] not in ('active', 'complete', 'uncertain'):
+                    return False
+                operation_id, subject = intent.operation_id, intent.source
+            else:
+                purpose: Literal['inference', 'load'] = 'inference' if type(intent) is RequestLease else 'load'
+                if self._coordinator._active_lease(conn, intent, purpose) is None:
+                    return False
+                subject = intent.target
+            model = None
+            if lease is not None:
+                if subject is None:
+                    raise MemoryDenied('model_memory_mismatch')
+                model = conn.execute('SELECT * FROM memory_reservations WHERE id=?', (lease.lease_id,)).fetchone()
+                if (model is None or _lease(model) != lease or lease.kind != 'model'
+                        or lease.domain_id != intent.domain_id or lease.owner_epoch != self._coordinator._epoch
+                        or json.loads(lease.binding)['profile']['target'] != asdict(subject)
+                        or isinstance(intent, ReleaseStep) and lease.lease_id != intent.memory_id):
+                    raise MemoryDenied('model_memory_mismatch')
+            if type(intent) is ReleaseStep:
+                conn.execute("UPDATE operations SET status='uncertain' WHERE id=?", (intent.operation_id,))
+            self._coordinator._uncertain(conn, intent.domain_id, operation_id, reference)
+            if model is not None and lease is not None and model['status'] != 'released':
+                conn.execute("UPDATE memory_reservations SET status='uncertain' WHERE id=?", (lease.lease_id,))
+                conn.execute("UPDATE memory_domains SET state='paused' WHERE domain=?", (lease.domain_id,))
+                self._change(conn, lease.domain_id, 'memory_uncertain', reference)
+            return True
+        return self._call(hold, now_ms)
 
     def _model_release_verified(self, conn: sqlite3.Connection, lease: MemoryLease) -> None:
         if lease.kind != 'model':

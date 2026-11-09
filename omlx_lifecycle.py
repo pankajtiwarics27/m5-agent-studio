@@ -399,23 +399,7 @@ class OmlxLifecycleBridge:
     def _hold(self, step: TransitionStep | ReleaseStep, lease: MemoryLease | None, status_code: int | None = None) -> None:
         now = self._now()
         reference = 'omlx_effect_uncertain' + (f'_http_{status_code}' if status_code is not None else '')
-        if isinstance(step, ReleaseStep):
-            self._coordinator.mark_release_uncertain(step, reference=reference, now_ms=now)
-            return
-        def hold(conn: sqlite3.Connection) -> None:
-            row = conn.execute('SELECT * FROM operations WHERE id=?', (step.operation_id,)).fetchone()
-            domain = self._coordinator._domain(conn, step.domain_id)
-            if (row is None or row['owner_epoch'] != self._coordinator._epoch or row['generation'] != step.generation
-                    or domain['operation_id'] != step.operation_id or domain['generation'] != step.generation
-                    or row['stage'] != step.kind or row['status'] not in ('active', 'uncertain')):
-                return
-            self._coordinator._uncertain(conn, step.domain_id, step.operation_id, reference)
-            if lease is not None:
-                self._memory._active(conn, lease)
-                conn.execute("UPDATE memory_reservations SET status='uncertain' WHERE id=?", (lease.lease_id,))
-                conn.execute("UPDATE memory_domains SET state='paused' WHERE domain=?", (lease.domain_id,))
-                self._memory._change(conn, lease.domain_id, 'memory_uncertain', reference)
-        self._coordinator._call(hold, now_ms=now)
+        self._memory.hold_model(step, lease, reference=reference, now_ms=now)
 
     async def send(self, permit: OmlxPermit, activity: OmlxActivity, *, lease: MemoryLease | None = None,
                    sample: MemorySample | None = None, profile: ModelMemoryProfile | None = None) -> Literal['pending', 'verify']:

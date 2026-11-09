@@ -86,6 +86,7 @@
       "test_native_dispatch*.py",
       "test_native_transition*.py",
       "test_native_inference*.py",
+      "test_native_interruption*.py",
       "test_native_scheduler_ownership.py",
       "test_native_load*.py",
       "test_native_unload*.py",

@@ -191,17 +191,12 @@ class NativeInferenceScheduler:
                         item, queued, plan.transition(item, memory)
                     )
                 except BaseException:
-                    self.driver.coord.mark_uncertain(
+                    self.driver.memory.hold_model(
                         item,
+                        memory,
                         reference="native_load_stage_interrupted",
                         now_ms=self.driver._now(),
                     )
-                    if memory is not None:
-                        self.driver.memory.mark_uncertain(
-                            memory,
-                            reference="native_load_stage_interrupted",
-                            now_ms=self.driver._now(),
-                        )
                     raise
                 memory = result.memory
             raise RuntimeDispatchDenied("coordinated_execution_unavailable")
@@ -212,17 +207,12 @@ class NativeInferenceScheduler:
         finally:
             try:
                 if control is not None:
-                    changed = self.driver.coord.mark_load_uncertain(
+                    self.driver.memory.hold_model(
                         control,
+                        memory,
                         reference="native_load_control_interrupted",
                         now_ms=self.driver._now(),
                     )
-                    if changed and memory is not None:
-                        self.driver.memory.mark_uncertain(
-                            memory,
-                            reference="native_load_control_interrupted",
-                            now_ms=self.driver._now(),
-                        )
                 elif queued is not None:
                     self.driver.coord.cancel(
                         queued.request_id, now_ms=self.driver._now()
@@ -465,17 +455,12 @@ class NativeInferenceScheduler:
         finally:
             try:
                 if step is not None and not retired:
-                    changed = self.driver.coord.mark_release_uncertain(
+                    self.driver.memory.hold_model(
                         step,
+                        memory,
                         reference="native_unload_interrupted",
                         now_ms=self.driver._now(),
                     )
-                    if changed and memory is not None:
-                        self.driver.memory.mark_uncertain(
-                            memory,
-                            reference="native_unload_interrupted",
-                            now_ms=self.driver._now(),
-                        )
                 if queued is not None and not retired:
                     self.driver.coord.cancel(
                         queued.request_id, now_ms=self.driver._now()
@@ -610,17 +595,12 @@ class NativeInferenceScheduler:
                 except BaseException:
                     # A producer can fail AFTER claim but BEFORE the concrete
                     # driver starts. Do not strand a dispatched stage or retry.
-                    self.driver.coord.mark_uncertain(
+                    self.driver.memory.hold_model(
                         item,
+                        memory,
                         reference="native_scheduler_stage_interrupted",
                         now_ms=self.driver._now(),
                     )
-                    if memory is not None:
-                        self.driver.memory.mark_uncertain(
-                            memory,
-                            reference="native_scheduler_stage_interrupted",
-                            now_ms=self.driver._now(),
-                        )
                     raise
                 memory = result.memory
             raise RuntimeDispatchDenied("coordinated_execution_unavailable")
@@ -635,17 +615,12 @@ class NativeInferenceScheduler:
                 if request is not None:
                     # Independent native completion releases its request before
                     # usage/tools. A close AFTER that is not new uncertainty.
-                    changed = self.driver.coord.mark_request_uncertain(
+                    self.driver.memory.hold_model(
                         request,
+                        memory,
                         reference="native_scheduler_interrupted",
                         now_ms=self.driver._now(),
                     )
-                    if changed and memory is not None:
-                        self.driver.memory.mark_uncertain(
-                            memory,
-                            reference="native_scheduler_interrupted",
-                            now_ms=self.driver._now(),
-                        )
                 elif queued is not None:
                     # Only this actor's queued waiter; never cancel another
                     # request, settle its memory or claim native cancellation.

@@ -641,30 +641,7 @@ class OllamaLifecycleBridge:
             self.memory._admission_call(commit, sample, now)
 
     def _failure(self, permit: OllamaPermit, lease: MemoryLease | None) -> None:
-        now = self._now()
-        intent = permit.intent
-        try:
-            if isinstance(intent, ReleaseStep):
-                self.coordinator.mark_release_uncertain(
-                    intent, reference="native_release_uncertain", now_ms=now
-                )
-            elif isinstance(intent, TransitionStep):
-                self.coordinator.mark_uncertain(
-                    intent, reference="ollama_native_uncertain", now_ms=now
-                )
-            elif isinstance(intent, LoadLease):
-                self.coordinator.mark_load_uncertain(
-                    intent, reference="native_load_uncertain", now_ms=now
-                )
-            else:
-                self.coordinator.mark_request_uncertain(
-                    intent, reference="ollama_native_uncertain", now_ms=now
-                )
-        finally:
-            if lease is not None:
-                self.memory.mark_uncertain(
-                    lease, reference="ollama_native_uncertain", now_ms=now
-                )
+        self.memory.hold_model(permit.intent, lease, reference="ollama_native_uncertain", now_ms=self._now())
 
     def drain(self, permit: OllamaPermit, activity: OllamaActivity) -> bool:
         if (

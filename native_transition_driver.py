@@ -766,13 +766,12 @@ class NativeTransitionDriver:
             return ReleaseResult(step, None, True)
         except BaseException as exc:
             if valid:
-                self.coord.mark_release_uncertain(
-                    step, reference="native_release_interrupted", now_ms=self._now()
+                self.memory.hold_model(
+                    step,
+                    held,
+                    reference="native_release_interrupted",
+                    now_ms=self._now(),
                 )
-                if held is not None:
-                    self.memory.mark_uncertain(
-                        held, reference="native_release_interrupted", now_ms=self._now()
-                    )
             if not isinstance(exc, Exception):
                 raise
             raise RuntimeDispatchDenied("coordinated_execution_unavailable") from None
@@ -932,15 +931,12 @@ class NativeTransitionDriver:
             # No retry/release/next-step inference on an interrupted stage. Native
             # bridges additionally retain their own send markers and late effects.
             if valid:
-                self.coord.mark_uncertain(
-                    step, reference="native_transition_uncertain", now_ms=self._now()
+                self.memory.hold_model(
+                    step,
+                    held,
+                    reference="native_transition_uncertain",
+                    now_ms=self._now(),
                 )
-                if held is not None:
-                    self.memory.mark_uncertain(
-                        held,
-                        reference="native_transition_uncertain",
-                        now_ms=self._now(),
-                    )
             if not isinstance(exc, Exception):
                 raise
             if isinstance(exc, RequestFitDenied):

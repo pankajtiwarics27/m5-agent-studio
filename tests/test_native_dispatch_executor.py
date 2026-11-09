@@ -720,6 +720,11 @@ for backend in ('ollama','lmstudio'):
  for actor in ('inference','load'):
   with pytest.MonkeyPatch.context() as patch:
    test_same_target_does_not_make_another_fifo_acquire_claim_ours(pathlib.Path('private-foreign-transition-'+backend+'-'+actor),patch,backend,actor)
+from test_native_interruption_holds import test_late_native_failure_cannot_pause_a_successors_live_model,test_owned_interruption_atomically_holds_slot_and_actual_model_without_retiring
+for backend in ('ollama','lmstudio'):
+ for old in ('request','operation'):
+  test_late_native_failure_cannot_pause_a_successors_live_model(pathlib.Path('private-late-hold-'+backend+'-'+old),backend,old)
+ test_owned_interruption_atomically_holds_slot_and_actual_model_without_retiring(pathlib.Path('private-owned-hold-'+backend),backend,'request','live')
 print('isolated native executor and shared transaction guards passed')
 """.replace("REPO", repr(str(root)))
     env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}

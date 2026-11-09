@@ -1016,3 +1016,64 @@ app/standalone auth/origin smokes passed. Standalone4,276,877bytes; fresh backen
 6/6 passed. Inherited P7-PARK-01/release-review artifacts remain untouched, not a
 current green approval. Full regression and fresh exact-head CI remain pending
 at this chronological note; no activation or independent acceptance is claimed.
+
+## Atomic model interruption holds, not stale callback ownership
+
+The preceding81656c2 checkpoint passed **4909 local tests,53 skips,one warning**;
+PR CI42543358826 and push CI42543353459 were green. PR260 comment6730019432
+supersedes its chronological pending notes. Those are historical results, not
+validation of this new source.
+
+A further offline audit found that split failure handling could ignore a failed
+current-intent mark and still pause model memory after the old stage/slot advanced.
+The initial10-case run had8 actual memory-poisoning failures and2 fixture permit
+construction errors; those fixture errors were repaired, not counted as safety
+regressions. The completed tests exercise old native callbacks, a real load moving
+to verify, and real verify completing before an independent successor is claimed.
+
+`SharedMemoryAdmission.hold_model` now checks exact current intent/resource scope
+and writes coordinator uncertainty plus actual model uncertainty/paused ledger in
+**one fenced transaction**. Actor and acquire/release-driver cleanup and all three
+native bridges use this seam instead of split writes. It creates no native action,
+producer or recovery authority. The coordinator's current-step metadata selector
+is factored from its deadline gate; native active-step semantics stay unchanged.
+A completed/stale request or acquire stage returnsFalse before touching old memory
+or a successor. Genuine current request/load slots, active or already uncertain
+acquire stages and still-owned release barriers remain held even when their
+request was cancelled/expired. Repeated failures never retire a slot or charge.
+
+Ownership is not always a phase check. A targetless release owns its exact durable
+request/source-memory barrier across drain/unload until retirement. Similarly,
+a physically proved acquire-source unload may advance to load before independent
+source-attributed zero settlement. Its exact still-charged source hold remains
+fenceable only with the same current operation/epoch/generation/source/target and
+durable complete_unload receipt. A released hold or completed successor is not
+unpaid settlement and cannot be paused by the old callback. This exception keeps
+nonzero/failed settlement conservative, without polling, implicit recovery or a
+new target hold. Physical proof, ACK and cancellation still do not prove zero.
+
+Actual model ID/binding/work/epoch/domain/kind/target are validated before writes;
+release additionally requires the exact source-memory ID. A failed memory/journal
+write rolls back both halves, avoiding a partially held slot or ledger. No model
+sample or native operation is performed under the transaction. This is accounting
+and failure containment, not dispatch/native qualification or schema migration.
+
+Initial evidence: **56 new offline tests;1304 passed,one upstream warning** in the
+combined24-module suite (66.07s), including current cancelled/expired holds, atomic
+rollback, wrong model identity, release barrier advancement and unpaid versus
+retired source memory, plus current/stale source-only oMLX callbacks. Private standalone exercises both real current holds and
+late native callback refusal without public sibling fallback. Native facts and
+transports remain synthetic. Full regression and exact-head CI are recorded
+separately after execution. No defaults/HTTP redirection/native activation,
+oMLX target/inference, already-absent/unload-all/cache policy, LC09 recovery or
+independent acceptance is added. Schema staysv4; inherited P7-PARK-01 and its
+historical release-review artifacts remain unchanged.
+
+Five valid isolated mutations were caught: ignore current slot (2failures), ignore
+acquire stage/dispatch (2), split the fenced hold with an early commit (8), drop
+unpaid-source fencing (1) and reuse a released source hold (1). Each ran against
+a temporary shadow module, leaving tracked kernels unchanged. These prove test
+sensitivity to those local defects, not hardware or independent acceptance.
+Bundle4,277,676bytes; app/standalone auth/startup smokes, standalone sibling-import
+isolation, Ruff/mypy75sources, docs259files/ADRs, scope map201modules/13areas,
+source/preservation/backend/performance contracts and screenshots6/6 pass.
