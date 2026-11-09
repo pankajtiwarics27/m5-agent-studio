@@ -19,8 +19,10 @@ permissions:
 
 jobs:
   candidate:
-    # The job pushes its own commit; without this guard that push would start it again.
-    if: "!contains(github.event.head_commit.message, '[skip candidate]')"
+    # The job pushes its own commit; without this guard that push would start it again. Match the
+    # subject prefix rather than a marker string: a marker also matches this workflow's own commit
+    # message whenever the change is described in it.
+    if: "!startsWith(github.event.head_commit.message, 'chore(uiv2): publish the cross-tab candidate')"
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
