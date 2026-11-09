@@ -5,14 +5,14 @@
   "program": "AP",
   "revision": "1.2",
   "prepared_date": "2026-11-08",
-  "lifecycle": "registered_tracking_ap002_active_ap003_authorized_sequential",
+  "lifecycle": "registered_tracking_ap002_done_ap003_authorized_next",
   "source_snapshot": "a67e8b291614f8afdac7c8d38ba51bcc8926d695",
   "source_repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "specification": "docs/autonomous-production-roadmap.md",
   "agent_prompt": "M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md",
   "authority": {
     "precedence": "AGENTS.md, existing security/approval rules and owning program ledgers remain binding.",
-    "scope": "AP tracking was registered through AP-001. A later explicit owner decision authorizes AP-002 and AP-003 sequentially; runtime activation and AP-004 through AP-032 remain unauthorized.",
+    "scope": "AP-001 and AP-002 are delivered. AP-003 is the next owner-authorized story but remains unclaimed and must be separately claimed; runtime activation and AP-004 through AP-032 remain unauthorized.",
     "registration_gate": "AP-001 records the tracking source and claim protocol; its merge did not authorize downstream work. The later AP-002/AP-003 authorization is separately recorded in program_registration.authorization_history.",
     "other_ledgers": "Do not alter AS/M5/UIUX/UIV2/LC tracking without the owning protocol.",
     "approval": "Agents cannot fabricate owner, screenshot, independent security or release approval."
@@ -177,7 +177,7 @@
       "title": "Resolve mission scope and operating-envelope decisions",
       "priority": "P0",
       "optional": false,
-      "status": "in_review",
+      "status": "done",
       "authorization": "owner_decisions_for_real_hardware_accounts_and_budgets",
       "dependencies": [
         "AP-001"
@@ -238,11 +238,11 @@
         "owner": "arena/5779cf5f-m5-agent-studio",
         "branch": "arena/5779cf5f-m5-agent-studio",
         "base_sha": "fecd51faec7cf636d38c7ef5340a14d4f98f9f92",
-        "head_sha": "69a01f6fc2d76961144561b4f0e237c16d4c7ad2",
+        "head_sha": "af67df404f07caefb176d054672dbc80fd48c79e",
         "claimed_at": "2026-11-09T16:09:30Z",
-        "heartbeat_at": "2026-11-09T17:09:25Z",
+        "heartbeat_at": "2026-11-09T17:23:52Z",
         "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/280",
-        "delivery_status": "pr_open",
+        "delivery_status": "merged",
         "acceptance_evidence": [
           "product/M5_Autonomous_Production_Operating_Envelope.json decisions U01-U06 plus docs/autonomous-production-operating-envelope.md §2 keep each unsupplied owner value explicitly pending and bind exact blocked story/action lists plus safe work.",
           "The operating-envelope owner_hardware_statement records Apple M5/24 GB/1 TB separately from measured_inventory; the latter remains not_measured, null-valued and populated only through the generic hardware_capabilities inventory/qualification recipe documented in §3.",
@@ -256,15 +256,18 @@
           "ruff check .; mypy (76 sources); tracked compileall; frontend syntax; docs/governance/security-record/baseline/test-map validation: passed.",
           "Local and standalone loopback smoke, demo transcript, six-screenshot manifest, studio/route/subsystem regeneration and roadmap dashboard check: passed with zero tracked generated drift.",
           "autonomous_production_decisions.py: valid; digest 235dc98bb142d204f1d3a7f6e4bd03af1c1dfbefce6d15c6ad24a4f4f0a50aef; U01-U06 pending; activation false; inventory not_measured; no automatic promotion.",
-          "security_release_gate.py --json: invariants satisfied and expected release-blocked on unsigned human review; lifecycle feasibility: offline synthetic expectations match, activation false. qualify_environment.py --all: expected exit 2, blocked outside Apple M5/24 GB target and without container runtime."
+          "security_release_gate.py --json: invariants satisfied and expected release-blocked on unsigned human review; lifecycle feasibility: offline synthetic expectations match, activation false. qualify_environment.py --all: expected exit 2, blocked outside Apple M5/24 GB target and without container runtime.",
+          "Final PR #280 head af67df404f07caefb176d054672dbc80fd48c79e passed push CI run 42661850062 and pull-request CI run 42661861110 on Python 3.11, 3.12 and 3.13 plus Browser safety regressions.",
+          "PR #280 merged as ce2373dd394ae1ecc86c81a58b043f7ff23e47d1; the immediate main push run 42664215927 was concurrency-cancelled by scheduled run 42665031438 on the same SHA, whose Python 3.11/3.12/3.13 and browser-safety jobs all passed.",
+          "Post-merge closeout against main ce2373dd394ae1ecc86c81a58b043f7ff23e47d1: scoped quality.docs-ci selection ran 22 modules with 518 passed and one upstream Starlette warning on Python 3.11; Ruff, mypy (76 sources), compileall, frontend syntax, AP validator, docs/governance/security-record/baseline/test-map/dashboard and diff checks passed."
         ],
         "blockers": [
-          "U01-U06 real-owner values remain explicitly pending; exact story/action denials and safe offline work are recorded per decision. This is intentional AP-002 output, not a reason to infer values.",
-          "Owner-host inventory remains not_measured: this Linux x86_64 sandbox has 3.85 GiB and cannot qualify the separately stated Apple M5/24 GB/1 TB host, installed runtimes or headroom.",
+          "U01-U06 real-owner values remain explicitly pending; exact story/action denials and safe offline work are recorded per decision. AP-002 completion does not infer those values.",
+          "Owner-host inventory remains not_measured: the implementation sandbox was Linux x86_64 with 3.85 GiB and could not qualify the separately stated Apple M5/24 GB/1 TB host, installed runtimes or headroom.",
           "No runtime, provider, account, file, egress, spending, promotion or lifecycle activation is authorized or implemented. Production release remains blocked on existing independent-security/signing gates.",
-          "AP-003 is authorized sequentially but remains not_started and unclaimed for a separate later branch/PR; AP-004 through AP-032 remain unauthorized."
+          "AP-003 is owner-authorized next but remains not_started and unclaimed for a separate branch/PR; AP-004 through AP-032 remain unauthorized."
         ],
-        "handoff": "AP-002 implementation snapshot 69a01f6fc2d76961144561b4f0e237c16d4c7ad2 is in review on PR #280. The strict offline bundle validates U01-U06, generic inventory evidence separation, exact roadmap blockers and fictional deny-by-default policy/budget scopes without runtime activation. Final current-head CI is required; after AP-002 delivery, AP-003 may be claimed only on its own later branch/PR.",
+        "handoff": "AP-002 is done: PR #280 head af67df404f07caefb176d054672dbc80fd48c79e passed the full Python/browser matrix and merged as ce2373dd394ae1ecc86c81a58b043f7ff23e47d1. Same-SHA post-merge CI run 42665031438 passed. U01-U06 and measured inventory remain explicitly pending, activation remains false, and AP-003 is the next authorized but unclaimed separate story.",
         "blast_radius": {
           "objective_and_gap": "Turn U01-U06 into versioned, machine-validated current state that distinguishes owner statements, measured facts and explicitly pending choices; current roadmap prose alone is not a consumable configuration or denial fixture.",
           "options": "Reject a runtime control plane or hard-coded owner machine profile. Prefer additive AP-owned schema/data, validation/tests and documentation; reuse existing hardware/grant/routing concepts without activating them.",
@@ -274,7 +277,7 @@
           "compatibility_and_rollback": "No feature flag or migration. Revert the AP-002 additive records and validator; preserve AP-001 history and all owning-program ledgers.",
           "required_evidence": "Positive, negative, schema/version, unknown-field, missing-grant, pending-decision and host-inventory separation tests; docs/governance/CI and generated-drift checks. Installed owner-host measurements remain blocked."
         },
-        "validated_against_main_sha": "b598eb8454fa7a23e2613eb4219caa44ba666c5a",
+        "validated_against_main_sha": "ce2373dd394ae1ecc86c81a58b043f7ff23e47d1",
         "changed_files": [
           "AGENTS.md",
           "autonomous_production_decisions.py",
@@ -286,6 +289,25 @@
           "pyproject.toml",
           "tests/test_autonomous_production_decisions.py",
           "tests/test_scopes.json"
+        ],
+        "merged_at": "2026-11-09T17:23:52Z",
+        "merge_commit_sha": "ce2373dd394ae1ecc86c81a58b043f7ff23e47d1",
+        "completion_recorded_by": "arena/841521ae-m5-agent-studio",
+        "completion_recorded_at": "2026-11-09T17:46:39Z",
+        "completion_base_sha": "ce2373dd394ae1ecc86c81a58b043f7ff23e47d1",
+        "completion_branch": "arena/841521ae-m5-agent-studio",
+        "completion_changed_files": [
+          "AGENTS.md",
+          "docs/autonomous-production-operating-envelope.md",
+          "product/M5_Autonomous_Production_Roadmap.json"
+        ],
+        "completion_evidence": [
+          "PR #280 merged at 2026-11-09T17:23:52Z as ce2373dd394ae1ecc86c81a58b043f7ff23e47d1; merged PR head af67df404f07caefb176d054672dbc80fd48c79e is in main history.",
+          "Final implementation-head push CI run 42661850062 and pull-request CI run 42661861110 each passed Python 3.11, 3.12 and 3.13 plus Browser safety regressions.",
+          "The repository owner explicitly requested the PR #280 merge after the AP-002 handoff. AP-002 requires no screenshot, playable-media or independent-security approval and claims none.",
+          "The immediate post-merge push run 42664215927 was canceled only because scheduled run 42665031438 superseded it on the same merge SHA; all four jobs in the superseding run passed.",
+          "All five AP-002 acceptance criteria remain mapped to versioned records, strict offline tests and documentation. Explicitly pending U01-U06 and not_measured owner-host inventory satisfy the bounded acceptance criteria without inferred consent or activation.",
+          "Local post-merge closeout validation against main ce2373dd394ae1ecc86c81a58b043f7ff23e47d1: scoped quality.docs-ci selection reported 518 passed and one upstream warning; AP invariants, Ruff, mypy, compileall, frontend syntax, validator, docs, governance, security-record consistency, baseline, test-map, dashboard and diff checks passed. Closeout PR current-head CI remains required before this completion record lands."
         ]
       },
       "implementation_prompt": "Implement AP-002: Resolve mission scope and operating-envelope decisions. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
@@ -2633,7 +2655,7 @@
     "reconciliation_evidence": "docs/autonomous-production-ap001-reconciliation.md",
     "registered_by_story": "AP-001",
     "owner_authorized_date": "2026-11-09",
-    "activation_scope": "AP-002 and AP-003 are owner-authorized sequential story work after AP-001 completion; claim one story per branch/PR; no product runtime activation.",
+    "activation_scope": "AP-002 is delivered; AP-003 remains owner-authorized as the next separate story/branch/PR; no product runtime activation.",
     "runtime_activation_authorized": false,
     "authorized_downstream_stories": [
       "AP-002",
