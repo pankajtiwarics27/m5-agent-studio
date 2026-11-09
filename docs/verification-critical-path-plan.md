@@ -26,6 +26,14 @@ after the merge (`42698201085`, `eab31d7`) cost 43.9 job-minutes and 13.5
 minutes wall clock — deliberately, because the merged tree is not the pull
 request head tree and that run is the post-merge confirmation.
 
+**Residual cost, measured on this page's own branch.** The saving applies to a
+push made while a pull request is already open. The first push of a branch
+happens before its pull request exists, so nobody can delegate it: this branch
+cost `42701605403` 41.1 job-minutes for that first push plus `42701630354` 42.9
+for the pull request — the full 84 for one revision, because the pull request
+was opened after the push had started. Compare like with like: quote the 48%
+against a follow-up revision, and never quote a first-push pair as a saving.
+
 **What did not change is the part that now matters: a pull request still takes
 about 13 minutes to prove itself.** Runner usage fell; the required verification
 critical path did not. That is the next problem, and it is a different problem.
