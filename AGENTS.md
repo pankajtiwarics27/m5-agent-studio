@@ -223,6 +223,22 @@ python scripts/validate_governance.py                   # also on the change cla
 python scripts/validate_adrs.py                         # only if you touched docs/adr/
 ```
 
+### 5.5 Measure the suite before changing how it runs
+
+Do not make CI faster by guessing. Profile first, then change the trigger or the
+step that the profile names:
+
+- `python -m pytest -q --durations=30 --durations-min=1.0` is the local profile;
+  CI prints the same list (`--durations=15`) inside the run log, plus a
+  `::notice` line with the step's elapsed seconds.
+- The local and CI profiles are not the same profile: CI installs no
+  ImageMagick, so the pixel pass over `docs/media/` costs minutes locally and
+  nothing there. Optimise the machine you measured.
+- Sharding, `xdist`, or dropping a leg changes coverage. Justify it from the
+  measured CI-side numbers, not from local wall clock.
+- A run is never restarted to look faster. Report the run id, the unfinished
+  job, and the queue-versus-execute split instead.
+
 ## 6. Branch, commit, and merge rules
 
 - **Branches:** one story per branch, named `as-XXX-short-slug` (e.g.
