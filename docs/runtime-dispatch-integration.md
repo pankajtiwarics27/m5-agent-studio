@@ -1249,3 +1249,15 @@ dispatch and the explicit offline/demo branch. See the
 [direct load-route audit](lc08-direct-load-route-audit.md); it makes no physical
 load claim. The matrix currently records29owners/54sites, eight bounded
 assessments and21inventory-only owners; no activation or acceptance advancement.
+
+
+## Bounded unload-all route failure handling
+
+The direct `api_unload_all` route previously returned model IDs after any per-model
+HTTP status and ignored redirects/inventory failures. Its online legacy path now
+requires a valid inventory and 2xx for each selected unload, returning a private
+503 on uncertainty and propagating cancellation. Earlier successful per-model
+responses are not rolled back if a later item fails; callers should refresh the
+inventory. The [unload-all audit](lc08-unload-all-route-audit.md) does not claim
+physical unload or release. The matrix is bounded at29owners/54sites, nine
+assessed and20inventory-only owners; no acceptance advancement.

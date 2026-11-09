@@ -465,6 +465,7 @@ def test_owner_matrix_matches_current_static_inventory_without_promoting_coverag
             "_unload_omlx_model": "bounded_legacy_cleanup_failure",
             "api_unload_model": "bounded_legacy_unload_route",
             "api_load_model": "bounded_legacy_load_route",
+            "api_unload_all": "bounded_legacy_unload_all_route",
         }
         assert row["assessment"] == assessments.get(
             row["owner"], "inventory_only_in_this_audit"
@@ -504,6 +505,9 @@ from test_workflow_picker_coordinated import test_picker_oversize_output_closes_
 from test_workflow_unload_legacy import test_online_legacy_cleanup_rejects_unconfirmed_http_status_without_leaking_body
 from test_workflow_unload_route import test_online_unload_route_refuses_non_success_status_privately
 from test_workflow_load_route import test_online_load_route_refuses_non_success_status_privately
+from test_workflow_unload_all_route import test_unload_all_route_refuses_unconfirmed_individual_cleanup_privately
+with pytest.MonkeyPatch.context() as patch:
+ test_unload_all_route_refuses_unconfirmed_individual_cleanup_privately(patch,500)
 with pytest.MonkeyPatch.context() as patch:
  test_online_load_route_refuses_non_success_status_privately(patch,500)
 with pytest.MonkeyPatch.context() as patch:

@@ -6087,12 +6087,39 @@ async def api_unload_all(request: Request) -> JSONResponse:
     if not await _omlx_is_online(client):
         _demo_loaded_model = None
         return JSONResponse({"status": "ok", "unloaded": ["demo"]})
-    unloaded = []
-    res = await client.get(f"{OMLX_BASE}/admin/api/models", timeout=5.0)
-    for m in res.json().get("models", []):
-        if m.get("loaded") and not m.get("virtual"):
-            await client.post(f"{OMLX_BASE}/v1/models/{m['id']}/unload", timeout=30.0)
-            unloaded.append(m["id"])
+    try:
+        endpoint = f"{OMLX_BASE}/admin/api/models"
+        response = await client.get(endpoint, timeout=5.0)
+        _reject_redirect_response(response, endpoint)
+        if not 200 <= response.status_code < 300:
+            raise RuntimeError("model inventory was not confirmed")
+        inventory = response.json()
+        models = inventory.get("models") if isinstance(inventory, dict) else None
+        if not isinstance(models, list):
+            raise RuntimeError("model inventory was malformed")
+        unloaded = []
+        for model in models:
+            if not isinstance(model, dict):
+                raise RuntimeError("model inventory was malformed")
+            if model.get("loaded") and not model.get("virtual"):
+                model_id = model.get("id")
+                if not isinstance(model_id, str) or not model_id:
+                    raise RuntimeError("model inventory was malformed")
+                unload_endpoint = f"{OMLX_BASE}/v1/models/{model_id}/unload"
+                unload_response = await client.post(
+                    f"{OMLX_BASE}/v1/models/{model_id}/unload", timeout=30.0
+                )
+                _reject_redirect_response(unload_response, unload_endpoint)
+                if not 200 <= unload_response.status_code < 300:
+                    raise RuntimeError("model cleanup was not confirmed")
+                unloaded.append(model_id)
+    except asyncio.CancelledError:
+        raise
+    except Exception:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "legacy_unload_all_unconfirmed", "retryable": False},
+        ) from None
     return JSONResponse({"status": "ok", "unloaded": unloaded})
 
 
