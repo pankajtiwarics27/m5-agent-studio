@@ -16,9 +16,9 @@ Environment: `linux` / `x64`, 2 CPUs, Node `v22.22.3`, `Python 3.11.2`, `Headles
 
 | Metric | Actual | Gate |
 | --- | ---: | ---: |
-| Fast real SSE schedules | 58 in 336.8ms (172.2/s) | ≥20 and ≥50/s |
+| Fast real SSE schedules | 58 in 333.6ms (173.9/s) | ≥20 and ≥50/s |
 | Coalesced chat renders | 18 | fewer than 58 schedules, complete text retained |
-| Full-window ten-event frame | mean 1.76ms; nearest-rank p95 2.20ms; max 2.50ms | mean ≤4ms |
+| Full-window ten-event frame | mean 1.93ms; nearest-rank p95 2.60ms; max 3.20ms | mean ≤4ms |
 | Events / cache / cards | 30,000 / 5,000 / 300 | 5,000 / 300 ceilings |
 | Post-GC document nodes | 8544 → 8544 → 8544 | repeated-cycle growth ≤64 |
 | Post-GC JS heap | 3.24 MiB → 3.20 MiB → 3.21 MiB | cycle growth ≤8 MiB; baseline growth ≤16 MiB |
@@ -33,9 +33,9 @@ Streaming intentionally moves cards inside the trajectory scroller. The gate rep
 | --- | --- | ---: | ---: | ---: | ---: | ---: |
 | 1640x900 | light | 0.18827 | 0.18827 | 0.00000 | 0.00px | 0px |
 | 1640x900 | dark | 0.29613 | 0.29613 | 0.00000 | 0.00px | 0px |
-| 1440x900 | light | 0.26887 | 0.26887 | 0.00000 | 0.00px | 0px |
+| 1440x900 | light | 0.23046 | 0.23046 | 0.00000 | 0.00px | 0px |
 | 1440x900 | dark | 0.38410 | 0.38410 | 0.00000 | 0.00px | 0px |
-| 1280x800 | light | 0.23537 | 0.23537 | 0.00000 | 0.00px | 0px |
+| 1280x800 | light | 0.27460 | 0.27460 | 0.00000 | 0.00px | 0px |
 | 1280x800 | dark | 0.39229 | 0.39229 | 0.00000 | 0.00px | 0px |
 | 390x844 | light | 0.94757 | 0.94757 | 0.00000 | 0.00px | 0px |
 | 390x844 | dark | 1.35367 | 1.35367 | 0.00000 | 0.00px | 0px |

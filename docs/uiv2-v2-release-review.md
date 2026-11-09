@@ -82,10 +82,10 @@ Environment: `linux` / `x64`, 2 CPUs, `HeadlessChrome/153.0.8010.0`; disposable 
 
 | Metric | Actual | Gate/scope |
 | --- | ---: | --- |
-| Fast real SSE | 58 schedules in 336.8ms = 172.21/s | at least 50/s, complete reply retained |
-| Full-window frame | mean 1.76ms; p95 2.20ms; max 2.50ms | unchanged mean ≤4ms |
+| Fast real SSE | 58 schedules in 333.6ms = 173.86/s | at least 50/s, complete reply retained |
+| Full-window frame | mean 1.93ms; p95 2.60ms; max 3.20ms | unchanged mean ≤4ms |
 | Post-GC nodes | 8544 → 8544 → 8544 | no repeated-cycle growth beyond the declared budget |
-| Post-GC JS heap | 3395416 → 3356232 → 3366496 bytes | repeated-cycle plateau, not zero allocation |
+| Post-GC JS heap | 3396364 → 3360240 → 3366936 bytes | repeated-cycle plateau, not zero allocation |
 | Backend safety | 302 tests; 16 isolation checks | zero failures |
 | Local container isolation | unqualified; blocked (fail closed) | live probes not requested; not advertised as qualified |
 
