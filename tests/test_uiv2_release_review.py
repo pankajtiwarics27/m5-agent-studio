@@ -21,6 +21,14 @@ If this module fails again, treat it as a real signal and read ``findings`` in
 ``product/M5_2_0_UIUX_V2_Release_Review.json`` -- do not re-park it without an
 owner decision, and never satisfy it by citing a CI run that did not happen.
 
+PARKED AGAIN 2026-11-09 (P7-PARK-03). The phone Hall fix moved the seat grid's collapse from
+390px to 340px, which changes the pinned structural signature of the two 390x844 hall captures
+(`required.#hallStream.y` 2273.61 -> 1740.42). The baseline was re-captured and approved by the
+owner in the same branch, but the release evidence (`product/M5_2_0_UIUX_V2_Release_Evidence.json`)
+still cites the pre-fix run, so `findings` is non-empty and this module cannot pass yet. The
+unblock condition is the one P7-PARK-02 had: land the change, then import evidence against a green
+run of a commit that already contains it. Owner decision recorded in docs/uiux-2-0-p7-parked.md.
+
 UNPARKED AGAIN 2026-09-11 -> 2026-11-09. P7-PARK-02 parked these assertions while the
 UIV2-P7-07 header fold made the committed release evidence stale. The unblock condition
 was met: ``main`` went green at merge commit ``6aca516``, a commit that already contains
@@ -40,6 +48,14 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
+
+# PARKED 2026-11-09 (P7-PARK-03, see docs/uiux-2-0-p7-parked.md). Skipped, never edited: the
+# assertions below are the release-handoff contract and must be restored, unchanged, as soon as the
+# evidence can cite a green run of a commit that contains them.
+pytestmark = pytest.mark.skip(
+    reason="P7-PARK-03: release evidence is pre-fix; import it against a green run of the commit that carries the phone Hall fix, then unpark"
+)
+
 SCRIPT = ROOT / "scripts" / "uiv2_release_review.py"
 
 spec = importlib.util.spec_from_file_location("uiv2_release_review", SCRIPT)
