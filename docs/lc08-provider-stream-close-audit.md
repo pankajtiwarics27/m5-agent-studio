@@ -9,8 +9,8 @@ semantics. The regression uses only `httpx.MockTransport`; it makes no real
 provider/network request and performs no runtime or hardware qualification.
 
 The [static owner matrix](../tests/fixtures/runtime_dispatch/workflow_coverage.json)
-contains **29 owners / 54 static sites**. Twelve owners have bounded evidence;
-**17 remain inventory-only**. This remains a bounded owner audit, not
+contains **29 owners / 54 static sites**. Thirteen owners have bounded evidence;
+**16 remain inventory-only**. This remains a bounded owner audit, not
 comprehensive workflow, provider, or permission coverage. No runtime activation,
 hardware qualification, release acceptance, test8, or LC09–11 status advances.
 
