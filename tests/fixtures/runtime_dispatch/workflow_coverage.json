@@ -62,8 +62,8 @@
         "_unload_other_omlx_models",
         "guarded legacy HTTP (not coordinated authority)"
       ],
-      "assessment": "inventory_only_in_this_audit",
-      "evidence": "docs/runtime-dispatch-entry-points.md"
+      "assessment": "bounded_local_stream_consumer_close",
+      "evidence": "tests/test_workflow_local_stream_close.py"
     },
     {
       "owner": "_unload_omlx_model",

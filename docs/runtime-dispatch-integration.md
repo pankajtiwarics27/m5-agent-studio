@@ -1284,3 +1284,16 @@ This does not assert provider-side work cancellation or physical resource
 release. The matrix remains at 29 owners / 54 sites, with twelve bounded
 assessments and 17 inventory-only owners; no activation, hardware, acceptance,
 test8, or LC09–11 status advancement.
+
+
+## Bounded local-stream consumer-close handling
+
+The existing local oMLX-compatible stream now explicitly closes its delegated
+async iterator when `stream_any_model` consumers stop early. A deterministic
+`httpx.MockTransport` regression reproduces the previously open client-owned
+response body without accessing a local runtime. See the
+[local-stream closure audit](lc08-local-stream-close-audit.md). This makes no
+physical unload/release or provider-side cancellation claim. The matrix now
+contains 29 owners / 54 sites, thirteen bounded assessments and 16
+inventory-only owners; no activation, hardware, acceptance, test8, or LC09–11
+status advancement.

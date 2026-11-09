@@ -4991,8 +4991,13 @@ async def stream_any_model(
 
     # Local inference is heavy: hold the single heavy-model slot for the stream.
     async with _heavy_model_slot(rem_model):
-        async for item in _stream_omlx_completion(client, rem_model, clean_messages, temperature, max_tokens, reasoning_mode):
-            yield item
+        async with contextlib.aclosing(
+            _stream_omlx_completion(
+                client, rem_model, clean_messages, temperature, max_tokens, reasoning_mode
+            )
+        ) as local_source:
+            async for item in local_source:
+                yield item
 
 
 def _workflow_orchestrator(client: httpx.AsyncClient, workflow: str) -> WorkflowOrchestrator:
