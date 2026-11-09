@@ -307,8 +307,9 @@
           "The repository owner explicitly requested the PR #280 merge after the AP-002 handoff. AP-002 requires no screenshot, playable-media or independent-security approval and claims none.",
           "The immediate post-merge push run 42664215927 was canceled only because scheduled run 42665031438 superseded it on the same merge SHA; all four jobs in the superseding run passed.",
           "All five AP-002 acceptance criteria remain mapped to versioned records, strict offline tests and documentation. Explicitly pending U01-U06 and not_measured owner-host inventory satisfy the bounded acceptance criteria without inferred consent or activation.",
-          "Local post-merge closeout validation against main ce2373dd394ae1ecc86c81a58b043f7ff23e47d1: scoped quality.docs-ci selection reported 518 passed and one upstream warning; AP invariants, Ruff, mypy, compileall, frontend syntax, validator, docs, governance, security-record consistency, baseline, test-map, dashboard and diff checks passed. Closeout PR current-head CI remains required before this completion record lands."
-        ]
+          "Local post-merge closeout validation against main ce2373dd394ae1ecc86c81a58b043f7ff23e47d1: scoped quality.docs-ci selection reported 518 passed and one upstream warning; AP invariants, Ruff, mypy, compileall, frontend syntax, validator, docs, governance, security-record consistency, baseline, test-map, dashboard and diff checks passed. Completion-record PR #281 current-head CI remains required before this completion record lands."
+        ],
+        "completion_pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/281"
       },
       "implementation_prompt": "Implement AP-002: Resolve mission scope and operating-envelope decisions. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },

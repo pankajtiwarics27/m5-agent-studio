@@ -2,6 +2,8 @@
 
 **State:** done • **Claim base:** `fecd51faec7cf636d38c7ef5340a14d4f98f9f92` • **Delivered PR:** [#280](https://github.com/pankajtiwarics27/m5-agent-studio/pull/280) • **Merged:** 2026-11-09T17:23:52Z
 
+**Completion record:** [#281](https://github.com/pankajtiwarics27/m5-agent-studio/pull/281) • **Closeout branch:** `arena/841521ae-m5-agent-studio`
+
 ## Authority and bounded outcome
 
 After AP-001 completed, the owner explicitly authorized **AP-002 and AP-003
@@ -172,7 +174,7 @@ resolves the story, not U01–U06: those owner values remain explicitly pending,
 target-host inventory remains `not_measured`, automatic promotion remains off,
 and no provider, account, file, egress, spending, runtime or lifecycle authority
 is activated. AP-003 is only the next authorized, separately claimable story.
-This post-merge closeout must pass its own current-head CI before landing.
+Completion-record PR #281 must pass its own current-head CI before landing.
 
 ## Acceptance mapping
 
