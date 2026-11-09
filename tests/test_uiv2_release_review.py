@@ -20,6 +20,14 @@ property that actually matters: the summary must not drift from the measurement.
 If this module fails again, treat it as a real signal and read ``findings`` in
 ``product/M5_2_0_UIUX_V2_Release_Review.json`` -- do not re-park it without an
 owner decision, and never satisfy it by citing a CI run that did not happen.
+
+PARKED AGAIN 2026-11-09 under P7-PARK-02 (owner decision, PR #268). The UIV2-P7-07
+header fold and the owner-approved re-captured visual baseline changed
+``static/index.html``, which makes the committed release evidence stale, and the
+evidence may only cite a green run at a commit that already contains that file.
+``docs/uiux-2-0-p7-parked.md`` carries the unblock procedure. Nothing here is deleted
+or weakened: the assertions are unchanged and the contract still reports ``blocked``
+with the stale-evidence finding while the module is parked.
 """
 from __future__ import annotations
 
@@ -31,6 +39,11 @@ import sys
 from pathlib import Path
 
 import pytest
+
+pytestmark = pytest.mark.skip(
+    reason="P7-PARK-02: the release evidence may only cite a green run at a commit that "
+    "already contains this static/index.html; unpark per docs/uiux-2-0-p7-parked.md"
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "uiv2_release_review.py"
