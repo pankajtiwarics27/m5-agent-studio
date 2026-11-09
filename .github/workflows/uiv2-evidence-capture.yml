@@ -53,10 +53,18 @@ jobs:
           LD_LIBRARY_PATH="$RUNNER_TEMP/m5-browser/libs/lib" "$chrome" --version
       - name: Compare continuity walk
         run: |
-          node scripts/compare_continuity_walk.mjs --screenshots "$RUNNER_TEMP/compare" --json > "$RUNNER_TEMP/compare.json"
+          set -uo pipefail
           mkdir -p .uiv2-evidence
+          node scripts/compare_continuity_walk.mjs --screenshots "$RUNNER_TEMP/compare" --json > "$RUNNER_TEMP/compare.json" 2> "$RUNNER_TEMP/compare.err"
+          rc=$?
+          echo "exit=$rc bytes=$(wc -c < "$RUNNER_TEMP/compare.json")"
+          if [ "$rc" -ne 0 ]; then
+            while IFS= read -r line; do echo "::error title=compare-walk::${line}"; done < <(tail -n 20 "$RUNNER_TEMP/compare.err")
+            while IFS= read -r line; do echo "::error title=compare-output::${line}"; done < <(tail -n 20 "$RUNNER_TEMP/compare.json")
+            exit "$rc"
+          fi
           cp "$RUNNER_TEMP/compare.json" .uiv2-evidence/compare.json
-          python -c "import json,os;d=json.load(open('.uiv2-evidence/compare.json'));print('compare:', d.get('totals') or d.get('checks'))"
+          python -c "import json;d=json.load(open('.uiv2-evidence/compare.json'));print('compare:', d.get('totals') or d.get('checks'))"
       - name: Approved cross-tab structure walk
         run: |
           node scripts/uiux_v2_cross_tab_reference_walk.mjs \
