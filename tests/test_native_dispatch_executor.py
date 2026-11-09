@@ -19,12 +19,26 @@ async def collect(source):
     return [v async for v in source]
 
 
-async def context(tmp_path, backend, *, tools=None, messages=None):
+async def context(
+    tmp_path,
+    backend,
+    *,
+    tools=None,
+    messages=None,
+    max_tokens=512,
+    temperature=0.2,
+    reasoning_mode=None,
+    configure=None,
+    input_tokens=7000,
+):
     if backend == "ollama":
         import test_ollama_lifecycle_bridge as driver
     else:
         import test_lmstudio_lifecycle_bridge as driver
     b = driver.setup(tmp_path)
+    if configure is not None:
+        # Explicit synthetic qualification, never a production profile mutation.
+        configure(b)
     req, ml = await driver.warm(b)
     payload = dict(
         messages=messages
@@ -34,9 +48,11 @@ async def context(tmp_path, backend, *, tools=None, messages=None):
             dict(role="user", content="FULL ORIGINAL ಕರ್ನಾಟಕ 😀"),
         ],
         tools=tools,
-        temperature=0.2,
-        max_tokens=512,
-        reasoning_mode="high" if backend == "ollama" else "off",
+        temperature=temperature,
+        max_tokens=max_tokens,
+        reasoning_mode=reasoning_mode
+        if reasoning_mode is not None
+        else ("high" if backend == "ollama" else "off"),
     )
     call = rd.RuntimeDispatchCall(
         backend, req.target.artifact_id, "infer", rf.encode(payload)
@@ -78,9 +94,10 @@ async def context(tmp_path, backend, *, tools=None, messages=None):
         )
         version = b.q.version
     prep = rf.prepare_request(
-        req, fp, rf.OutputBudget(512), native.body, origin="coordinated_dispatch"
+        req, fp, rf.OutputBudget(max_tokens), native.body, origin="coordinated_dispatch"
     )
     harness(b, req, ml, prep, version=version)
+    b.input_tokens = input_tokens
     b.bridge.admit_request = b.service.authorizes
 
     async def fresh_sample():

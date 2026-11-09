@@ -10,6 +10,12 @@ input/refusal/cleanup and limited real warm-fit/native/standalone evidence, not
 all-workflow or installed qualification. The snapshot below remains pinned to its
 PR262 base; its next-increment recommendation led to that follow-up, not G1 closure.
 
+The next bounded [Hall HTTP summon audit](lc08-hall-summon-audit.md) adds one
+assessed owner (26 remain inventory-only), closes both owned attempt sources and
+denies coordinated changed-budget retries. Hall retains save/pin-before-cleanup
+semantics; cleanup refusal cannot announce success or erase the completed reply.
+It is not an MCP summon audit, LC09 retention change or installed qualification.
+
 ## Scope of this snapshot
 
 Reviewed against merged base `fc6a304c970fec65a8a324183a83443f71443318`
