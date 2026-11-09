@@ -475,6 +475,7 @@ def test_owner_matrix_matches_current_static_inventory_without_promoting_coverag
             "openai_gateway_chat.sse_gen": "bounded_chat_stream_consumer_close",
             "openai_gateway_chat": "bounded_chat_stream_consumer_close",
             "_coordinated_gateway_chat.events": "bounded_chat_stream_consumer_close",
+            "_unload_other_omlx_models": "bounded_unload_http_acknowledgement",
         }
         assert row["assessment"] == assessments.get(
             row["owner"], "inventory_only_in_this_audit"

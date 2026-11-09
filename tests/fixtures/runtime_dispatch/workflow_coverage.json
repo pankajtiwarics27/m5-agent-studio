@@ -78,8 +78,8 @@
       "seams": [
         "guarded legacy HTTP (not coordinated authority)"
       ],
-      "assessment": "inventory_only_in_this_audit",
-      "evidence": "docs/runtime-dispatch-entry-points.md"
+      "assessment": "bounded_unload_http_acknowledgement",
+      "evidence": "tests/test_workflow_unload_other_models.py"
     },
     {
       "owner": "_workflow_orchestrator.stream_model",

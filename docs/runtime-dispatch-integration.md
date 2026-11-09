@@ -1309,5 +1309,6 @@ its source iterator. Mock async-source tests use no model or network request.
 See the [chat-stream closure audit](lc08-chat-stream-close-audit.md). This does
 not qualify complete workflow, tool execution, provider-side cancellation,
 runtime activation, hardware, release acceptance, test8, or LC09–11. The matrix
-remains 29 owners / 54 sites, eighteen bounded assessments and 11
-inventory-only owners.
+remains 29 owners / 54 sites, nineteen bounded assessments and 10
+inventory-only owners. The bounded legacy cleanup check verifies response-status
+handling only; HTTP acknowledgment is not proof of physical resource release.
