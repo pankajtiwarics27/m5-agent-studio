@@ -954,30 +954,25 @@ def _grant_denials(grant: PolicyGrant, request: ActionRequest) -> tuple[str, ...
     reasons: list[str] = []
     if request.capability not in grant.capabilities:
         reasons.append("capability_not_granted")
-    if grant.providers and request.provider is None:
+    if request.provider is None:
         reasons.append("provider_scope_missing")
-    elif request.provider is not None and request.provider not in grant.providers:
+    elif request.provider not in grant.providers:
         reasons.append("provider_not_granted")
-    if grant.egress_destinations and request.egress_destination is None:
+    if request.egress_destination is None:
         reasons.append("egress_destination_scope_missing")
-    elif (
-        request.egress_destination is not None
-        and request.egress_destination not in grant.egress_destinations
-    ):
+    elif request.egress_destination not in grant.egress_destinations:
         reasons.append("egress_destination_not_granted")
-    if grant.accounts and request.account is None:
+    if request.account is None:
         reasons.append("account_scope_missing")
-    elif request.account is not None and request.account not in grant.accounts:
+    elif request.account not in grant.accounts:
         reasons.append("account_not_granted")
-    if grant.read_roots and request.read_path is None:
+    if request.read_path is None:
         reasons.append("read_path_scope_missing")
-    elif request.read_path is not None and not any(
-        _scope_contains(root, request.read_path) for root in grant.read_roots
-    ):
+    elif not any(_scope_contains(root, request.read_path) for root in grant.read_roots):
         reasons.append("read_path_not_granted")
-    if grant.write_roots and request.write_path is None:
+    if request.write_path is None:
         reasons.append("write_path_scope_missing")
-    elif request.write_path is not None and not any(
+    elif not any(
         _scope_contains(root, request.write_path) for root in grant.write_roots
     ):
         reasons.append("write_path_not_granted")
@@ -987,7 +982,7 @@ def _grant_denials(grant: PolicyGrant, request: ActionRequest) -> tuple[str, ...
         reasons.append("spending_currency_not_granted")
     if request.spend_minor_units > grant.spending.max_minor_units:
         reasons.append("spending_limit_exceeded")
-    if grant.data_classes and not request.data_classes:
+    if not request.data_classes:
         reasons.append("data_class_scope_missing")
     elif not set(request.data_classes).issubset(grant.data_classes):
         reasons.append("data_class_not_granted")
