@@ -1,14 +1,14 @@
 {
   "story": "UIV2-28",
   "git": {
-    "head": "144fb7fd32b5f0d2d8d59487b8cd9b096107bb9d",
-    "dirty": false
+    "head": "9315b51045caf2bc6ea6feef41c6547e5e94581b",
+    "dirty": true
   },
   "source_sha256": {
-    "static/index.html": "b37f117dd620b8a2d5b3a285eceb1e8738368e57b1ed187e52ce13b51337fe0d",
+    "static/index.html": "397c3ae069fe281d8150485e1b88e73c7970de8a1ac07841c6790f7fe685da0f",
     "scripts/uiv2_accessibility_adversarial_walk.mjs": "831d65473af6d28d3e77294420fa49130addb5c02d132b433d0141ded525e0c7"
   },
-  "generated_at": "2026-11-09T12:45:11.980Z",
+  "generated_at": "2026-11-09T18:01:14.188Z",
   "method": {
     "contrast": "WCAG 2 relative luminance on computed solid backgrounds",
     "zoom": "half CSS viewport with deviceScaleFactor=2",
@@ -1084,496 +1084,496 @@
       "viewport": "1440x900",
       "theme": "light",
       "pane": "start",
-      "path": "/tmp/ev-a11y2/rendered-1440x900-light-start.png",
-      "sha256": "24336114befb366863c3945c3270eff8eaab07a27a55262ad68a228bc29690c3"
+      "path": "/home/runner/work/_temp/uiv2-28/rendered-1440x900-light-start.png",
+      "sha256": "cfeb7f17b707ce6663fccca01864e43512546552b80a69801cd08219bd1df373"
     },
     {
       "group": "rendered",
       "viewport": "1440x900",
       "theme": "light",
       "pane": "harness",
-      "path": "/tmp/ev-a11y2/rendered-1440x900-light-harness.png",
-      "sha256": "071511727596d7a623dacc8c1e2e991b992ea5dc7ad2eb5bef8d0d5ec0c5f79b"
+      "path": "/home/runner/work/_temp/uiv2-28/rendered-1440x900-light-harness.png",
+      "sha256": "83960a2cd210a753a34c5a1b6ee39167386100408afa1767861bd4f1ec83e43d"
     },
     {
       "group": "rendered",
       "viewport": "1440x900",
       "theme": "light",
       "pane": "hall",
-      "path": "/tmp/ev-a11y2/rendered-1440x900-light-hall.png",
-      "sha256": "31d8b3513d3aa1328eebcad590976278b71e53a039436d1a1d53db74bfa96417"
+      "path": "/home/runner/work/_temp/uiv2-28/rendered-1440x900-light-hall.png",
+      "sha256": "d88d10edee7736b19768080af8e36c968c9a2799de993c2cdbe891bde2fd9041"
     },
     {
       "group": "rendered",
       "viewport": "1440x900",
       "theme": "light",
       "pane": "council",
-      "path": "/tmp/ev-a11y2/rendered-1440x900-light-council.png",
-      "sha256": "604483e5d75f6610ff1c8e7c9799904f88509019f032c38e2dec3e7d3169f557"
+      "path": "/home/runner/work/_temp/uiv2-28/rendered-1440x900-light-council.png",
+      "sha256": "477733081c03327d318b38b51c5f1540982398daadeede9a130510fd15b070eb"
     },
     {
       "group": "rendered",
       "viewport": "1440x900",
       "theme": "light",
       "pane": "debate",
-      "path": "/tmp/ev-a11y2/rendered-1440x900-light-debate.png",
-      "sha256": "49bdd9dabc7c61cd5e514e9bab99f42835b1763f639cec781869a6eab15c2548"
+      "path": "/home/runner/work/_temp/uiv2-28/rendered-1440x900-light-debate.png",
+      "sha256": "7ebd3602d5cde9170634c2c1a005391a0215acb6f309ecde33eb237f560d0497"
     },
     {
       "group": "rendered",
       "viewport": "1440x900",
       "theme": "light",
       "pane": "chat",
-      "path": "/tmp/ev-a11y2/rendered-1440x900-light-chat.png",
-      "sha256": "32f16c37f38393c35aa6cb415864e0650653d61d533b2e08712b8360b06ca84a"
+      "path": "/home/runner/work/_temp/uiv2-28/rendered-1440x900-light-chat.png",
+      "sha256": "7b79f88ff3ef9c9078b0ad1708ddd3bdb8e9041d090127e9332f36fe92bade5d"
     },
     {
       "group": "rendered",
       "viewport": "1440x900",
       "theme": "dark",
       "pane": "start",
-      "path": "/tmp/ev-a11y2/rendered-1440x900-dark-start.png",
-      "sha256": "6278f2590190d32bb86134151d39ed50a4d24d8d64a5e7687eecf5f05fdc3133"
+      "path": "/home/runner/work/_temp/uiv2-28/rendered-1440x900-dark-start.png",
+      "sha256": "3975bf7e89149dc4a572d9ed1fad721d642f17c87a85c164b445d982bbcbddee"
     },
     {
       "group": "rendered",
       "viewport": "1440x900",
       "theme": "dark",
       "pane": "harness",
-      "path": "/tmp/ev-a11y2/rendered-1440x900-dark-harness.png",
-      "sha256": "ecf485c9d56bf68490e2521cd0070afb438053783b923cf6bfc39a49bd9cf649"
+      "path": "/home/runner/work/_temp/uiv2-28/rendered-1440x900-dark-harness.png",
+      "sha256": "419df325563e2689132f3965df33d17a47cc12c9f7519cd4cdedbbd724299ce9"
     },
     {
       "group": "rendered",
       "viewport": "1440x900",
       "theme": "dark",
       "pane": "hall",
-      "path": "/tmp/ev-a11y2/rendered-1440x900-dark-hall.png",
-      "sha256": "9dddd226a206c1b9c9c263f1225b7860164e2092c8cbb845e4803372e007a96b"
+      "path": "/home/runner/work/_temp/uiv2-28/rendered-1440x900-dark-hall.png",
+      "sha256": "efdf142fb1ba4197f156a3421eb08e93569ddbf8627a6c79e232be4e83a6049d"
     },
     {
       "group": "rendered",
       "viewport": "1440x900",
       "theme": "dark",
       "pane": "council",
-      "path": "/tmp/ev-a11y2/rendered-1440x900-dark-council.png",
-      "sha256": "f13728cb6c6c8c56fe37bdd984b4475b9800749a9be59d28e1fd97f433beca61"
+      "path": "/home/runner/work/_temp/uiv2-28/rendered-1440x900-dark-council.png",
+      "sha256": "550e6c64cf0c27d21eb414d29334e8610da9dda85703085057cd9b8f87c5e77e"
     },
     {
       "group": "rendered",
       "viewport": "1440x900",
       "theme": "dark",
       "pane": "debate",
-      "path": "/tmp/ev-a11y2/rendered-1440x900-dark-debate.png",
-      "sha256": "bcfa9f11137b8597999b2c94f7d48a8daa1fce98623b189201b5f6e1e719da3e"
+      "path": "/home/runner/work/_temp/uiv2-28/rendered-1440x900-dark-debate.png",
+      "sha256": "d5f755ea8553361bc995a4f65189b3ef0296c7a34e3810e5aaf9ee8680919fba"
     },
     {
       "group": "rendered",
       "viewport": "1440x900",
       "theme": "dark",
       "pane": "chat",
-      "path": "/tmp/ev-a11y2/rendered-1440x900-dark-chat.png",
-      "sha256": "0422bd7a8d222e1d75628041b95114aab7f216429bf6156aa97f71c45844391e"
+      "path": "/home/runner/work/_temp/uiv2-28/rendered-1440x900-dark-chat.png",
+      "sha256": "fa3302be5defef5bbabee438fb211b58792c2886fd054c3cb0824c883fead64f"
     },
     {
       "group": "zoom-200",
       "viewport": "1640x900",
       "theme": "light",
       "pane": "start",
-      "path": "/tmp/ev-a11y2/zoom-200-1640x900-light-start.png",
-      "sha256": "b4041c859c3ca3cc3f3867b91374357576627c5051894848bfc703f4c99b5b2b"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-1640x900-light-start.png",
+      "sha256": "31e44ac11f1fc4db1ccd156f7f48443f02b9e16308d00c165b618cb8e17b3a87"
     },
     {
       "group": "zoom-200",
       "viewport": "1640x900",
       "theme": "light",
       "pane": "harness",
-      "path": "/tmp/ev-a11y2/zoom-200-1640x900-light-harness.png",
-      "sha256": "73b8276fe9dcf5734ec7702e6db52241b495aaf345ed3ebe9f32afe01869fa0f"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-1640x900-light-harness.png",
+      "sha256": "b27c382f9bae15cc1aa3b15a74b8cb6e42eaf7aeea9bd2b759d5bfa8cbdbcf9b"
     },
     {
       "group": "zoom-200",
       "viewport": "1640x900",
       "theme": "light",
       "pane": "hall",
-      "path": "/tmp/ev-a11y2/zoom-200-1640x900-light-hall.png",
-      "sha256": "a750705f9259c35074e33ebe1d9755468b0994d5e937fd7d378fad7c89ab14f3"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-1640x900-light-hall.png",
+      "sha256": "c40af1deba6e59c2c31cc5cada8702b4ab9d242dc8ae3cb2a1a89de35193408e"
     },
     {
       "group": "zoom-200",
       "viewport": "1640x900",
       "theme": "light",
       "pane": "council",
-      "path": "/tmp/ev-a11y2/zoom-200-1640x900-light-council.png",
-      "sha256": "1d8ad6aa41ccbbbe19d029dda1177f32ca57f96e085e4b4aa8f1680f30503e83"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-1640x900-light-council.png",
+      "sha256": "1eafb3a07bfc7d2ab42820bbf4d6ce02da33b5db3162a505be7cd5e6ab787dcc"
     },
     {
       "group": "zoom-200",
       "viewport": "1640x900",
       "theme": "light",
       "pane": "debate",
-      "path": "/tmp/ev-a11y2/zoom-200-1640x900-light-debate.png",
-      "sha256": "97e8c8ad8c7bc44b615b522e9b0e35524d8e62ed0af2eb741894fd43c249b7df"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-1640x900-light-debate.png",
+      "sha256": "9739be48c7c5471c5b77ca2d6bcdc9660b5cd8b2a8ce88ff9ef704bb612587df"
     },
     {
       "group": "zoom-200",
       "viewport": "1640x900",
       "theme": "light",
       "pane": "chat",
-      "path": "/tmp/ev-a11y2/zoom-200-1640x900-light-chat.png",
-      "sha256": "bf401185ec9958c6d5fe933782a04c5f5f33b057af36b64a215ec6f17fc7523c"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-1640x900-light-chat.png",
+      "sha256": "2abd66f8b9ca7df8ad355cee2e6783039e81c58ae3884a195c0385f1917a91e1"
     },
     {
       "group": "zoom-200",
       "viewport": "1640x900",
       "theme": "dark",
       "pane": "start",
-      "path": "/tmp/ev-a11y2/zoom-200-1640x900-dark-start.png",
-      "sha256": "914c3ff32f905b17efed4c4afcddb1d946bfa386dcd37135ce35e24452208c5d"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-1640x900-dark-start.png",
+      "sha256": "93250d8addf20516f91c76fc77771c7f85f918918708a7c397750e8a455741f4"
     },
     {
       "group": "zoom-200",
       "viewport": "1640x900",
       "theme": "dark",
       "pane": "harness",
-      "path": "/tmp/ev-a11y2/zoom-200-1640x900-dark-harness.png",
-      "sha256": "3bbe826168a52a9293929403cb1caf992f59a502a505043f7a7ad2e4f6f82f53"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-1640x900-dark-harness.png",
+      "sha256": "3a57ca55cf2de9440912f63724f09dcd410a23bf78468a966d845709c6e3b4c5"
     },
     {
       "group": "zoom-200",
       "viewport": "1640x900",
       "theme": "dark",
       "pane": "hall",
-      "path": "/tmp/ev-a11y2/zoom-200-1640x900-dark-hall.png",
-      "sha256": "cbe6d69712e668c8f84dc752acca331ab1d1f0d8f7bede62fa2c72ac98bb22d6"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-1640x900-dark-hall.png",
+      "sha256": "eb00e6c9b40093e0d98e104ebc8506fbbdcefd6bb03168083b24d00a642a3211"
     },
     {
       "group": "zoom-200",
       "viewport": "1640x900",
       "theme": "dark",
       "pane": "council",
-      "path": "/tmp/ev-a11y2/zoom-200-1640x900-dark-council.png",
-      "sha256": "82da2b8bdc82812f3038e3b03ddd2d8e0c6c26fe82feb3c7a94b9017d07d7c17"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-1640x900-dark-council.png",
+      "sha256": "b2f89af55af1f33adf5dad6042734e94281094d7cf9e6d249ed71c431a6040ba"
     },
     {
       "group": "zoom-200",
       "viewport": "1640x900",
       "theme": "dark",
       "pane": "debate",
-      "path": "/tmp/ev-a11y2/zoom-200-1640x900-dark-debate.png",
-      "sha256": "db28bf5b3fa0deeaae019942894193f9aad73dced610a68ba7b91192d698b184"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-1640x900-dark-debate.png",
+      "sha256": "bd15d225d63b89454a4916b6b9ccc39640f8fb7ec6b2208865aa3289f7eb7ce4"
     },
     {
       "group": "zoom-200",
       "viewport": "1640x900",
       "theme": "dark",
       "pane": "chat",
-      "path": "/tmp/ev-a11y2/zoom-200-1640x900-dark-chat.png",
-      "sha256": "cdc36321ba8062a5831dfbe61f8a54273f3c0c2f3f0393892385a6809fd58c38"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-1640x900-dark-chat.png",
+      "sha256": "fdd28b04597936900aad430dbf5139b95b6c9caf59c18dcc86679208b155c1ad"
     },
     {
       "group": "zoom-200",
       "viewport": "1440x900",
       "theme": "light",
       "pane": "start",
-      "path": "/tmp/ev-a11y2/zoom-200-1440x900-light-start.png",
-      "sha256": "9933397b8feb3ef5c65deb8d61137492833518ecc08a65f7364ebf25b29421db"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-1440x900-light-start.png",
+      "sha256": "32ba6020ed49df9fa8558abb6f4ef00e116aa48ac9368a775937b85a5a177364"
     },
     {
       "group": "zoom-200",
       "viewport": "1440x900",
       "theme": "light",
       "pane": "harness",
-      "path": "/tmp/ev-a11y2/zoom-200-1440x900-light-harness.png",
-      "sha256": "580e62cdf3e8522f9e82fa527f2ee3ba4f50ada9c77dd44d298dfec75f095b88"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-1440x900-light-harness.png",
+      "sha256": "ea52678e80d7ad2418ef9d2406a749ef38dd5723e03e50b7cb775700618d13d4"
     },
     {
       "group": "zoom-200",
       "viewport": "1440x900",
       "theme": "light",
       "pane": "hall",
-      "path": "/tmp/ev-a11y2/zoom-200-1440x900-light-hall.png",
-      "sha256": "daed023f15ac7f73a2fc00c42430848d0eef90500b121a1505360dbdd50422d7"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-1440x900-light-hall.png",
+      "sha256": "0c3139a8211cd5bf5ce5e3078ec664a9b2091c4a74b90b66321fbd90708dcccc"
     },
     {
       "group": "zoom-200",
       "viewport": "1440x900",
       "theme": "light",
       "pane": "council",
-      "path": "/tmp/ev-a11y2/zoom-200-1440x900-light-council.png",
-      "sha256": "137ca802ad73efe35e786c9747bae4379aa17e3ce306ad96277fd61683254e9c"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-1440x900-light-council.png",
+      "sha256": "02d99e338b5659326af055919e01fbc21aa3e61571d57c62a04dc454325f9109"
     },
     {
       "group": "zoom-200",
       "viewport": "1440x900",
       "theme": "light",
       "pane": "debate",
-      "path": "/tmp/ev-a11y2/zoom-200-1440x900-light-debate.png",
-      "sha256": "34ef583a137705c8a057927154ffac82be991d3128b90abb4618fb6cc6338352"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-1440x900-light-debate.png",
+      "sha256": "ccbf2fc010a8f1532a28f3ee0272c395b0ba14b954a1a7623810536523b3938e"
     },
     {
       "group": "zoom-200",
       "viewport": "1440x900",
       "theme": "light",
       "pane": "chat",
-      "path": "/tmp/ev-a11y2/zoom-200-1440x900-light-chat.png",
-      "sha256": "804a0d04c424fddd70c46a6f97e06f803c8957a0dac379e81e052f635298aba7"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-1440x900-light-chat.png",
+      "sha256": "2a2c73419808349143c3a41a0562618d938d871a37a6b1eca5d4d89998d6adc6"
     },
     {
       "group": "zoom-200",
       "viewport": "1440x900",
       "theme": "dark",
       "pane": "start",
-      "path": "/tmp/ev-a11y2/zoom-200-1440x900-dark-start.png",
-      "sha256": "12e718104c5c315f8aec315f9fd38ac143b562f5690e02b8c9b3f1c4fe1b93f7"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-1440x900-dark-start.png",
+      "sha256": "732bbe23e33fb17c636ea725a0023d180c96aef38e8d25756e3d93cdc3dfe400"
     },
     {
       "group": "zoom-200",
       "viewport": "1440x900",
       "theme": "dark",
       "pane": "harness",
-      "path": "/tmp/ev-a11y2/zoom-200-1440x900-dark-harness.png",
-      "sha256": "138d0511b2887f8b4e96b7cabac93a2f17cac0619fef85f882065e7bb5f8a6cc"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-1440x900-dark-harness.png",
+      "sha256": "fbac2b3a1554ba228053b946bbca9dcda65904ae36cff6bd40fb9203f97e7e18"
     },
     {
       "group": "zoom-200",
       "viewport": "1440x900",
       "theme": "dark",
       "pane": "hall",
-      "path": "/tmp/ev-a11y2/zoom-200-1440x900-dark-hall.png",
-      "sha256": "c81d59603b04cba11e61ea74a7f8195f0f6ae27652c09b122863ecf81b9eac68"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-1440x900-dark-hall.png",
+      "sha256": "773f92ac5b03c36ce945dbb2b557950787a77bdf864d675a45ec5fd538d064c1"
     },
     {
       "group": "zoom-200",
       "viewport": "1440x900",
       "theme": "dark",
       "pane": "council",
-      "path": "/tmp/ev-a11y2/zoom-200-1440x900-dark-council.png",
-      "sha256": "a50b2205798599fc3aec70c0623da703d14a50e1bdc17d36600176450efa2e71"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-1440x900-dark-council.png",
+      "sha256": "a3aaa503cad0b40ffc2e14647413010a46af0366914fd65705f59cff703a8f35"
     },
     {
       "group": "zoom-200",
       "viewport": "1440x900",
       "theme": "dark",
       "pane": "debate",
-      "path": "/tmp/ev-a11y2/zoom-200-1440x900-dark-debate.png",
-      "sha256": "597e4abd78c93f6e8932dac5dc836f0d4a7615aaaa2bf2d6eb10bbb7cefb45bd"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-1440x900-dark-debate.png",
+      "sha256": "53a8e7d2aceca34ad9904cb860d6ad9e93758602caf483ea53527866aa8a0936"
     },
     {
       "group": "zoom-200",
       "viewport": "1440x900",
       "theme": "dark",
       "pane": "chat",
-      "path": "/tmp/ev-a11y2/zoom-200-1440x900-dark-chat.png",
-      "sha256": "f2a65df02e66bee263a7ca33acefd52b7c837606a34a57b0b14a3fdf510058ed"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-1440x900-dark-chat.png",
+      "sha256": "d9a4917218cabaf657fd47923c88cb9ac0075e92c55ee70d1defc3eab12e9f1a"
     },
     {
       "group": "zoom-200",
       "viewport": "1280x800",
       "theme": "light",
       "pane": "start",
-      "path": "/tmp/ev-a11y2/zoom-200-1280x800-light-start.png",
-      "sha256": "92c62ae8f750110ada5c646d4ce283f144ccb3ae49e570b715f0edf8553ef962"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-1280x800-light-start.png",
+      "sha256": "0a546834b5c256b11ef98888af162aed90cce1a9a2d12ca0857f7d9c22dc8cd6"
     },
     {
       "group": "zoom-200",
       "viewport": "1280x800",
       "theme": "light",
       "pane": "harness",
-      "path": "/tmp/ev-a11y2/zoom-200-1280x800-light-harness.png",
-      "sha256": "03bee944d68f162516eafbe61583742c19cc764d436dafc3f6545ace9f0dedd9"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-1280x800-light-harness.png",
+      "sha256": "79308e6f2b6838611892f081f443d314e1edb57f0d77e0fffbcc9291a090d1fa"
     },
     {
       "group": "zoom-200",
       "viewport": "1280x800",
       "theme": "light",
       "pane": "hall",
-      "path": "/tmp/ev-a11y2/zoom-200-1280x800-light-hall.png",
-      "sha256": "f996ba5b05b32555d0f45d8caaa4713dfa9d7dfceacc3a63305cf5ededca1ccd"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-1280x800-light-hall.png",
+      "sha256": "388c3997aba7d867e2fdc42f658773f5fe543b18a2f3ebfdebd2698b61932d6d"
     },
     {
       "group": "zoom-200",
       "viewport": "1280x800",
       "theme": "light",
       "pane": "council",
-      "path": "/tmp/ev-a11y2/zoom-200-1280x800-light-council.png",
-      "sha256": "f46164e431dc11266dc7e22155b7fae055bbd540fc49c1234dc33b3523750dc2"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-1280x800-light-council.png",
+      "sha256": "970f53b665d67c430e40441429ee33440ba058afea69344da4721e48696eeab5"
     },
     {
       "group": "zoom-200",
       "viewport": "1280x800",
       "theme": "light",
       "pane": "debate",
-      "path": "/tmp/ev-a11y2/zoom-200-1280x800-light-debate.png",
-      "sha256": "982271f87ace4939d6957d87a25b246d22efcce57aa51925503fb1aea17fef19"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-1280x800-light-debate.png",
+      "sha256": "7e1b3589c89b0d80806d01d6b09b28e5c14eb2a890063defedc887031b7ec52d"
     },
     {
       "group": "zoom-200",
       "viewport": "1280x800",
       "theme": "light",
       "pane": "chat",
-      "path": "/tmp/ev-a11y2/zoom-200-1280x800-light-chat.png",
-      "sha256": "3d84f539cb60e8a0680cd195596132177250d88249c88625cc05f2cf703c51e3"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-1280x800-light-chat.png",
+      "sha256": "db1fbcf0de620dc7849e4c72c78043f23f8f36e11190df48e5e41643b44b3d16"
     },
     {
       "group": "zoom-200",
       "viewport": "1280x800",
       "theme": "dark",
       "pane": "start",
-      "path": "/tmp/ev-a11y2/zoom-200-1280x800-dark-start.png",
-      "sha256": "b114780e1b52e02869e6c19a836d5522c30b64ef9ed4cff794b452021749b639"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-1280x800-dark-start.png",
+      "sha256": "aa58bb6d5e1000a736f32d037792c8b57be890d24172309bc64bc6c676ae4632"
     },
     {
       "group": "zoom-200",
       "viewport": "1280x800",
       "theme": "dark",
       "pane": "harness",
-      "path": "/tmp/ev-a11y2/zoom-200-1280x800-dark-harness.png",
-      "sha256": "32aff28a4b1963a3e23b08276e6b3d8a87f732642d8972cafd9dd2353732f220"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-1280x800-dark-harness.png",
+      "sha256": "3840007f556b0170535343a2569c7328a7cd1e1b672ecfed4d3c0e60680c39a9"
     },
     {
       "group": "zoom-200",
       "viewport": "1280x800",
       "theme": "dark",
       "pane": "hall",
-      "path": "/tmp/ev-a11y2/zoom-200-1280x800-dark-hall.png",
-      "sha256": "ea21f8db993c08302b88748de57980477ca6fea5ea79ae377d1a12026c444b7f"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-1280x800-dark-hall.png",
+      "sha256": "ea0e01bfbf42b797072fd2e7b23cdb51ddddaf704dce3b2e40ac9c3fc49c4c55"
     },
     {
       "group": "zoom-200",
       "viewport": "1280x800",
       "theme": "dark",
       "pane": "council",
-      "path": "/tmp/ev-a11y2/zoom-200-1280x800-dark-council.png",
-      "sha256": "259e23a22cda95b3a8c356e0faf0e4c4ea026ed52decf918dbe7e75ca897d00a"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-1280x800-dark-council.png",
+      "sha256": "e41e73c08f55c62e34a68bc2f8e3a1557089d82c4075154c72eff74d0908cd60"
     },
     {
       "group": "zoom-200",
       "viewport": "1280x800",
       "theme": "dark",
       "pane": "debate",
-      "path": "/tmp/ev-a11y2/zoom-200-1280x800-dark-debate.png",
-      "sha256": "ce65f4ab4e035bc24d0b9f6abed4f47b80ba74040c46a2a0cb01ff21a0b08088"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-1280x800-dark-debate.png",
+      "sha256": "faac8e5d6e7ef083f2ba914e7def81f1b282e628425e7e958842cdc5de9c8586"
     },
     {
       "group": "zoom-200",
       "viewport": "1280x800",
       "theme": "dark",
       "pane": "chat",
-      "path": "/tmp/ev-a11y2/zoom-200-1280x800-dark-chat.png",
-      "sha256": "e6606fc5cafa3722af99002c1af594e1e278295b0f797bb6ac367d0bcdd4db26"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-1280x800-dark-chat.png",
+      "sha256": "073fcedd393c1c4c0acb42c3711d26e964d7bb3a74e4adeb389c983d34728030"
     },
     {
       "group": "zoom-200",
       "viewport": "390x844",
       "theme": "light",
       "pane": "start",
-      "path": "/tmp/ev-a11y2/zoom-200-390x844-light-start.png",
-      "sha256": "e99ba9ddf9517437c7696d2f6ed062b0d31c9125d778fbb8fb596cf54f150693"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-390x844-light-start.png",
+      "sha256": "e13a6dd2e267b8e9694d45d3dd0ec36a0258fe4d0b11e0b6800ce9950d28e463"
     },
     {
       "group": "zoom-200",
       "viewport": "390x844",
       "theme": "light",
       "pane": "harness",
-      "path": "/tmp/ev-a11y2/zoom-200-390x844-light-harness.png",
-      "sha256": "96d4b69519630c207bdf4c3feb90c1c8181b723f323894170b7aac5e565081cd"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-390x844-light-harness.png",
+      "sha256": "e330da9e7de1d61c8a568907682e1186739f6557e271dd37f101ff6890ab8408"
     },
     {
       "group": "zoom-200",
       "viewport": "390x844",
       "theme": "light",
       "pane": "hall",
-      "path": "/tmp/ev-a11y2/zoom-200-390x844-light-hall.png",
-      "sha256": "1c1012f887b5bce92f00253092f8b6af09fe8be96c04a914a3a382a4b90b9e3b"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-390x844-light-hall.png",
+      "sha256": "cef97ea9658d0eeb030dffeab4f0049ff15a219ec0239102ef07289cab17975b"
     },
     {
       "group": "zoom-200",
       "viewport": "390x844",
       "theme": "light",
       "pane": "council",
-      "path": "/tmp/ev-a11y2/zoom-200-390x844-light-council.png",
-      "sha256": "20d3803f3ab915f34fbeb5c0f67040ac37f466fa2e316083fcf919858e786917"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-390x844-light-council.png",
+      "sha256": "8d21ebd5f07460badcc28bf0df13abdfcfc57bea2a5ccaeab26f5583d1526be2"
     },
     {
       "group": "zoom-200",
       "viewport": "390x844",
       "theme": "light",
       "pane": "debate",
-      "path": "/tmp/ev-a11y2/zoom-200-390x844-light-debate.png",
-      "sha256": "0292619425da3707f768aa56465b22aed8fcad04cdb2a64685e0b04c53a3b4c6"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-390x844-light-debate.png",
+      "sha256": "3b2fd8cc1eb87da741e8b544918ed7f042b0af75a0aebeb38974bd158b15a555"
     },
     {
       "group": "zoom-200",
       "viewport": "390x844",
       "theme": "light",
       "pane": "chat",
-      "path": "/tmp/ev-a11y2/zoom-200-390x844-light-chat.png",
-      "sha256": "d62583551914561cb067ff785413d782017d70cd2d5e45df4c3fddf026c810a8"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-390x844-light-chat.png",
+      "sha256": "9de1ced650f0139331b4b6ae342cc6f41c4ca73609b3240ab833901ea62ef5b1"
     },
     {
       "group": "zoom-200",
       "viewport": "390x844",
       "theme": "dark",
       "pane": "start",
-      "path": "/tmp/ev-a11y2/zoom-200-390x844-dark-start.png",
-      "sha256": "9da06e531945de2d59a78fa47c6783f5ebf581a527437300461806d7c75d7dfb"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-390x844-dark-start.png",
+      "sha256": "83a3d3dbb6a887f4a76e0c91612603817d24fa2854f80d3806b692f78cc9daac"
     },
     {
       "group": "zoom-200",
       "viewport": "390x844",
       "theme": "dark",
       "pane": "harness",
-      "path": "/tmp/ev-a11y2/zoom-200-390x844-dark-harness.png",
-      "sha256": "7e16553ebb2aba9dc8546303e7958c636f6300c8d3a3abc00208bbefd319de37"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-390x844-dark-harness.png",
+      "sha256": "ea226040f8af2eb218e5c6f4ddca17489f0659c47cc41a0704973c2b912e1ff9"
     },
     {
       "group": "zoom-200",
       "viewport": "390x844",
       "theme": "dark",
       "pane": "hall",
-      "path": "/tmp/ev-a11y2/zoom-200-390x844-dark-hall.png",
-      "sha256": "ffa02f790ec0a542632c33a9f372ff53f7cade7f383870109681b5b54233b1d2"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-390x844-dark-hall.png",
+      "sha256": "2c1ed970a241c42d276cec4357589162c314b1f50f173dafc10ffba208305f8e"
     },
     {
       "group": "zoom-200",
       "viewport": "390x844",
       "theme": "dark",
       "pane": "council",
-      "path": "/tmp/ev-a11y2/zoom-200-390x844-dark-council.png",
-      "sha256": "6eb79288c27b282dca7280a67d764146d4d6c900097769098f794416e05079fc"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-390x844-dark-council.png",
+      "sha256": "3d7b2d4070ee532adbb19ceee30ba784765053b8deb0d0fb8e2fded5f47d0a2d"
     },
     {
       "group": "zoom-200",
       "viewport": "390x844",
       "theme": "dark",
       "pane": "debate",
-      "path": "/tmp/ev-a11y2/zoom-200-390x844-dark-debate.png",
-      "sha256": "7d8483253dee681268c466e2f6458947c9f493f3afbbbde835a78e1683f1f49e"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-390x844-dark-debate.png",
+      "sha256": "0c5cde6e4c9cfa8ebd13e20965b8c8f0cb3bdc379c4433ba753b04519634f210"
     },
     {
       "group": "zoom-200",
       "viewport": "390x844",
       "theme": "dark",
       "pane": "chat",
-      "path": "/tmp/ev-a11y2/zoom-200-390x844-dark-chat.png",
-      "sha256": "bfee845fe12062a6876aa027298631f37d14882c404fde3902e4245555a71a83"
+      "path": "/home/runner/work/_temp/uiv2-28/zoom-200-390x844-dark-chat.png",
+      "sha256": "d3d9194cc29cc3497ecb2429da1f967f9615aac9f014008b451e7a2aa6e203a4"
     },
     {
       "group": "long-recovery",
       "viewport": "1280x800",
       "theme": "dark",
       "pane": "conclusion-modal",
-      "path": "/tmp/ev-a11y2/long-recovery-1280x800-dark-conclusion-modal.png",
-      "sha256": "0e4753efc82d164c1c77e0803e2cc0f0ea8c0fac38f974b48c16b3e529949f50"
+      "path": "/home/runner/work/_temp/uiv2-28/long-recovery-1280x800-dark-conclusion-modal.png",
+      "sha256": "601a7a8f949fb55c255893072227101fb60130a711332d41249daeca0be86723"
     },
     {
       "group": "long-recovery",
       "viewport": "390x844",
       "theme": "light",
       "pane": "conclusion-modal",
-      "path": "/tmp/ev-a11y2/long-recovery-390x844-light-conclusion-modal.png",
-      "sha256": "0cbaac4ed681eafc4e49b5d9c2a68ff9d8b474ad03615274ee9e8da6611df64f"
+      "path": "/home/runner/work/_temp/uiv2-28/long-recovery-390x844-light-conclusion-modal.png",
+      "sha256": "13f033257f4666acc2e830171d163afdb26bbed0fa210c4bf186c2177b0035dc"
     }
   ]
 }
