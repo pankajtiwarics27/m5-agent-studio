@@ -1176,3 +1176,14 @@ and review ancestry checks without changing any pin or test. The regenerated
 review differs only in its embedded backend isolation-smoke temporary workspace
 path, as required by the newly recorded backend run. Imported release evidence,
 measured roadmap, restored assertions and parking resolution are untouched.
+
+
+## Bounded Hall HTTP summon continuation
+
+Following merged PR264, the [Hall audit](lc08-hall-summon-audit.md) records
+one additional bounded owner, full assembled input, retry/owned-close regressions
+and save/pin-before-cleanup semantics. Three original-source regressions reproduce;
+21 final offline Hall cases include real dormant warm native/fit kernels with
+synthetic facts, not installed qualification. The owner matrix leaves26owners
+inventory-only. Legacy defaults, native dormancy, LC09 scope, proposed ADR status,
+paused test8 and independent acceptance are unchanged.

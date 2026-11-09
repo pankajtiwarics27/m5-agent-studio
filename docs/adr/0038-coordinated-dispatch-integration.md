@@ -221,6 +221,12 @@ cleanup refusal. Record bounded per-owner workflow/input evidence, not a claim
 that static entry inventory establishes complete workflow support. See the
 [adapter audit](../lc08-workflow-adapter-audit.md); no producer or review activation.
 
+Extend that bounded ownership/retry policy to Hall HTTP summon, not MCP summon
+by association. Preserve Hall save/pin-before-optional-cleanup ordering: an
+unconfirmed cleanup refuses terminal success without rolling back the completed
+transcript or marking it abandoned. See the [Hall audit](../lc08-hall-summon-audit.md);
+LC09 retention/recovery and review/activation remain separate.
+
 ## Alternatives
 
 - Replace served routing immediately: would activate unqualified transports and

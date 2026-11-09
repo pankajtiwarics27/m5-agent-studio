@@ -461,7 +461,13 @@ def test_owner_matrix_matches_current_static_inventory_without_promoting_coverag
             "_workflow_orchestrator.unload_model",
         }
         assert row["assessment"] == (
-            "bounded_workflow_adapter" if assessed else "inventory_only_in_this_audit"
+            "bounded_workflow_adapter"
+            if assessed
+            else (
+                "bounded_hall_http_summon"
+                if row["owner"] == "api_hall_summon.event_gen"
+                else "inventory_only_in_this_audit"
+            )
         )
 
 
@@ -492,6 +498,13 @@ sys.modules['runtime_dispatch_boundary']=studio.runtime_dispatch_boundary
 sys.path.insert(0,str(root/'tests'))
 import pytest
 from test_workflow_coordinated import test_coordinated_reasoning_only_workflow_never_retries_with_changed_budget,test_response_consumer_close_reaches_backend_without_saving_run,test_unconfirmed_cleanup_cannot_start_next_stage_or_save_success
+from test_workflow_hall_coordinated import test_hall_reasoning_only_never_retries_changed_budget_in_coordinated_mode,test_hall_close_or_disconnect_immediately_closes_source_without_saving,test_hall_cleanup_failure_keeps_completed_transcript_but_never_reports_summon_success
+with pytest.MonkeyPatch.context() as patch:
+ test_hall_reasoning_only_never_retries_changed_budget_in_coordinated_mode(patch)
+with pytest.MonkeyPatch.context() as patch:
+ test_hall_close_or_disconnect_immediately_closes_source_without_saving(patch,"close")
+with pytest.MonkeyPatch.context() as patch:
+ test_hall_cleanup_failure_keeps_completed_transcript_but_never_reports_summon_success(patch,"pending")
 for workflow in ('council','debate'):
  with pytest.MonkeyPatch.context() as patch:
   test_coordinated_reasoning_only_workflow_never_retries_with_changed_budget(patch,workflow)

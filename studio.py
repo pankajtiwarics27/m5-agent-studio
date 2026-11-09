@@ -23886,33 +23886,36 @@ async def api_hall_summon(session_id: str, request: Request) -> StreamingRespons
 
             yield _sse("summon_start", {"author": author_label, "role_key": role_key, "model": model})
 
-            async for item in stream_any_model(client, model, messages, temperature=0.0, max_tokens=4600, reasoning_mode=reasoning_mode):
-                if await request.is_disconnected():
-                    # The reader stopped this stream (Stop) or the connection died. Nothing of
-                    # this turn reaches the transcript, and the dropped turn is recorded so the
-                    # next read can say that rather than showing a card that never resolves.
-                    abandoned("the reader's connection closed before the reply was saved")
-                    return
-                if item["type"] == "content":
-                    buf.append(item["text"])
-                    yield _sse("token", {"kind": "content", "text": item["text"]})
-                elif item["type"] == "reasoning":
-                    rbuf.append(item["text"])
-                    yield _sse("token", {"kind": "reasoning", "text": item["text"]})
-                elif item["type"] == "usage":
-                    usage_info = item
-                    record_perf("hall", model, item["decode_tps"], item["prefill_tps"], item["ttft"], item["completion_tokens"], item["cached_tokens"], demo=bool(item.get("demo")))
-
-            if not "".join(buf).strip() and rbuf and is_local_omlx_model(model):
-                async for item in stream_any_model(client, model, messages, temperature=0.0, max_tokens=4096, reasoning_mode="off"):
+            async with contextlib.aclosing(stream_any_model(client, model, messages, temperature=0.0, max_tokens=4600, reasoning_mode=reasoning_mode)) as source:
+                async for item in source:
                     if await request.is_disconnected():
+                        # The reader stopped this stream (Stop) or the connection died. Nothing of
+                        # this turn reaches the transcript, and the dropped turn is recorded so the
+                        # next read can say that rather than showing a card that never resolves.
                         abandoned("the reader's connection closed before the reply was saved")
                         return
                     if item["type"] == "content":
                         buf.append(item["text"])
                         yield _sse("token", {"kind": "content", "text": item["text"]})
+                    elif item["type"] == "reasoning":
+                        rbuf.append(item["text"])
+                        yield _sse("token", {"kind": "reasoning", "text": item["text"]})
                     elif item["type"] == "usage":
                         usage_info = item
+                        record_perf("hall", model, item["decode_tps"], item["prefill_tps"], item["ttft"], item["completion_tokens"], item["cached_tokens"], demo=bool(item.get("demo")))
+
+            # A completed coordinated response cannot authorize a changed-budget retry.
+            if not _local_runtime_dispatch().coordinated and not "".join(buf).strip() and rbuf and is_local_omlx_model(model):
+                async with contextlib.aclosing(stream_any_model(client, model, messages, temperature=0.0, max_tokens=4096, reasoning_mode="off")) as source:
+                    async for item in source:
+                        if await request.is_disconnected():
+                            abandoned("the reader's connection closed before the reply was saved")
+                            return
+                        if item["type"] == "content":
+                            buf.append(item["text"])
+                            yield _sse("token", {"kind": "content", "text": item["text"]})
+                        elif item["type"] == "usage":
+                            usage_info = item
 
             final_text = "".join(buf).strip() or "".join(rbuf).strip()
             saved_msg = append_hall_message(session_id, author_label, role_key, final_text, model=model, reasoning="".join(rbuf), usage=usage_info)

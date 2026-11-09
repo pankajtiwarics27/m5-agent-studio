@@ -44,7 +44,7 @@ Streaming intentionally moves cards inside the trajectory scroller. The gate rep
 
 **302 tests passed across 13 owning modules; 16 isolation checks passed; 0 failures.**
 
-Environment: Python `3.13.16`, `Linux-6.1.189+-x86_64-with-glibc2.41`, 2 CPUs. No external service, provider, user workspace or live container probe is used.
+Environment: Python `3.11.2`, `Linux-6.1.158+-x86_64-with-glibc2.36`, 2 CPUs. No external service, provider, user workspace or live container probe is used.
 
 Container runtime available: **no**. Isolation status: **unqualified**; dependent execution: **blocked (fail closed)**. This is intentional fail-closed behavior, not an isolation qualification.
 

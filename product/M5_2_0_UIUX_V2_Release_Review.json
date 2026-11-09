@@ -360,9 +360,9 @@
         "M5-P0-04 isolation smoke test",
         "",
         "== 1. Environment fingerprint and runtime availability ==",
-        "  platform: Linux-6.1.189+-x86_64-with-glibc2.41",
-        "  machine: x86_64  python: 3.13.16  cpus: 2",
-        "  memory_total: 2030416 kB",
+        "  platform: Linux-6.1.158+-x86_64-with-glibc2.36",
+        "  machine: x86_64  python: 3.11.2  cpus: 2",
+        "  memory_total: 4034452 kB",
         "  runtime_available: no ('docker' not on PATH)",
         "",
         "== 2. Sandbox invocation invariants (as constructed by app._sandbox_command) ==",
@@ -372,7 +372,7 @@
         "  [PASS] no new privileges — --security-opt=no-new-privileges",
         "  [PASS] no implicit image pull — --pull=never",
         "  [PASS] resource limits — --pids-limit=128 --memory=2g --cpus=2",
-        "  [PASS] single workspace bind mount — type=bind,source=/tmp/m5-isolation-smoke-71nn2jyy,target=/workspace",
+        "  [PASS] single workspace bind mount — type=bind,source=/tmp/m5-isolation-smoke-9g22l_kt,target=/workspace",
         "",
         "== 3. Skill-code execution gates (app._run_skill_script) ==",
         "  [PASS] default-off skill-code denial — PermissionError",
@@ -501,16 +501,12 @@
     "visual_captures": 48,
     "compare_checks": 15,
     "compare_captures": 6,
-    "findings": 2
+    "findings": 1
   },
   "findings": [
     {
       "check": "release-evidence",
       "detail": "release evidence is stale for its declared browser-source scope"
-    },
-    {
-      "check": "release-evidence",
-      "detail": "cannot read static/index.html at implementation HEAD 5fb978bbfa03ac13dd3d4f4b8885da994fb2558f"
     }
   ]
 }

@@ -155,4 +155,3 @@ python3 -m pytest -q tests/test_uiv2_release_review.py
 ## Findings
 
 - **release-evidence**: release evidence is stale for its declared browser-source scope
-- **release-evidence**: cannot read static/index.html at implementation HEAD 5fb978bbfa03ac13dd3d4f4b8885da994fb2558f
