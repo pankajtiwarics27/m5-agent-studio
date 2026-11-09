@@ -215,14 +215,14 @@
   ],
   "frontend": {
     "anchor_lines": {
-      "pane": 3306,
-      "launch_card": 3314,
-      "readiness_line": 3321,
-      "composer": 3324,
-      "blocker": 3334,
-      "checklist": 3360,
-      "health": 3401,
-      "workspace": 3421
+      "pane": 3309,
+      "launch_card": 3317,
+      "readiness_line": 3324,
+      "composer": 3327,
+      "blocker": 3337,
+      "checklist": 3363,
+      "health": 3404,
+      "workspace": 3424
     },
     "order": {
       "composer_is_first_card": true,
