@@ -7,6 +7,12 @@ plan lives, how to verify changes, and the rules every change must follow.
 
 Read this file top to bottom before writing code.
 
+Every session must also read and apply
+[`docs/verification-efficiency.md`](docs/verification-efficiency.md): plan
+risk-based verification, use the existing scoped selector during iteration,
+profile avoidable delays, and report selected/reused/deferred evidence honestly.
+Mandatory final, PR, security and release checks remain unchanged.
+
 ---
 
 ## 1. What this project is
