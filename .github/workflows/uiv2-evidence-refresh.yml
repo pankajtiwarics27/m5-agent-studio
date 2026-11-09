@@ -55,18 +55,36 @@ jobs:
       - name: UIV2-29 browser walk (real SSE, DOM/heap, layout)
         run: node scripts/uiv2_performance_safety_walk.mjs --screenshots "$RUNNER_TEMP/uiv2-29"
       - name: UIV2-29 import, backend run and regenerate
+        # Job logs and artifacts are unreachable from the sandbox that drives this branch, so a
+        # failure here has to say why in a place the API can read: check-run annotations.
         run: |
-          python scripts/uiv2_performance_safety.py --import-evidence "$RUNNER_TEMP/uiv2-29/capture-manifest.json"
-          python scripts/uiv2_performance_safety.py --run-backend
-          python scripts/uiv2_performance_safety.py
-          python scripts/uiv2_performance_safety.py --check
+          set -uo pipefail
+          step() {
+            echo "+ $*"
+            if ! ( "$@" 2>&1 | tee "$RUNNER_TEMP/step.log" ); then
+              while IFS= read -r line; do echo "::error title=${1##*/} $2::${line}"; done < <(tail -n 25 "$RUNNER_TEMP/step.log")
+              return 1
+            fi
+          }
+          step python scripts/uiv2_performance_safety.py --import-evidence "$RUNNER_TEMP/uiv2-29/capture-manifest.json" || exit 1
+          step python scripts/uiv2_performance_safety.py --run-backend || exit 1
+          step python scripts/uiv2_performance_safety.py || exit 1
+          step python scripts/uiv2_performance_safety.py --check
       - name: UIV2-28 browser walk (keyboard, responsive, adversarial)
         run: node scripts/uiv2_accessibility_adversarial_walk.mjs --screenshots "$RUNNER_TEMP/uiv2-28"
       - name: UIV2-28 import and regenerate
         run: |
-          python scripts/uiv2_accessibility_adversarial.py --import-evidence "$RUNNER_TEMP/uiv2-28/capture-manifest.json"
-          python scripts/uiv2_accessibility_adversarial.py
-          python scripts/uiv2_accessibility_adversarial.py --check
+          set -uo pipefail
+          step() {
+            echo "+ $*"
+            if ! ( "$@" 2>&1 | tee "$RUNNER_TEMP/step.log" ); then
+              while IFS= read -r line; do echo "::error title=${1##*/} $2::${line}"; done < <(tail -n 25 "$RUNNER_TEMP/step.log")
+              return 1
+            fi
+          }
+          step python scripts/uiv2_accessibility_adversarial.py --import-evidence "$RUNNER_TEMP/uiv2-28/capture-manifest.json" || exit 1
+          step python scripts/uiv2_accessibility_adversarial.py || exit 1
+          step python scripts/uiv2_accessibility_adversarial.py --check
       - name: Regenerate the inventories that hash the same sources
         run: |
           python scripts/uiux_start_command_center_inventory.py
