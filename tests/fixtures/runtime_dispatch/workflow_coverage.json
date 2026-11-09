@@ -27,8 +27,8 @@
       "seams": [
         "stream_any_model"
       ],
-      "assessment": "inventory_only_in_this_audit",
-      "evidence": "docs/runtime-dispatch-entry-points.md"
+      "assessment": "bounded_chat_stream_consumer_close",
+      "evidence": "tests/test_workflow_chat_stream_cancel.py"
     },
     {
       "owner": "_mcp_summon_model",
@@ -78,8 +78,8 @@
       "seams": [
         "guarded legacy HTTP (not coordinated authority)"
       ],
-      "assessment": "inventory_only_in_this_audit",
-      "evidence": "docs/runtime-dispatch-entry-points.md"
+      "assessment": "bounded_unload_http_acknowledgement",
+      "evidence": "tests/test_workflow_unload_other_models.py"
     },
     {
       "owner": "_workflow_orchestrator.stream_model",
@@ -228,8 +228,8 @@
       "seams": [
         "stream_any_model"
       ],
-      "assessment": "inventory_only_in_this_audit",
-      "evidence": "docs/runtime-dispatch-entry-points.md"
+      "assessment": "bounded_chat_stream_consumer_close",
+      "evidence": "tests/test_workflow_chat_stream_cancel.py"
     },
     {
       "owner": "openai_gateway_chat.sse_gen",

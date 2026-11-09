@@ -26,7 +26,7 @@ all-path inclusion validation remain required before activation.
 | `_stream_omlx_completion` | `guarded legacy HTTP (not coordinated authority)` | 4779 |
 | `_stream_omlx_completion` | `guarded legacy HTTP (not coordinated authority)` | 4845 |
 | `_unload_omlx_model` | `guarded legacy HTTP (not coordinated authority)` | 6059 |
-| `_unload_other_omlx_models` | `guarded legacy HTTP (not coordinated authority)` | 6086 |
+| `_unload_other_omlx_models` | `guarded legacy HTTP (not coordinated authority)` | 6085 |
 | `_workflow_orchestrator.stream_model` | `stream_any_model` | 5014 |
 | `_workflow_orchestrator.unload_model` | `_unload_omlx_model` | 5032 |
 | `api_chat_stream.event_gen` | `_unload_omlx_model` | 6470 |
