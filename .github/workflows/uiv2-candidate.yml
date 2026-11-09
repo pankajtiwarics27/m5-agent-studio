@@ -7,6 +7,12 @@ name: UIV2 candidate capture (temporary)
 
 on:
   workflow_dispatch:
+  # Dispatch alone is not enough while the file is new on a non-default branch: GitHub only
+  # offers `workflow_dispatch` once the workflow is registered on the default branch. A push
+  # trigger restricted to this one branch runs it from the branch itself.
+  push:
+    branches:
+      - arena/f4336d9c-m5-agent-studio
 
 permissions:
   contents: read
