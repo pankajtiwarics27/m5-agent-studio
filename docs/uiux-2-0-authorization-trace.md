@@ -5,7 +5,7 @@ It is the `UIUX-P0-04` artifact: for state-changing route candidates resolved by
 what can refuse them and what durable state they touch, derived from `app.py` and the route map.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4`.
-* `app.py` digest: `45fff9cd76e7b038…` · route map digest: `71286b199b3df998…`.
+* `app.py` digest: `cc08dbdac9a26ac3…` · route map digest: `1323591437bf85cc…`.
 * 50 resolved state-changing route candidates, out of 81 in `app.py`; 0 fetch site(s) have 0 unresolved URL or method edge(s) (0 method).
 * 26 reference an authority subsystem, 43 a durable-state subsystem, 3 contain a SQL write, and 23 can leave the machine.
 
@@ -57,7 +57,7 @@ Routes outside the protected prefixes: `GET /healthz`, `GET /` — the shell and
 
 | Method | Route | Handler | Browser callers | Response | Refusals | Authority | Durable state | Writes | Effects |
 |---|---|---|---|---|---|---|---|---|---|
-| POST | `/api/cache/clear-ssd` | `api_clear_ssd_cache` | clearSsdCache | json | 400 401 403 413 | — | — | — | outbound http |
+| POST | `/api/cache/clear-ssd` | `api_clear_ssd_cache` | clearSsdCache | json | 400 401 403 413 503 | — | — | — | outbound http |
 | POST | `/api/chat/stream` | `api_chat_stream` | consumeSSE | stream | 400 401 403 413 429 | — | — | — | outbound http |
 | POST | `/api/codegraph/query` | `api_codegraph_query` | runCodeGraphPlayground | json | 400 401 403 413 | — | — | — | — |
 | POST | `/api/combos` | `api_save_combo` | saveCombo | json | 400 401 403 413 | — | — | — | — |
@@ -125,7 +125,7 @@ understandable errors needs the whole set.
 | 429 | 8 | 0 | 8 route(s): `POST /api/chat/stream`, `POST /api/council/stream`, `POST /api/debate/stream`, `POST /api/harness/gsd-wave`, `POST /api/harness/run`, `POST /api/harness/sdlc/run`, `POST /api/workspace/picker/folders`, `POST /api/workspace/picker/suggest` |
 | 500 | 0 | 1 | 1 route(s): `POST /api/skills/install` |
 | 502 | 0 | 2 | 2 route(s): `POST /api/providers/fetch-models`, `POST /api/workspace/picker/suggest` |
-| 503 | 0 | 12 | 10 route(s): `POST /api/harness/run`, `PATCH /api/harness/sessions/{session_id}`, `POST /api/harness/sessions/{session_id}/delegations`, `POST /api/harness/sessions/{session_id}/grants`, `POST /api/harness/sessions/{session_id}/grants/revoke`, `POST /api/harness/sessions/{session_id}/resume`, `POST /api/harness/sessions/{session_id}/switch-model`, `POST /api/models/unload-all`, `POST /api/models/{model_id:path}/load`, `POST /api/models/{model_id:path}/unload` |
+| 503 | 0 | 13 | 11 route(s): `POST /api/cache/clear-ssd`, `POST /api/harness/run`, `PATCH /api/harness/sessions/{session_id}`, `POST /api/harness/sessions/{session_id}/delegations`, `POST /api/harness/sessions/{session_id}/grants`, `POST /api/harness/sessions/{session_id}/grants/revoke`, `POST /api/harness/sessions/{session_id}/resume`, `POST /api/harness/sessions/{session_id}/switch-model`, `POST /api/models/unload-all`, `POST /api/models/{model_id:path}/load`, `POST /api/models/{model_id:path}/unload` |
 | 507 | 0 | 3 | 3 route(s): `POST /api/harness/run`, `POST /api/harness/sessions/{session_id}/apply`, `POST /api/harness/sessions/{session_id}/snapshots` |
 
 ## Handlers that can leave the machine

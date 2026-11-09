@@ -1261,3 +1261,13 @@ responses are not rolled back if a later item fails; callers should refresh the
 inventory. The [unload-all audit](lc08-unload-all-route-audit.md) does not claim
 physical unload or release. The matrix is bounded at29owners/54sites, nine
 assessed and20inventory-only owners; no acceptance advancement.
+
+
+## Bounded SSD-cache clear failure handling
+
+The existing `api_clear_ssd_cache` online legacy branch now rejects redirects and
+non-2xx results and privately normalizes transport/JSON failures; cancellation,
+valid 2xx JSON, coordinated routing and the explicitly marked demo branch remain
+unchanged. See the [cache-clear audit](lc08-cache-clear-route-audit.md). Mock
+responses are not evidence of actual cache deletion. Matrix:29owners/54sites, ten
+bounded assessments and19inventory-only; no runtime or acceptance advancement.

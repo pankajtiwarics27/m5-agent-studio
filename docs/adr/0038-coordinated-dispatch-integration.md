@@ -303,3 +303,9 @@ The direct unload-all route also has bounded legacy online checks for inventory
 shape, redirects, and each per-model 2xx response. Any uncertainty returns a
 private failure; partial earlier unload responses are not rolled back and are not
 physical-release evidence. See [unload-all route audit](../lc08-unload-all-route-audit.md).
+
+
+A bounded audit of the existing SSD-cache clear endpoint also normalizes online
+redirect, non-2xx, transport, and malformed-JSON failures privately while keeping
+the coordinated path and explicit offline/demo behavior. Mock HTTP response is
+not physical cache-deletion evidence; see [cache-clear route audit](../lc08-cache-clear-route-audit.md).

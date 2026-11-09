@@ -24195,8 +24195,21 @@ async def api_clear_ssd_cache(request: Request) -> JSONResponse:
     client: httpx.AsyncClient = request.app.state.http
     if not await _omlx_is_online(client):
         return JSONResponse({"status": "ok", "total_deleted": 46, "demo": True})
-    r = await client.post(f"{OMLX_BASE}/admin/api/ssd-cache/clear", timeout=20.0)
-    return JSONResponse(r.json())
+    endpoint = f"{OMLX_BASE}/admin/api/ssd-cache/clear"
+    try:
+        response = await client.post(f"{OMLX_BASE}/admin/api/ssd-cache/clear", timeout=20.0)
+        _reject_redirect_response(response, endpoint)
+        if not 200 <= response.status_code < 300:
+            raise RuntimeError("legacy cache clear was not confirmed")
+        payload = response.json()
+    except asyncio.CancelledError:
+        raise
+    except Exception:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "legacy_cache_clear_unconfirmed", "retryable": False},
+        ) from None
+    return JSONResponse(payload)
 
 
 @app.get("/api/history/export")
