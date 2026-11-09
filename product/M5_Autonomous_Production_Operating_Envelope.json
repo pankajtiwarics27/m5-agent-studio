@@ -1,0 +1,261 @@
+{
+  "schema_version": 1,
+  "record_version": 1,
+  "document_type": "autonomous_production_operating_envelope",
+  "program": "AP",
+  "story_id": "AP-002",
+  "recorded_at": "2026-11-09T16:09:30Z",
+  "runtime_activation_authorized": false,
+  "owner_hardware_statement": {
+    "evidence_level": "owner_statement",
+    "statement_id": "owner-pilot-target-2026-11-08",
+    "platform": "Apple M5 / 24 GB unified memory / 1 TB storage",
+    "physical_memory_bytes": 25769803776,
+    "storage_capacity_bytes": 1099511627776,
+    "recorded_at": "2026-11-09T16:09:30Z",
+    "limitations": [
+      "This is the owner's nominal pilot target recorded from the AP specification, not an observation from the machine.",
+      "Nominal memory is not available model memory, qualified headroom, peak residency, or permission for concurrent model loads.",
+      "Nominal storage is not measured free storage and does not authorize a download or installation."
+    ]
+  },
+  "inventory_recipe": {
+    "schema_version": 1,
+    "collector_mode": "operator_run_local_only",
+    "hardware_profile_schema": "hardware_capabilities.HardwareProfile/v1",
+    "required_observations": [
+      "operating_system",
+      "architecture",
+      "physical_memory_bytes",
+      "available_memory_bytes",
+      "available_storage_bytes",
+      "memory_pressure",
+      "installed_runtime_versions",
+      "collected_at",
+      "collector_version",
+      "configuration_fingerprint",
+      "qualified_headroom_bytes",
+      "qualification_record"
+    ],
+    "measurement_rules": [
+      "Collect on the named target host with an operator-visible local-only command; never copy the owner statement into observation fields.",
+      "Record every installed runtime name and exact observed version separately from model or backend compatibility claims.",
+      "Measure currently available memory and storage at collection time; do not derive either value from nominal capacity.",
+      "Measure qualified headroom only through the owning installed qualification at a pinned Studio, runtime, model, configuration and collector revision.",
+      "Keep sequential load/unload as the intended architecture; an inventory does not authorize activation or concurrent residency."
+    ],
+    "qualification_requirements": [
+      "Bind observations to host, collector and configuration fingerprints without storing credentials or private account data.",
+      "Distinguish observed_unqualified from qualified; only the latter may carry qualified_headroom_bytes and a qualification record.",
+      "Preserve blocked, skipped, unavailable and stale outcomes rather than replacing them with nominal values.",
+      "Re-run after runtime, model, quantization, context, host, Studio revision or material free-resource changes."
+    ]
+  },
+  "measured_inventory": {
+    "status": "not_measured",
+    "observed_at": null,
+    "collector": null,
+    "hardware_profile": null,
+    "available_storage_bytes": null,
+    "qualified_headroom_bytes": null,
+    "qualification_record": null
+  },
+  "decisions": [
+    {
+      "id": "U01",
+      "status": "pending",
+      "question": "Initial specialisation/audience/format and launch order",
+      "resolution": null,
+      "blocked_story_ids": [
+        "AP-002",
+        "AP-021",
+        "AP-022",
+        "AP-023",
+        "AP-024",
+        "AP-030"
+      ],
+      "blocked_actions": [
+        "Declare a website, video or guest-desktop pilot as the selected launch specialisation.",
+        "Finalize a launch audience, output format, pilot rubric or launch order.",
+        "Present a generic direction sample as owner selection or final creative acceptance."
+      ],
+      "safe_work": [
+        "Build generic contracts, fictional fixtures and evaluation harnesses that do not assume a specialisation.",
+        "Research adapters without installation, activation, account access or output-quality claims.",
+        "Keep website-first as a suggestion rather than a selected launch decision."
+      ]
+    },
+    {
+      "id": "U02",
+      "status": "pending",
+      "question": "Installed runtime versions, measured free memory/storage and qualified headroom; owner hardware is M5/24 GB/1 TB",
+      "resolution": null,
+      "blocked_story_ids": [
+        "AP-002",
+        "AP-012",
+        "AP-013",
+        "AP-014",
+        "AP-021",
+        "AP-023",
+        "AP-026",
+        "AP-030"
+      ],
+      "blocked_actions": [
+        "Claim installed runtime, model, browser, media or guest-desktop capacity on the owner host.",
+        "Download, load, benchmark or admit a model from nominal 24 GB memory or 1 TB storage.",
+        "Claim physical unload, free-resource headroom, performance or safe concurrent residency."
+      ],
+      "safe_work": [
+        "Develop hardware-independent contracts and mocked tests using invented profiles.",
+        "Prepare the operator-run inventory and qualification recipe without probing this sandbox as the owner host.",
+        "Preserve sequential load/unload and deny unqualified installed execution."
+      ]
+    },
+    {
+      "id": "U03",
+      "status": "pending",
+      "question": "Permitted external services/providers, data scopes and spending grants; external reasoning-model use requires a separate explicit policy decision",
+      "resolution": null,
+      "blocked_story_ids": [
+        "AP-002",
+        "AP-004",
+        "AP-009",
+        "AP-013",
+        "AP-014",
+        "AP-021",
+        "AP-023",
+        "AP-024",
+        "AP-026",
+        "AP-029"
+      ],
+      "blocked_actions": [
+        "Send data to, create an account with, or spend through a real external service.",
+        "Use a hosted reasoning model, including fallback, judging, evaluation or improvement.",
+        "Treat provider configuration, a catalog entry or a fictional grant as live consent."
+      ],
+      "safe_work": [
+        "Use local mocks and fictional scoped policy examples with explicit deny paths.",
+        "Keep local inference as the AP default while preserving future explicitly granted non-inference service adapters.",
+        "Evaluate source, license, egress and cost metadata without signup or activation."
+      ]
+    },
+    {
+      "id": "U04",
+      "status": "pending",
+      "question": "Folders/accounts/network/retention and operating grants",
+      "resolution": null,
+      "blocked_story_ids": [
+        "AP-002",
+        "AP-004",
+        "AP-009",
+        "AP-010",
+        "AP-012",
+        "AP-021",
+        "AP-023",
+        "AP-026",
+        "AP-029",
+        "AP-030"
+      ],
+      "blocked_actions": [
+        "Read or write a real folder, reuse a browser/account profile, or contact a real network destination for AP work.",
+        "Retain private source, browser, media or account data without a versioned scope and retention rule.",
+        "Publish, deliver, schedule or execute against an external account."
+      ],
+      "safe_work": [
+        "Use disposable fictional paths, accounts and destinations under offline tests.",
+        "Represent versioned grants and prove missing scope denies access.",
+        "Develop confinement, revocation and retention contracts without opening real resources."
+      ]
+    },
+    {
+      "id": "U05",
+      "status": "pending",
+      "question": "Promotion classes, thresholds and owner review policy",
+      "resolution": null,
+      "blocked_story_ids": [
+        "AP-002",
+        "AP-026",
+        "AP-028"
+      ],
+      "blocked_actions": [
+        "Automatically promote a lesson, skill, adapter, model route, evaluator or authority change into persistent production use.",
+        "Invent quality thresholds, risk classes, canary limits or owner-review exemptions.",
+        "Treat a shadow candidate report as approval to mutate production state."
+      ],
+      "safe_work": [
+        "Run shadow evaluations and produce candidate reports with no automatic promotion.",
+        "Document risk classes and review boundaries while keeping every automatic_promotion flag false.",
+        "Reuse existing evidence-backed lesson and transformation candidate paths without widening their authority."
+      ]
+    },
+    {
+      "id": "U06",
+      "status": "pending",
+      "question": "Current lifecycle/sandbox qualification and activation",
+      "resolution": null,
+      "blocked_story_ids": [
+        "AP-002",
+        "AP-004",
+        "AP-007",
+        "AP-010",
+        "AP-012",
+        "AP-014",
+        "AP-021",
+        "AP-023",
+        "AP-030"
+      ],
+      "blocked_actions": [
+        "Activate a dormant native lifecycle, sandbox, browser, media or guest-desktop execution backend.",
+        "Resume paused Test8 or claim installed isolation, physical load/unload or machine-wide exclusivity.",
+        "Fallback to host execution when an isolation or lifecycle qualification is absent, stale or blocked."
+      ],
+      "safe_work": [
+        "Audit call paths and implement offline refusal, cancellation and uncertain-effect tests.",
+        "Coordinate with the owning runtime/LC program while preserving legacy defaults.",
+        "Keep activation false and record installed qualification as not run or blocked."
+      ]
+    }
+  ],
+  "promotion_policy": {
+    "policy_version": 1,
+    "decision_id": "U05",
+    "decision_status": "pending",
+    "default_effect": "deny_promotion",
+    "classes": [
+      {
+        "id": "shadow_candidate_report",
+        "description": "Ephemeral evaluation output that may be inspected but is not promoted into persistent behavior.",
+        "automatic_promotion": false,
+        "review_boundary": "none",
+        "persistence_effect": "none"
+      },
+      {
+        "id": "project_lesson",
+        "description": "A project-scoped evidence-backed lesson that changes future retrieval or prompting.",
+        "automatic_promotion": false,
+        "review_boundary": "owner",
+        "persistence_effect": "project"
+      },
+      {
+        "id": "executable_skill_or_adapter",
+        "description": "Executable code, tool, CLI, MCP or service adapter with side-effect and supply-chain implications.",
+        "automatic_promotion": false,
+        "review_boundary": "owner_and_security",
+        "persistence_effect": "project_executable"
+      },
+      {
+        "id": "authority_evaluator_or_runtime",
+        "description": "A change to policy, evaluators, routing authority, runtime lifecycle or system-wide behavior.",
+        "automatic_promotion": false,
+        "review_boundary": "independent_and_owner",
+        "persistence_effect": "system_authority"
+      }
+    ]
+  },
+  "policy_fixture_path": "product/M5_Autonomous_Production_Policy_Examples.json",
+  "notes": [
+    "Decision readiness is not story authorization; the AP ledger remains the story authority.",
+    "The register and fixtures are offline planning evidence and are not consumed by app.py or studio.py.",
+    "Absent decisions, grants, measurements and qualification deny affected live actions without blocking unrelated offline work."
+  ]
+}

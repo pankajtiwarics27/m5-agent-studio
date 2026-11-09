@@ -143,6 +143,7 @@ measurements without trusting them).
 · [`autonomous-production-roadmap.md`](autonomous-production-roadmap.md) (AP requirements and dependency graph)
 · [`autonomous-production-ux-direction.md`](autonomous-production-ux-direction.md) (owner-selected concept direction, not implementation approval)
 · [`autonomous-production-ap001-reconciliation.md`](autonomous-production-ap001-reconciliation.md) (AP-001 source/caller/test gap map, ownership reconciliation and claim convention)
+· [`autonomous-production-operating-envelope.md`](autonomous-production-operating-envelope.md) (AP-002 U01–U06 register, target-host inventory recipe, fictional deny-by-default policy/budget examples and promotion boundaries)
 · [`../M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md`](../M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md) (AP claim, evidence and handoff protocol)
 · [`uiux-2-0-program.md`](uiux-2-0-program.md) (UI/UX phases, gates and evidence bar)
 · [`uiux-2-0-transformation-plan.md`](uiux-2-0-transformation-plan.md) (what each UI/UX story changes, and how two sessions share one HTML file)
