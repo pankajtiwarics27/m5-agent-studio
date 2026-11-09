@@ -46,7 +46,9 @@ jobs:
             echo "TMPDIR=$TMPDIR"
             echo "STUDIO_SCREENSHOT_CHROME=$chrome"
             echo "STUDIO_PUPPETEER_CORE=$GITHUB_WORKSPACE/tests/browser/node_modules/puppeteer-core/lib/puppeteer/puppeteer-core.js"
-            echo "STUDIO_SCREENSHOT_CHROME_ARGS=--disable-gpu"
+            # Compare continuity reads this variable and would otherwise drop its own
+            # --no-sandbox default, which the GitHub runner needs (no unprivileged userns).
+            echo "STUDIO_SCREENSHOT_CHROME_ARGS=--disable-gpu --no-sandbox"
             echo "LD_LIBRARY_PATH=$RUNNER_TEMP/m5-browser/libs/lib"
             echo "STUDIO_PYTHON=python"
           } >> "$GITHUB_ENV"
