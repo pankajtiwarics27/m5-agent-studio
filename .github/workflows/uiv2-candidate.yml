@@ -1,9 +1,9 @@
 name: UIV2 candidate capture (temporary)
 
 # TEMPORARY. This workflow exists only to capture the UIV2-26 cross-tab *candidate* for an
-# owner review that needs a real browser; it is dispatched by hand, never on push or schedule.
-# It uploads the candidate manifest plus its PNGs, and it must be deleted before the branch
-# that carries it is merged.
+# owner review that needs a real browser; it never runs on the default branch. It commits the
+# candidate manifest and a signature delta back to the branch, because artifacts and job logs
+# are not reachable from the sandbox that asked for them. It is deleted before merge.
 
 on:
   workflow_dispatch:
@@ -15,12 +15,14 @@ on:
       - arena/f4336d9c-m5-agent-studio
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   candidate:
+    # The job pushes its own commit; without this guard that push would start it again.
+    if: "!contains(github.event.head_commit.message, '[skip candidate]')"
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
         with:
@@ -61,10 +63,14 @@ jobs:
             --timeout-ms 60000
       - name: Validate the candidate
         run: python scripts/uiux_v2_cross_tab_reference.py --validate-candidate "$RUNNER_TEMP/candidate/candidate-manifest.json"
-      - name: Summarise the signature delta against the approved baseline
+      - name: Publish the manifest and the signature delta on the branch
         run: |
+          set -eu
+          mkdir -p .uiv2-candidate
+          cp "$RUNNER_TEMP/candidate/candidate-manifest.json" .uiv2-candidate/candidate-manifest.json
           python - <<'PY'
           import json, os, pathlib
+
           root = pathlib.Path(os.environ["RUNNER_TEMP"]) / "candidate"
           cand = json.loads((root / "candidate-manifest.json").read_text())
           appr = json.loads(pathlib.Path("product/M5_2_0_UIUX_V2_Cross_Tab_Approval.json").read_text())
@@ -80,19 +86,25 @@ jobs:
               elif a != b:
                   yield path, a, b
 
-          changed = 0
+          report = {
+              "captured_at_head": cand["git"]["head"],
+              "dirty": cand["git"]["dirty"],
+              "checks": cand["checks"],
+              "browser": cand["browser"],
+              "changed": {},
+          }
           for row in cand["captures"]:
-              delta = list(walk(before.get(row["key"]), row["signature"]))
+              delta = [
+                  {"field": field, "approved": old, "candidate": new}
+                  for field, old, new in walk(before.get(row["key"]), row["signature"])
+              ]
               if delta:
-                  changed += 1
-                  print(f"CHANGED {row['key']}")
-                  for path, old, new in delta:
-                      print(f"    {path}: {old!r} -> {new!r}")
-          print(f"SUMMARY {changed} of {len(cand['captures'])} captures changed")
+                  report["changed"][row["key"]] = delta
+          pathlib.Path(".uiv2-candidate/delta.json").write_text(json.dumps(report, indent=1, sort_keys=True) + "\n")
+          print(json.dumps(report, indent=1, sort_keys=True))
           PY
-      - uses: actions/upload-artifact@v4
-        with:
-          name: uiv2-26-candidate
-          path: ${{ runner.temp }}/candidate
-          if-no-files-found: error
-          retention-days: 7
+          git config user.name "uiv2-candidate"
+          git config user.email "uiv2-candidate@users.noreply.github.com"
+          git add -f .uiv2-candidate
+          git commit -q -m "chore(uiv2): publish the cross-tab candidate captured at ${GITHUB_SHA} [skip candidate]" -m "Temporary: the manifest and the structural delta against the approved baseline, committed where the sandbox that asked for them can read them (artifacts and job logs are unreachable from there). Deleted together with the capture workflow before merge."
+          git push origin "HEAD:${GITHUB_REF_NAME}"
