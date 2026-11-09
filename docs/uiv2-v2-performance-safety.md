@@ -12,16 +12,16 @@ PNG captures remain local review evidence; the committed browser record carries 
 
 **21/21 checks passed; 11 captures; 0 failures.**
 
-Environment: `linux` / `x64`, 2 CPUs, Node `v22.22.3`, `Python 3.11.2`, `HeadlessChrome/153.0.8010.0` headless Chromium.
+Environment: `linux` / `x64`, 2 CPUs, Node `v20.20.2`, `Python 3.13.16`, `HeadlessChrome/156.0.8078.4` headless Chromium.
 
 | Metric | Actual | Gate |
 | --- | ---: | ---: |
-| Fast real SSE schedules | 58 in 329.8ms (175.9/s) | ≥20 and ≥50/s |
-| Coalesced chat renders | 19 | fewer than 58 schedules, complete text retained |
-| Full-window ten-event frame | mean 1.48ms; nearest-rank p95 2.10ms; max 2.60ms | mean ≤4ms |
+| Fast real SSE schedules | 58 in 290.6ms (199.6/s) | ≥20 and ≥50/s |
+| Coalesced chat renders | 18 | fewer than 58 schedules, complete text retained |
+| Full-window ten-event frame | mean 2.05ms; nearest-rank p95 3.00ms; max 3.40ms | mean ≤4ms |
 | Events / cache / cards | 30,000 / 5,000 / 300 | 5,000 / 300 ceilings |
-| Post-GC document nodes | 8481 → 8481 → 8481 | repeated-cycle growth ≤64 |
-| Post-GC JS heap | 3.22 MiB → 3.17 MiB → 3.19 MiB | cycle growth ≤8 MiB; baseline growth ≤16 MiB |
+| Post-GC document nodes | 8544 → 8544 → 8544 | repeated-cycle growth ≤64 |
+| Post-GC JS heap | 3.04 MiB → 2.98 MiB → 2.99 MiB | cycle growth ≤8 MiB; baseline growth ≤16 MiB |
 
 Memory readings use CDP `Performance.getMetrics` immediately after `HeapProfiler.collectGarbage`. They are repeated-cycle plateau checks, not a claim that a browser never allocates during a frame.
 
@@ -31,20 +31,20 @@ Streaming intentionally moves cards inside the trajectory scroller. The gate rep
 
 | Viewport | Theme | Total shift | Internal stream | External shell | Geometry delta | Overflow |
 | --- | --- | ---: | ---: | ---: | ---: | ---: |
-| 1640x900 | light | 0.15396 | 0.15396 | 0.00000 | 0.00px | 0px |
-| 1640x900 | dark | 0.24490 | 0.24490 | 0.00000 | 0.00px | 0px |
-| 1440x900 | light | 0.19059 | 0.19059 | 0.00000 | 0.00px | 0px |
-| 1440x900 | dark | 0.31766 | 0.31766 | 0.00000 | 0.00px | 0px |
-| 1280x800 | light | 0.17722 | 0.17722 | 0.00000 | 0.00px | 0px |
-| 1280x800 | dark | 0.29537 | 0.29537 | 0.00000 | 0.00px | 0px |
-| 390x844 | light | 0.68225 | 0.68225 | 0.00000 | 0.00px | 0px |
-| 390x844 | dark | 0.97464 | 0.97464 | 0.00000 | 0.00px | 0px |
+| 1640x900 | light | 0.18827 | 0.18827 | 0.00000 | 0.00px | 0px |
+| 1640x900 | dark | 0.29613 | 0.29613 | 0.00000 | 0.00px | 0px |
+| 1440x900 | light | 0.26887 | 0.26887 | 0.00000 | 0.00px | 0px |
+| 1440x900 | dark | 0.38410 | 0.38410 | 0.00000 | 0.00px | 0px |
+| 1280x800 | light | 0.23537 | 0.23537 | 0.00000 | 0.00px | 0px |
+| 1280x800 | dark | 0.39229 | 0.39229 | 0.00000 | 0.00px | 0px |
+| 390x844 | light | 0.94757 | 0.94757 | 0.00000 | 0.00px | 0px |
+| 390x844 | dark | 1.35367 | 1.35367 | 0.00000 | 0.00px | 0px |
 
 ## Executed backend and isolation run
 
 **302 tests passed across 13 owning modules; 16 isolation checks passed; 0 failures.**
 
-Environment: Python `3.11.2`, `Linux-6.1.158+-x86_64-with-glibc2.36`, 2 CPUs. No external service, provider, user workspace or live container probe is used.
+Environment: Python `3.13.16`, `Linux-6.1.189+-x86_64-with-glibc2.41`, 2 CPUs. No external service, provider, user workspace or live container probe is used.
 
 Container runtime available: **no**. Isolation status: **unqualified**; dependent execution: **blocked (fail closed)**. This is intentional fail-closed behavior, not an isolation qualification.
 

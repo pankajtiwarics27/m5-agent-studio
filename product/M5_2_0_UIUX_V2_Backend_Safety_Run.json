@@ -1,13 +1,13 @@
 {
   "story": "UIV2-29",
   "kind": "backend-safety-run",
-  "generated_at": "2026-11-09T04:48:13.879155+00:00",
+  "generated_at": "2026-11-09T06:12:51.572070+00:00",
   "git": {
-    "head": "04ec70b5fb26b39621fc9c823f5a6f2475566f02",
+    "head": "3871473bb1a0c9ce5f49a821cec94b3c7d29663f",
     "dirty": true
   },
   "source_sha256": {
-    "static/index.html": "7a938b83e3b512b80b20ed006436763117acb4445ce13b463bcc93f72699c6f6",
+    "static/index.html": "2bf80b669dff0202201dbe15fce36034290ea4a13bb0b4286d30d8e788ee5e44",
     "app.py": "70405f54afd47b0c10c59d0ad153f31632af12f659910d7598166de3740fc0bd",
     "task_events.py": "59ab9597bed3a497de995cf775354c5b6dff57a4009c19e232e33d0f6b8d31d7",
     "scoped_grants.py": "b14f49e39a684f7a6c18b681ed68622b0bdbaa98ce7ba1c0dc2f37d2dfcd83ec",
@@ -31,8 +31,8 @@
     "tests/test_pipeline_recovery.py": "8fc3761f8943d7908d2c1f665bd6ce42ce5d8aac2bb403274dd33d5fbbe6e75b"
   },
   "environment": {
-    "python": "3.11.2",
-    "platform": "Linux-6.1.158+-x86_64-with-glibc2.36",
+    "python": "3.13.16",
+    "platform": "Linux-6.1.189+-x86_64-with-glibc2.41",
     "machine": "x86_64",
     "cpu_count": 2,
     "container_runtime_available": "no",
@@ -68,12 +68,12 @@
       "........................................................................ [ 95%]",
       "..............                                                           [100%]",
       "=============================== warnings summary ===============================",
-      ".venv/lib/python3.11/site-packages/fastapi/testclient.py:1",
-      "  /home/user/m5-agent-studio/.venv/lib/python3.11/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.",
+      "../../usr/local/lib/python3.13/site-packages/fastapi/testclient.py:1",
+      "  /usr/local/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.",
       "    from starlette.testclient import TestClient as TestClient  # noqa",
       "",
       "-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html",
-      "302 passed, 1 warning in 90.65s (0:01:30)"
+      "302 passed, 1 warning in 76.57s (0:01:16)"
     ]
   },
   "isolation": {
@@ -87,9 +87,9 @@
       "M5-P0-04 isolation smoke test",
       "",
       "== 1. Environment fingerprint and runtime availability ==",
-      "  platform: Linux-6.1.158+-x86_64-with-glibc2.36",
-      "  machine: x86_64  python: 3.11.2  cpus: 2",
-      "  memory_total: 4034452 kB",
+      "  platform: Linux-6.1.189+-x86_64-with-glibc2.41",
+      "  machine: x86_64  python: 3.13.16  cpus: 2",
+      "  memory_total: 2030416 kB",
       "  runtime_available: no ('docker' not on PATH)",
       "",
       "== 2. Sandbox invocation invariants (as constructed by app._sandbox_command) ==",
@@ -99,7 +99,7 @@
       "  [PASS] no new privileges — --security-opt=no-new-privileges",
       "  [PASS] no implicit image pull — --pull=never",
       "  [PASS] resource limits — --pids-limit=128 --memory=2g --cpus=2",
-      "  [PASS] single workspace bind mount — type=bind,source=/tmp/m5-isolation-smoke-ohyhauis,target=/workspace",
+      "  [PASS] single workspace bind mount — type=bind,source=/tmp/m5-isolation-smoke-71nn2jyy,target=/workspace",
       "",
       "== 3. Skill-code execution gates (app._run_skill_script) ==",
       "  [PASS] default-off skill-code denial — PermissionError",
@@ -155,7 +155,7 @@
       "scripts/isolation_smoke.py"
     ]
   },
-  "duration_seconds": 93.088,
+  "duration_seconds": 78.542,
   "totals": {
     "test_modules": 13,
     "tests_passed": 302,
