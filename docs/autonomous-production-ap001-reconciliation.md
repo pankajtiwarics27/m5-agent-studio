@@ -1,12 +1,12 @@
 # AP-001 — Program reconciliation and production gap map
 
-**Story:** AP-001 • **State:** in review • **Originally claimed:** 2026-11-09T14:34:22Z
+**Story:** AP-001 • **State:** done • **Originally claimed:** 2026-11-09T14:34:22Z • **Merged:** 2026-11-09T15:27:46Z
 
 **Original claim base:** `2f91bd3a7d9e835818f31a9005d5fc648e207182` • **Merged-main refresh base:** `c0ab6892071e388a39f12533f4a130aeff11bbe9`
 
-**Original implementation evidence head:** `f35417da46f2a0bd6c5e6364ff875987fb237ee7` • **Merged-main evidence head:** `6e7922e6bfa6524a4c636dc7527108c48f6172cb`
+**Original implementation evidence head:** `f35417da46f2a0bd6c5e6364ff875987fb237ee7` • **Merged-main evidence head:** `6e7922e6bfa6524a4c636dc7527108c48f6172cb` • **Merged PR head:** `863ba601cd9e3537aac58906acef4502764e5c0f`
 
-**Replacement claim:** [PR #275](https://github.com/pankajtiwarics27/m5-agent-studio/pull/275)
+**Delivered claim:** [PR #275](https://github.com/pankajtiwarics27/m5-agent-studio/pull/275) • **Merge commit:** `6a7cd319a94e013258cd51cc7dd6c8559d2d78d7` • **Completion record:** [PR #278](https://github.com/pankajtiwarics27/m5-agent-studio/pull/278)
 
 ## 1. Authority, scope and pre-edit record
 
@@ -18,13 +18,15 @@ branch. Those instructions authorize AP-001 reconciliation and program
 registration only. They do not activate a runtime path, authorize a later AP
 story, approve an external service, or settle decisions U01–U06.
 
-The current session is claimed by `arena/6d69f2cd-m5-agent-studio`. It supersedes
+The delivered story was claimed by `arena/6d69f2cd-m5-agent-studio`. It superseded
 the interrupted claim on `arena/73573f93-m5-agent-studio`; draft PR
 [#274](https://github.com/pankajtiwarics27/m5-agent-studio/pull/274) was closed
 after replacement draft PR #275 became the remote coordination claim. Arena
 fixes the branch name for the session, so the proposed `ap-XXX-short-slug`
-convention cannot rename this branch. A local ledger edit is not treated as an
-atomic remote claim.
+convention could not rename that branch. Post-merge completion is recorded from
+`arena/bf895de2-m5-agent-studio` without transferring the historical claim or
+authorizing downstream work. A local ledger edit is not treated as an atomic
+remote claim.
 
 ### Pre-edit blast radius
 
@@ -102,9 +104,9 @@ status vocabulary.
 | M5 runtime | `product/M5_2_0_Autonomous_Roadmap.json`: 34/34 `done`; no active story. | Done story records remain untouched. External security/signing and host-bound qualification obligations still apply even though story tracking is complete. |
 | UIUX | `product/M5_2_0_UIUX_Autonomous_Roadmap.json`: 40/40 `done`; no ledger-local active story. | Existing six-pane preservation, route, control and approval records remain owned here. Concept direction is not implementation approval. |
 | UIV2 | `product/M5_2_0_UIUX_V2_Visual_Fidelity_Roadmap.json`: 30/30 `done`. `docs/uiv2-v2-release-review.md` says UI handoff `READY` but production/security release `RELEASE-BLOCKED`. | No AP story rewrites visual baselines, screenshot approval or release-review evidence. |
-| Current shared-UI work | Open PR [#268](https://github.com/pankajtiwarics27/m5-agent-studio/pull/268), refreshed head `6b64bf0397de0640c1b5149ce0e9111c2ee3a625`, owns header/Density/Council shared surfaces; checks were still mixed completed/in-progress when re-inspected. | AP-008/018/019/020 must reconcile after that owner lands or hands off work. AP-001 does not edit `static/index.html` or its generated evidence. |
+| Current shared-UI baseline | PR [#268](https://github.com/pankajtiwarics27/m5-agent-studio/pull/268) merged as `6aca516fc9afce5bbe1f8276b72407c69a00d0c1` from head `bb38ca309a5a4b7a6dcb6b1194b256b91926cc87`, landing the single-row header, Density retirement and Council reachability work with its owner/generated evidence. | AP-008/018/019/020 must reconcile against that merged baseline. AP-001 does not edit `static/index.html` or its generated evidence. |
 | LC08/native lifecycle | `docs/lc08-current-status.md` remains the earlier 19-owner snapshot; after merged PR #276, the generated fixture and latest `docs/runtime-dispatch-integration.md` checkpoint record 29 owners/54 sites, 16 bounded assessments and **13 inventory-only owners**. G1–G6 remain open, ADR-0038 is proposed and legacy is the default. | No backend, producer, setting or runtime mode is installed by AP-001. Test8 remains paused/unpassed. PRs #272 and #276 are preserved. |
-| AP | `product/M5_Autonomous_Production_Roadmap.json`: AP-001 alone is `in_review`; 31 stories remain `not_started`. | AP-001 registration is tracking authority, not authorization for AP-002 or any product activation. |
+| AP | `product/M5_Autonomous_Production_Roadmap.json`: AP-001 alone is `done`; 31 stories remain `not_started`. | AP-001 registration is tracking authority, not authorization for AP-002 or any product activation. |
 
 ## 4. Producer → authority → executor → consumer matrix
 
@@ -154,14 +156,14 @@ changes.
 
 | Story / required capability bundle | Classification | Source, test and caller evidence; exact gap |
 |---|---|---|
-| AP-001 — reconciliation/registration | `extend` | This record, `AGENTS.md`, `docs/README.md` and the AP ledger establish the map and convention. Review/merge evidence is still required before `done`. |
+| AP-001 — reconciliation/registration | `extend` | This merged record, `AGENTS.md`, `docs/README.md` and the AP ledger extend repository governance with the map and convention. PR #275 and its full CI provide delivery evidence; `extend` records the implementation approach rather than an unfinished story status. |
 | AP-002 — mission scope and operating envelope | `blocked` | `hardware_capabilities.py`, `onboarding_preflight.py`, `routing_policy.py`, `scoped_grants.py`; tests include `test_scoped_grants.py` and `test_routing_consent_policy.py`. U01–U06 remain owner/installed decisions; the current sandbox cannot settle them. |
 | AP-003 — versioned briefs/rubrics/failure fixtures | evaluator `dormant`; AP dataset/held-out controls `missing` | `workflow_evaluation.py` is a pure aggregator and `failure_injection.py` is integrated for fault suites; `test_workflow_evaluation.py` and `test_failure_injection.py` are synthetic. No AP technical/factual/creative/practical brief registry or protected held-out partition exists. |
 | AP-004 — mission-wide authority/budget | `extend` | C02/C03 are live through `_run_authorized_tool`, task budgets and grants (`test_execution_spine.py`, `test_execution_budget.py`). Browser, direct native MoneyPrinter, research HTTP and future media/script entry points do not yet share one AP root envelope. |
 | AP-005 — mission task graph/recoverable joins | `extend` | C01/C05 provide durable root task, checkpoints, leases and one-level child joins (`test_durable_task_state_machine.py`, `test_child_delegation.py`). A general dependency DAG, mission artifact contracts and populated AP migration do not exist. |
 | AP-006 — artifact identity/provenance/invalidation | `extend` | C04 provides hashes, lineage, selective invalidation and verification (`test_artifact_lineage.py`, `test_verification_evidence.py`). AP source/licence/reference histories and isolated active-preview handling are absent. |
 | AP-007 — bounded execution/cancellation/recovery | live core `extend`; installed execution `blocked` | Budgets, recovery guard, process supervision, uncertain effects and no-host-fallback tests exist (`test_process_supervision.py`, `test_side_effect_ledger.py`, `test_sandbox_boundary.py`). Coverage is not mission-wide; this Linux host has no Docker/Podman and is not the qualified Apple target. |
-| AP-008 — mission controls/artifact-first status | `blocked` | Durable events/pause/cancel/evidence UI are reusable, with UIUX/UIV2 preservation suites. No AP mission view or active-preview boundary exists; PR #268 owns current shared UI and actual implementation/visual review is required. |
+| AP-008 — mission controls/artifact-first status | `blocked` | Durable events/pause/cancel/evidence UI are reusable, with UIUX/UIV2 preservation suites. No AP mission view or active-preview boundary exists; merged PR #268 is now the shared-UI baseline and future implementation/visual review is still required. |
 | AP-009 — sourced safe search/reading/repo inspection | existing network boundary `extend`; gateway module `dormant`; research record `missing` | C13. `private_network_gateway.py` is unit-tested but unused. `_fetch_online_inspiration` does not preserve URL/date/excerpt/contradiction provenance and catches provider failures, so it is not an AP research consumer. |
 | AP-010 — controlled browser and takeover | `missing` | C14. Browser walks test Studio; the Playwright catalog entry is not an isolated project profile, durable browser job, egress broker or authenticated human-takeover protocol. U04/U06 also block live activation. |
 | AP-011 — inspect capability candidates without activation | model discovery `dormant`; general candidate registry `missing` | `model_discovery.py` creates inert install plans and has `test_model_discovery.py`; `supply_chain.py` is release-script owned. No live generic candidate record covers source revision, licence, hooks, egress, privileges and resource cost. |
@@ -340,12 +342,14 @@ human approval.
 - hosted reasoning or silent cloud/media fallback;
 - coordinated native lifecycle composition, concurrent model residency or
   resumed Test8;
-- UI implementation from concept mockups or changes that overwrite PR #268;
+- UI implementation from concept mockups or changes that overwrite the merged PR #268 baseline or its generated evidence;
 - owner screenshot/artifact/reference/publish approval or independent security
   sign-off.
 
-The next action after review/merge is an explicit owner decision on whether to
-authorize AP-002, AP-003, both, or neither. AP-001 does not make that decision.
+The next AP-program action after AP-001 completion is an explicit owner decision
+on whether to authorize AP-002, AP-003, both, or neither. AP-001 does not make
+that decision, and a generic continuation does not silently claim downstream
+work.
 
 ## 11. Executed validation and evidence limits
 
@@ -394,8 +398,9 @@ The direct-project import count remains 36.
 - Security stayed `release-blocked`; lifecycle feasibility remained 19/19
   synthetic with activation false; current-host sandbox/hardware qualification
   remained blocked with expected exit 2.
-- The previous PR head's eight reported GitHub checks were green. The refreshed
-  pushed head still requires its own full PR matrix before merge.
+- The previous PR head's eight reported GitHub checks were green. At this
+  refresh point, the new pushed head still required its own full PR matrix
+  before merge; the completed result is recorded below.
 
 The full local pytest suite was not re-run because this documentation/ledger
 change maps to the 518-test docs/CI scope; the refreshed 646-test source-grounding
@@ -404,7 +409,34 @@ CI remains responsible for the full Python 3.11/3.12/3.13 and browser-safety
 matrix at the pushed head.
 AP-001 moved to `in_review` only after the implementation/evidence commit was
 pinned; the earlier invariant run correctly recorded `in_progress` during
-construction. Until PR checks finish, CI is pending rather than green. No
-current-host isolation, installed native runtime, physical load/unload, real
-browser task, playable video, owner artifact review or independent security
-acceptance is claimed.
+construction. At that point CI was pending rather than green. The post-merge
+record below closes only AP-001; no current-host isolation, installed native
+runtime, physical load/unload, real browser task, playable video, owner artifact
+review or independent security acceptance is claimed.
+
+### Post-merge completion record
+
+The owner explicitly requested the merge after reviewing the AP-001 handoff.
+The refreshed pull-request head `863ba601cd9e3537aac58906acef4502764e5c0f`
+passed CI run `42642415180`: full tests on Python 3.11, 3.12 and 3.13 plus the
+browser-safety regression job all completed successfully. PR #275 then merged
+at 2026-11-09T15:27:46Z as
+`6a7cd319a94e013258cd51cc7dd6c8559d2d78d7`; the merged head is an ancestor of
+`main`.
+
+PR #268 subsequently merged as
+`6aca516fc9afce5bbe1f8276b72407c69a00d0c1`. This closeout was refreshed from
+that descendant rather than treating the formerly open UI claim as current.
+The post-merge `main` run for #275 was superseded by the higher-priority #268
+merge run, not by a test assertion failure. Completion-record PR #278 must still pass its own current-head CI before
+landing. Local closeout selection collected 518
+tests: **497 passed**, **21 intentionally skipped** under `P7-PARK-02`, and one
+upstream warning. AP invariants, documentation, governance, security-record
+consistency and baseline validation passed.
+
+All five AP-001 acceptance criteria have the evidence mapped in §10, applicable
+implementation-head CI passed, and the implementation PR is merged. AP-001 is
+therefore `done` under the ledger completion convention. This status does not
+make the product release-ready: security remains `release-blocked`, installed
+host/native qualification remains blocked/not run, and all 31 downstream AP
+stories remain `not_started` and unauthorized.

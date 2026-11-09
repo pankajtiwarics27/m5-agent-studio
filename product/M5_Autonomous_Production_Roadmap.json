@@ -70,7 +70,7 @@
       "title": "Reconcile programs and trace current production gaps",
       "priority": "P0",
       "optional": false,
-      "status": "in_review",
+      "status": "done",
       "authorization": "owner_authorizes_program_registration_and_scope",
       "dependencies": [],
       "objective": "Create a source-grounded delta map; prevent duplicate implementations and unauthorized LC activation.",
@@ -120,14 +120,14 @@
         "owner": "arena/6d69f2cd-m5-agent-studio",
         "branch": "arena/6d69f2cd-m5-agent-studio",
         "base_sha": "2f91bd3a7d9e835818f31a9005d5fc648e207182",
-        "head_sha": "6e7922e6bfa6524a4c636dc7527108c48f6172cb",
+        "head_sha": "863ba601cd9e3537aac58906acef4502764e5c0f",
         "claimed_at": "2026-11-09T14:34:22Z",
-        "heartbeat_at": "2026-11-09T15:12:54Z",
+        "heartbeat_at": "2026-11-09T15:27:46Z",
         "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/275",
-        "delivery_status": "pr_open",
+        "delivery_status": "merged",
         "acceptance_evidence": [
           "docs/autonomous-production-ap001-reconciliation.md §§2,4,5: classification definitions, 18 producer/authority/executor/consumer rows, and all 32 AP story capability bundles with source/test/caller evidence.",
-          "docs/autonomous-production-ap001-reconciliation.md §3: AS/M5/UIUX/UIV2/LC ledger counts, active UI PR ownership, LC G1-G6/legacy-default blockers, and untouched status vocabularies.",
+          "docs/autonomous-production-ap001-reconciliation.md §3: AS/M5/UIUX/UIV2/LC ledger counts, merged shared-UI baseline ownership, LC G1-G6/legacy-default blockers, and untouched status vocabularies.",
           "docs/autonomous-production-ap001-reconciliation.md §6: explicit MoneyPrinter, evidence-lessons, routing, and durable-delegation assessments; no new wrapper/control plane proposed.",
           "docs/autonomous-production-ap001-reconciliation.md §§7-8: release-blocked security state, current/recorded installed qualification limits, and generated/source-bound artifact ownership.",
           "AGENTS.md plus docs/autonomous-production-ap001-reconciliation.md §9: one AP tracking source, AP-001-only owner activation scope, fixed-Arena-branch exception, remote draft-PR claim and takeover convention."
@@ -138,16 +138,35 @@
           "ruff check ., mypy (75 sources), tracked compileall, frontend syntax, baseline, app/standalone smoke, docs/governance/security-signoff, demo and screenshot validation: passed before and after merged-main refresh.",
           "studio/route/subsystem/AS-roadmap regeneration plus runtime dispatch and UI/UIV2 source-bound checks: passed with zero unintended tracked drift after merging main.",
           "security_release_gate.py --json: executed successfully, decision release-blocked; check_lifecycle_feasibility.py: 19/19 synthetic expectations, activation false.",
-          "qualify_environment.py --all: exit 2, expected blocked on Linux x86_64 without Docker/Podman and outside the Apple M5/24 GiB target."
+          "qualify_environment.py --all: exit 2, expected blocked on Linux x86_64 without Docker/Podman and outside the Apple M5/24 GiB target.",
+          "Post-merge closeout against main 6aca516fc9afce5bbe1f8276b72407c69a00d0c1: scoped docs/CI selection collected 518 tests, with 497 passed and 21 intentionally skipped under P7-PARK-02; one upstream warning. AP invariants, docs, governance, security-record consistency, baseline and diff checks passed."
         ],
         "blockers": [
-          "AP-001 needs refreshed PR #275 full CI and merge before done.",
           "AP-002 through AP-032 have no authorization from AP-001; U01-U06 remain unresolved where referenced.",
           "Current-host sandbox/hardware and installed native lifecycle qualification are blocked/not run; no activation is allowed.",
           "Production release remains blocked on independent AS-031 acceptance and maintainer artifact signing.",
-          "Shared UI work must coordinate with PR #268 and preserve owner/generated visual evidence."
+          "Downstream UI stories must preserve and reconcile against merged PR #268 and its owner/generated visual evidence."
         ],
-        "handoff": "AP-001 merged main c0ab6892071e388a39f12533f4a130aeff11bbe9 and refreshed implementation evidence at 6e7922e6bfa6524a4c636dc7527108c48f6172cb in ready PR #275. Require the refreshed full PR CI before merge. Do not claim AP-002 or activate runtime/UI/media/browser/model paths; the owner must separately authorize the next AP story."
+        "handoff": "AP-001 is done: PR #275 head 863ba601cd9e3537aac58906acef4502764e5c0f passed the full Python/browser matrix and merged as 6a7cd319a94e013258cd51cc7dd6c8559d2d78d7. Post-merge closeout was refreshed from main 6aca516fc9afce5bbe1f8276b72407c69a00d0c1 after PR #268 landed. All 31 downstream stories remain not_started and unauthorized; await an explicit owner decision before claiming AP-002 or AP-003, and do not activate runtime/UI/media/browser/model paths.",
+        "merged_at": "2026-11-09T15:27:46Z",
+        "merge_commit_sha": "6a7cd319a94e013258cd51cc7dd6c8559d2d78d7",
+        "completion_recorded_by": "arena/bf895de2-m5-agent-studio",
+        "completion_base_sha": "6aca516fc9afce5bbe1f8276b72407c69a00d0c1",
+        "changed_files": [
+          "AGENTS.md",
+          "docs/README.md",
+          "docs/autonomous-production-ap001-reconciliation.md",
+          "product/M5_Autonomous_Production_Roadmap.json"
+        ],
+        "completion_evidence": [
+          "PR #275 merged at 2026-11-09T15:27:46Z as 6a7cd319a94e013258cd51cc7dd6c8559d2d78d7; merged PR head 863ba601cd9e3537aac58906acef4502764e5c0f is in main history.",
+          "GitHub Actions run 42642415180 passed the refreshed PR head on Python 3.11, 3.12 and 3.13 plus Browser safety regressions.",
+          "The repository owner explicitly requested merge after the AP-001 handoff; AP-001 requires no screenshot, artifact, independent-security or release sign-off, and does not claim those approvals.",
+          "Post-merge closeout refreshed against main 6aca516fc9afce5bbe1f8276b72407c69a00d0c1 after UI PR #268 merged; closure PR current-head CI remains required before that bookkeeping change lands.",
+          "Local post-merge closeout validation against main 6aca516fc9afce5bbe1f8276b72407c69a00d0c1: AP invariants, docs, governance, security-record consistency and baseline passed; scoped docs/CI tests reported 497 passed and 21 intentional P7-PARK-02 skips."
+        ],
+        "completion_branch": "arena/bf895de2-m5-agent-studio",
+        "completion_pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/278"
       },
       "implementation_prompt": "Implement AP-001: Reconcile programs and trace current production gaps. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
