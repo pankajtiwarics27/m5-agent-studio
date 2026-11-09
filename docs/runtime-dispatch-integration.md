@@ -1200,3 +1200,16 @@ framing plus dormant warm native/fit kernels with synthetic facts, not installed
 qualification. HTTP Hall's session guards and retention semantics are not copied
 into MCP. Legacy/default dormancy, LC09 scope, proposed ADR status, paused test8
 and independent acceptance are unchanged.
+
+
+## Bounded workspace suggestion continuation
+
+Following merged PR266, the [workspace suggestion audit](lc08-workspace-suggestion-audit.md)
+records one more assessed owner, leaving24inventory-only owners. Rejection of
+overlong model text previously left the owned source open until finalization;
+explicit closing now completes within the existing timeout.22offline cases
+cover consent, complete accepted input, no-action/output refusal, context reset,
+interruption and dormant warm native/fit kernels with synthetic facts. No folder
+is created or workspace switched by a suggestion; original limits/options and
+legacy defaults remain unchanged. LC09, paused test8, proposed ADR and independent
+acceptance boundaries are not advanced.

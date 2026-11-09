@@ -8,8 +8,8 @@
   "check_with": "python3 scripts/uiux_authorization_trace.py --check",
   "statement": "For state-changing route candidates resolved by the browser map: the shared gates every request passes, handler refusals, referenced authority and durable-state subsystems, and possible effects. The route map is a lexical scan, not proof of exhaustive browser coverage; a reference is evidence of a consultation, not proof of enforcement.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "app_sha256": "124ba246dd77e6da195dc1f15573c41088c56f324da9b66627893ee3cece55be",
-  "route_map_sha256": "d1788c2a4384af22763d54ae82db1621d157aea00ed1775cadbaa3dfcdd08634",
+  "app_sha256": "5749d2740294311458e8111afe8b7f73984e7f994b7d9617bb3f93e24dba21a0",
+  "route_map_sha256": "21dd832ba015dea8a1b3946a3ae168afb313dd52645d4fa54c351e4cf6ba7b41",
   "totals": {
     "routes_in_app": 121,
     "state_changing_routes_in_app": 81,
@@ -279,7 +279,7 @@
       "method": "POST",
       "path": "/api/cache/clear-ssd",
       "handler": "api_clear_ssd_cache",
-      "handler_line": 6123,
+      "handler_line": 6124,
       "response": "json",
       "ui_callers": [
         "clearSsdCache"
@@ -332,7 +332,7 @@
       "method": "POST",
       "path": "/api/chat/stream",
       "handler": "api_chat_stream",
-      "handler_line": 6223,
+      "handler_line": 6224,
       "response": "stream",
       "ui_callers": [
         "consumeSSE"
@@ -410,7 +410,7 @@
       "method": "POST",
       "path": "/api/codegraph/query",
       "handler": "api_codegraph_query",
-      "handler_line": 8506,
+      "handler_line": 8507,
       "response": "json",
       "ui_callers": [
         "runCodeGraphPlayground"
@@ -568,7 +568,7 @@
       "method": "POST",
       "path": "/api/council/stream",
       "handler": "api_council_stream",
-      "handler_line": 6394,
+      "handler_line": 6395,
       "response": "stream",
       "ui_callers": [
         "consumeSSE"
@@ -627,7 +627,7 @@
       "method": "POST",
       "path": "/api/debate/stream",
       "handler": "api_debate_stream",
-      "handler_line": 6456,
+      "handler_line": 6457,
       "response": "stream",
       "ui_callers": [
         "consumeSSE"
@@ -686,7 +686,7 @@
       "method": "DELETE",
       "path": "/api/hall/sessions",
       "handler": "api_clear_hall_sessions",
-      "handler_line": 5824,
+      "handler_line": 5825,
       "response": "json",
       "ui_callers": [
         "clearAllHallSessions"
@@ -738,7 +738,7 @@
       "method": "POST",
       "path": "/api/hall/sessions",
       "handler": "api_hall_create",
-      "handler_line": 5613,
+      "handler_line": 5614,
       "response": "json",
       "ui_callers": [
         "confirmSpawnSession",
@@ -795,7 +795,7 @@
       "method": "DELETE",
       "path": "/api/hall/sessions/{session_id}",
       "handler": "api_delete_hall_session",
-      "handler_line": 5845,
+      "handler_line": 5846,
       "response": "json",
       "ui_callers": [
         "deleteHallSession"
@@ -857,7 +857,7 @@
       "method": "POST",
       "path": "/api/hall/sessions/{session_id}/message",
       "handler": "api_hall_post_message",
-      "handler_line": 5637,
+      "handler_line": 5638,
       "response": "json",
       "ui_callers": [
         "postHumanHallMessage"
@@ -913,7 +913,7 @@
       "method": "POST",
       "path": "/api/hall/sessions/{session_id}/summon",
       "handler": "api_hall_summon",
-      "handler_line": 5662,
+      "handler_line": 5663,
       "response": "stream",
       "ui_callers": [
         "consumeSSE"
@@ -995,7 +995,7 @@
       "method": "POST",
       "path": "/api/harness/abort/{session_id}",
       "handler": "api_abort_harness",
-      "handler_line": 13925,
+      "handler_line": 13926,
       "response": "json",
       "ui_callers": [
         "abortHarnessRun"
@@ -1056,7 +1056,7 @@
       "method": "POST",
       "path": "/api/harness/approve",
       "handler": "api_approve_harness_tool",
-      "handler_line": 13855,
+      "handler_line": 13856,
       "response": "json",
       "ui_callers": [
         "resolveHarnessApproval"
@@ -1136,7 +1136,7 @@
       "method": "POST",
       "path": "/api/harness/gsd-wave",
       "handler": "api_run_gsd_fresh_wave",
-      "handler_line": 19961,
+      "handler_line": 19962,
       "response": "stream",
       "ui_callers": [
         "consumeSSE"
@@ -1216,7 +1216,7 @@
       "method": "POST",
       "path": "/api/harness/run",
       "handler": "api_run_harness_turn",
-      "handler_line": 19018,
+      "handler_line": 19019,
       "response": "stream",
       "ui_callers": [
         "consumeSSE"
@@ -1334,7 +1334,7 @@
       "method": "POST",
       "path": "/api/harness/sdlc/feedback",
       "handler": "api_run_sdlc_feedback_loop",
-      "handler_line": 21641,
+      "handler_line": 21642,
       "response": "stream",
       "ui_callers": [
         "consumeSSE"
@@ -1415,7 +1415,7 @@
       "method": "POST",
       "path": "/api/harness/sdlc/run",
       "handler": "api_run_agile_sdlc_factory",
-      "handler_line": 21322,
+      "handler_line": 21323,
       "response": "stream",
       "ui_callers": [
         "consumeSSE"
@@ -1504,7 +1504,7 @@
       "method": "DELETE",
       "path": "/api/harness/sessions/{session_id}",
       "handler": "api_delete_harness_session",
-      "handler_line": 13744,
+      "handler_line": 13745,
       "response": "json",
       "ui_callers": [
         "deleteHarnessSession"
@@ -1582,7 +1582,7 @@
       "method": "PATCH",
       "path": "/api/harness/sessions/{session_id}",
       "handler": "api_patch_harness_session",
-      "handler_line": 13655,
+      "handler_line": 13656,
       "response": "json",
       "ui_callers": [
         "patchActiveHarnessSettings"
@@ -1666,7 +1666,7 @@
       "method": "POST",
       "path": "/api/harness/sessions/{session_id}/apply",
       "handler": "api_apply_harness_worktree",
-      "handler_line": 13813,
+      "handler_line": 13814,
       "response": "json",
       "ui_callers": [
         "applyHarnessWorktree",
@@ -1744,7 +1744,7 @@
       "method": "POST",
       "path": "/api/harness/sessions/{session_id}/cancel",
       "handler": "api_cancel_harness_session",
-      "handler_line": 14545,
+      "handler_line": 14546,
       "response": "json",
       "ui_callers": [
         "harnessRecoveryPost"
@@ -1820,7 +1820,7 @@
       "method": "POST",
       "path": "/api/harness/sessions/{session_id}/compact",
       "handler": "api_compact_harness_session",
-      "handler_line": 13843,
+      "handler_line": 13844,
       "response": "json",
       "ui_callers": [
         "compactActiveHarness",
@@ -1878,7 +1878,7 @@
       "method": "POST",
       "path": "/api/harness/sessions/{session_id}/contain",
       "handler": "api_contain_harness_session",
-      "handler_line": 14653,
+      "handler_line": 14654,
       "response": "json",
       "ui_callers": [
         "harnessRecoveryPost"
@@ -1954,7 +1954,7 @@
       "method": "POST",
       "path": "/api/harness/sessions/{session_id}/delegations",
       "handler": "api_create_harness_delegation",
-      "handler_line": 17923,
+      "handler_line": 17924,
       "response": "json",
       "ui_callers": [
         "harnessRecoveryPost"
@@ -2033,7 +2033,7 @@
       "method": "POST",
       "path": "/api/harness/sessions/{session_id}/grants",
       "handler": "api_issue_harness_session_grant",
-      "handler_line": 15045,
+      "handler_line": 15046,
       "response": "json",
       "ui_callers": [
         "harnessRecoveryPost"
@@ -2115,7 +2115,7 @@
       "method": "POST",
       "path": "/api/harness/sessions/{session_id}/grants/revoke",
       "handler": "api_revoke_harness_session_grant",
-      "handler_line": 15112,
+      "handler_line": 15113,
       "response": "json",
       "ui_callers": [
         "revokeHarnessGrant"
@@ -2199,7 +2199,7 @@
       "method": "POST",
       "path": "/api/harness/sessions/{session_id}/pause",
       "handler": "api_pause_harness_session",
-      "handler_line": 14502,
+      "handler_line": 14503,
       "response": "json",
       "ui_callers": [
         "harnessRecoveryPost"
@@ -2269,7 +2269,7 @@
       "method": "POST",
       "path": "/api/harness/sessions/{session_id}/resume",
       "handler": "api_resume_harness_session",
-      "handler_line": 18937,
+      "handler_line": 18938,
       "response": "json",
       "ui_callers": [
         "harnessRecoveryPost"
@@ -2356,7 +2356,7 @@
       "method": "POST",
       "path": "/api/harness/sessions/{session_id}/snapshots",
       "handler": "api_capture_harness_session_snapshot",
-      "handler_line": 14155,
+      "handler_line": 14156,
       "response": "json",
       "ui_callers": [
         "harnessRecoveryPost"
@@ -2426,7 +2426,7 @@
       "method": "POST",
       "path": "/api/harness/sessions/{session_id}/switch-model",
       "handler": "api_switch_harness_session_model",
-      "handler_line": 16182,
+      "handler_line": 16183,
       "response": "json",
       "ui_callers": [
         "harnessRecoveryPost"
@@ -2509,7 +2509,7 @@
       "method": "POST",
       "path": "/api/mcp/import-json",
       "handler": "api_import_mcp_json",
-      "handler_line": 7662,
+      "handler_line": 7663,
       "response": "json",
       "ui_callers": [
         "importMcpJson"
@@ -2571,7 +2571,7 @@
       "method": "POST",
       "path": "/api/mcp/servers",
       "handler": "api_save_mcp_server",
-      "handler_line": 7645,
+      "handler_line": 7646,
       "response": "json",
       "ui_callers": [
         "saveMcpServer"
@@ -2630,7 +2630,7 @@
       "method": "DELETE",
       "path": "/api/mcp/servers/{alias}",
       "handler": "api_delete_mcp_server",
-      "handler_line": 7748,
+      "handler_line": 7749,
       "response": "json",
       "ui_callers": [
         "deleteMcpServer"
@@ -2690,7 +2690,7 @@
       "method": "PATCH",
       "path": "/api/mcp/servers/{alias}",
       "handler": "api_patch_mcp_server",
-      "handler_line": 7718,
+      "handler_line": 7719,
       "response": "json",
       "ui_callers": [
         "changeMcpApprovalPolicy",
@@ -2750,7 +2750,7 @@
       "method": "POST",
       "path": "/api/mcp/servers/{alias}/call",
       "handler": "api_call_mcp_server_tool",
-      "handler_line": 7845,
+      "handler_line": 7846,
       "response": "json",
       "ui_callers": [
         "runMcpPlayground"
@@ -2832,7 +2832,7 @@
       "method": "POST",
       "path": "/api/mcp/servers/{alias}/sync",
       "handler": "api_sync_mcp_server",
-      "handler_line": 7791,
+      "handler_line": 7792,
       "response": "json",
       "ui_callers": [
         "syncMcpServer"
@@ -2893,7 +2893,7 @@
       "method": "POST",
       "path": "/api/models/unload-all",
       "handler": "api_unload_all",
-      "handler_line": 6072,
+      "handler_line": 6073,
       "response": "json",
       "ui_callers": [
         "unloadAllModels"
@@ -2946,7 +2946,7 @@
       "method": "POST",
       "path": "/api/models/{model_id:path}/load",
       "handler": "api_load_model",
-      "handler_line": 6091,
+      "handler_line": 6092,
       "response": "json",
       "ui_callers": [
         "councilSeatAction",
@@ -3005,7 +3005,7 @@
       "method": "POST",
       "path": "/api/models/{model_id:path}/unload",
       "handler": "api_unload_model",
-      "handler_line": 6108,
+      "handler_line": 6109,
       "response": "json",
       "ui_callers": [
         "modelAction"
@@ -3058,7 +3058,7 @@
       "method": "POST",
       "path": "/api/opencontext/docs",
       "handler": "api_save_opencontext",
-      "handler_line": 7991,
+      "handler_line": 7992,
       "response": "json",
       "ui_callers": [
         "saveOpenContextDoc"
@@ -3112,7 +3112,7 @@
       "method": "DELETE",
       "path": "/api/opencontext/docs/{doc_id}",
       "handler": "api_delete_opencontext",
-      "handler_line": 8026,
+      "handler_line": 8027,
       "response": "json",
       "ui_callers": [
         "deleteOpenContextDoc"
@@ -3161,7 +3161,7 @@
       "method": "PATCH",
       "path": "/api/opencontext/docs/{doc_id}",
       "handler": "api_patch_opencontext",
-      "handler_line": 8008,
+      "handler_line": 8009,
       "response": "json",
       "ui_callers": [
         "togglePinOpenContextDoc"
