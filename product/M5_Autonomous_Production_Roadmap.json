@@ -5,15 +5,15 @@
   "program": "AP",
   "revision": "1.2",
   "prepared_date": "2026-11-08",
-  "lifecycle": "proposed_awaiting_program_reconciliation",
+  "lifecycle": "registered_tracking_ap001_only",
   "source_snapshot": "a67e8b291614f8afdac7c8d38ba51bcc8926d695",
   "source_repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "specification": "docs/autonomous-production-roadmap.md",
   "agent_prompt": "M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md",
   "authority": {
     "precedence": "AGENTS.md, existing security/approval rules and owning program ledgers remain binding.",
-    "scope": "Drafting/recording this plan is not runtime activation, installed qualification, or blanket code/story execution authorization.",
-    "registration_gate": "AP-001 reconciles ownership and records approved program activation before implementation claims.",
+    "scope": "AP tracking is registered through owner-authorized AP-001. Product/runtime activation and every downstream AP story remain separately authorized.",
+    "registration_gate": "AP-001 records the authoritative tracking source and bounded claim protocol; merge/review does not authorize AP-002 through AP-032.",
     "other_ledgers": "Do not alter AS/M5/UIUX/UIV2/LC tracking without the owning protocol.",
     "approval": "Agents cannot fabricate owner, screenshot, independent security or release approval."
   },
@@ -2546,5 +2546,19 @@
     "policy": "Revision 1.2 overrides earlier blanket hosted-media exclusions. Local inference is default; explicitly granted external cloud/media capabilities are feasible. No silent fallback. External reasoning-model use requires a separate policy decision.",
     "ux_direction": "docs/autonomous-production-ux-direction.md",
     "approval_scope": "Concept direction only; no implementation, screenshot, security or release acceptance."
+  },
+  "program_registration": {
+    "tracking_source": "product/M5_Autonomous_Production_Roadmap.json",
+    "requirements_source": "docs/autonomous-production-roadmap.md",
+    "protocol": "M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md",
+    "reconciliation_evidence": "docs/autonomous-production-ap001-reconciliation.md",
+    "registered_by_story": "AP-001",
+    "owner_authorized_date": "2026-11-09",
+    "activation_scope": "AP-001 reconciliation, registration and evidence only",
+    "runtime_activation_authorized": false,
+    "authorized_downstream_stories": [],
+    "claim_authority": "A pushed draft pull request plus the matching story tracking block is the remote coordination claim; a local JSON edit alone is not atomic.",
+    "fixed_branch_exception": "Arena sessions use their assigned arena/<session>-m5-agent-studio branch instead of renaming to the proposed ap-XXX-short-slug convention.",
+    "stale_claim_rule": "No automatic timeout is inferred. Inspect remote activity, coordinate explicitly, preserve work and record the takeover reason before superseding a claim."
   }
 }
