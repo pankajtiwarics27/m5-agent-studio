@@ -151,6 +151,9 @@
       "test_routing_consent_policy.py",
       "test_security_*.py"
     ],
+    "autonomous.production": [
+      "test_autonomous_production_*.py"
+    ],
     "quality.docs-ci": [
       "test_adr_process.py",
       "test_baseline.py",
@@ -414,6 +417,11 @@
     ],
     "moneyprinter_mcp.py": [
       "models.providers"
+    ],
+    "autonomous_production_decisions.py": [
+      "autonomous.production",
+      "security.execution",
+      "security.network"
     ]
   }
 }
