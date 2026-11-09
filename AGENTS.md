@@ -78,7 +78,7 @@ AS source/status record rather than a fourth interchangeable claim ledger.
 - **Autonomous Production program** ([`product/M5_Autonomous_Production_Roadmap.json`](product/M5_Autonomous_Production_Roadmap.json)):
   AP-001 and AP-002 are `done`. On 2026-11-09 the owner explicitly authorized
   AP-002 and AP-003 **sequentially**, one story per branch/PR. AP-003 is now
-  `in_progress` on its separate fixed Arena branch for offline evaluation-brief,
+  `in_review` on its separate fixed Arena branch for offline evaluation-brief,
   partition-policy and synthetic failure-fixture work only. AP-004…AP-032,
   product runtime activation, real external services and unresolved U01–U06
   owner decisions remain unauthorized.

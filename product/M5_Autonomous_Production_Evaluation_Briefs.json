@@ -1,0 +1,711 @@
+{
+  "schema_version": 1,
+  "record_version": 1,
+  "document_type": "autonomous_production_evaluation_briefs",
+  "recorded_at": "2026-11-09T18:52:05Z",
+  "lifecycle": "provisional_uncalibrated",
+  "activation_authorized": false,
+  "owner_scope_selected": false,
+  "source_policy": {
+    "requirements_source": "docs/autonomous-production-roadmap.md#7-evaluation-benchmarks-and-feedback",
+    "existing_evaluator_contracts": [
+      "model_comparison.EvalTask/v1",
+      "workflow_evaluation.WorkflowComparison/v1"
+    ],
+    "limitations": [
+      "The records are synthetic evaluation inputs, not observed product performance.",
+      "U01 remains pending; the three domains are provisional fixture categories, not an owner launch choice.",
+      "No model, runner, optimizer, provider, network destination, account, file grant, or runtime is activated."
+    ]
+  },
+  "quality_model": {
+    "rubric_id": "ap-quality-v1",
+    "version": 1,
+    "scoring_scale": {
+      "minimum": 0,
+      "maximum": 4,
+      "labels": {
+        "0": "absent_or_harmful",
+        "1": "major_repair",
+        "2": "partial",
+        "3": "acceptable",
+        "4": "strong"
+      }
+    },
+    "aggregation_policy": {
+      "category_scores_remain_separate": true,
+      "hard_gates_cannot_be_averaged_away": true,
+      "single_grader_cannot_certify_all_categories": true,
+      "record_failures_and_variability": true
+    },
+    "categories": [
+      {
+        "id": "technical",
+        "description": "Whether the requested functions work and the delivered artifact is valid, usable, accessible, and recoverable.",
+        "criteria": [
+          {
+            "id": "T01",
+            "description": "Required functions and interactions complete end to end without a false-success state.",
+            "evidence_types": [
+              "deterministic_check",
+              "artifact_inspection"
+            ],
+            "hard_gate": true
+          },
+          {
+            "id": "T02",
+            "description": "The artifact parses, opens, renders, or decodes in the applicable real consumer.",
+            "evidence_types": [
+              "deterministic_check",
+              "real_consumer_inspection"
+            ],
+            "hard_gate": true
+          },
+          {
+            "id": "T03",
+            "description": "Accessibility, cancellation, failure reporting, and recovery are appropriate to the output type.",
+            "evidence_types": [
+              "adversarial_check",
+              "recovery_check"
+            ],
+            "hard_gate": true
+          }
+        ]
+      },
+      {
+        "id": "factual",
+        "description": "Whether claims are supported by suitable evidence and uncertainty or contradiction is made explicit.",
+        "criteria": [
+          {
+            "id": "F01",
+            "description": "Consequential claims map to dated sources or supplied evidence with provenance.",
+            "evidence_types": [
+              "source_map",
+              "claim_review"
+            ],
+            "hard_gate": true
+          },
+          {
+            "id": "F02",
+            "description": "Uncertainty, missing evidence, and contradictory sources are disclosed rather than guessed away.",
+            "evidence_types": [
+              "claim_review",
+              "contradiction_check"
+            ],
+            "hard_gate": true
+          },
+          {
+            "id": "F03",
+            "description": "Quoted, derived, and original material remain distinguishable.",
+            "evidence_types": [
+              "provenance_review"
+            ],
+            "hard_gate": false
+          }
+        ]
+      },
+      {
+        "id": "creative",
+        "description": "Whether the work fits its audience, has coherent style and pacing, and avoids generic or derivative execution.",
+        "criteria": [
+          {
+            "id": "C01",
+            "description": "Voice, visual language, structure, and pacing fit the stated fictional brief.",
+            "evidence_types": [
+              "blinded_review",
+              "artifact_inspection"
+            ],
+            "hard_gate": false
+          },
+          {
+            "id": "C02",
+            "description": "The output is coherent and sufficiently original for the task rather than a template-only substitution.",
+            "evidence_types": [
+              "blinded_review",
+              "similarity_review"
+            ],
+            "hard_gate": false
+          },
+          {
+            "id": "C03",
+            "description": "Creative choices support rather than obscure factual and functional requirements.",
+            "evidence_types": [
+              "cross_category_review"
+            ],
+            "hard_gate": false
+          }
+        ]
+      },
+      {
+        "id": "practical",
+        "description": "Whether the result is useful to the intended fictional audience and objective without claiming demand or revenue.",
+        "criteria": [
+          {
+            "id": "P01",
+            "description": "A recipient can understand and use the delivery package without hidden operator repair.",
+            "evidence_types": [
+              "task_completion_review",
+              "delivery_check"
+            ],
+            "hard_gate": true
+          },
+          {
+            "id": "P02",
+            "description": "Limitations, dependencies, costs, and separately authorised next actions are explicit.",
+            "evidence_types": [
+              "delivery_check",
+              "policy_review"
+            ],
+            "hard_gate": true
+          },
+          {
+            "id": "P03",
+            "description": "The artifact addresses the stated outcome but makes no unsupported demand, revenue, or production-readiness claim.",
+            "evidence_types": [
+              "objective_review"
+            ],
+            "hard_gate": false
+          }
+        ]
+      }
+    ]
+  },
+  "evaluation_briefs": [
+    {
+      "brief_id": "synthetic-research-brief",
+      "version": 1,
+      "domain": "research",
+      "status": "synthetic_provisional",
+      "owner_scope_selected": false,
+      "audience": "A fictional project lead comparing documented options.",
+      "outcome": "A concise evidence-linked brief that distinguishes facts, uncertainty, contradictions, and a bounded recommendation.",
+      "rubric_id": "ap-quality-v1",
+      "required_category_ids": [
+        "technical",
+        "factual",
+        "creative",
+        "practical"
+      ],
+      "required_artifacts": [
+        "brief",
+        "source_map",
+        "claim_uncertainty_log",
+        "limitations"
+      ],
+      "prohibited_claims": [
+        "owner selected research as the launch specialisation",
+        "observed market demand",
+        "production approval"
+      ]
+    },
+    {
+      "brief_id": "synthetic-website-brief",
+      "version": 1,
+      "domain": "website",
+      "status": "synthetic_provisional",
+      "owner_scope_selected": false,
+      "audience": "A fictional small organisation reviewing a local prototype.",
+      "outcome": "A runnable local website prototype whose requested interactions, responsive layout, accessibility, sources, and limitations can be inspected.",
+      "rubric_id": "ap-quality-v1",
+      "required_category_ids": [
+        "technical",
+        "factual",
+        "creative",
+        "practical"
+      ],
+      "required_artifacts": [
+        "source_package",
+        "local_preview",
+        "functional_report",
+        "accessibility_report",
+        "asset_attribution",
+        "limitations"
+      ],
+      "prohibited_claims": [
+        "owner selected websites as the launch specialisation",
+        "deployment authority",
+        "real customer conversion"
+      ]
+    },
+    {
+      "brief_id": "synthetic-short-video-brief",
+      "version": 1,
+      "domain": "short_video",
+      "status": "synthetic_provisional",
+      "owner_scope_selected": false,
+      "audience": "A fictional general audience reviewing a local short-form explainer draft.",
+      "outcome": "A playable short draft with a sourced claim pack, coherent script and storyboard, captions, rights notes, technical checks, and explicit limitations.",
+      "rubric_id": "ap-quality-v1",
+      "required_category_ids": [
+        "technical",
+        "factual",
+        "creative",
+        "practical"
+      ],
+      "required_artifacts": [
+        "playable_draft",
+        "script",
+        "storyboard",
+        "captions",
+        "claim_map",
+        "rights_manifest",
+        "technical_report",
+        "limitations"
+      ],
+      "prohibited_claims": [
+        "owner selected video as the launch specialisation",
+        "publishing authority",
+        "monetisation eligibility"
+      ]
+    }
+  ],
+  "dataset": {
+    "dataset_id": "ap-pilot-synthetic-v1",
+    "version": 1,
+    "status": "provisional_until_calibrated",
+    "synthetic_only": true,
+    "calibration_required": true,
+    "accepted_input_classes": [
+      "synthetic",
+      "scrubbed_private_trace_metadata"
+    ],
+    "initial_size_plan": {
+      "research": 10,
+      "website": 5,
+      "short_video": 5,
+      "total": 20,
+      "status": "provisional_until_baseline_calibration",
+      "broad_reliability_claim_allowed": false
+    },
+    "partitions": {
+      "development": {
+        "task_ids": [
+          "ap-eval-research-001",
+          "ap-eval-research-002",
+          "ap-eval-research-003",
+          "ap-eval-research-004",
+          "ap-eval-research-005",
+          "ap-eval-website-001",
+          "ap-eval-website-002",
+          "ap-eval-website-003",
+          "ap-eval-short_video-001",
+          "ap-eval-short_video-002",
+          "ap-eval-short_video-003"
+        ],
+        "prompt_read_roles": [
+          "ordinary_optimizer",
+          "evaluator",
+          "independent_evaluator",
+          "dataset_curator"
+        ],
+        "answer_read_roles": [
+          "ordinary_optimizer",
+          "evaluator",
+          "independent_evaluator",
+          "dataset_curator"
+        ],
+        "write_roles": [
+          "dataset_curator"
+        ],
+        "mutation_policy": "new_version_only"
+      },
+      "validation": {
+        "task_ids": [
+          "ap-eval-research-006",
+          "ap-eval-research-007",
+          "ap-eval-research-008",
+          "ap-eval-website-004",
+          "ap-eval-short_video-004"
+        ],
+        "prompt_read_roles": [
+          "ordinary_optimizer",
+          "evaluator",
+          "independent_evaluator",
+          "dataset_curator"
+        ],
+        "answer_read_roles": [
+          "evaluator",
+          "independent_evaluator",
+          "dataset_curator"
+        ],
+        "write_roles": [
+          "dataset_curator"
+        ],
+        "mutation_policy": "new_version_only"
+      },
+      "held_out": {
+        "task_ids": [
+          "ap-eval-research-009",
+          "ap-eval-research-010",
+          "ap-eval-website-005",
+          "ap-eval-short_video-005"
+        ],
+        "prompt_read_roles": [
+          "independent_evaluator",
+          "dataset_curator"
+        ],
+        "answer_read_roles": [
+          "independent_evaluator",
+          "dataset_curator"
+        ],
+        "write_roles": [
+          "dataset_curator"
+        ],
+        "mutation_policy": "new_version_only"
+      }
+    },
+    "tasks": [
+      {
+        "task_id": "ap-eval-research-001",
+        "task_version": 1,
+        "brief_id": "synthetic-research-brief",
+        "partition": "development",
+        "synthetic": true,
+        "case_id": "research-001",
+        "answer_embedded": false,
+        "answer_access": "optimizer_visible_synthetic_answer",
+        "immutable_version": true
+      },
+      {
+        "task_id": "ap-eval-research-002",
+        "task_version": 1,
+        "brief_id": "synthetic-research-brief",
+        "partition": "development",
+        "synthetic": true,
+        "case_id": "research-002",
+        "answer_embedded": false,
+        "answer_access": "optimizer_visible_synthetic_answer",
+        "immutable_version": true
+      },
+      {
+        "task_id": "ap-eval-research-003",
+        "task_version": 1,
+        "brief_id": "synthetic-research-brief",
+        "partition": "development",
+        "synthetic": true,
+        "case_id": "research-003",
+        "answer_embedded": false,
+        "answer_access": "optimizer_visible_synthetic_answer",
+        "immutable_version": true
+      },
+      {
+        "task_id": "ap-eval-research-004",
+        "task_version": 1,
+        "brief_id": "synthetic-research-brief",
+        "partition": "development",
+        "synthetic": true,
+        "case_id": "research-004",
+        "answer_embedded": false,
+        "answer_access": "optimizer_visible_synthetic_answer",
+        "immutable_version": true
+      },
+      {
+        "task_id": "ap-eval-research-005",
+        "task_version": 1,
+        "brief_id": "synthetic-research-brief",
+        "partition": "development",
+        "synthetic": true,
+        "case_id": "research-005",
+        "answer_embedded": false,
+        "answer_access": "optimizer_visible_synthetic_answer",
+        "immutable_version": true
+      },
+      {
+        "task_id": "ap-eval-research-006",
+        "task_version": 1,
+        "brief_id": "synthetic-research-brief",
+        "partition": "validation",
+        "synthetic": true,
+        "case_id": "research-006",
+        "answer_embedded": false,
+        "answer_access": "evaluator_only",
+        "immutable_version": true
+      },
+      {
+        "task_id": "ap-eval-research-007",
+        "task_version": 1,
+        "brief_id": "synthetic-research-brief",
+        "partition": "validation",
+        "synthetic": true,
+        "case_id": "research-007",
+        "answer_embedded": false,
+        "answer_access": "evaluator_only",
+        "immutable_version": true
+      },
+      {
+        "task_id": "ap-eval-research-008",
+        "task_version": 1,
+        "brief_id": "synthetic-research-brief",
+        "partition": "validation",
+        "synthetic": true,
+        "case_id": "research-008",
+        "answer_embedded": false,
+        "answer_access": "evaluator_only",
+        "immutable_version": true
+      },
+      {
+        "task_id": "ap-eval-research-009",
+        "task_version": 1,
+        "brief_id": "synthetic-research-brief",
+        "partition": "held_out",
+        "synthetic": true,
+        "case_id": "research-009",
+        "answer_embedded": false,
+        "answer_access": "independent_evaluator_only_sealed",
+        "immutable_version": true
+      },
+      {
+        "task_id": "ap-eval-research-010",
+        "task_version": 1,
+        "brief_id": "synthetic-research-brief",
+        "partition": "held_out",
+        "synthetic": true,
+        "case_id": "research-010",
+        "answer_embedded": false,
+        "answer_access": "independent_evaluator_only_sealed",
+        "immutable_version": true
+      },
+      {
+        "task_id": "ap-eval-website-001",
+        "task_version": 1,
+        "brief_id": "synthetic-website-brief",
+        "partition": "development",
+        "synthetic": true,
+        "case_id": "website-001",
+        "answer_embedded": false,
+        "answer_access": "optimizer_visible_synthetic_answer",
+        "immutable_version": true
+      },
+      {
+        "task_id": "ap-eval-website-002",
+        "task_version": 1,
+        "brief_id": "synthetic-website-brief",
+        "partition": "development",
+        "synthetic": true,
+        "case_id": "website-002",
+        "answer_embedded": false,
+        "answer_access": "optimizer_visible_synthetic_answer",
+        "immutable_version": true
+      },
+      {
+        "task_id": "ap-eval-website-003",
+        "task_version": 1,
+        "brief_id": "synthetic-website-brief",
+        "partition": "development",
+        "synthetic": true,
+        "case_id": "website-003",
+        "answer_embedded": false,
+        "answer_access": "optimizer_visible_synthetic_answer",
+        "immutable_version": true
+      },
+      {
+        "task_id": "ap-eval-website-004",
+        "task_version": 1,
+        "brief_id": "synthetic-website-brief",
+        "partition": "validation",
+        "synthetic": true,
+        "case_id": "website-004",
+        "answer_embedded": false,
+        "answer_access": "evaluator_only",
+        "immutable_version": true
+      },
+      {
+        "task_id": "ap-eval-website-005",
+        "task_version": 1,
+        "brief_id": "synthetic-website-brief",
+        "partition": "held_out",
+        "synthetic": true,
+        "case_id": "website-005",
+        "answer_embedded": false,
+        "answer_access": "independent_evaluator_only_sealed",
+        "immutable_version": true
+      },
+      {
+        "task_id": "ap-eval-short_video-001",
+        "task_version": 1,
+        "brief_id": "synthetic-short-video-brief",
+        "partition": "development",
+        "synthetic": true,
+        "case_id": "short_video-001",
+        "answer_embedded": false,
+        "answer_access": "optimizer_visible_synthetic_answer",
+        "immutable_version": true
+      },
+      {
+        "task_id": "ap-eval-short_video-002",
+        "task_version": 1,
+        "brief_id": "synthetic-short-video-brief",
+        "partition": "development",
+        "synthetic": true,
+        "case_id": "short_video-002",
+        "answer_embedded": false,
+        "answer_access": "optimizer_visible_synthetic_answer",
+        "immutable_version": true
+      },
+      {
+        "task_id": "ap-eval-short_video-003",
+        "task_version": 1,
+        "brief_id": "synthetic-short-video-brief",
+        "partition": "development",
+        "synthetic": true,
+        "case_id": "short_video-003",
+        "answer_embedded": false,
+        "answer_access": "optimizer_visible_synthetic_answer",
+        "immutable_version": true
+      },
+      {
+        "task_id": "ap-eval-short_video-004",
+        "task_version": 1,
+        "brief_id": "synthetic-short-video-brief",
+        "partition": "validation",
+        "synthetic": true,
+        "case_id": "short_video-004",
+        "answer_embedded": false,
+        "answer_access": "evaluator_only",
+        "immutable_version": true
+      },
+      {
+        "task_id": "ap-eval-short_video-005",
+        "task_version": 1,
+        "brief_id": "synthetic-short-video-brief",
+        "partition": "held_out",
+        "synthetic": true,
+        "case_id": "short_video-005",
+        "answer_embedded": false,
+        "answer_access": "independent_evaluator_only_sealed",
+        "immutable_version": true
+      }
+    ],
+    "protected_answer_policy": {
+      "answers_embedded_in_registry": false,
+      "ordinary_optimizer_read": false,
+      "ordinary_optimizer_write": false,
+      "storage": "separate grant-confined evaluator store outside ordinary optimizer read/write roots",
+      "evaluator_mode": "read_only_during_scoring",
+      "curator_mode": "new_version_only",
+      "release_to_optimizer": "never",
+      "integrity": "bind answer material to dataset, task, task version, rubric version, and immutable digest"
+    }
+  },
+  "baseline_protocol": {
+    "protocol_id": "ap-single-agent-baseline-v1",
+    "version": 1,
+    "status": "provisional_until_calibrated",
+    "baseline": {
+      "strategy": "single_agent",
+      "agent_count": 1,
+      "delegation_allowed": false,
+      "unchanged_incumbent_required": true
+    },
+    "candidates_must_include_baseline": true,
+    "matched_inputs": [
+      "dataset_id",
+      "dataset_version",
+      "task_id",
+      "task_version",
+      "rubric_id",
+      "rubric_version",
+      "model_runtime_config",
+      "hardware_profile",
+      "resource_budget"
+    ],
+    "resource_accounting": [
+      "wall_time_ms",
+      "input_tokens",
+      "output_tokens",
+      "tool_calls",
+      "retries",
+      "repair_attempts",
+      "user_intervention_seconds",
+      "cost_minor_units",
+      "currency",
+      "peak_memory_bytes"
+    ],
+    "existing_contract_mapping": {
+      "workflow_evaluation": [
+        "task_success",
+        "outcome",
+        "latency_ms",
+        "cost",
+        "peak_memory_bytes",
+        "task_config_hardware_environment_identity"
+      ],
+      "execution_budget": [
+        "elapsed_seconds",
+        "tokens",
+        "cost",
+        "tools",
+        "retries"
+      ],
+      "ap_extension_required_from_runner": [
+        "input_output_token_split",
+        "repair_attempts",
+        "user_intervention_seconds"
+      ]
+    },
+    "repetitions": {
+      "minimum_per_task_candidate": 3,
+      "report_all_runs": true,
+      "report_variability": true,
+      "status": "provisional_until_baseline_calibration"
+    },
+    "acceptance_target": {
+      "metric": "accepted_without_user_repair",
+      "threshold": 0.8,
+      "binding": false,
+      "status": "provisional_until_calibrated_and_owner_approved",
+      "denominator_required": true
+    },
+    "hard_gates": [
+      "critical_technical_requirements",
+      "critical_safety_requirements",
+      "authority_and_egress_requirements"
+    ],
+    "reporting": [
+      "first_pass_success",
+      "repair_attempts",
+      "user_intervention_seconds",
+      "median_and_tail_latency",
+      "cost_per_accepted_artifact",
+      "resource_use",
+      "failures",
+      "exclusions_with_reason"
+    ]
+  },
+  "privacy_policy": {
+    "synthetic_fixture_default": true,
+    "real_private_trace_use": "scrub_before_use",
+    "scrubber_contract": "autonomous_production_evaluation.scrub_private_trace/v1",
+    "raw_trace_persistence_allowed": false,
+    "allowed_scrubbed_fields": [
+      "strategy",
+      "outcome",
+      "task_success",
+      "task_digest",
+      "config_digest",
+      "hardware_digest",
+      "latency_ms",
+      "cost_minor_units",
+      "currency",
+      "peak_memory_bytes",
+      "input_tokens",
+      "output_tokens",
+      "tool_calls",
+      "retries",
+      "repair_attempts",
+      "user_intervention_seconds",
+      "failure_kinds"
+    ],
+    "dropped_content": [
+      "prompts",
+      "responses",
+      "tool_arguments",
+      "tool_results",
+      "paths",
+      "accounts",
+      "user_identifiers",
+      "environment_values",
+      "arbitrary_free_text"
+    ]
+  }
+}
