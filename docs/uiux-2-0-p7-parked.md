@@ -1,9 +1,9 @@
 # Parked work register — UI/UX P7
 
 **Owner:** repository owner
-**Parked:** 2026-11-08, 2026-11-09
-**Tracker:** PR #258, PR #268
-**Status:** 1 item parked — P7-PARK-02; P7-PARK-01 was resolved on 2026-11-08 (see its Unparked section)
+**Parked:** 2026-11-08
+**Tracker:** PR #258
+**Status:** 0 items parked — P7-PARK-01 resolved 2026-11-08, P7-PARK-02 resolved 2026-11-09 (entries are deleted once their unblock condition is met)
 
 This page exists so that work deliberately parked during `UIV2-P7` has an owner, a
 reason and a fix procedure written down in the repository rather than a merged PR
@@ -108,46 +108,6 @@ left exactly as they were produced at `dfa6647`, when their evidence was current
 are a historical record. Regenerating them now would overwrite that record with a
 `blocked` decision caused only by the parking, not by a real change in readiness. The
 generator's `--check` therefore fails by design while parked; nothing in CI runs it.
-
----
-
-## P7-PARK-02 — UIV2-30 release review assertions parked again — **PARKED 2026-11-09**
-
-| Field | Value |
-|---|---|
-| Artifact | `tests/test_uiv2_release_review.py` (21 assertions) |
-| Generator | `scripts/uiv2_release_review.py` (left in place, still runnable) |
-| Decision | owner, PR #268 — the header fold and the owner-approved re-captured visual baseline |
-| Mechanism | module-level `pytestmark` skip; no test deleted, no assertion edited |
-| Blocks | nothing in the fold; the module is the release-handoff contract, not product behaviour |
-
-### Why it cannot pass as written
-
-The same bootstrap as P7-PARK-01, triggered this time by a UI change rather than a new story.
-The fold changed `static/index.html`, so the committed release evidence is stale: its
-`source_sha256` must equal the current files, and `--import-evidence` only accepts a
-completed, successful run whose four jobs (`test (3.11)`, `test (3.12)`, `test (3.13)`,
-`Browser safety regressions`) are green. The evidence may therefore only cite a run at a
-commit that already contains this `static/index.html`, and every such commit on the branch is
-red because of these same assertions.
-
-Everything the owner gates is green before this entry: the approved cross-tab walk is
-2200/2200 against the re-captured baseline, the release gate is 37/37 checks and 7/7 phase
-gates with 0 findings, and the only remaining review finding is the stale-evidence one.
-
-### Unblock procedure
-
-1. Note the green `main` merge commit that contains the fold; that is the implementation HEAD
-   the evidence may legally cite.
-2. `node scripts/compare_continuity_walk.mjs --screenshots /tmp/uiv2-30-compare --json > /tmp/compare.json`
-3. `node scripts/uiux_v2_cross_tab_reference_walk.mjs --check --out /tmp/uiv2-30-visual --timeout-ms 60000`
-4. `gh run view <run-id> --json status,conclusion,headSha,url,jobs,createdAt,updatedAt > /tmp/ci.json`
-5. `python3 scripts/uiv2_release_review.py --import-evidence --compare-run /tmp/compare.json --visual-run /tmp/uiv2-30-visual/check-manifest.json --ci-run /tmp/ci.json`
-6. `python3 scripts/uiv2_release_review.py && python3 scripts/uiv2_release_review.py --check`
-7. Delete the `pytestmark` block and this entry.
-
-**While parked** the contract still reports its own decision: `python3 scripts/uiv2_release_review.py --json`
-reads `blocked` for the stale-evidence finding. That is expected, not a new defect.
 
 ---
 

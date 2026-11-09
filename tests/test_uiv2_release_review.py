@@ -21,13 +21,12 @@ If this module fails again, treat it as a real signal and read ``findings`` in
 ``product/M5_2_0_UIUX_V2_Release_Review.json`` -- do not re-park it without an
 owner decision, and never satisfy it by citing a CI run that did not happen.
 
-PARKED AGAIN 2026-11-09 under P7-PARK-02 (owner decision, PR #268). The UIV2-P7-07
-header fold and the owner-approved re-captured visual baseline changed
-``static/index.html``, which makes the committed release evidence stale, and the
-evidence may only cite a green run at a commit that already contains that file.
-``docs/uiux-2-0-p7-parked.md`` carries the unblock procedure. Nothing here is deleted
-or weakened: the assertions are unchanged and the contract still reports ``blocked``
-with the stale-evidence finding while the module is parked.
+UNPARKED AGAIN 2026-09-11 -> 2026-11-09. P7-PARK-02 parked these assertions while the
+UIV2-P7-07 header fold made the committed release evidence stale. The unblock condition
+was met: ``main`` went green at merge commit ``6aca516``, a commit that already contains
+this ``static/index.html``, so the evidence could be imported against that run
+(Compare 15/15, visual 2200/2200, CI success). The assertions were never edited while
+parked, and the contract now reports ``ready`` with zero findings.
 """
 from __future__ import annotations
 
@@ -39,11 +38,6 @@ import sys
 from pathlib import Path
 
 import pytest
-
-pytestmark = pytest.mark.skip(
-    reason="P7-PARK-02: the release evidence may only cite a green run at a commit that "
-    "already contains this static/index.html; unpark per docs/uiux-2-0-p7-parked.md"
-)
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "uiv2_release_review.py"
