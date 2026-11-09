@@ -163,7 +163,7 @@
             "routes_with_state_directly": 16,
             "routes_with_durable_writes": 3,
             "routes_that_can_leave_the_machine": 23,
-            "distinct_handler_refusals": 9,
+            "distinct_handler_refusals": 8,
             "refusals_by_status": {
               "400": 96,
               "401": 50,
@@ -174,7 +174,7 @@
               "429": 8,
               "500": 1,
               "502": 2,
-              "503": 10,
+              "503": 11,
               "507": 3
             },
             "shared_refusals_by_status": {
@@ -191,9 +191,8 @@
               "409": 19,
               "500": 1,
               "502": 2,
-              "503": 10,
-              "507": 3,
-              "dynamic": 1
+              "503": 11,
+              "507": 3
             }
           }
         }

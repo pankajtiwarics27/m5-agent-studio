@@ -1237,3 +1237,15 @@ coordinated routing and the explicit offline/demo branch. The
 [route audit](lc08-direct-unload-route-audit.md) makes no physical-release claim.
 The matrix remains bounded at29owners/54sites, with seven assessed and22
 inventory-only owners; no runtime activation or acceptance advancement is implied.
+
+
+## Bounded direct load-route failure handling
+
+A separate audit of existing `api_load_model` online legacy HTTP behavior found
+provider response bodies escaped on error and invalid JSON/transport failures
+were not normalized. The route now refuses redirects/non-2xx and converts transport
+or JSON failures privately, while preserving 2xx JSON, cancellation, coordinated
+dispatch and the explicit offline/demo branch. See the
+[direct load-route audit](lc08-direct-load-route-audit.md); it makes no physical
+load claim. The matrix currently records29owners/54sites, eight bounded
+assessments and21inventory-only owners; no activation or acceptance advancement.
