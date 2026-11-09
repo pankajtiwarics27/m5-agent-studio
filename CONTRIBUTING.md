@@ -34,6 +34,9 @@ one-line documentation edit buys nothing:
 | Test infrastructure, `tests/test_scopes.json`, workflow or CI configuration | the full suite: `python -m pytest -q` |
 | Anything else, or several of the above | the full suite |
 
+When you touched Python sources, also prove the tree byte-compiles:
+`git ls-files -z -- '*.py' | xargs -0 -r python -m compileall -q`.
+
 Whatever you skip locally, CI still runs the complete sequence on every pull
 request, and a pull request is mergeable only when all three Python legs
 (3.11, 3.12, 3.13) and the browser-safety job pass. `AGENTS.md` §5.4 lists the

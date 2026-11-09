@@ -131,6 +131,11 @@ jobs:
           PYTHONUNBUFFERED: "1"
           PYTEST_ADDOPTS: "--durations=15 --durations-min=1.0"
         run: |
+          # GitHub runs `run:` blocks with `bash -e`, which aborts on the first
+          # failing command - including the pytest pipeline. That would skip the
+          # annotations, the timing notice and the log tail below on exactly the
+          # runs that need them, so the errexit is turned off on purpose.
+          set +e
           set -uo pipefail
           log="${RUNNER_TEMP:-/tmp}/pytest.log"
           started=$SECONDS

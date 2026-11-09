@@ -153,6 +153,9 @@ def test_ci_streams_pytest_and_reports_its_own_timing() -> None:
     workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
 
     assert 'tee "$log"' in workflow
+    # GitHub runs `run:` with `bash -e`; without turning it off, the first
+    # failing command (the pytest pipeline itself) skips every diagnostic below.
+    assert "set +e\n          set -uo pipefail" in workflow
     assert "PYTHONUNBUFFERED" in workflow
     assert "--durations=15" in workflow
     assert "::notice title=Pytest ${mode} suite" in workflow
