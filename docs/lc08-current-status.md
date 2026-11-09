@@ -1,5 +1,15 @@
 # LC08 current status and gap review
 
+## Continuation after this snapshot
+
+The first bounded G1 follow-up is now documented in the
+[Council/Debate adapter audit](lc08-workflow-adapter-audit.md): a checked-in
+29-owner coverage matrix, two audited shared-adapter owners, coordinated
+reasoning-retry suppression and deterministic iterator closure. It adds offline
+input/refusal/cleanup and limited real warm-fit/native/standalone evidence, not
+all-workflow or installed qualification. The snapshot below remains pinned to its
+PR262 base; its next-increment recommendation led to that follow-up, not G1 closure.
+
 ## Scope of this snapshot
 
 Reviewed against merged base `fc6a304c970fec65a8a324183a83443f71443318`

@@ -1,0 +1,253 @@
+{
+  "schema_version": 1,
+  "scope": "Static owner mapping plus bounded Council/Debate application-adapter audit; not all-workflow or native qualification.",
+  "assembly_owners": [
+    "api_council_stream.event_gen",
+    "api_debate_stream.event_gen"
+  ],
+  "owners": [
+    {
+      "owner": "AnthropicProviderAdapter.stream",
+      "seams": [
+        "_stream_cloud_anthropic"
+      ],
+      "assessment": "inventory_only_in_this_audit",
+      "evidence": "docs/runtime-dispatch-entry-points.md"
+    },
+    {
+      "owner": "OpenAICompatibleProviderAdapter.stream",
+      "seams": [
+        "_stream_cloud_openai"
+      ],
+      "assessment": "inventory_only_in_this_audit",
+      "evidence": "docs/runtime-dispatch-entry-points.md"
+    },
+    {
+      "owner": "_coordinated_gateway_chat.events",
+      "seams": [
+        "stream_any_model"
+      ],
+      "assessment": "inventory_only_in_this_audit",
+      "evidence": "docs/runtime-dispatch-entry-points.md"
+    },
+    {
+      "owner": "_mcp_summon_model",
+      "seams": [
+        "_unload_omlx_model",
+        "stream_any_model"
+      ],
+      "assessment": "inventory_only_in_this_audit",
+      "evidence": "docs/runtime-dispatch-entry-points.md"
+    },
+    {
+      "owner": "_run_sdlc_sprints_stream",
+      "seams": [
+        "_unload_omlx_model",
+        "stream_any_model"
+      ],
+      "assessment": "inventory_only_in_this_audit",
+      "evidence": "docs/runtime-dispatch-entry-points.md"
+    },
+    {
+      "owner": "_stream_cloud_openai",
+      "seams": [
+        "guarded legacy HTTP (not coordinated authority)"
+      ],
+      "assessment": "inventory_only_in_this_audit",
+      "evidence": "docs/runtime-dispatch-entry-points.md"
+    },
+    {
+      "owner": "_stream_omlx_completion",
+      "seams": [
+        "_unload_other_omlx_models",
+        "guarded legacy HTTP (not coordinated authority)"
+      ],
+      "assessment": "inventory_only_in_this_audit",
+      "evidence": "docs/runtime-dispatch-entry-points.md"
+    },
+    {
+      "owner": "_unload_omlx_model",
+      "seams": [
+        "guarded legacy HTTP (not coordinated authority)"
+      ],
+      "assessment": "inventory_only_in_this_audit",
+      "evidence": "docs/runtime-dispatch-entry-points.md"
+    },
+    {
+      "owner": "_unload_other_omlx_models",
+      "seams": [
+        "guarded legacy HTTP (not coordinated authority)"
+      ],
+      "assessment": "inventory_only_in_this_audit",
+      "evidence": "docs/runtime-dispatch-entry-points.md"
+    },
+    {
+      "owner": "_workflow_orchestrator.stream_model",
+      "seams": [
+        "stream_any_model"
+      ],
+      "assessment": "bounded_workflow_adapter",
+      "evidence": "tests/test_workflow_coordinated.py"
+    },
+    {
+      "owner": "_workflow_orchestrator.unload_model",
+      "seams": [
+        "_unload_omlx_model"
+      ],
+      "assessment": "bounded_workflow_adapter",
+      "evidence": "tests/test_workflow_coordinated.py"
+    },
+    {
+      "owner": "api_chat_stream.event_gen",
+      "seams": [
+        "_unload_omlx_model",
+        "stream_any_model"
+      ],
+      "assessment": "inventory_only_in_this_audit",
+      "evidence": "docs/runtime-dispatch-entry-points.md"
+    },
+    {
+      "owner": "api_clear_ssd_cache",
+      "seams": [
+        "guarded legacy HTTP (not coordinated authority)"
+      ],
+      "assessment": "inventory_only_in_this_audit",
+      "evidence": "docs/runtime-dispatch-entry-points.md"
+    },
+    {
+      "owner": "api_hall_summon.event_gen",
+      "seams": [
+        "_unload_omlx_model",
+        "stream_any_model"
+      ],
+      "assessment": "inventory_only_in_this_audit",
+      "evidence": "docs/runtime-dispatch-entry-points.md"
+    },
+    {
+      "owner": "api_load_model",
+      "seams": [
+        "guarded legacy HTTP (not coordinated authority)"
+      ],
+      "assessment": "inventory_only_in_this_audit",
+      "evidence": "docs/runtime-dispatch-entry-points.md"
+    },
+    {
+      "owner": "api_run_agile_sdlc_factory.sdlc_gen",
+      "seams": [
+        "_unload_omlx_model",
+        "stream_any_model"
+      ],
+      "assessment": "inventory_only_in_this_audit",
+      "evidence": "docs/runtime-dispatch-entry-points.md"
+    },
+    {
+      "owner": "api_run_gsd_fresh_wave.gsd_gen",
+      "seams": [
+        "_unload_omlx_model",
+        "stream_any_model"
+      ],
+      "assessment": "inventory_only_in_this_audit",
+      "evidence": "docs/runtime-dispatch-entry-points.md"
+    },
+    {
+      "owner": "api_run_harness_turn.event_gen",
+      "seams": [
+        "_unload_other_omlx_models",
+        "stream_any_model"
+      ],
+      "assessment": "inventory_only_in_this_audit",
+      "evidence": "docs/runtime-dispatch-entry-points.md"
+    },
+    {
+      "owner": "api_run_sdlc_feedback_loop.fb_gen",
+      "seams": [
+        "_unload_omlx_model",
+        "stream_any_model"
+      ],
+      "assessment": "inventory_only_in_this_audit",
+      "evidence": "docs/runtime-dispatch-entry-points.md"
+    },
+    {
+      "owner": "api_unload_all",
+      "seams": [
+        "guarded legacy HTTP (not coordinated authority)"
+      ],
+      "assessment": "inventory_only_in_this_audit",
+      "evidence": "docs/runtime-dispatch-entry-points.md"
+    },
+    {
+      "owner": "api_unload_model",
+      "seams": [
+        "guarded legacy HTTP (not coordinated authority)"
+      ],
+      "assessment": "inventory_only_in_this_audit",
+      "evidence": "docs/runtime-dispatch-entry-points.md"
+    },
+    {
+      "owner": "api_workspace_picker_suggest",
+      "seams": [
+        "stream_any_model"
+      ],
+      "assessment": "inventory_only_in_this_audit",
+      "evidence": "docs/runtime-dispatch-entry-points.md"
+    },
+    {
+      "owner": "execute_child_delegation_async",
+      "seams": [
+        "_unload_omlx_model"
+      ],
+      "assessment": "inventory_only_in_this_audit",
+      "evidence": "docs/runtime-dispatch-entry-points.md"
+    },
+    {
+      "owner": "execute_child_delegation_async._stream_sub",
+      "seams": [
+        "stream_any_model"
+      ],
+      "assessment": "inventory_only_in_this_audit",
+      "evidence": "docs/runtime-dispatch-entry-points.md"
+    },
+    {
+      "owner": "execute_conservative_model_switch_async",
+      "seams": [
+        "_unload_other_omlx_models"
+      ],
+      "assessment": "inventory_only_in_this_audit",
+      "evidence": "docs/runtime-dispatch-entry-points.md"
+    },
+    {
+      "owner": "execute_conservative_model_switch_async._run_probe_stream",
+      "seams": [
+        "stream_any_model"
+      ],
+      "assessment": "inventory_only_in_this_audit",
+      "evidence": "docs/runtime-dispatch-entry-points.md"
+    },
+    {
+      "owner": "openai_gateway_chat",
+      "seams": [
+        "stream_any_model"
+      ],
+      "assessment": "inventory_only_in_this_audit",
+      "evidence": "docs/runtime-dispatch-entry-points.md"
+    },
+    {
+      "owner": "openai_gateway_chat.sse_gen",
+      "seams": [
+        "stream_any_model"
+      ],
+      "assessment": "inventory_only_in_this_audit",
+      "evidence": "docs/runtime-dispatch-entry-points.md"
+    },
+    {
+      "owner": "stream_any_model",
+      "seams": [
+        "_stream_omlx_completion",
+        "_unload_other_omlx_models",
+        "stream_any_model"
+      ],
+      "assessment": "inventory_only_in_this_audit",
+      "evidence": "docs/runtime-dispatch-entry-points.md"
+    }
+  ]
+}

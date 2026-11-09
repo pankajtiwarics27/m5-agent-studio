@@ -2,6 +2,11 @@
 
 ## Current status first
 
+Latest bounded follow-up: [Council/Debate adapter audit](lc08-workflow-adapter-audit.md).
+It records the static-owner coverage matrix, coordinated reasoning-only retry
+finding, iterator-close fix and offline evidence. Other workflow owners and
+production/native qualification remain open.
+
 For a consolidated source/test-backed snapshot at merged PR262 (`fc6a304`), read
 [LC08 current status and gap review](lc08-current-status.md). Cold-to-warm inference,
 optional explicit load/unload actors, selected cross-runtime/control races and

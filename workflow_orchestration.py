@@ -9,6 +9,7 @@ storage boundaries explicit and makes the workflow behavior testable offline.
 from __future__ import annotations
 
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping, Sequence
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Any, Literal, Protocol
 
@@ -16,6 +17,17 @@ from typing import Any, Literal, Protocol
 Message = dict[str, str]
 ModelEvent = Mapping[str, Any]
 StageId = int | str
+
+
+@asynccontextmanager
+async def _closing_events(source: AsyncIterator[Any]) -> AsyncIterator[AsyncIterator[Any]]:
+    """Close a source we own before returning; tolerate iterator-only producers."""
+    try:
+        yield source
+    finally:
+        close = getattr(source, "aclose", None)
+        if close is not None:
+            await close()
 
 
 class ModelStreamer(Protocol):
@@ -102,12 +114,14 @@ class WorkflowOrchestrator:
         is_local_model: LocalModelPredicate,
         unload_model: ModelUnloader,
         unload_target: Callable[[str], str] | None = None,
+        allow_reasoning_retry: LocalModelPredicate | None = None,
     ) -> None:
         self._stream_model = stream_model
         self._record_usage = record_usage
         self._is_local_model = is_local_model
         self._unload_model = unload_model
         self._unload_target = unload_target or (lambda model: model)
+        self._allow_reasoning_retry = allow_reasoning_retry or (lambda model: True)
 
     async def run_stages(
         self,
@@ -150,14 +164,15 @@ class WorkflowOrchestrator:
                 {"role": "user", "content": stage.prompt(context)},
             ]
             result: StageResult | None = None
-            async for event in self._run_stage(
+            async with _closing_events(self._run_stage(
                 stage, messages, workflow=workflow, is_disconnected=is_disconnected
-            ):
-                yield event
-                if event.kind == "disconnected":
-                    return
-                if event.kind == "stage_done":
-                    result = event.result
+            )) as source:
+                async for event in source:
+                    yield event
+                    if event.kind == "disconnected":
+                        return
+                    if event.kind == "stage_done":
+                        result = event.result
             if result is None:
                 return
             context[stage.key] = result.content or result.reasoning
@@ -187,44 +202,48 @@ class WorkflowOrchestrator:
             record_usage: bool,
         ) -> AsyncIterator[WorkflowEvent]:
             nonlocal disconnected, usage
-            async for item in self._stream_model(
+            async with _closing_events(self._stream_model(
                 stage.model,
                 messages,
                 stage.temperature,
                 max_tokens,
                 reasoning_mode,
-            ):
-                if is_disconnected is not None and await is_disconnected():
-                    disconnected = True
-                    yield WorkflowEvent("disconnected", {"stage": stage.stage_id})
-                    return
-                event_type = item.get("type")
-                if event_type == "content":
-                    text = str(item.get("text") or "")
-                    content.append(text)
-                    yield WorkflowEvent("token", {"stage": stage.stage_id, "kind": "content", "text": text})
-                elif event_type == "reasoning":
-                    text = str(item.get("text") or "")
-                    reasoning.append(text)
-                    yield WorkflowEvent("token", {"stage": stage.stage_id, "kind": "reasoning", "text": text})
-                elif event_type == "usage":
-                    usage = dict(item)
-                    if record_usage:
-                        self._record_usage(workflow, stage.model, usage)
+            )) as source:
+                async for item in source:
+                    if is_disconnected is not None and await is_disconnected():
+                        disconnected = True
+                        yield WorkflowEvent("disconnected", {"stage": stage.stage_id})
+                        return
+                    event_type = item.get("type")
+                    if event_type == "content":
+                        text = str(item.get("text") or "")
+                        content.append(text)
+                        yield WorkflowEvent("token", {"stage": stage.stage_id, "kind": "content", "text": text})
+                    elif event_type == "reasoning":
+                        text = str(item.get("text") or "")
+                        reasoning.append(text)
+                        yield WorkflowEvent("token", {"stage": stage.stage_id, "kind": "reasoning", "text": text})
+                    elif event_type == "usage":
+                        usage = dict(item)
+                        if record_usage:
+                            self._record_usage(workflow, stage.model, usage)
 
-        async for event in stream_once(stage.reasoning_mode, stage.max_tokens, record_usage=True):
-            yield event
+        async with _closing_events(stream_once(stage.reasoning_mode, stage.max_tokens, record_usage=True)) as source:
+            async for event in source:
+                yield event
         if disconnected:
             return
 
         # Preserve the existing local-model recovery path: a reasoning-only
         # response gets one content retry with thinking disabled.
-        if not "".join(content).strip() and reasoning and self._is_local_model(stage.model):
+        if (not "".join(content).strip() and reasoning and self._is_local_model(stage.model)
+                and self._allow_reasoning_retry(stage.model)):
             content.clear()
-            async for event in stream_once("off", 4096, record_usage=False):
-                yield event
-                if disconnected:
-                    return
+            async with _closing_events(stream_once("off", 4096, record_usage=False)) as source:
+                async for event in source:
+                    yield event
+                    if disconnected:
+                        return
 
         result = StageResult(stage.stage_id, stage.key, stage.model, "".join(content), "".join(reasoning), usage)
         yield WorkflowEvent(

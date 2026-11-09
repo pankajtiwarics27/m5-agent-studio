@@ -13,6 +13,7 @@ to the server's own stream rather than to a fixture that could agree with it abo
 
 from __future__ import annotations
 
+import ast
 import importlib.util
 import json
 import subprocess
@@ -347,11 +348,19 @@ def test_the_ledger_marks_the_story():
 
 def test_the_council_route_still_saves_after_the_last_stage():
     """The pane says a stopped run is not saved; that is true because of this order."""
-    server = APP.read_text(encoding="utf-8")
-    body = inventory.python_function(server, "api_council_stream")
-    loop = body.find("async for event in orchestrator.run_stages(")
-    saved = body.find('save_run("council"')
-    assert 0 <= loop < saved
+    tree = ast.parse(APP.read_text(encoding="utf-8"))
+    route = next(node for node in tree.body if isinstance(node, ast.AsyncFunctionDef) and node.name == "api_council_stream")
+    events = next(node for node in route.body if isinstance(node, ast.AsyncFunctionDef) and node.name == "event_gen")
+    success = next(node for node in events.body if isinstance(node, ast.Try)).body
+    stage_scope = next(node for node in success if isinstance(node, ast.AsyncWith)
+                       and any(isinstance(call, ast.Call) and ast.unparse(call.func) == "orchestrator.run_stages"
+                               for call in ast.walk(node)))
+    saved = next(node for node in success if isinstance(node, ast.Assign)
+                 and isinstance(node.value, ast.Call) and ast.unparse(node.value.func) == "save_run")
+    # Save outside, and strictly after exhaustion/closure of the stage iterator.
+    assert success.index(stage_scope) < success.index(saved)
+    assert stage_scope.end_lineno < saved.lineno
+    assert any(isinstance(node, ast.AsyncFor) and ast.unparse(node.iter) == "stages" for node in stage_scope.body)
 
 
 def test_the_pane_still_posts_only_what_it_posted():

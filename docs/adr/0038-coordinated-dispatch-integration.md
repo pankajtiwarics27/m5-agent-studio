@@ -212,6 +212,15 @@ scope cannot pause a successor. Current cancelled/expired counts remain held and
 charged, and ledger failure rolls back both halves. Count facts do not become
 inference completion, physical release, retry permission or fit approval.
 
+Preserve provider-neutral legacy reasoning recovery by default, but let the
+application adapter refuse changed-budget reasoning retries in coordinated mode.
+Own and close iterators at each Council/Debate route/orchestrator/dispatch forwarding
+layer; tolerating iterator-only providers is not permission to invent native
+completion or release. Keep text-tool consumers fail-closed and preserve canonical
+cleanup refusal. Record bounded per-owner workflow/input evidence, not a claim
+that static entry inventory establishes complete workflow support. See the
+[adapter audit](../lc08-workflow-adapter-audit.md); no producer or review activation.
+
 ## Alternatives
 
 - Replace served routing immediately: would activate unqualified transports and

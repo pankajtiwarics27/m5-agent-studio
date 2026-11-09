@@ -83,6 +83,7 @@
       "test_shared_memory_admission.py",
       "test_request_fit*.py",
       "test_runtime_dispatch*.py",
+      "test_workflow_coordinated.py",
       "test_native_dispatch*.py",
       "test_native_transition*.py",
       "test_native_inference*.py",

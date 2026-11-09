@@ -13,6 +13,7 @@ seat rather than drawing a failure, and that the walk's claims are read from the
 
 from __future__ import annotations
 
+import ast
 import importlib.util
 import json
 import subprocess
@@ -318,9 +319,19 @@ def test_the_doc_names_the_limits_it_refuses_to_cross():
 
 def test_the_council_route_still_saves_after_the_last_stage():
     """A failed run leaves nothing on record; the surface says so, and this order is why."""
-    server = APP.read_text(encoding="utf-8")
-    body = inventory.python_function(server, "api_council_stream")
-    assert 0 <= body.find("async for event in orchestrator.run_stages(") < body.find('save_run("council"')
+    tree = ast.parse(APP.read_text(encoding="utf-8"))
+    route = next(node for node in tree.body if isinstance(node, ast.AsyncFunctionDef) and node.name == "api_council_stream")
+    events = next(node for node in route.body if isinstance(node, ast.AsyncFunctionDef) and node.name == "event_gen")
+    success = next(node for node in events.body if isinstance(node, ast.Try)).body
+    stage_scope = next(node for node in success if isinstance(node, ast.AsyncWith)
+                       and any(isinstance(call, ast.Call) and ast.unparse(call.func) == "orchestrator.run_stages"
+                               for call in ast.walk(node)))
+    saved = next(node for node in success if isinstance(node, ast.Assign)
+                 and isinstance(node.value, ast.Call) and ast.unparse(node.value.func) == "save_run")
+    # Save outside, and strictly after exhaustion/closure of the stage iterator.
+    assert success.index(stage_scope) < success.index(saved)
+    assert stage_scope.end_lineno < saved.lineno
+    assert any(isinstance(node, ast.AsyncFor) and ast.unparse(node.iter) == "stages" for node in stage_scope.body)
 
 
 def test_the_export_is_still_the_only_reader_of_runs():
