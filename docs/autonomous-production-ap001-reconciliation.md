@@ -15,8 +15,10 @@ story, approve an external service, or settle decisions U01–U06.
 
 The current session is claimed by `arena/6d69f2cd-m5-agent-studio`. It supersedes
 the interrupted claim on `arena/73573f93-m5-agent-studio` and preserves that
-session's read-only audit; the superseded draft PR is closed once this branch
-has its replacement remote coordination claim. Arena fixes the branch name for
+session's read-only audit; draft PR [#274](https://github.com/pankajtiwarics27/m5-agent-studio/pull/274)
+is closed and replacement draft PR
+[#275](https://github.com/pankajtiwarics27/m5-agent-studio/pull/275) is the remote
+coordination claim. Arena fixes the branch name for
 the session, so the proposed `ap-XXX-short-slug` convention cannot rename this
 branch. The draft pull request is the atomic remote coordination claim; the JSON
 record alone is not treated as atomic coordination.
