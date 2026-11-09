@@ -27,7 +27,7 @@
     {
       "step": "a reload restores the same comparison, and says it is this browser's copy",
       "passed": true,
-      "detail": "Qwen3.8-27B-oQ4e-mtp:answered · Gemma-4-21B-REAP-4bit:answered || This comparisonkept in this browserThis is this browser's copy of the comparison you last ran here · kept at 11/9/2026, 7:10:43 PM - not the server's ",
+      "detail": "Qwen3.8-27B-oQ4e-mtp:answered · Gemma-4-21B-REAP-4bit:answered || This comparisonkept in this browserThis is this browser's copy of the comparison you last ran here · kept at 11/9/2026, 7:24:45 PM - not the server's ",
       "status": "pass"
     },
     {
