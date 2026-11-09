@@ -9,7 +9,13 @@ import app
 
 
 @pytest.mark.parametrize(
-    "surface", ["api_chat_stream", "openai_gateway_chat", "openai_gateway_chat_tools"]
+    "surface",
+    [
+        "api_chat_stream",
+        "openai_gateway_chat",
+        "openai_gateway_chat_tools",
+        "coordinated_gateway",
+    ],
 )
 def test_chat_stream_consumer_close_closes_delegated_model_source(monkeypatch, surface):
     state = {"closed": False}
@@ -59,7 +65,14 @@ def test_chat_stream_consumer_close_closes_delegated_model_source(monkeypatch, s
     monkeypatch.setattr(app, "_heavy_model_preflight", lambda _model: None)
 
     async def run():
-        if surface == "api_chat_stream":
+        if surface == "coordinated_gateway":
+            coordinated_body = {
+                "model": "fixture-model",
+                "messages": [{"role": "user", "content": "hi"}],
+                "stream": True,
+            }
+            response = await app._coordinated_gateway_chat(request, coordinated_body)
+        elif surface == "api_chat_stream":
 
             async def no_skills(*_args, **_kwargs):
                 return "", []

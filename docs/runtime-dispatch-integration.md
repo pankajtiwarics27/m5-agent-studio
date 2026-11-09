@@ -1302,10 +1302,12 @@ status advancement.
 ## Bounded chat-stream wrapper cancellation handling
 
 The API-chat event generator and OpenAI-compatible SSE wrapper now explicitly
-close their delegated model streams on consumer cancellation. Mock async-source
-tests cover ordinary chat, OpenAI-compatible content streaming, and its
-buffering branch without a model or network request. See the
-[chat-stream closure audit](lc08-chat-stream-close-audit.md). This does not
-qualify complete workflow, tool execution, provider-side cancellation, runtime
-activation, hardware, release acceptance, test8, or LC09–11. The matrix remains
-29 owners / 54 sites, sixteen bounded assessments and 13 inventory-only owners.
+close their delegated model streams on consumer cancellation. The public OpenAI
+gateway route is exercised through both SSE branches; the coordinated gateway
+event path is also tested as a bounded passing control because it already owns
+its source iterator. Mock async-source tests use no model or network request.
+See the [chat-stream closure audit](lc08-chat-stream-close-audit.md). This does
+not qualify complete workflow, tool execution, provider-side cancellation,
+runtime activation, hardware, release acceptance, test8, or LC09–11. The matrix
+remains 29 owners / 54 sites, eighteen bounded assessments and 11
+inventory-only owners.
