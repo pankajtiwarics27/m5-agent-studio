@@ -5,15 +5,15 @@
   "program": "AP",
   "revision": "1.2",
   "prepared_date": "2026-11-08",
-  "lifecycle": "proposed_awaiting_program_reconciliation",
+  "lifecycle": "registered_tracking_ap001_only",
   "source_snapshot": "a67e8b291614f8afdac7c8d38ba51bcc8926d695",
   "source_repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "specification": "docs/autonomous-production-roadmap.md",
   "agent_prompt": "M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md",
   "authority": {
     "precedence": "AGENTS.md, existing security/approval rules and owning program ledgers remain binding.",
-    "scope": "Drafting/recording this plan is not runtime activation, installed qualification, or blanket code/story execution authorization.",
-    "registration_gate": "AP-001 reconciles ownership and records approved program activation before implementation claims.",
+    "scope": "AP tracking is registered through owner-authorized AP-001. Product/runtime activation and every downstream AP story remain separately authorized.",
+    "registration_gate": "AP-001 records the authoritative tracking source and bounded claim protocol; merge/review does not authorize AP-002 through AP-032.",
     "other_ledgers": "Do not alter AS/M5/UIUX/UIV2/LC tracking without the owning protocol.",
     "approval": "Agents cannot fabricate owner, screenshot, independent security or release approval."
   },
@@ -70,7 +70,7 @@
       "title": "Reconcile programs and trace current production gaps",
       "priority": "P0",
       "optional": false,
-      "status": "not_started",
+      "status": "in_review",
       "authorization": "owner_authorizes_program_registration_and_scope",
       "dependencies": [],
       "objective": "Create a source-grounded delta map; prevent duplicate implementations and unauthorized LC activation.",
@@ -117,18 +117,37 @@
         "Push/PR state; owner/independent approvals where required"
       ],
       "tracking": {
-        "owner": null,
-        "branch": null,
-        "base_sha": null,
-        "head_sha": null,
-        "claimed_at": null,
-        "heartbeat_at": null,
-        "pr_url": null,
-        "delivery_status": "not_pushed",
-        "acceptance_evidence": [],
-        "tests_executed": [],
-        "blockers": [],
-        "handoff": null
+        "owner": "arena/6d69f2cd-m5-agent-studio",
+        "branch": "arena/6d69f2cd-m5-agent-studio",
+        "base_sha": "2f91bd3a7d9e835818f31a9005d5fc648e207182",
+        "head_sha": "6e7922e6bfa6524a4c636dc7527108c48f6172cb",
+        "claimed_at": "2026-11-09T14:34:22Z",
+        "heartbeat_at": "2026-11-09T15:12:54Z",
+        "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/275",
+        "delivery_status": "pr_open",
+        "acceptance_evidence": [
+          "docs/autonomous-production-ap001-reconciliation.md §§2,4,5: classification definitions, 18 producer/authority/executor/consumer rows, and all 32 AP story capability bundles with source/test/caller evidence.",
+          "docs/autonomous-production-ap001-reconciliation.md §3: AS/M5/UIUX/UIV2/LC ledger counts, active UI PR ownership, LC G1-G6/legacy-default blockers, and untouched status vocabularies.",
+          "docs/autonomous-production-ap001-reconciliation.md §6: explicit MoneyPrinter, evidence-lessons, routing, and durable-delegation assessments; no new wrapper/control plane proposed.",
+          "docs/autonomous-production-ap001-reconciliation.md §§7-8: release-blocked security state, current/recorded installed qualification limits, and generated/source-bound artifact ownership.",
+          "AGENTS.md plus docs/autonomous-production-ap001-reconciliation.md §9: one AP tracking source, AP-001-only owner activation scope, fixed-Arena-branch exception, remote draft-PR claim and takeover convention."
+        ],
+        "tests_executed": [
+          "run_scoped_tests.py --base origin/main --head HEAD --worktree: 518 passed, 1 upstream warning after full-history fetch (initial shallow run: 516 passed, 2 ancestry failures); rerun after merging main c0ab6892: 518 passed, 1 warning.",
+          "Initial 30-module capability source-grounding run: 607 passed, 1 warning; merged-main run expanded with chat-stream/coordinated workflow suites: 646 passed, 1 warning.",
+          "ruff check ., mypy (75 sources), tracked compileall, frontend syntax, baseline, app/standalone smoke, docs/governance/security-signoff, demo and screenshot validation: passed before and after merged-main refresh.",
+          "studio/route/subsystem/AS-roadmap regeneration plus runtime dispatch and UI/UIV2 source-bound checks: passed with zero unintended tracked drift after merging main.",
+          "security_release_gate.py --json: executed successfully, decision release-blocked; check_lifecycle_feasibility.py: 19/19 synthetic expectations, activation false.",
+          "qualify_environment.py --all: exit 2, expected blocked on Linux x86_64 without Docker/Podman and outside the Apple M5/24 GiB target."
+        ],
+        "blockers": [
+          "AP-001 needs refreshed PR #275 full CI and merge before done.",
+          "AP-002 through AP-032 have no authorization from AP-001; U01-U06 remain unresolved where referenced.",
+          "Current-host sandbox/hardware and installed native lifecycle qualification are blocked/not run; no activation is allowed.",
+          "Production release remains blocked on independent AS-031 acceptance and maintainer artifact signing.",
+          "Shared UI work must coordinate with PR #268 and preserve owner/generated visual evidence."
+        ],
+        "handoff": "AP-001 merged main c0ab6892071e388a39f12533f4a130aeff11bbe9 and refreshed implementation evidence at 6e7922e6bfa6524a4c636dc7527108c48f6172cb in ready PR #275. Require the refreshed full PR CI before merge. Do not claim AP-002 or activate runtime/UI/media/browser/model paths; the owner must separately authorize the next AP story."
       },
       "implementation_prompt": "Implement AP-001: Reconcile programs and trace current production gaps. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
@@ -2546,5 +2565,19 @@
     "policy": "Revision 1.2 overrides earlier blanket hosted-media exclusions. Local inference is default; explicitly granted external cloud/media capabilities are feasible. No silent fallback. External reasoning-model use requires a separate policy decision.",
     "ux_direction": "docs/autonomous-production-ux-direction.md",
     "approval_scope": "Concept direction only; no implementation, screenshot, security or release acceptance."
+  },
+  "program_registration": {
+    "tracking_source": "product/M5_Autonomous_Production_Roadmap.json",
+    "requirements_source": "docs/autonomous-production-roadmap.md",
+    "protocol": "M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md",
+    "reconciliation_evidence": "docs/autonomous-production-ap001-reconciliation.md",
+    "registered_by_story": "AP-001",
+    "owner_authorized_date": "2026-11-09",
+    "activation_scope": "AP-001 reconciliation, registration and evidence only",
+    "runtime_activation_authorized": false,
+    "authorized_downstream_stories": [],
+    "claim_authority": "A pushed draft pull request plus the matching story tracking block is the remote coordination claim; a local JSON edit alone is not atomic.",
+    "fixed_branch_exception": "Arena sessions use their assigned arena/<session>-m5-agent-studio branch instead of renaming to the proposed ap-XXX-short-slug convention.",
+    "stale_claim_rule": "No automatic timeout is inferred. Inspect remote activity, coordinate explicitly, preserve work and record the takeover reason before superseding a claim."
   }
 }
