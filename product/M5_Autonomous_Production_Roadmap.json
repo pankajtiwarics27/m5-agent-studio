@@ -70,7 +70,7 @@
       "title": "Reconcile programs and trace current production gaps",
       "priority": "P0",
       "optional": false,
-      "status": "not_started",
+      "status": "in_progress",
       "authorization": "owner_authorizes_program_registration_and_scope",
       "dependencies": [],
       "objective": "Create a source-grounded delta map; prevent duplicate implementations and unauthorized LC activation.",
@@ -117,18 +117,18 @@
         "Push/PR state; owner/independent approvals where required"
       ],
       "tracking": {
-        "owner": null,
-        "branch": null,
-        "base_sha": null,
-        "head_sha": null,
-        "claimed_at": null,
-        "heartbeat_at": null,
+        "owner": "arena/6d69f2cd-m5-agent-studio",
+        "branch": "arena/6d69f2cd-m5-agent-studio",
+        "base_sha": "2f91bd3a7d9e835818f31a9005d5fc648e207182",
+        "head_sha": "2f91bd3a7d9e835818f31a9005d5fc648e207182",
+        "claimed_at": "2026-11-09T14:34:22Z",
+        "heartbeat_at": "2026-11-09T14:38:59Z",
         "pr_url": null,
         "delivery_status": "not_pushed",
         "acceptance_evidence": [],
         "tests_executed": [],
         "blockers": [],
-        "handoff": null
+        "handoff": "AP-001 continued after the owner selected Continue. arena/6d69f2cd-m5-agent-studio supersedes arena/73573f93-m5-agent-studio and preserves its audit. Scope remains reconciliation and registration only; no product-code, runtime activation, or downstream AP story is authorized."
       },
       "implementation_prompt": "Implement AP-001: Reconcile programs and trace current production gaps. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
