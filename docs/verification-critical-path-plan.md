@@ -148,21 +148,24 @@ setup-python 0.1, setup-node 0.0, install 0.2, mypy 0.1, lint 0.0, guards 0.0,
 smoke 0.1, evidence/artifacts 0.2. The pytest step is 94% of the job, and the
 job is the critical path — so the critical path is pytest.
 
-The slowest leg is not always 3.11. Across the four baseline runs it was
+The slowest leg is not always 3.11. Across the baseline runs it was
 `test (3.12)` three times (`42687013895` 13.5, `42687023006` 13.6,
-`42681851797` 13.9) and `test (3.11)` once (`42681862794` 13.3, and 13.4 on
-`42698201085`). Per-leg pytest time moves by up to 90 s between runs on the same
-commit, so a shard partition must be balanced per version from that version's
-own measurements, never from a single global split.
+`42681851797` 13.9) and `test (3.11)` twice (`42681862794` 13.3, `42698201085`
+13.4). Pytest time also moves between runs of the *same* commit: 3.13 took
+592.7 s in the pull request run and 741.9 s in the manual dispatch run of
+`92ec749`, a 149 s spread, and 3.12 ranged 739.7–761.1 s over the same pair.
+A shard partition must therefore be balanced per version from that version's
+own measurements, and its margin must absorb a spread of this size rather than
+assume a repeatable 650 s.
 
 Pytest seconds per leg, read from the step's own `::notice` (5249 passed,
 35 skipped on each):
 
-| leg | run `42698201085` | run `42695177203` |
-| --- | --- | --- |
-| 3.11 | 752.4 s | 740.5 s |
-| 3.12 | 649.6 s | 739.7 s |
-| 3.13 | 587.3 s | 592.7 s |
+| leg | `42698201085` (`main`) | `42695177203` (`92ec749`) | `42695269077` (`92ec749`) |
+| --- | --- | --- | --- |
+| 3.11 | 752.4 s | 740.5 s | 736.5 s |
+| 3.12 | 649.6 s | 739.7 s | 761.1 s |
+| 3.13 | 587.3 s | 592.7 s | 741.9 s |
 
 Inside `Browser safety regressions` (8.3 min): pinned-browser install 0.22,
 backend authorization gate 1.45, browser screenshot/keyboard/refusal regressions
