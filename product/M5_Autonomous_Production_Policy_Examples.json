@@ -1,0 +1,141 @@
+{
+  "schema_version": 1,
+  "document_type": "autonomous_production_fictional_policy_examples",
+  "fictional_only": true,
+  "examples": [
+    {
+      "fixture_id": "fictional-local-offline-deny",
+      "description": "A local-only default with no external, account, file or spending grants; every scoped external request is denied.",
+      "policy_version": 1,
+      "fictional": true,
+      "external_reasoning_models": {
+        "state": "separate_explicit_policy_required",
+        "policy_id": null
+      },
+      "grants": [],
+      "budget": {
+        "max_elapsed_seconds": 600,
+        "max_tokens": 50000,
+        "max_tool_calls": 20,
+        "max_retries": 1,
+        "spending": {
+          "currency": null,
+          "max_minor_units": 0
+        }
+      }
+    },
+    {
+      "fixture_id": "fictional-reviewed-media-export",
+      "description": "A fictional, short-lived grant for one non-inference media service, account, destination, path pair and USD 25.00 ceiling.",
+      "policy_version": 1,
+      "fictional": true,
+      "external_reasoning_models": {
+        "state": "separate_explicit_policy_required",
+        "policy_id": null
+      },
+      "grants": [
+        {
+          "grant_id": "fictional-grant-media-001",
+          "version": 1,
+          "capabilities": [
+            "external_non_inference_media"
+          ],
+          "providers": [
+            "fictional-media-service"
+          ],
+          "egress_destinations": [
+            "https://media.example.invalid"
+          ],
+          "accounts": [
+            "fictional-media-review-account"
+          ],
+          "read_roots": [
+            "fixtures/project-a/input"
+          ],
+          "write_roots": [
+            "fixtures/project-a/output"
+          ],
+          "spending": {
+            "currency": "USD",
+            "max_minor_units": 2500
+          },
+          "ttl_seconds": 900,
+          "max_uses": 3,
+          "data_classes": [
+            "generated_draft",
+            "public_source"
+          ],
+          "retention_days": 7
+        }
+      ],
+      "budget": {
+        "max_elapsed_seconds": 900,
+        "max_tokens": 0,
+        "max_tool_calls": 3,
+        "max_retries": 0,
+        "spending": {
+          "currency": "USD",
+          "max_minor_units": 2500
+        }
+      }
+    },
+    {
+      "fixture_id": "fictional-scoped-research-adapters",
+      "description": "A fictional zero-spend grant showing that API, CLI and MCP adapters still need exact provider, egress, account, path, data and retention scopes.",
+      "policy_version": 1,
+      "fictional": true,
+      "external_reasoning_models": {
+        "state": "denied",
+        "policy_id": null
+      },
+      "grants": [
+        {
+          "grant_id": "fictional-grant-research-001",
+          "version": 1,
+          "capabilities": [
+            "public_research",
+            "application_api",
+            "cli",
+            "mcp"
+          ],
+          "providers": [
+            "fictional-research-service"
+          ],
+          "egress_destinations": [
+            "https://research.example.invalid"
+          ],
+          "accounts": [
+            "fictional-read-only-account"
+          ],
+          "read_roots": [
+            "fixtures/project-b/queries"
+          ],
+          "write_roots": [
+            "fixtures/project-b/sources"
+          ],
+          "spending": {
+            "currency": null,
+            "max_minor_units": 0
+          },
+          "ttl_seconds": 600,
+          "max_uses": 10,
+          "data_classes": [
+            "public_query",
+            "public_source"
+          ],
+          "retention_days": 3
+        }
+      ],
+      "budget": {
+        "max_elapsed_seconds": 600,
+        "max_tokens": 0,
+        "max_tool_calls": 10,
+        "max_retries": 1,
+        "spending": {
+          "currency": null,
+          "max_minor_units": 0
+        }
+      }
+    }
+  ]
+}

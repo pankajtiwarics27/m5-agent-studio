@@ -19,15 +19,15 @@
     {
       "path": "app.py",
       "role": "the FastAPI server the UI talks to; source of the route table",
-      "sha256": "dd25de4b283746031c7dce0bb9310389b827b80e4847a77f2cdb1d963807aea2",
-      "bytes": 1072407,
+      "sha256": "ad33bc4fc764d45cfb8d5fd5c19b41e30997b08d43e2d6c83f1f1becae4d2f69",
+      "bytes": 1072475,
       "lines": 23006
     },
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "7e2ae1f6049974ecd58e885c253cc94243d6598c5de289fac4c92960d07c9503",
-      "bytes": 4294821,
+      "sha256": "655471ed04e26d2084261698d75bde002f5d27ecd054e04d7d6891a0cd0004ea",
+      "bytes": 4294889,
       "lines": 83386
     },
     {
@@ -571,7 +571,7 @@
   },
   "api": {
     "path": "app.py",
-    "sha256": "dd25de4b283746031c7dce0bb9310389b827b80e4847a77f2cdb1d963807aea2",
+    "sha256": "ad33bc4fc764d45cfb8d5fd5c19b41e30997b08d43e2d6c83f1f1becae4d2f69",
     "route_count": 121,
     "by_method": {
       "DELETE": 7,
