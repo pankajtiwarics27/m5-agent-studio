@@ -10,12 +10,12 @@ The first decision covers only merge/handoff of the UI/UX V2 program. It is not 
 
 | Field | Verified value |
 | --- | --- |
-| Implementation HEAD | `6aca516fc9afce5bbe1f8276b72407c69a00d0c1` (dirty=`false`) |
-| Frontend SHA-256 | `b37f117dd620b8a2d5b3a285eceb1e8738368e57b1ed187e52ce13b51337fe0d` |
+| Implementation HEAD | `af860cc879f2ba0b1378b42e8d3801a21fad2cce` (dirty=`false`) |
+| Frontend SHA-256 | `397c3ae069fe281d8150485e1b88e73c7970de8a1ac07841c6790f7fe685da0f` |
 | Evidence scope | `current-browser-sources`; current-browser-sources=`true` |
 | Post-handoff #185 evidence | `current` |
 | Roadmap at generation | 30/30 done, 0 in progress, 0 blocked |
-| Critical CI | [`6aca516fc9afce5bbe1f8276b72407c69a00d0c1`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42646156594) — success |
+| Critical CI | [`af860cc879f2ba0b1378b42e8d3801a21fad2cce`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42683511615) — success |
 | Local executed checks | 7/7 exit 0 |
 | Production release | `release-blocked`; release_ready=`false` |
 
@@ -39,21 +39,21 @@ Post-handoff #185 has current clean implementation and matching CI evidence.
 
 | Evidence | Actual result | Binding |
 | --- | --- | --- |
-| Approved structural matrix | 2200/2200 checks; 48 variants / 144 PNGs | manifest `8afca1179f0c4305435ca5c119c2d7c85e9291b98d236e34f512e807c411086d` |
-| Human approval | approved-check | `user:PR 268 owner review 2026-11-09 "approved the re-captured baseline"` |
-| Compare restore/export continuity | 15/15 checks; six PNGs | run `9ac78b2ba9177658b754ea5095b966b5250873c6d68527d7ca7f2fdc8a5f4fbc` |
+| Approved structural matrix | 2200/2200 checks; 48 variants / 144 PNGs | manifest `d0e31010db932fc477b32b5bcd34e648d468dc9f9407903d01511daa7bf41415` |
+| Human approval | approved-check | `user:Arena review 2026-11-09 "approved the re-captured phone Hall baseline; re-capture the two 390x844 hall captures"` |
+| Compare restore/export continuity | 15/15 checks; six PNGs | run `eb9c6c51f40314092e5dff75380d00d4f008e49bd1c2b54ff2e5c8f3bc9d5f21` |
 | Browser / fonts | HeadlessChrome/153.0.8010.0 | three font digests recorded in the release evidence |
 
-Local review manifests: `/tmp/uiv2-30-visual/check-manifest.json` and `/tmp/uiv2-30-compare.json`. PNGs are not committed; their hashes, source digests and actual outcomes are. Approval is structural fidelity, not pixel identity or self-certification.
+Local review manifests: `.uiv2-evidence/check-manifest.json` and `.uiv2-evidence/compare.json`. PNGs are not committed; their hashes, source digests and actual outcomes are. Approval is structural fidelity, not pixel identity or self-certification.
 
 ### Compare captures
 
-- `compare-record-forgotten.png` — `a364a2db933642b86eb2636ba1f8e7efc49193f6b5b681d1fce7e1497738c67c` (19952 bytes)
-- `compare-record-light.png` — `59e9ee1ebca05ef03d5502270dfa440ac06f64d458b075ff70815e6348fc1ad0` (58815 bytes)
-- `compare-record-live.png` — `8cdfa8efbdf2623ea6c801928c784e93b2dc1771d39011fc2bfde7281e291221` (94070 bytes)
-- `compare-record-narrow.png` — `7bfbb0d014bcc2370adebee80caa899b01f6b9d5f288d68397e479760f58391e` (72713 bytes)
-- `compare-record-restored.png` — `eb2e76c5ac8782634a4df47e177db573b213b9560a304b5d0a8f27986269fca6` (70533 bytes)
-- `compare-record-server.png` — `72c87b58a0cd4c1bc046a0fd7808d39aa34fe2a377a1829ba459be208f94a9a1` (22094 bytes)
+- `compare-record-forgotten.png` — `9b34fa80499cba163142a30ccc9d920b6788eceea1205d3b79c5c199cd36d4cc` (22488 bytes)
+- `compare-record-light.png` — `b2dea2eed26389eeeec0bb39b9f03b13c19968b15bb5fb72d58c56750a5e26d8` (66134 bytes)
+- `compare-record-live.png` — `1fcc384f71756326989f3a3bad703c3fa3ebbaa7a09c0fc47199d2c535dd7367` (102106 bytes)
+- `compare-record-narrow.png` — `88556b7a1655efc81cd930f96ec157944b7c25ae0fa1605aab0db0fde7146bed` (78641 bytes)
+- `compare-record-restored.png` — `48d728f03eadc81c3dabae76a877f93c10369a761c6fa91522c2484f39b84a83` (76871 bytes)
+- `compare-record-server.png` — `786608f89dcda456992aad095380bfd837e7c0202887cba121a0cae01edad24f` (24417 bytes)
 
 ## Critical checks that actually ran
 
@@ -69,23 +69,23 @@ Local review manifests: `/tmp/uiv2-30-visual/check-manifest.json` and `/tmp/uiv2
 
 CI jobs in the imported merged-release run:
 
-- **test (3.13)** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42646156594/job/129259998564))
-- **test (3.11)** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42646156594/job/129259998921))
-- **test (3.12)** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42646156594/job/129259998931))
-- **Browser safety regressions** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42646156594/job/129259999116))
+- **Browser safety regressions** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42683511615/job/129384848762))
+- **test (3.12)** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42683511615/job/129384849338))
+- **test (3.11)** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42683511615/job/129384849393))
+- **test (3.13)** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42683511615/job/129384849706))
 
 The older 40-story UI/UX gate remains separately owned by `scripts/uiux_release_gate.py`; this review requires its committed 37/37 checks and 7/7 gates and also runs it during final verification. It does not pretend that artifact generation is a full browser or three-interpreter test run.
 
 ## Measured performance and safety carried into release
 
-Environment: `linux` / `x64`, 2 CPUs, `HeadlessChrome/153.0.8010.0`; disposable loopback fixture, no external provider calls.
+Environment: `linux` / `x64`, 4 CPUs, `HeadlessChrome/153.0.8010.0`; disposable loopback fixture, no external provider calls.
 
 | Metric | Actual | Gate/scope |
 | --- | ---: | --- |
-| Fast real SSE | 58 schedules in 333.6ms = 173.86/s | at least 50/s, complete reply retained |
-| Full-window frame | mean 1.93ms; p95 2.60ms; max 3.20ms | unchanged mean ≤4ms |
+| Fast real SSE | 58 schedules in 328.6ms = 176.51/s | at least 50/s, complete reply retained |
+| Full-window frame | mean 1.78ms; p95 2.10ms; max 2.80ms | unchanged mean ≤4ms |
 | Post-GC nodes | 8544 → 8544 → 8544 | no repeated-cycle growth beyond the declared budget |
-| Post-GC JS heap | 3396364 → 3360240 → 3366936 bytes | repeated-cycle plateau, not zero allocation |
+| Post-GC JS heap | 3400048 → 3347212 → 3367188 bytes | repeated-cycle plateau, not zero allocation |
 | Backend safety | 302 tests; 16 isolation checks | zero failures |
 | Local container isolation | unqualified; blocked (fail closed) | live probes not requested; not advertised as qualified |
 
@@ -117,7 +117,7 @@ These are not hidden behind the handoff decision. Historical roadmap entries rem
 | --- | --- |
 | Quickstart and documentation links resolve | scripts/uiux_docs_verification.py --check and scripts/validate_docs.py |
 | UI/UX V2 review is scoped to merge/handoff, not production security approval | scripts/security_release_gate.py --json remains release-blocked |
-| Visual conformity is structural, not a pixel-perfect or self-approved claim | user:PR 268 owner review 2026-11-09 "approved the re-captured baseline" |
+| Visual conformity is structural, not a pixel-perfect or self-approved claim | user:Arena review 2026-11-09 "approved the re-captured phone Hall baseline; re-capture the two 390x844 hall captures" |
 | No new runtime behavior is asserted by UIV2-30 | static/index.html and both browser walks match the imported source digests |
 
 README deliberately does not say production-ready, fully accessible, all-tests-pass, pixel-perfect, or qualified container isolation. Its release link points here, and its safety section continues to describe opt-in execution and external-provider data sharing.
