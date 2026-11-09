@@ -725,6 +725,11 @@ for backend in ('ollama','lmstudio'):
  for old in ('request','operation'):
   test_late_native_failure_cannot_pause_a_successors_live_model(pathlib.Path('private-late-hold-'+backend+'-'+old),backend,old)
  test_owned_interruption_atomically_holds_slot_and_actual_model_without_retiring(pathlib.Path('private-owned-hold-'+backend),backend,'request','live')
+from test_request_fit_interruptions import test_late_counter_cleanup_cannot_pause_an_independent_successor,test_real_task_cancellation_after_count_dispatch_scopes_its_hold
+for backend in ('ollama','lmstudio'):
+ test_late_counter_cleanup_cannot_pause_an_independent_successor(pathlib.Path('private-late-counter-'+backend),backend,'error')
+ for stale in (False,True):
+  test_real_task_cancellation_after_count_dispatch_scopes_its_hold(pathlib.Path('private-cancel-counter-'+backend+'-'+str(stale)),backend,stale)
 print('isolated native executor and shared transaction guards passed')
 """.replace("REPO", repr(str(root)))
     env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}

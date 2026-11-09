@@ -1102,3 +1102,56 @@ The restored review/performance/new interruption tests pass **120/120**; all21
 restored assertions are enabled. Full integrated regression and exact-head CI
 must be recorded separately after execution. This integration does not merge
 PR260, enable native dispatch or complete LC08/LC09.
+
+## Fit-counter interruption accounting after merged PR260
+
+PR260 merged as38a5778 after exact8a1b269 PR42551265711 and push42551259213
+completed green on Python3.11/3.12/3.13 and Browser safety. This is historical CI
+proof, not proof of this continuation. The separate old local full run has no
+completed result in this checkout and is not claimed. Main's PR261 restored
+P7-PARK-01 assertions; that resolution and its real imported browser/CI pins stay
+intact. No review is re-parked and no native/independent acceptance follows.
+
+The full-request fit-counter failure handler still had split coordinator/model
+writes. Offline baseline **15failed**:12 late counter/receipt/observation/cancel
+callbacks paused a successor's live model after independently finished request
+scope, and3 injected memory-write failures committed coordinator uncertainty
+without the matching ledger write. The independently finished request in these
+tests is fixture-supplied terminal proof, not physical release inferred from count.
+Counter facts remain synthetic, including the generic source-only fit fixture.
+
+`RequestFitAdmission._hold` now reuses `SharedMemoryAdmission.hold_model` with the
+exact fit request lease and actual model-memory lease. One fenced transaction
+checks still-current scope and model identity, then holds both halves, or rolls
+back both. No valid current scope means no successor pause. Current cancelled/
+expired requests and actual task cancellation remain charged/active/reconciling;
+no new count, inference, observation, settlement or retry runs in the hold.
+This does not treat a count receipt as inference/native/physical-completion proof,
+issue a fit approval on failure, or change counter qualification, request bytes,
+fit arithmetic, TTL, grant, default/routing/schema or native activation policy.
+
+Evidence: **51 new offline tests** across generic fit, Ollama and LM Studio
+fixtures; focused4-module suite **237passed in61.53s**, including the private
+standalone using actual embedded fit/native kernels, current/stale task
+cancellation and no public sibling fallback. These51test cases include
+27current live/cancelled/expired counter failures,6real task cancellation cases,
+12late successor callbacks,3atomic rollback and3single-fenced-write checks.
+Three isolated temporary-module mutations are caught: restore split cleanup
+(15failures), drop the hold (30failures,3intentional stale-case passes) and commit
+the coordinator half early (3failures). Tracked sources were not mutated for this
+experiment. Combined/full suite and exact-head CI results are recorded only after
+execution. LC08/LC09 remain incomplete; no hardware/live/independent acceptance,
+oMLXtarget/inference, absence/all/cache/recovery or native activation is added.
+
+Combined25-module lifecycle/native/fit suite: **1355passed,1upstream warning in
+236.39s**. The command wait timed out while pytest continued; the completed log,
+not the timeout, supplies that result. Generated-contract suite108passed in21.01s.
+Bundle4,277,493bytes; backend302/16, source64/6/121, preservation21/272/50,
+performance21/21/11, restored review7/7/2200/15 with0findings, screenshots6/6,
+app/standalone auth/origin/startup smokes, Ruff/mypy75, docs259/ADRs and scope
+map202/13 pass. The initial shallow checkout lacked the real pinned historical
+baseline/browser-evidence commits; fetching its actual history fixed baseline
+and review ancestry checks without changing any pin or test. The regenerated
+review differs only in its embedded backend isolation-smoke temporary workspace
+path, as required by the newly recorded backend run. Imported release evidence,
+measured roadmap, restored assertions and parking resolution are untouched.
