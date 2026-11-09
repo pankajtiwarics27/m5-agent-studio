@@ -14,11 +14,16 @@ heavy jobs for a pushed branch that already has an open pull request (failing
 open if the lookup breaks), and concurrency is keyed per event lane so a cheap
 scoped push can never cancel the full-suite pull request run.
 
-| revision | push run | pull_request run | job-minutes | merge-gate wall clock |
+| revision | push run | pull_request run | job-minutes | pull request wall clock |
 | --- | --- | --- | --- | --- |
-| before (`b273a45`) | `42687013895` 43.7 | `42687023006` 41.9 | 85.6 | 14.0 min |
-| before (`6e02146c`) | `42681851797` 45.9 | `42681862794` 42.0 | 87.9 | 13.7 min |
+| before (`b273a45`) | `42687013895` 43.7 | `42687023006` 41.9 | 85.6 | 13.6 min |
+| before (`6e02146c`) | `42681851797` 45.9 | `42681862794` 42.0 | 87.9 | 13.4 min |
 | after (`92ec749`) | `42695169572` 0.1 (skipped) | `42695177203` 44.9 | **45.0 (−48%)** | 13.3 min |
+
+Every wall clock in this page is `run_started_at` → `updated_at`; every
+job-minute is the sum of job `started_at` → `completed_at`. Quote the pull
+request run for wall clock and both runs for job-minutes, or the comparison is
+not like for like.
 
 Coverage was not traded for the saving: `5248 passed, 35 skipped` on each of
 Python 3.11, 3.12 and 3.13, plus the full browser-safety job. The `main` push
@@ -45,10 +50,16 @@ critical path did not. That is the next problem, and it is a different problem.
   only in-flight `ci.yml` work: a fail-closed event planner, five parallel
   browser-safety shards behind the existing `Browser safety regressions`
   identity, and planner regressions. Its measured shards are cited in §4.
-- **This page and its session own measurement, not the workflow.** The
-  `arena/bd2b9f81` session writes no `ci.yml` change while PR #286 is open.
-  Two sessions editing the same workflow is the failure mode this section
-  exists to prevent.
+- **This page and its session own measurement and independent review, not the
+  workflow.** The `arena/bd2b9f81` session writes no `ci.yml` change while PR
+  #286 is open, and reviews that session's measurements instead of reproducing
+  them on a competing branch. Two sessions editing one workflow is the failure
+  mode this section exists to prevent.
+- **Green checks are not review approval.** A required check proves the tree
+  passes the gates it was given; it does not prove the claims in a report, the
+  fairness of a comparison, or that coverage was preserved. Every number
+  published here is traceable to a run id, and an independent reviewer reads
+  the diff and re-derives the figures before anything is merged or banked.
 - **Preconditions before PR #286 starts the pytest work** (all are rebase-time
   fixes, not new scope):
   1. Rebase onto `eab31d7`. PR #286 is `CONFLICTING` today and its branch
@@ -64,6 +75,42 @@ critical path did not. That is the next problem, and it is a different problem.
      pytest sharding work.
 - If PR #286 closes without the work, ownership returns to exactly one new
   owner before any further `ci.yml` edit. Never two at once.
+
+### 2.1 Reconciliation requirements for PR #286
+
+Reviewed at `e45ec2e` against `eab31d7`. That branch predates the merge, so a
+rebase must not silently undo the merged guarantees:
+
+**Must survive the rebase** (each is pinned by a test or a run):
+
+- Fail-closed pull request lookup: a lookup error runs the verification.
+- Per-lane concurrency with `main` never cancelled. Observed live on
+  `eab31d7`: main runs `42698201085` and `42697477881` finished side by side.
+  The branch's `cancel-in-progress: true` for every event would cancel a
+  running main verification when another main push arrives.
+- Required identities `test (3.11)`, `test (3.12)`, `test (3.13)` and
+  `Browser safety regressions` produced by PR, main, schedule and dispatch.
+- Streamed pytest with `--durations`, the `::notice` summary, `PYTHONUNBUFFERED`
+  and `set +e`; the branch predates all of it and falls back to a buffered log.
+- The 25-minute test-job timeout (slowest measured leg 13.6 minutes).
+
+**Worth keeping from the branch:** the five browser shards behind the unchanged
+aggregate identity, and the 3.11-only consolidation of source gates *if*
+dependency parity is proven per interpreter.
+
+**Blocking discrepancies:**
+
+- A planner and the merged `ci-preflight` would both run. Keep one mechanism.
+- `pip install -e '.[dev,supply-chain]'` only on 3.11 while `.[dev]` runs
+  elsewhere: dependency parity differs per interpreter, so per-version outcome
+  identity (§7.1) must be demonstrated, not assumed.
+- Release-evidence build/upload reduced to 3.11, which removes the
+  `release-evidence-3.12` and `3.13` artifacts. Either keep them or record the
+  reduction as a deliberate scope change.
+- Renaming push-run jobs to `Branch test (…)` is defensible only if branch
+  protection requires the plain names at pull request time. Branch protection is
+  not readable with this repository token (HTTP 403), so that stays an stated
+  assumption, not a verified fact.
 
 ## 3. Environment
 
@@ -100,6 +147,13 @@ Inside the critical path, `test (3.11)`: **Run tests 12.6 min**, checkout 0.1,
 setup-python 0.1, setup-node 0.0, install 0.2, mypy 0.1, lint 0.0, guards 0.0,
 smoke 0.1, evidence/artifacts 0.2. The pytest step is 94% of the job, and the
 job is the critical path — so the critical path is pytest.
+
+The slowest leg is not always 3.11. Across the four baseline runs it was
+`test (3.12)` three times (`42687013895` 13.5, `42687023006` 13.6,
+`42681851797` 13.9) and `test (3.11)` once (`42681862794` 13.3, and 13.4 on
+`42698201085`). Per-leg pytest time moves by up to 90 s between runs on the same
+commit, so a shard partition must be balanced per version from that version's
+own measurements, never from a single global split.
 
 Pytest seconds per leg, read from the step's own `::notice` (5249 passed,
 35 skipped on each):
@@ -178,17 +232,70 @@ identity, lowers time-to-green without dropping or duplicating a test.
    improve the number.
 5. Record the browser shards separately first, since PR #286 already has them.
 
+**Order of work.** The browser shards land first because they are bounded and
+already measured, not because they shorten the critical path: 8.3 minutes of
+browser work sits under a 13.4-minute Python leg, so sharding it alone changes
+the total by roughly nothing. Their value is a smaller, reversible change that
+proves the aggregate-identity pattern. pytest is the measured critical path and
+is therefore the increment that can actually move the number.
+
+### 7.1 Test identity and outcome coverage
+
+Totals are not coverage. A shard can pass while collecting nothing, a test can
+be collected twice, and a skip can appear on one interpreter only — all three
+survive a `passed`-count comparison. The experiment must show, **per Python
+version**:
+
+1. **Node id set identity.** `pytest --collect-only -q` before and after; the
+   union of the shards' collected node ids must equal the unsharded collection
+   for that interpreter, exactly. Compare sets, not counts, and store both.
+2. **Duplicate detection.** The union must have no repeated node id; a test
+   collected by two shards is a defect even when both pass.
+3. **Outcome identity.** A per-test outcome map (`passed`/`failed`/`skipped`/
+   `xfail`/`error`) diffed against the unsharded run at the same commit. A test
+   that was `passed` and is now `skipped` is lost coverage, whatever the totals
+   say.
+4. **Skip identity.** The same skip reasons with the same counts per
+   interpreter; a skip that appears only on 3.12 is a per-version regression.
+5. **Non-empty shards.** A shard that collects zero tests fails, so an empty
+   shard cannot report a green.
+6. **No filters.** No `-k`, no `--deselect`, no `-m` narrowing, no new
+   `pytest.mark.skip`, no changed `addopts`. `PYTEST_ADDOPTS` stays limited to
+   `--durations`.
+
+Every shard publishes its collected count, its elapsed seconds and its outcome
+line in a `::notice`, and the run id is recorded next to the numbers.
+
+### 7.2 Repeated qualification, retained attempts
+
+Repeat the full qualification **only on the final candidate**: five consecutive
+runs of the same tree (no intervening commits), no retries, and every attempt
+kept — including failures, with the run id, the job, the failing node id and the
+first divergence from the baseline outcome map. A failed attempt is reported and
+investigated as a defect; deleting it or re-running until green is prohibited.
+Intermediate iterations are measured once each; they are not qualified.
+
+### 7.3 Reporting rule: observed versus projected
+
+Observed results — run id, wall clock, job-minutes, per-shard seconds, identity
+diff — are reported in one table. Anything not yet run is reported separately,
+labelled a projection, and never mixed into the observed table or summarised as
+a saving.
+
 **Acceptance criterion — measured, not projected.**
 
 - Critical path (run start → last required check green) improves by at least
   30% on the same class of run: from 13.5 minutes to **9.5 minutes or less**.
-- Coverage is unchanged: union of collected node ids equals the unsharded
-  collection; `sum(passed)`/`sum(skipped)` match the baseline for that commit;
-  no `-k`, no `--deselect`, no new skips, no relaxed assertion.
+- Coverage is unchanged by §7.1: per-version node id sets, duplicates, outcomes
+  and skips all identical to the unsharded baseline at the same commit.
 - Flakiness does not increase: five consecutive runs at an unchanged tree with
-  zero unexplained failures, each failure investigated as a defect. No retries
-  until green.
+  zero unexplained failures, all attempts retained. No retries until green.
 - Required check names and branch-protection contexts are untouched.
+- **No uncontrolled resource growth**: total job-minutes stay inside 1.3× the
+  measured baseline for the same event class (≤ 58 for a pull request against
+  44.9), queue time stays under one minute, and no single shard exceeds 10
+  minutes. A critical-path win bought with unbounded runners fails this
+  criterion, because the next run then waits in a queue instead.
 
 **Projection, clearly labelled as such.** With per-leg pytest near 650–750 s
 split three ways (~4.2 min) plus ~0.8 min of per-shard setup and gates, a shard
