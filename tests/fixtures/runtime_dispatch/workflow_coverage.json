@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "scope": "Static owner mapping plus bounded Council/Debate adapters, Hall HTTP/MCP summon, workspace suggestion, cleanup helper and direct unload-route audits; not all-workflow or native qualification.",
+  "scope": "Static owner mapping plus bounded Council/Debate adapters, Hall HTTP/MCP summon, workspace suggestion, cleanup helper, and direct load/unload route audits; not all-workflow or native qualification.",
   "assembly_owners": [
     "api_council_stream.event_gen",
     "api_debate_stream.event_gen"
@@ -128,8 +128,8 @@
       "seams": [
         "guarded legacy HTTP (not coordinated authority)"
       ],
-      "assessment": "inventory_only_in_this_audit",
-      "evidence": "docs/runtime-dispatch-entry-points.md"
+      "assessment": "bounded_legacy_load_route",
+      "evidence": "tests/test_workflow_load_route.py"
     },
     {
       "owner": "api_run_agile_sdlc_factory.sdlc_gen",
