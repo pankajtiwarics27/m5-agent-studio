@@ -466,7 +466,11 @@ def test_owner_matrix_matches_current_static_inventory_without_promoting_coverag
             else (
                 "bounded_hall_http_summon"
                 if row["owner"] == "api_hall_summon.event_gen"
-                else "inventory_only_in_this_audit"
+                else (
+                    "bounded_mcp_stdio_summon"
+                    if row["owner"] == "_mcp_summon_model"
+                    else "inventory_only_in_this_audit"
+                )
             )
         )
 
@@ -499,6 +503,13 @@ sys.path.insert(0,str(root/'tests'))
 import pytest
 from test_workflow_coordinated import test_coordinated_reasoning_only_workflow_never_retries_with_changed_budget,test_response_consumer_close_reaches_backend_without_saving_run,test_unconfirmed_cleanup_cannot_start_next_stage_or_save_success
 from test_workflow_hall_coordinated import test_hall_reasoning_only_never_retries_changed_budget_in_coordinated_mode,test_hall_close_or_disconnect_immediately_closes_source_without_saving,test_hall_cleanup_failure_keeps_completed_transcript_but_never_reports_summon_success
+from test_workflow_mcp_coordinated import test_mcp_consumer_error_closes_owned_source_before_client_exit,test_mcp_preserves_full_matter_chronicle_role_and_original_options,test_mcp_unconfirmed_cleanup_never_appends_or_returns_success
+with pytest.MonkeyPatch.context() as patch:
+ test_mcp_consumer_error_closes_owned_source_before_client_exit(patch)
+with pytest.MonkeyPatch.context() as patch:
+ test_mcp_preserves_full_matter_chronicle_role_and_original_options(patch)
+with pytest.MonkeyPatch.context() as patch:
+ test_mcp_unconfirmed_cleanup_never_appends_or_returns_success(patch,"pending")
 with pytest.MonkeyPatch.context() as patch:
  test_hall_reasoning_only_never_retries_changed_budget_in_coordinated_mode(patch)
 with pytest.MonkeyPatch.context() as patch:
