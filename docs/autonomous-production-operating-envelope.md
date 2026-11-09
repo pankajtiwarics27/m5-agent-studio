@@ -1,6 +1,6 @@
 # AP-002 — Mission scope and operating envelope
 
-**State:** in progress • **Claim base:** `fecd51faec7cf636d38c7ef5340a14d4f98f9f92` • **Claim PR:** [#280](https://github.com/pankajtiwarics27/m5-agent-studio/pull/280)
+**State:** in review • **Claim base:** `fecd51faec7cf636d38c7ef5340a14d4f98f9f92` • **Claim PR:** [#280](https://github.com/pankajtiwarics27/m5-agent-studio/pull/280)
 
 ## Authority and bounded outcome
 
@@ -176,7 +176,8 @@ python -m pytest -q tests/test_autonomous_production_decisions.py \
 
 The validator reads only the three repository JSON records. It does not inspect
 the host, load a model, contact a provider, resolve DNS, access an account or
-issue a grant. Full command outcomes and current-head CI are recorded in the AP
-ledger before review. Target-host inventory/qualification, real service grants
+issue a grant. Full command outcomes are recorded in the AP ledger and
+current-head CI is linked from the pull request before review. Target-host
+inventory/qualification, real service grants
 and owner resolution of U01–U06 remain pending rather than being inferred from
 offline tests.
