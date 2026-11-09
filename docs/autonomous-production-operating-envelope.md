@@ -1,13 +1,15 @@
 # AP-002 — Mission scope and operating envelope
 
-**State:** in review • **Claim base:** `fecd51faec7cf636d38c7ef5340a14d4f98f9f92` • **Claim PR:** [#280](https://github.com/pankajtiwarics27/m5-agent-studio/pull/280)
+**State:** done • **Claim base:** `fecd51faec7cf636d38c7ef5340a14d4f98f9f92` • **Delivered PR:** [#280](https://github.com/pankajtiwarics27/m5-agent-studio/pull/280) • **Merged:** 2026-11-09T17:23:52Z
+
+**Completion record:** [#281](https://github.com/pankajtiwarics27/m5-agent-studio/pull/281) • **Closeout branch:** `arena/841521ae-m5-agent-studio`
 
 ## Authority and bounded outcome
 
 After AP-001 completed, the owner explicitly authorized **AP-002 and AP-003
-sequentially**. AP-002 is the only story claimed on this branch. AP-003 remains
-`not_started` for a separate later branch and pull request; AP-004 through AP-032
-remain unauthorized.
+sequentially**. AP-002 was delivered from its fixed Arena branch and merged
+through PR #280. AP-003 remains `not_started` and unclaimed for its own later
+branch and pull request; AP-004 through AP-032 remain unauthorized.
 
 AP-002 adds an offline, versioned decision/configuration boundary. It does not
 activate a provider, runtime, lifecycle coordinator, sandbox, browser, account,
@@ -152,6 +154,34 @@ not canonical outputs of these files and must not drift. The AP ledger and AP
 operating-envelope JSON are hand-maintained authority/evidence records, not
 standalone generator outputs.
 
+## Post-merge completion record
+
+The repository owner explicitly requested the merge after reviewing the AP-002
+handoff. Final PR head `af67df404f07caefb176d054672dbc80fd48c79e`
+passed both push CI run `42661850062` and pull-request CI run `42661861110`:
+Python 3.11, 3.12 and 3.13 plus Browser safety regressions all succeeded. PR
+#280 merged at 2026-11-09T17:23:52Z as
+`ce2373dd394ae1ecc86c81a58b043f7ff23e47d1`, with the delivered head in
+`main` history.
+
+The immediate post-merge push run `42664215927` was concurrency-cancelled when
+the scheduled run `42665031438` superseded it on that same merge SHA. The
+superseding run passed all four jobs. This was scheduling, not a failed test.
+
+Completion-record PR #281 was refreshed from current main
+`c0484cc64e4cd9934a0eb9d6775524073c217324` after PR #277 landed. That runtime
+and generated-evidence change does not overlap the three AP-002 closeout files.
+The refreshed scoped selection again passed all 518 tests before the closeout
+head was pushed.
+
+All five acceptance criteria below have versioned artifact, documentation and
+test evidence, so AP-002 is `done` under the repository convention. Completion
+resolves the story, not U01–U06: those owner values remain explicitly pending,
+target-host inventory remains `not_measured`, automatic promotion remains off,
+and no provider, account, file, egress, spending, runtime or lifecycle authority
+is activated. AP-003 is only the next authorized, separately claimable story.
+Completion-record PR #281 must pass its own current-head CI before landing.
+
 ## Acceptance mapping
 
 | AP-002 acceptance criterion | Evidence |
@@ -176,8 +206,7 @@ python -m pytest -q tests/test_autonomous_production_decisions.py \
 
 The validator reads only the three repository JSON records. It does not inspect
 the host, load a model, contact a provider, resolve DNS, access an account or
-issue a grant. Full command outcomes are recorded in the AP ledger and
-current-head CI is linked from the pull request before review. Target-host
-inventory/qualification, real service grants
-and owner resolution of U01–U06 remain pending rather than being inferred from
-offline tests.
+issue a grant. Full command outcomes and merged delivery evidence are recorded
+in the AP ledger and completion record above. Target-host inventory and
+qualification, real service grants, and owner resolution of U01–U06 remain
+pending rather than being inferred from offline tests.
