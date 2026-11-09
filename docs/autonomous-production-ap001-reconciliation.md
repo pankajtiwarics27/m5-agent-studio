@@ -2,7 +2,9 @@
 
 **Story:** AP-001 • **State:** in review • **Originally claimed:** 2026-11-09T14:34:22Z
 
-**Current main/base:** `2f91bd3a7d9e835818f31a9005d5fc648e207182` • **Implementation evidence head:** `f35417da46f2a0bd6c5e6364ff875987fb237ee7`
+**Original claim base:** `2f91bd3a7d9e835818f31a9005d5fc648e207182` • **Merged-main refresh base:** `c0ab6892071e388a39f12533f4a130aeff11bbe9`
+
+**Original implementation evidence head:** `f35417da46f2a0bd6c5e6364ff875987fb237ee7`
 
 **Replacement claim:** [PR #275](https://github.com/pankajtiwarics27/m5-agent-studio/pull/275)
 
@@ -100,9 +102,9 @@ status vocabulary.
 | M5 runtime | `product/M5_2_0_Autonomous_Roadmap.json`: 34/34 `done`; no active story. | Done story records remain untouched. External security/signing and host-bound qualification obligations still apply even though story tracking is complete. |
 | UIUX | `product/M5_2_0_UIUX_Autonomous_Roadmap.json`: 40/40 `done`; no ledger-local active story. | Existing six-pane preservation, route, control and approval records remain owned here. Concept direction is not implementation approval. |
 | UIV2 | `product/M5_2_0_UIUX_V2_Visual_Fidelity_Roadmap.json`: 30/30 `done`. `docs/uiv2-v2-release-review.md` says UI handoff `READY` but production/security release `RELEASE-BLOCKED`. | No AP story rewrites visual baselines, screenshot approval or release-review evidence. |
-| Current shared-UI work | Open PR [#268](https://github.com/pankajtiwarics27/m5-agent-studio/pull/268), head `3cda2f4a049682d0cdc44b3d798fb09416276c82`, owns header/Density/Council shared surfaces; checks were still mixed completed/in-progress when inspected. | AP-008/018/019/020 must reconcile after that owner lands or hands off work. AP-001 does not edit `static/index.html` or its generated evidence. |
-| LC08/native lifecycle | `docs/lc08-current-status.md` and `docs/runtime-dispatch-integration.md`: substantial dormant composition; **19 inventory-only owners** remain; G1–G6 remain open; ADR-0038 is proposed; legacy is the default. | No backend, producer, setting or runtime mode is installed by AP-001. Test8 remains paused/unpassed. PR #272 is already merged into this base and is preserved. |
-| AP | `product/M5_Autonomous_Production_Roadmap.json`: AP-001 alone is `in_progress`; 31 stories remain `not_started`. | AP-001 registration is tracking authority, not authorization for AP-002 or any product activation. |
+| Current shared-UI work | Open PR [#268](https://github.com/pankajtiwarics27/m5-agent-studio/pull/268), refreshed head `6b64bf0397de0640c1b5149ce0e9111c2ee3a625`, owns header/Density/Council shared surfaces; checks were still mixed completed/in-progress when re-inspected. | AP-008/018/019/020 must reconcile after that owner lands or hands off work. AP-001 does not edit `static/index.html` or its generated evidence. |
+| LC08/native lifecycle | `docs/lc08-current-status.md` remains the earlier 19-owner snapshot; after merged PR #276, the generated fixture and latest `docs/runtime-dispatch-integration.md` checkpoint record 29 owners/54 sites, 16 bounded assessments and **13 inventory-only owners**. G1–G6 remain open, ADR-0038 is proposed and legacy is the default. | No backend, producer, setting or runtime mode is installed by AP-001. Test8 remains paused/unpassed. PRs #272 and #276 are preserved. |
+| AP | `product/M5_Autonomous_Production_Roadmap.json`: AP-001 alone is `in_review`; 31 stories remain `not_started`. | AP-001 registration is tracking authority, not authorization for AP-002 or any product activation. |
 
 ## 4. Producer → authority → executor → consumer matrix
 
@@ -347,10 +349,11 @@ authorize AP-002, AP-003, both, or neither. AP-001 does not make that decision.
 
 ## 11. Executed validation and evidence limits
 
-All commands below ran on the AP-001 branch against base `2f91bd3` in a Linux
-x86_64 environment with Python 3.11.2. No provider credential, model endpoint,
-MCP server, browser worker, MoneyPrinter installation or external service was
-used.
+The initial commands below ran on the AP-001 branch against original base
+`2f91bd3` in a Linux x86_64 environment with Python 3.11.2. A merged-main
+refresh against `c0ab6892` is recorded separately below. No provider credential,
+model endpoint, MCP server, browser worker, MoneyPrinter installation or
+external service was used.
 
 | Command / check | Actual result |
 |---|---|
@@ -371,10 +374,34 @@ used.
 | `.venv/bin/python scripts/qualify_environment.py --all --json /tmp/ap001-qualification.json --quiet` | Exit 2 as an expected environment block: no Docker/Podman and not the Apple M5/24 GiB target; both M5-P3-01 and M5-P4-01 `blocked`. `/tmp` evidence is local/transient and is not committed. |
 | JSON parse and `git diff --check` | Passed. |
 
+### Merged-main refresh before the owner-requested merge
+
+PR #276 merged to main while PR #275 awaited review. Main commit
+`c0ab6892071e388a39f12533f4a130aeff11bbe9` was merged into this branch rather
+than allowing the AP audit to land against stale source-bound evidence. The
+refresh preserved PR #276's chat-stream close fix and regenerated artifacts.
+It also updated the LC count from the earlier 19-owner snapshot to the latest
+fixture: 29 owners/54 sites, 16 bounded assessments and 13 inventory-only.
+The direct-project import count remains 36.
+
+- The docs/CI scope reran clean: **518 passed**, one upstream warning.
+- The capability run was expanded with PR #276's chat-stream and coordinated
+  workflow suites: **646 passed**, one upstream warning.
+- Ruff, mypy (75 sources), compileall, frontend syntax, baseline, both smoke
+  modes, docs/governance/security-record, demo and screenshot checks passed.
+- Runtime/UI/UIV2 source-bound checks passed; rebuilding the standalone, route
+  matrix, subsystem inventory and AS dashboard produced no unintended drift.
+- Security stayed `release-blocked`; lifecycle feasibility remained 19/19
+  synthetic with activation false; current-host sandbox/hardware qualification
+  remained blocked with expected exit 2.
+- The previous PR head's eight reported GitHub checks were green. The refreshed
+  pushed head still requires its own full PR matrix before merge.
+
 The full local pytest suite was not re-run because this documentation/ledger
-change maps to the 518-test docs/CI scope; the 607 focused source-grounding run
-adds the audited capability contracts. Pull-request CI remains responsible for
-the full Python 3.11/3.12/3.13 and browser-safety matrix at the pushed head.
+change maps to the 518-test docs/CI scope; the refreshed 646-test source-grounding
+run adds the audited capability and merged-main workflow contracts. Pull-request
+CI remains responsible for the full Python 3.11/3.12/3.13 and browser-safety
+matrix at the pushed head.
 AP-001 moved to `in_review` only after the implementation/evidence commit was
 pinned; the earlier invariant run correctly recorded `in_progress` during
 construction. Until PR checks finish, CI is pending rather than green. No
