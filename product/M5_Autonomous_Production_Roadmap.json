@@ -177,7 +177,7 @@
       "title": "Resolve mission scope and operating-envelope decisions",
       "priority": "P0",
       "optional": false,
-      "status": "in_progress",
+      "status": "in_review",
       "authorization": "owner_decisions_for_real_hardware_accounts_and_budgets",
       "dependencies": [
         "AP-001"
@@ -238,9 +238,9 @@
         "owner": "arena/5779cf5f-m5-agent-studio",
         "branch": "arena/5779cf5f-m5-agent-studio",
         "base_sha": "fecd51faec7cf636d38c7ef5340a14d4f98f9f92",
-        "head_sha": "f00da704e309a36e09aa6becf625a6e35414d55f",
+        "head_sha": "a6dbc45388d3e0ea1fd0f30261015b6624fcb567",
         "claimed_at": "2026-11-09T16:09:30Z",
-        "heartbeat_at": "2026-11-09T16:38:00Z",
+        "heartbeat_at": "2026-11-09T16:37:18Z",
         "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/280",
         "delivery_status": "pr_open",
         "acceptance_evidence": [
@@ -264,7 +264,7 @@
           "No runtime, provider, account, file, egress, spending, promotion or lifecycle activation is authorized or implemented. Production release remains blocked on existing independent-security/signing gates.",
           "AP-003 is authorized sequentially but remains not_started and unclaimed for a separate later branch/PR; AP-004 through AP-032 remain unauthorized."
         ],
-        "handoff": "AP-002 implementation is complete locally and remains the sole claim on PR #280 pending push/review/CI. The strict offline bundle validates U01-U06, generic inventory evidence separation, exact roadmap blockers and fictional deny-by-default policy/budget scopes without runtime activation. After delivery, AP-003 may be claimed only on its own later branch/PR.",
+        "handoff": "AP-002 implementation commit a6dbc45388d3e0ea1fd0f30261015b6624fcb567 is ready for PR #280 review after push/CI. The strict offline bundle validates U01-U06, generic inventory evidence separation, exact roadmap blockers and fictional deny-by-default policy/budget scopes without runtime activation. After AP-002 delivery, AP-003 may be claimed only on its own later branch/PR.",
         "blast_radius": {
           "objective_and_gap": "Turn U01-U06 into versioned, machine-validated current state that distinguishes owner statements, measured facts and explicitly pending choices; current roadmap prose alone is not a consumable configuration or denial fixture.",
           "options": "Reject a runtime control plane or hard-coded owner machine profile. Prefer additive AP-owned schema/data, validation/tests and documentation; reuse existing hardware/grant/routing concepts without activating them.",
@@ -273,7 +273,20 @@
           "authority_and_resources": "No credentials, provider calls, network, private files, spending, model load or host execution. Missing grants and unresolved decisions deny affected actions.",
           "compatibility_and_rollback": "No feature flag or migration. Revert the AP-002 additive records and validator; preserve AP-001 history and all owning-program ledgers.",
           "required_evidence": "Positive, negative, schema/version, unknown-field, missing-grant, pending-decision and host-inventory separation tests; docs/governance/CI and generated-drift checks. Installed owner-host measurements remain blocked."
-        }
+        },
+        "validated_against_main_sha": "b598eb8454fa7a23e2613eb4219caa44ba666c5a",
+        "changed_files": [
+          "AGENTS.md",
+          "autonomous_production_decisions.py",
+          "docs/README.md",
+          "docs/autonomous-production-operating-envelope.md",
+          "product/M5_Autonomous_Production_Operating_Envelope.json",
+          "product/M5_Autonomous_Production_Policy_Examples.json",
+          "product/M5_Autonomous_Production_Roadmap.json",
+          "pyproject.toml",
+          "tests/test_autonomous_production_decisions.py",
+          "tests/test_scopes.json"
+        ]
       },
       "implementation_prompt": "Implement AP-002: Resolve mission scope and operating-envelope decisions. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
