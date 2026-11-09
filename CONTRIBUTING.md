@@ -18,22 +18,27 @@ python -m venv .venv
 # Activate it: source .venv/bin/activate (POSIX) or .venv\Scripts\activate (Windows)
 python -m pip install -e '.[dev]'
 python scripts/verify_baseline.py
-ruff check .
-mypy
-git ls-files -z -- '*.py' | xargs -0 -r python -m compileall -q
-python scripts/check_frontend_syntax.py
-python -m pytest -q
-python scripts/smoke_local.py
-python scripts/smoke_local.py --standalone
-python scripts/build_studio.py
-python scripts/generate_route_matrix.py
-python scripts/generate_subsystem_inventory.py
-python scripts/generate_roadmap_status.py
-git diff --exit-code
-python scripts/validate_governance.py
 ```
 
-This is the same sequence CI runs; a pull request is mergeable only when all three Python legs pass it.
+Then run the checks that match your change rather than the whole list every
+time. The full suite takes 10–13 minutes per CI run, so paying for it on a
+one-line documentation edit buys nothing:
+
+| Change touches | Minimum local run before pushing |
+| --- | --- |
+| Prose only (`docs/*.md`, `README.md`, `AGENTS.md`, this file) | `python scripts/validate_docs.py` |
+| Generated docs, roadmap/product JSON | the generators, then `git diff --exit-code` |
+| Screenshots or `docs/media/` | `python scripts/validate_screenshots.py` |
+| Runtime, storage, security, providers | `ruff check .`, `mypy`, `python scripts/run_scoped_tests.py --base origin/main --head HEAD --worktree`, `python scripts/smoke_local.py` and `--standalone` |
+| Frontend or UI tests | `python scripts/check_frontend_syntax.py`, the affected `--area ui.*` selection, artifact regeneration |
+| Test infrastructure, `tests/test_scopes.json`, workflow or CI configuration | the full suite: `python -m pytest -q` |
+| Anything else, or several of the above | the full suite |
+
+Whatever you skip locally, CI still runs the complete sequence on every pull
+request, and a pull request is mergeable only when all three Python legs
+(3.11, 3.12, 3.13) and the browser-safety job pass. `AGENTS.md` §5.4 lists the
+full sequence, including the release-evidence, smoke, screenshot, and generated
+artifact drift checks.
 
 ## Scoped test selection
 

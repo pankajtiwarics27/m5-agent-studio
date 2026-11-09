@@ -131,38 +131,97 @@ check. From a clean checkout:
 ```bash
 python -m venv .venv && . .venv/bin/activate
 python -m pip install -e '.[dev,supply-chain]'   # supply-chain = pip-audit for the release scan
+python scripts/verify_baseline.py                # pinned Git ancestry (needs full history: git fetch --unshallow)
+```
 
-python scripts/verify_baseline.py                       # pinned Git ancestry (needs full history: git fetch --unshallow)
+### 5.1 Local verification by risk
+
+Match the commands to what the change can break instead of running the whole
+checklist for every edit; the full suite is 10–13 minutes per run and running it
+for a one-line doc edit costs more than it proves. CI is the merge gate and is
+never relaxed by this table.
+
+| Change touches | Minimum local run before pushing |
+| --- | --- |
+| Prose only (`README.md`, `docs/*.md`, `AGENTS.md`, `CONTRIBUTING.md`) | `python scripts/validate_docs.py`, plus any ADR check when `docs/adr/` changed |
+| Roadmap/product JSON, or anything that generates a doc | the generators, then `git diff --exit-code` (see [§8](#8-generated-artifacts--regenerate-never-hand-edit)) |
+| Screenshot manifest, `docs/media/` | `python scripts/validate_screenshots.py`, `python scripts/uiux_screenshot_review.py --check` |
+| Release/governance records | `python scripts/validate_governance.py`, `python scripts/validate_security_signoff.py` |
+| Supply chain, packaging, dependencies | `python scripts/release_supply_chain.py build` then `verify` |
+| Runtime, storage, security, providers (`app.py`, `*.py` modules) | `ruff check .`, `mypy`, `python scripts/run_scoped_tests.py --base origin/main --head HEAD --worktree`, `python scripts/smoke_local.py` and `--standalone` |
+| Frontend (`studio.py` is generated — edit its source), UI tests | `python scripts/check_frontend_syntax.py`, the affected `--area ui.*` selection, plus `scripts/build_studio.py` regeneration |
+| Generated artifacts (`studio.py`, route matrix, subsystem inventory) | regenerate all three and `git diff --exit-code` |
+| Test infrastructure, `tests/test_scopes.json`, workflow or CI config | the full suite (`python -m pytest -q`): the selector cannot reason about its own change |
+
+Anything not listed, any change spanning several rows, and any change whose
+blast radius you cannot state in one sentence: run the full suite. The same
+applies before asking for a review, before merging, and before claiming a story
+is done — the checklist below is what CI enforces, and it must pass in CI at
+the merge commit.
+
+### 5.2 Scoped test selection
+
+The selector maps changed paths to feature areas through
+`tests/test_scopes.json`:
+
+```bash
+python scripts/run_scoped_tests.py --base origin/main --head HEAD --worktree
+python scripts/run_scoped_tests.py --area ui.compare      # explicit feature run
+python scripts/run_scoped_tests.py --check-map            # every module is categorized
+```
+
+Unknown, shared, or high-risk paths fall back to the full suite inside the
+selector itself.
+
+### 5.3 What CI runs, and when
+
+One run per event lane; the pull request owns the merge gate and is never
+cancelled by a cheaper push run:
+
+- **Pull request** (any branch): full suite on Python 3.11, 3.12, 3.13 plus
+  browser safety. This is the authoritative merge-gate run, and a newer push
+  supersedes an in-flight run for the same pull request.
+- **Push without an open pull request** (feature branch): scoped selection. The
+  `ci-preflight` job skips the heavy jobs entirely when that branch already has
+  an open pull request, because the pull request run covers the same commit;
+  `main` pushes always run in full.
+- **Push to `main`**, **nightly schedule** (`17 7 * * *`), **manual dispatch**:
+  full suite plus browser safety, never cancelled by concurrency.
+- Every run streams pytest output and `--durations` while it executes, and
+  prints the slowest tests and a `::notice` summary with the elapsed seconds.
+
+A pull request is mergeable only when all three Python legs and the browser
+safety check are green.
+
+### 5.4 Full gate
+
+The complete set CI enforces on a merge-gate run. Run it locally when the risk
+table points here, and reproduce any red CI leg with these exact commands:
+
+```bash
+python scripts/verify_baseline.py                       # pinned Git ancestry (needs full history)
+python scripts/check_commit_messages.py --base origin/main   # only new commits are checked
+python scripts/validate_security_signoff.py              # AS-031 record/release-gate consistency
+python scripts/validate_docs.py                         # required docs, sections, links, no placeholders
 ruff check .                                            # lint (generated studio.py excluded)
 mypy                                                    # type-check the typed contract modules
 git ls-files -z -- '*.py' | xargs -0 -r python -m compileall -q
 python scripts/check_frontend_syntax.py                 # needs Node.js
-python -m pytest -q
+python scripts/run_scoped_tests.py --check-map           # every module is categorized
+python -m pytest -q                                     # full suite on 3.11, 3.12, 3.13 in CI
+python scripts/demo_tour.py --check                     # committed demo transcript has not drifted
+python scripts/validate_screenshots.py                  # screenshot manifest vs. captured images
 python scripts/smoke_local.py && python scripts/smoke_local.py --standalone
+python scripts/release_supply_chain.py build            # SBOM + provenance + scans (writes dist/evidence)
+python scripts/release_supply_chain.py verify           # evidence still describes the artifact
 python scripts/build_studio.py                          # regenerate artifacts, then prove no drift:
 python scripts/generate_route_matrix.py
 python scripts/generate_subsystem_inventory.py
-python scripts/generate_roadmap_status.py
+python scripts/generate_roadmap_status.py --check
 git diff --exit-code                                    # any output = stale generated file
-python scripts/validate_governance.py
-python scripts/validate_security_signoff.py              # AS-031 record/release-gate consistency
-python scripts/validate_docs.py                         # required docs, sections, links, no placeholders
-python scripts/release_supply_chain.py build            # SBOM + provenance + scans (writes dist/evidence)
-python scripts/release_supply_chain.py verify           # evidence still describes the artifact
-python scripts/demo_tour.py --check                     # committed demo transcript has not drifted
-python scripts/validate_screenshots.py                  # screenshot manifest vs. captured images
+python scripts/validate_governance.py                   # also on the change classes that touch it
 python scripts/validate_adrs.py                         # only if you touched docs/adr/
-python scripts/check_commit_messages.py --base origin/main   # only new commits are checked
 ```
-
-For local iteration, prefer the feature-scoped selector:
-`python scripts/run_scoped_tests.py --base origin/main --head HEAD --worktree`;
-use `--area ui.compare` (or another named area) for an explicit feature run. Unknown,
-high-risk, and unmapped changes fall back to the full suite. CI runs scoped
-pytest on feature-branch pushes, but keeps the full suite on pull requests,
-`main` pushes, nightly schedules, and manual runs across Python 3.11, 3.12, and
-3.13. The browser-safety suite still runs on every event. A pull request is
-mergeable only when all full-suite Python legs and browser checks are green.
 
 ## 6. Branch, commit, and merge rules
 
