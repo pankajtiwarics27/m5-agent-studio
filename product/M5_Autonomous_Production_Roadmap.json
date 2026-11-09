@@ -164,7 +164,9 @@
           "The repository owner explicitly requested merge after the AP-001 handoff; AP-001 requires no screenshot, artifact, independent-security or release sign-off, and does not claim those approvals.",
           "Post-merge closeout refreshed against main 6aca516fc9afce5bbe1f8276b72407c69a00d0c1 after UI PR #268 merged; closure PR current-head CI remains required before that bookkeeping change lands.",
           "Local post-merge closeout validation against main 6aca516fc9afce5bbe1f8276b72407c69a00d0c1: AP invariants, docs, governance, security-record consistency and baseline passed; scoped docs/CI tests reported 497 passed and 21 intentional P7-PARK-02 skips."
-        ]
+        ],
+        "completion_branch": "arena/bf895de2-m5-agent-studio",
+        "completion_pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/278"
       },
       "implementation_prompt": "Implement AP-001: Reconcile programs and trace current production gaps. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },

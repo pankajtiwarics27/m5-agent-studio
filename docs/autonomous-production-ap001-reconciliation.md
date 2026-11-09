@@ -6,7 +6,7 @@
 
 **Original implementation evidence head:** `f35417da46f2a0bd6c5e6364ff875987fb237ee7` • **Merged-main evidence head:** `6e7922e6bfa6524a4c636dc7527108c48f6172cb` • **Merged PR head:** `863ba601cd9e3537aac58906acef4502764e5c0f`
 
-**Delivered claim:** [PR #275](https://github.com/pankajtiwarics27/m5-agent-studio/pull/275) • **Merge commit:** `6a7cd319a94e013258cd51cc7dd6c8559d2d78d7`
+**Delivered claim:** [PR #275](https://github.com/pankajtiwarics27/m5-agent-studio/pull/275) • **Merge commit:** `6a7cd319a94e013258cd51cc7dd6c8559d2d78d7` • **Completion record:** [PR #278](https://github.com/pankajtiwarics27/m5-agent-studio/pull/278)
 
 ## 1. Authority, scope and pre-edit record
 
@@ -428,8 +428,8 @@ PR #268 subsequently merged as
 `6aca516fc9afce5bbe1f8276b72407c69a00d0c1`. This closeout was refreshed from
 that descendant rather than treating the formerly open UI claim as current.
 The post-merge `main` run for #275 was superseded by the higher-priority #268
-merge run, not by a test assertion failure. The closure PR must still pass its
-own current-head CI before landing. Local closeout selection collected 518
+merge run, not by a test assertion failure. Completion-record PR #278 must still pass its own current-head CI before
+landing. Local closeout selection collected 518
 tests: **497 passed**, **21 intentionally skipped** under `P7-PARK-02`, and one
 upstream warning. AP invariants, documentation, governance, security-record
 consistency and baseline validation passed.
