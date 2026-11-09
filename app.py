@@ -4995,8 +4995,11 @@ def _workflow_orchestrator(client: httpx.AsyncClient, workflow: str) -> Workflow
         max_tokens: int,
         reasoning_mode: str,
     ) -> AsyncIterator[dict[str, Any]]:
-        async for item in stream_any_model(client, model, messages, temperature, max_tokens, reasoning_mode):
-            yield item
+        async with contextlib.aclosing(
+            stream_any_model(client, model, messages, temperature, max_tokens, reasoning_mode)
+        ) as source:
+            async for item in source:
+                yield item
 
     def record_usage(_workflow: str, model: str, usage: Mapping[str, Any]) -> None:
         record_perf(
@@ -5018,6 +5021,9 @@ def _workflow_orchestrator(client: httpx.AsyncClient, workflow: str) -> Workflow
         record_usage=record_usage,
         is_local_model=is_local_omlx_model,
         unload_model=unload_model,
+        # A coordinated completion/refusal never authorizes a changed-budget retry.
+        # Keep the legacy recovery default for non-coordinated local execution.
+        allow_reasoning_retry=lambda _model: not _local_runtime_dispatch().coordinated,
     )
 
 
@@ -6417,21 +6423,22 @@ async def api_council_stream(request: Request) -> StreamingResponse:
             ]
 
             orchestrator = _workflow_orchestrator(client, "council")
-            async for event in orchestrator.run_stages(
+            async with contextlib.aclosing(orchestrator.run_stages(
                 stages_cfg,
                 workflow="council",
                 auto_unload=auto_unload,
                 is_disconnected=request.is_disconnected,
-            ):
-                if event.kind == "disconnected":
-                    return
-                if event.kind in ("stage_start", "token", "unloading"):
-                    yield _sse(event.kind, event.data)
-                elif event.kind == "stage_done" and event.result is not None:
-                    result = event.result
-                    stage = next(item for item in stages_cfg if item.stage_id == result.stage_id)
-                    stage_records.append({"stage": result.stage_id, "key": stage.key, "title": stage.title, "model": result.model, "content": result.content, "reasoning": result.reasoning, "usage": result.usage})
-                    yield _sse("stage_done", event.data)
+            )) as stages:
+                async for event in stages:
+                    if event.kind == "disconnected":
+                        return
+                    if event.kind in ("stage_start", "token", "unloading"):
+                        yield _sse(event.kind, event.data)
+                    elif event.kind == "stage_done" and event.result is not None:
+                        result = event.result
+                        stage = next(item for item in stages_cfg if item.stage_id == result.stage_id)
+                        stage_records.append({"stage": result.stage_id, "key": stage.key, "title": stage.title, "model": result.model, "content": result.content, "reasoning": result.reasoning, "usage": result.usage})
+                        yield _sse("stage_done", event.data)
 
             total_elapsed = round(time.perf_counter() - t_council, 2)
             run_id = save_run("council", task[:100], {"task": task, "total_elapsed_s": total_elapsed, "stages": stage_records})
@@ -6491,31 +6498,32 @@ async def api_debate_stream(request: Request) -> StreamingResponse:
                 )
 
             orchestrator = _workflow_orchestrator(client, "debate")
-            async for event in orchestrator.run_stages(
+            async with contextlib.aclosing(orchestrator.run_stages(
                 stages_cfg,
                 workflow="debate",
                 auto_unload=auto_unload,
                 is_disconnected=request.is_disconnected,
-            ):
-                if event.kind == "disconnected":
-                    return
-                if event.kind == "token":
-                    slot: int | str = "synthesis" if event.data["stage"] == "synthesis" else int(event.data["stage"])
-                    yield _sse("token", {"slot": slot, "kind": event.data["kind"], "text": event.data["text"]})
-                elif event.kind == "stage_start":
-                    if event.data["stage"] == "synthesis":
-                        yield _sse("synthesis_start", {"model": event.data["model"]})
-                    else:
-                        yield _sse("panel_start", {"slot": int(event.data["stage"]), "model": event.data["model"]})
-                elif event.kind == "stage_done" and event.result is not None:
-                    result = event.result
-                    if result.stage_id == "synthesis":
-                        synthesis_record = {"model": result.model, "content": result.content, "usage": result.usage}
-                        yield _sse("synthesis_done", {"model": result.model, "usage": result.usage})
-                    else:
-                        slot = int(result.stage_id)
-                        opinions.append({"slot": slot, "model": result.model, "content": result.content, "usage": result.usage})
-                        yield _sse("panel_done", {"slot": slot, "model": result.model, "usage": result.usage})
+            )) as stages:
+                async for event in stages:
+                    if event.kind == "disconnected":
+                        return
+                    if event.kind == "token":
+                        slot: int | str = "synthesis" if event.data["stage"] == "synthesis" else int(event.data["stage"])
+                        yield _sse("token", {"slot": slot, "kind": event.data["kind"], "text": event.data["text"]})
+                    elif event.kind == "stage_start":
+                        if event.data["stage"] == "synthesis":
+                            yield _sse("synthesis_start", {"model": event.data["model"]})
+                        else:
+                            yield _sse("panel_start", {"slot": int(event.data["stage"]), "model": event.data["model"]})
+                    elif event.kind == "stage_done" and event.result is not None:
+                        result = event.result
+                        if result.stage_id == "synthesis":
+                            synthesis_record = {"model": result.model, "content": result.content, "usage": result.usage}
+                            yield _sse("synthesis_done", {"model": result.model, "usage": result.usage})
+                        else:
+                            slot = int(result.stage_id)
+                            opinions.append({"slot": slot, "model": result.model, "content": result.content, "usage": result.usage})
+                            yield _sse("panel_done", {"slot": slot, "model": result.model, "usage": result.usage})
 
             total_elapsed = round(time.perf_counter() - t0, 2)
             run_id = save_run("debate", prompt[:100], {"prompt": prompt, "opinions": opinions, "synthesis": synthesis_record, "total_elapsed_s": total_elapsed})
