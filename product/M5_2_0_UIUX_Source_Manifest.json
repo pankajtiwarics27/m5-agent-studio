@@ -19,16 +19,16 @@
     {
       "path": "app.py",
       "role": "the FastAPI server the UI talks to; source of the route table",
-      "sha256": "ee1d3a22de343a0a7484406141bbb605d3f6f011d74c5919ee87701e711adb09",
-      "bytes": 1071935,
-      "lines": 22997
+      "sha256": "dd25de4b283746031c7dce0bb9310389b827b80e4847a77f2cdb1d963807aea2",
+      "bytes": 1072407,
+      "lines": 23006
     },
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "897e6828373f3633f3f56ca0572d76da5e8c8644cd47cb66b2be94950dcbb8c0",
-      "bytes": 4293572,
-      "lines": 83365
+      "sha256": "08dcc92ea5ec0d7f9058163c165c422b58c29a81d2c4a6f38351471b50e39e2e",
+      "bytes": 4294044,
+      "lines": 83374
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -571,7 +571,7 @@
   },
   "api": {
     "path": "app.py",
-    "sha256": "ee1d3a22de343a0a7484406141bbb605d3f6f011d74c5919ee87701e711adb09",
+    "sha256": "dd25de4b283746031c7dce0bb9310389b827b80e4847a77f2cdb1d963807aea2",
     "route_count": 121,
     "by_method": {
       "DELETE": 7,

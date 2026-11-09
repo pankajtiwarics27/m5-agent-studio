@@ -10,8 +10,8 @@ alter runtime selection, admission policy, request payloads, response semantics,
 or release/acceptance status.
 
 The [static owner matrix](../tests/fixtures/runtime_dispatch/workflow_coverage.json)
-contains **29 owners / 54 static sites**. Thirteen owners have bounded evidence;
-**16 remain inventory-only**. `stream_any_model` remains inventory-only because
+contains **29 owners / 54 static sites**. Fourteen owners have bounded evidence;
+**15 remain inventory-only**. `stream_any_model` remains inventory-only because
 this increment checks only its legacy local-stream delegation, not its complete
 coordinated, combo, cloud, and local behavior. This is not comprehensive
 workflow or permission coverage. No runtime activation, hardware qualification,

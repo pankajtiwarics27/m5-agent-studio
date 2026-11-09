@@ -5403,12 +5403,15 @@ async def openai_gateway_chat(request: Request):
             if tools:
                 # Buffer when tools are active so `<tool_call>` blocks convert cleanly to OpenAI `delta.tool_calls`!
                 buf_t: list[str] = []
-                async for item in stream_any_model(client, model, messages, temperature, max_tokens, reasoning_mode):
-                    if item["type"] == "reasoning":
-                        pkt = {"id": cid, "object": "chat.completion.chunk", "model": model, "choices": [{"index": 0, "delta": {"reasoning_content": item["text"]}, "finish_reason": None}]}
-                        yield f"data: {json.dumps(pkt)}\n\n"
-                    elif item["type"] == "content":
-                        buf_t.append(item["text"])
+                async with contextlib.aclosing(
+                    stream_any_model(client, model, messages, temperature, max_tokens, reasoning_mode)
+                ) as model_source:
+                    async for item in model_source:
+                        if item["type"] == "reasoning":
+                            pkt = {"id": cid, "object": "chat.completion.chunk", "model": model, "choices": [{"index": 0, "delta": {"reasoning_content": item["text"]}, "finish_reason": None}]}
+                            yield f"data: {json.dumps(pkt)}\n\n"
+                        elif item["type"] == "content":
+                            buf_t.append(item["text"])
                 clean_txt, t_calls = extract_tool_calls("".join(buf_t))
                 if clean_txt:
                     pkt = {"id": cid, "object": "chat.completion.chunk", "model": model, "choices": [{"index": 0, "delta": {"role": "assistant", "content": clean_txt}, "finish_reason": None}]}
@@ -5432,13 +5435,16 @@ async def openai_gateway_chat(request: Request):
                 yield f"data: {json.dumps(done_pkt)}\n\ndata: [DONE]\n\n"
                 return
 
-            async for item in stream_any_model(client, model, messages, temperature, max_tokens, reasoning_mode):
-                if item["type"] == "content":
-                    pkt = {"id": cid, "object": "chat.completion.chunk", "model": model, "choices": [{"index": 0, "delta": {"content": item["text"]}, "finish_reason": None}]}
-                    yield f"data: {json.dumps(pkt)}\n\n"
-                elif item["type"] == "reasoning":
-                    pkt = {"id": cid, "object": "chat.completion.chunk", "model": model, "choices": [{"index": 0, "delta": {"reasoning_content": item["text"]}, "finish_reason": None}]}
-                    yield f"data: {json.dumps(pkt)}\n\n"
+            async with contextlib.aclosing(
+                stream_any_model(client, model, messages, temperature, max_tokens, reasoning_mode)
+            ) as model_source:
+                async for item in model_source:
+                    if item["type"] == "content":
+                        pkt = {"id": cid, "object": "chat.completion.chunk", "model": model, "choices": [{"index": 0, "delta": {"content": item["text"]}, "finish_reason": None}]}
+                        yield f"data: {json.dumps(pkt)}\n\n"
+                    elif item["type"] == "reasoning":
+                        pkt = {"id": cid, "object": "chat.completion.chunk", "model": model, "choices": [{"index": 0, "delta": {"reasoning_content": item["text"]}, "finish_reason": None}]}
+                        yield f"data: {json.dumps(pkt)}\n\n"
             done_pkt = {"id": cid, "object": "chat.completion.chunk", "model": model, "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]}
             yield f"data: {json.dumps(done_pkt)}\n\ndata: [DONE]\n\n"
         except Exception as exc:
@@ -6362,24 +6368,27 @@ async def api_chat_stream(request: Request) -> StreamingResponse:
 
                 tool_token = _CHAT_NATIVE_TOOLS.set(_chat_tool_schemas() if tools_enabled and tool_protocol == "native" else None)
                 try:
-                    async for item in stream_any_model(client, model, messages, temperature, max_tokens, reasoning_mode):
-                        if await request.is_disconnected():
-                            return
-                        if item["type"] == "content":
-                            chunk = item["text"]
-                            step_content_buf.append(chunk)
-                            joined_so_far = "".join(step_content_buf)
-                            if "<tool_call" in joined_so_far or "<|tool_call>" in joined_so_far or "<function=" in joined_so_far or "```tool_call" in joined_so_far:
-                                suppressing_tc = True
-                            if not suppressing_tc:
-                                yield _sse("token", {"kind": "content", "text": chunk})
-                        elif item["type"] == "reasoning":
-                            step_reason_buf.append(item["text"])
-                            full_reasoning.append(item["text"])
-                            yield _sse("token", {"kind": "reasoning", "text": item["text"]})
-                        elif item["type"] == "usage":
-                            usage_info = item
-                            record_perf("chat", model, item["decode_tps"], item["prefill_tps"], item["ttft"], item["completion_tokens"], item["cached_tokens"], demo=bool(item.get("demo")))
+                    async with contextlib.aclosing(
+                        stream_any_model(client, model, messages, temperature, max_tokens, reasoning_mode)
+                    ) as model_source:
+                        async for item in model_source:
+                            if await request.is_disconnected():
+                                return
+                            if item["type"] == "content":
+                                chunk = item["text"]
+                                step_content_buf.append(chunk)
+                                joined_so_far = "".join(step_content_buf)
+                                if "<tool_call" in joined_so_far or "<|tool_call>" in joined_so_far or "<function=" in joined_so_far or "```tool_call" in joined_so_far:
+                                    suppressing_tc = True
+                                if not suppressing_tc:
+                                    yield _sse("token", {"kind": "content", "text": chunk})
+                            elif item["type"] == "reasoning":
+                                step_reason_buf.append(item["text"])
+                                full_reasoning.append(item["text"])
+                                yield _sse("token", {"kind": "reasoning", "text": item["text"]})
+                            elif item["type"] == "usage":
+                                usage_info = item
+                                record_perf("chat", model, item["decode_tps"], item["prefill_tps"], item["ttft"], item["completion_tokens"], item["cached_tokens"], demo=bool(item.get("demo")))
                 finally:
                     _CHAT_NATIVE_TOOLS.reset(tool_token)
 
