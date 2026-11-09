@@ -4,7 +4,7 @@
 
 **Original claim base:** `2f91bd3a7d9e835818f31a9005d5fc648e207182` • **Merged-main refresh base:** `c0ab6892071e388a39f12533f4a130aeff11bbe9`
 
-**Original implementation evidence head:** `f35417da46f2a0bd6c5e6364ff875987fb237ee7`
+**Original implementation evidence head:** `f35417da46f2a0bd6c5e6364ff875987fb237ee7` • **Merged-main evidence head:** `6e7922e6bfa6524a4c636dc7527108c48f6172cb`
 
 **Replacement claim:** [PR #275](https://github.com/pankajtiwarics27/m5-agent-studio/pull/275)
 
