@@ -91,6 +91,9 @@ REQUIRED_FRONTEND = {
     "bounded-cache": "const HARNESS_CACHE_LIMIT = 5000;",
 }
 REQUIRED_WALK = {
+    "full-rendered-reply": "expectedBody.innerHTML === actualBody.innerHTML",
+    "slow-rendered-completion": 'slow.state.status === "complete" && slow.state.content.length > 80 && slow.state.completeReplyMatches',
+    "fast-rendered-completion": "fastTiming.renders < fastTiming.schedules && fast.state.completeReplyMatches",
     "real-fixture": '"--slow-model", SLOW_MODEL',
     "fast-fixture": 'const FAST_MODEL = "Gemma-4-21B-REAP-4bit";',
     "high-frequency-floor": "const MIN_FAST_SSE_PER_SECOND = 50;",

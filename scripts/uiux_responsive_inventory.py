@@ -59,6 +59,7 @@ TARGET_MIN = 24
 BREAKPOINTS = {
     1439: "UIV2-05: the contextual inspector becomes a 320px drawer; the central pane keeps its width",
     1279: "UIV2-05: the nav collapses to a 64px icon rail; labels hide, button titles keep the names. UIV2-08: the harness session/workspace list folds away here too, per the approved reference",
+    1024: "UIV2-P7-07: with the toolbar folded into the header, the workspace caption runs out of room at these widths; Settings, Search and Inspector fold to their icons and keep aria-labels, titles, handlers and focus rings",
     880: "the hall sidebar folds to a horizontal strip and the council seat grid goes to two columns (the harness sidebar already folded at 1279)",
     860: "the hall shell goes to one column",
     820: "the role grid goes to two columns",
@@ -242,7 +243,7 @@ def build_inventory() -> dict:
     # ── 3. the breakpoints are a list, not an accident ──────────────────────
     found = media_queries(html)
     check(
-        "the stylesheet has the six documented breakpoints and no others",
+        "the stylesheet has only documented breakpoints",
         set(found) == set(BREAKPOINTS),
         f"found {sorted(found)}, documented {sorted(BREAKPOINTS)}",
     )

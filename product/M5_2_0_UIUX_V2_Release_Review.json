@@ -12,13 +12,13 @@
     "scope": "merge/handoff of the 30-story UI/UX V2 program only; tagging/publishing a production release remains under scripts/security_release_gate.py and scripts/release.py"
   },
   "pinned_release": {
-    "implementation_head": "5fb978bbfa03ac13dd3d4f4b8885da994fb2558f",
+    "implementation_head": "6aca516fc9afce5bbe1f8276b72407c69a00d0c1",
     "dirty": false,
-    "static_sha256": "7a938b83e3b512b80b20ed006436763117acb4445ce13b463bcc93f72699c6f6",
+    "static_sha256": "b37f117dd620b8a2d5b3a285eceb1e8738368e57b1ed187e52ce13b51337fe0d",
     "review_scope": "current-browser-sources",
     "current_browser_sources": true,
     "post_handoff_evidence": "current",
-    "evidence_recorded_at": "2026-11-09T00:55:01.629099+00:00",
+    "evidence_recorded_at": "2026-11-09T15:47:19.663703+00:00",
     "note": "The evidence commit may contain only later release docs/tracker changes; executable browser sources are bound by digest and verified inside the implementation commit."
   },
   "program_state": {
@@ -30,36 +30,36 @@
     "percent_complete": 100
   },
   "critical_ci": {
-    "headSha": "5fb978bbfa03ac13dd3d4f4b8885da994fb2558f",
+    "headSha": "6aca516fc9afce5bbe1f8276b72407c69a00d0c1",
     "status": "completed",
     "conclusion": "success",
-    "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42517037242",
-    "createdAt": null,
-    "updatedAt": null,
+    "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42646156594",
+    "createdAt": "2026-11-09T15:35:14Z",
+    "updatedAt": "2026-11-09T15:46:33Z",
     "jobs": [
       {
         "name": "test (3.13)",
         "status": "completed",
         "conclusion": "success",
-        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42517037242/job/128842210730"
-      },
-      {
-        "name": "Browser safety regressions",
-        "status": "completed",
-        "conclusion": "success",
-        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42517037242/job/128842210911"
+        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42646156594/job/129259998564"
       },
       {
         "name": "test (3.11)",
         "status": "completed",
         "conclusion": "success",
-        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42517037242/job/128842211021"
+        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42646156594/job/129259998921"
       },
       {
         "name": "test (3.12)",
         "status": "completed",
         "conclusion": "success",
-        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42517037242/job/128842211052"
+        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42646156594/job/129259998931"
+      },
+      {
+        "name": "Browser safety regressions",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42646156594/job/129259999116"
       }
     ]
   },
@@ -118,20 +118,20 @@
   },
   "visual_evidence": {
     "run": "/tmp/uiv2-30-visual/check-manifest.json",
-    "manifest_sha256": "e8543e5d378a4ca52eb82aa6f99bc6140b5bf9f79660207e81f6d3923d9afae5",
+    "manifest_sha256": "8afca1179f0c4305435ca5c119c2d7c85e9291b98d236e34f512e807c411086d",
     "git": {
-      "head": "5fb978bbfa03ac13dd3d4f4b8885da994fb2558f",
+      "head": "6aca516fc9afce5bbe1f8276b72407c69a00d0c1",
       "dirty": false
     },
     "contract_sha256": "caf0e5543c6e644eae4a12a6db0ed38a169ad361a96af75cdb04cbfa0f4c2435",
     "wireframe_sha256": "f1232a0ea81fccbfb343f6f16d8f8878edbcc20a478a96dbea8b45a44cba8a17",
     "approval": {
       "status": "approved-check",
-      "reference": "user:PR 258 owner review 2026-11-08 \"1. Approved\" - re-baseline the debate-pane #debateCriteriaDetails.y shift caused by UIV2-P7-03 label truncation (32px at >=1280, 48px at 390)",
+      "reference": "user:PR 268 owner review 2026-11-09 \"approved the re-captured baseline\"",
       "candidate": {
-        "manifest": "/tmp/cand/candidate-manifest.json",
-        "manifest_sha256": "394f2129ad5c110ff0d17afb5bab64a66532a542cdfb3ebdc2b25db187410800",
-        "git_head": "1d3498a80309947e95c24d68caef185fefe435fa"
+        "manifest": "/home/user/uiv2-fold-recapture/candidate-manifest.json",
+        "manifest_sha256": "bde31a3073e9a05ba53fc41ca1b2ce1301f1e04a9fcff6bd00209b7f677ec2d7",
+        "git_head": "f64842a5a23b723f7ae7124e04ea14d1aa48fe28"
       }
     },
     "matrix": {
@@ -228,7 +228,7 @@
   },
   "compare_recovery": {
     "run": "/tmp/uiv2-30-compare.json",
-    "run_sha256": "193e4f4b276c39be4f9f09190ac1019282da51bacc39139f36ccf6f9190b1f73",
+    "run_sha256": "9ac78b2ba9177658b754ea5095b966b5250873c6d68527d7ca7f2fdc8a5f4fbc",
     "script": "scripts/compare_continuity_walk.mjs",
     "checks": 15,
     "passed": 15,
@@ -236,33 +236,33 @@
     "captures": [
       {
         "path": "compare-record-forgotten.png",
-        "sha256": "a4540f9261db07d57b7b973b589190d01308fc936ea80b687c2a08d1241038d9",
-        "bytes": 19957
+        "sha256": "a364a2db933642b86eb2636ba1f8e7efc49193f6b5b681d1fce7e1497738c67c",
+        "bytes": 19952
       },
       {
         "path": "compare-record-light.png",
-        "sha256": "baa224e8393240caa797b554b3a2560e9d33b2e163822eb46c7e06d8b86e61a3",
-        "bytes": 59183
+        "sha256": "59e9ee1ebca05ef03d5502270dfa440ac06f64d458b075ff70815e6348fc1ad0",
+        "bytes": 58815
       },
       {
         "path": "compare-record-live.png",
-        "sha256": "7e455a244565a5100cfac211fe2bcf94ec6ac987d3d87eb6556f30427546555a",
-        "bytes": 94205
+        "sha256": "8cdfa8efbdf2623ea6c801928c784e93b2dc1771d39011fc2bfde7281e291221",
+        "bytes": 94070
       },
       {
         "path": "compare-record-narrow.png",
-        "sha256": "8d06f3b058c17ecf00ed76fc746c67d085cdc7fae7299500289527f923e05b81",
-        "bytes": 68023
+        "sha256": "7bfbb0d014bcc2370adebee80caa899b01f6b9d5f288d68397e479760f58391e",
+        "bytes": 72713
       },
       {
         "path": "compare-record-restored.png",
-        "sha256": "32aa8794a493b242e7d304e7d6731ea153bb0319dd32fc032bf7ae4c2ae86b1d",
-        "bytes": 70569
+        "sha256": "eb2e76c5ac8782634a4df47e177db573b213b9560a304b5d0a8f27986269fca6",
+        "bytes": 70533
       },
       {
         "path": "compare-record-server.png",
-        "sha256": "a3d837e2288e24352dfd64f61ff3e5a93f803281148b08f8f2b040daacdd5243",
-        "bytes": 22097
+        "sha256": "72c87b58a0cd4c1bc046a0fd7808d39aa34fe2a377a1829ba459be208f94a9a1",
+        "bytes": 22094
       }
     ]
   },
@@ -283,50 +283,50 @@
     },
     "fast_sse": {
       "model": "Gemma-4-21B-REAP-4bit",
-      "elapsed_ms": 329.80000000074506,
-      "renders": 19,
+      "elapsed_ms": 333.59999999962747,
+      "renders": 18,
       "schedules": 58,
       "model_tokens": 58,
-      "sse_per_second": 175.864,
+      "sse_per_second": 173.861,
       "complete_chars": 330
     },
     "steady_frame": {
       "calls": 20,
-      "mean_ms": 1.4750000000931323,
-      "p95_ms": 2.099999999627471,
-      "max_ms": 2.599999999627471,
+      "mean_ms": 1.9250000002793968,
+      "p95_ms": 2.600000001490116,
+      "max_ms": 3.199999999254942,
       "cards": 300
     },
     "memory": {
       "baseline": {
-        "Nodes": 8481,
+        "Nodes": 8544,
         "Documents": 2,
-        "JSEventListeners": 334,
-        "JSHeapUsedSize": 3378912,
-        "JSHeapTotalSize": 4456448,
+        "JSEventListeners": 336,
+        "JSHeapUsedSize": 3396364,
+        "JSHeapTotalSize": 4194304,
         "LayoutCount": 1,
         "RecalcStyleCount": 3
       },
       "after_cycle_1": {
-        "Nodes": 8481,
+        "Nodes": 8544,
         "Documents": 2,
-        "JSEventListeners": 334,
-        "JSHeapUsedSize": 3328912,
-        "JSHeapTotalSize": 3903488,
+        "JSEventListeners": 336,
+        "JSHeapUsedSize": 3360240,
+        "JSHeapTotalSize": 4165632,
         "LayoutCount": 123,
         "RecalcStyleCount": 245
       },
       "after_cycle_2": {
-        "Nodes": 8481,
+        "Nodes": 8544,
         "Documents": 2,
-        "JSEventListeners": 334,
-        "JSHeapUsedSize": 3348040,
+        "JSEventListeners": 336,
+        "JSHeapUsedSize": 3366936,
         "JSHeapTotalSize": 3903488,
         "LayoutCount": 245,
         "RecalcStyleCount": 487
       },
       "cycle_1": {
-        "elapsed_ms": 3968.5999999996275,
+        "elapsed_ms": 3982.699999999255,
         "cursor": 18000,
         "cached": 5000,
         "cards": 300,
@@ -334,7 +334,7 @@
         "last": 18000
       },
       "cycle_2": {
-        "elapsed_ms": 3973.89999999851,
+        "elapsed_ms": 3989.0999999996275,
         "cursor": 30000,
         "cached": 5000,
         "cards": 300,
@@ -372,7 +372,7 @@
         "  [PASS] no new privileges — --security-opt=no-new-privileges",
         "  [PASS] no implicit image pull — --pull=never",
         "  [PASS] resource limits — --pids-limit=128 --memory=2g --cpus=2",
-        "  [PASS] single workspace bind mount — type=bind,source=/tmp/m5-isolation-smoke-3y1c2slb,target=/workspace",
+        "  [PASS] single workspace bind mount — type=bind,source=/tmp/m5-isolation-smoke-tdyk9iza,target=/workspace",
         "",
         "== 3. Skill-code execution gates (app._run_skill_script) ==",
         "  [PASS] default-off skill-code denial — PermissionError",
@@ -411,7 +411,7 @@
     },
     {
       "claim": "Visual conformity is structural, not a pixel-perfect or self-approved claim",
-      "evidence": "user:PR 258 owner review 2026-11-08 \"1. Approved\" - re-baseline the debate-pane #debateCriteriaDetails.y shift caused by UIV2-P7-03 label truncation (32px at >=1280, 48px at 390)",
+      "evidence": "user:PR 268 owner review 2026-11-09 \"approved the re-captured baseline\"",
       "verified": true
     },
     {

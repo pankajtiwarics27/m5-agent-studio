@@ -5,7 +5,7 @@
   "source": {
     "frontend": "static/index.html",
     "style_block": "#m5-redesign-system",
-    "style_block_sha256": "84a57ab041f254a3bedadc3e7684591d9d7e7c6abbe5ab44466632d696ab4da5",
+    "style_block_sha256": "239e64865c3c31ebac848ede2e5e7ecaeb23543d099759248bba5970d0e83b3d",
     "superseded_blocks": [
       "the first <style> block declares an older palette that this one overrides; it is kept only so a stale rule cannot resolve to an undefined name"
     ]
@@ -42,7 +42,7 @@
   "totals": {
     "tokens": 58,
     "groups": 8,
-    "references": 1637,
+    "references": 1645,
     "theme_overrides": 20,
     "density_overrides": 5,
     "contrast_pairs": 28,
@@ -153,7 +153,7 @@
         "light": "#FFFFFF"
       },
       "density_override": null,
-      "references": 73
+      "references": 74
     },
     {
       "name": "--bg-hover",
@@ -193,7 +193,7 @@
         "light": "#DDE2E8"
       },
       "density_override": null,
-      "references": 207
+      "references": 209
     },
     {
       "name": "--border-hi",
@@ -223,7 +223,7 @@
         "light": "#596579"
       },
       "density_override": null,
-      "references": 190
+      "references": 192
     },
     {
       "name": "--text-faint",
@@ -475,7 +475,7 @@
       "value": "10px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 30
+      "references": 31
     },
     {
       "name": "--radius-xl",
@@ -595,7 +595,7 @@
       "value": "56px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 14
+      "references": 16
     },
     {
       "name": "--debate-cols",

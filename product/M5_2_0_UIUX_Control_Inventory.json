@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "7a938b83e3b512b80b20ed006436763117acb4445ce13b463bcc93f72699c6f6",
+  "frontend_sha256": "b37f117dd620b8a2d5b3a285eceb1e8738368e57b1ed187e52ce13b51337fe0d",
   "panes": [
     {
       "dom_id": "start",
@@ -884,9 +884,9 @@
     }
   ],
   "chrome": {
-    "control_count": 162,
+    "control_count": 163,
     "counts": {
-      "button": 96,
+      "button": 97,
       "input": 37,
       "select": 14,
       "summary": 8,
@@ -895,12 +895,90 @@
     "controls": [
       {
         "tag": "button",
-        "id": "telemetryPopoverBtn",
+        "id": "harnessSessionsToggle",
+        "type": "button",
+        "class": "btn btn-xs sessions-toggle",
+        "onclick": "toggleHarnessSessions()",
+        "text": "Sessions"
+      },
+      {
+        "tag": "summary",
+        "text": "Tools & integrations"
+      },
+      {
+        "tag": "button",
+        "id": "integrationMcpTab",
+        "type": "button",
+        "class": "btn btn-xs",
+        "onclick": "setIntegrationKind('mcp')",
+        "text": "MCP servers"
+      },
+      {
+        "tag": "button",
+        "id": "integrationSkillsTab",
+        "type": "button",
+        "class": "btn btn-xs",
+        "onclick": "setIntegrationKind('skills')",
+        "text": "Skills"
+      },
+      {
+        "tag": "input",
+        "id": "integrationSearch",
+        "type": "search",
+        "placeholder": "Filter by name…",
+        "oninput": "renderIntegrationPicker(true)"
+      },
+      {
+        "tag": "button",
+        "id": "integrationPrev",
+        "type": "button",
+        "class": "btn btn-xs",
+        "aria-label": "Previous integrations page",
+        "onclick": "changeIntegrationPage(-1)",
+        "text": "Previous"
+      },
+      {
+        "tag": "button",
+        "id": "integrationNext",
+        "type": "button",
+        "class": "btn btn-xs",
+        "aria-label": "Next integrations page",
+        "onclick": "changeIntegrationPage(1)",
+        "text": "Next"
+      },
+      {
+        "tag": "select",
+        "id": "integrationsQuickMenu",
+        "aria-label": "Open studio tools and integrations",
+        "onchange": "openIntegrationFromMenu(this)",
+        "text": "Manage integrations… Cloud & Local Providers MCP Tools Hub Agent Skills (SKILL.md) Knowledge & CodeGraph External Harness CLI Bridge"
+      },
+      {
+        "tag": "button",
+        "class": "btn btn-xs btn-danger",
+        "aria-label": "Unload every local model to free memory",
+        "title": "Unload local models to free memory",
+        "onclick": "unloadAllModels()",
+        "text": "Unload models"
+      },
+      {
+        "tag": "button",
+        "id": "monitorToggleBtn",
+        "class": "btn btn-xs",
+        "aria-label": "Toggle the contextual inspector",
+        "title": "Show the contextual inspector",
+        "onclick": "toggleMonitorRail()",
+        "text": "Inspector"
+      },
+      {
+        "tag": "button",
+        "id": "settingsBtn",
         "type": "button",
         "class": "btn",
-        "title": "Global telemetry, memory and model residency (header popover)",
-        "onclick": "toggleTelemetryPopover()",
-        "text": "Telemetry"
+        "aria-label": "Open Settings",
+        "title": "Settings: theme, telemetry and preferences",
+        "onclick": "openSettings()",
+        "text": "Settings"
       },
       {
         "tag": "button",
@@ -911,25 +989,6 @@
           "data-shortcut-action": "command-palette"
         },
         "text": "Search ⌘K"
-      },
-      {
-        "tag": "button",
-        "id": "densityToggleBtn",
-        "type": "button",
-        "class": "btn",
-        "title": "Toggle workspace density",
-        "onclick": "toggleDensity()",
-        "text": "Density: comfortable"
-      },
-      {
-        "tag": "button",
-        "id": "themeToggleBtn",
-        "type": "button",
-        "class": "btn",
-        "aria-label": "Switch to light theme",
-        "title": "Switch to light theme",
-        "onclick": "toggleTheme()",
-        "text": "Light"
       },
       {
         "tag": "button",
@@ -963,6 +1022,32 @@
         "class": "btn btn-xs",
         "onclick": "clearSsdCache()",
         "text": "Clear SSD"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn btn-xs",
+        "onclick": "closeOverlay('settingsModal')",
+        "text": "Close"
+      },
+      {
+        "tag": "button",
+        "id": "themeToggleBtn",
+        "type": "button",
+        "class": "btn",
+        "aria-label": "Switch to light theme",
+        "title": "Switch to light theme",
+        "onclick": "toggleTheme()",
+        "text": "Light"
+      },
+      {
+        "tag": "button",
+        "id": "telemetryPopoverBtn",
+        "type": "button",
+        "class": "btn",
+        "title": "Global telemetry, memory and model residency (header popover)",
+        "onclick": "openTelemetryFromSettings()",
+        "text": "Telemetry"
       },
       {
         "tag": "button",
@@ -1800,83 +1885,6 @@
         "text": "Spawn & Convene 4-LLM Council"
       },
       {
-        "tag": "button",
-        "id": "harnessSessionsToggle",
-        "type": "button",
-        "class": "btn btn-xs sessions-toggle",
-        "onclick": "toggleHarnessSessions()",
-        "text": "Sessions"
-      },
-      {
-        "tag": "summary",
-        "text": "Tools & integrations"
-      },
-      {
-        "tag": "button",
-        "id": "integrationMcpTab",
-        "type": "button",
-        "class": "btn btn-xs",
-        "onclick": "setIntegrationKind('mcp')",
-        "text": "MCP servers"
-      },
-      {
-        "tag": "button",
-        "id": "integrationSkillsTab",
-        "type": "button",
-        "class": "btn btn-xs",
-        "onclick": "setIntegrationKind('skills')",
-        "text": "Skills"
-      },
-      {
-        "tag": "input",
-        "id": "integrationSearch",
-        "type": "search",
-        "placeholder": "Filter by name…",
-        "oninput": "renderIntegrationPicker(true)"
-      },
-      {
-        "tag": "button",
-        "id": "integrationPrev",
-        "type": "button",
-        "class": "btn btn-xs",
-        "aria-label": "Previous integrations page",
-        "onclick": "changeIntegrationPage(-1)",
-        "text": "Previous"
-      },
-      {
-        "tag": "button",
-        "id": "integrationNext",
-        "type": "button",
-        "class": "btn btn-xs",
-        "aria-label": "Next integrations page",
-        "onclick": "changeIntegrationPage(1)",
-        "text": "Next"
-      },
-      {
-        "tag": "select",
-        "id": "integrationsQuickMenu",
-        "aria-label": "Open studio tools and integrations",
-        "onchange": "openIntegrationFromMenu(this)",
-        "text": "Manage integrations… Cloud & Local Providers MCP Tools Hub Agent Skills (SKILL.md) Knowledge & CodeGraph External Harness CLI Bridge"
-      },
-      {
-        "tag": "button",
-        "class": "btn btn-xs btn-danger",
-        "aria-label": "Unload every local model to free memory",
-        "title": "Unload local models to free memory",
-        "onclick": "unloadAllModels()",
-        "text": "Unload models"
-      },
-      {
-        "tag": "button",
-        "id": "monitorToggleBtn",
-        "class": "btn btn-xs",
-        "aria-label": "Toggle the contextual inspector",
-        "title": "Show the contextual inspector",
-        "onclick": "toggleMonitorRail()",
-        "text": "Inspector"
-      },
-      {
         "tag": "summary",
         "text": "Run evidenceContracts, handoffs and measured verdicts"
       },
@@ -2020,9 +2028,9 @@
   },
   "totals": {
     "panes": 6,
-    "markup_controls": 272,
+    "markup_controls": 273,
     "pane_controls": 110,
-    "chrome_controls": 162,
+    "chrome_controls": 163,
     "script_rendered_controls": 74,
     "script_rendered_by_function": {
       "debateModelPageFooter": 2,

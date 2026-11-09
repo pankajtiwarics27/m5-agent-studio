@@ -6,9 +6,9 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 re-derived from the markup on every run.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
-* Frontend digest: `7a938b83e3b512b80b20ed006436763117acb4445ce13b463bcc93f72699c6f6`.
+* Frontend digest: `b37f117dd620b8a2d5b3a285eceb1e8738368e57b1ed187e52ce13b51337fe0d`.
 * Panes: 6 · controls in panes: 110 · controls in the
-  shared chrome: 162 · script-rendered: 74.
+  shared chrome: 163 · script-rendered: 74.
 
 ## What this page is, and is not
 
@@ -27,13 +27,13 @@ the end, attributed to the function that renders them — a heuristic, not a cal
 | council | `pane-council` | 17 | 2 | 0 | button 9, input 1, select 5, summary 1, textarea 1 |
 | debate | `pane-debate` | 10 | 1 | 0 | button 5, input 1, select 2, summary 1, textarea 1 |
 | chat | `pane-chat` | 13 | 0 | 0 | button 5, input 3, select 4, textarea 1 |
-| (chrome) | outside the panes | 162 | 64 | 0 | button 96, input 37, select 14, summary 8, textarea 7 |
+| (chrome) | outside the panes | 163 | 65 | 0 | button 97, input 37, select 14, summary 8, textarea 7 |
 
 ## What the numbers already say
 
-* 272 controls are in the markup and 74 more are built by script — a checklist written from the markup alone would miss 21% of the interactive surface.
-* The shared chrome carries 162 controls; all six panes together carry 110. Most of the clicking happens in the shell, not inside a tab.
-* 92 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
+* 273 controls are in the markup and 74 more are built by script — a checklist written from the markup alone would miss 21% of the interactive surface.
+* The shared chrome carries 163 controls; all six panes together carry 110. Most of the clicking happens in the shell, not inside a tab.
+* 93 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
 
 ## Pane `start`
 
@@ -189,174 +189,175 @@ Section `pane-chat`, 13 interactive elements.
 
 ## Shared chrome
 
-162 interactive elements outside every pane (tab bar,
+163 interactive elements outside every pane (tab bar,
 top bar and monitor rail). These are reachable from all six tabs, which is why they are not
 attributed to one.
 
 | # | Element | id | Type | Label or text | Handler |
 |---|---|---|---|---|---|
-| 1 | button | telemetryPopoverBtn | button | Telemetry | toggleTelemetryPopover() |
-| 2 | button | — | — | Open Command Palette (Cmd+K) | openCommandPalette() |
-| 3 | button | densityToggleBtn | button | Density: comfortable | toggleDensity() |
-| 4 | button | themeToggleBtn | button | Switch to light theme | toggleTheme() |
-| 5 | button | — | button | Close | toggleTelemetryPopover(false) |
-| 6 | select | omlxLoadModelPicker | — | Select local model to load | toggleCustomLoadInput(this.value) |
-| 7 | button | — | button | Load | loadSelectedOmlxModel() |
-| 8 | input | omlxCustomModelInput | text | Enter local oMLX or HF model ID… | — |
-| 9 | button | — | — | Clear SSD | clearSsdCache() |
-| 10 | button | tab-start | tab | Start | switchTab('start') |
-| 11 | button | tab-harness | tab | Harness | switchTab('harness') |
-| 12 | button | tab-hall | tab | Council | switchTab('hall') |
-| 13 | button | tab-council | tab | Pipeline | switchTab('council') |
-| 14 | button | tab-debate | tab | Compare | switchTab('debate') |
-| 15 | button | tab-chat | tab | Chat | switchTab('chat') |
-| 16 | input | cmdSearchInput | text | Search actions | renderCommandPaletteList(this.value) |
-| 17 | button | — | button | Close expanded conclusion | closeHallConclusionModal() |
-| 18 | button | ctxTabBtn-oc | — | Knowledge | switchCtxTab('oc') |
-| 19 | button | ctxTabBtn-cg | — | Code graph | switchCtxTab('cg') |
-| 20 | button | ctxTabBtn-gsd | — | Planning | switchCtxTab('gsd') |
-| 21 | button | — | — | Close | closeContextModal() |
-| 22 | input | ocDocId | hidden | — | — |
-| 23 | input | ocTitle | text | e.g. Auth Service JWT Rotation & Edge Cases | — |
-| 24 | select | ocFolder | — | architecture decisions preferences postmortems | — |
-| 25 | input | ocPinned | checkbox | — | — |
-| 26 | textarea | ocContent | — | Markdown architectural rules, decisions, commands, or lessons learned... | — |
-| 27 | input | ocSearchInput | text | Search OpenContext documents | searchOpenContextUI(this.value) |
-| 28 | button | — | — | Wiki Lint | runOpenContextLintUI() |
-| 29 | button | — | — | Clear | resetOcForm() |
-| 30 | button | — | — | Save to OpenContext | saveOpenContextDoc() |
-| 31 | button | — | — | Scan Workspace Graph | refreshCodeGraphOverview() |
-| 32 | input | cgWorkspaceInput | text | — | — |
-| 33 | button | — | button | Browse Studio host workspace folders | openPathPicker('cgWorkspaceInput', {workspace:true}) |
-| 34 | select | cgModeSelect | — | codegraph_architecture (Hubs & God Nodes) codegraph_path (Graphify Shortest Path A -> B) codegraph_impact (Caller Blast-Radius) codegraph_context (Symbol Search) codegraph_quality (Complexity Hotspots) ponytail-debt (Shortcut & Rationale Ledger) | — |
-| 35 | input | cgQueryInput | text | e.g. api_run_harness_turn -> stream_any_model | — |
-| 36 | button | — | — | Run Query | runCodeGraphPlayground() |
-| 37 | input | mcpHubSearch | search | Search MCP presets, connected servers and tools | renderMcpHub() |
-| 38 | button | — | — | Refresh | loadMcpServers() |
-| 39 | button | — | — | Close | closeMcpModal() |
-| 40 | button | mcpTabCatalog | tab | Catalog 0 | switchMcpTab('catalog') |
-| 41 | button | mcpTabConnected | tab | Connected 0 | switchMcpTab('connected') |
-| 42 | button | mcpTabTools | tab | Tools 0 | switchMcpTab('tools') |
-| 43 | button | mcpTabActivity | tab | Activity 0 | switchMcpTab('activity') |
-| 44 | summary | — | — | Add or edit a serverPick a catalog card to prefill, or enter your own. | — |
-| 45 | button | mcpWizardTab1 | button | 1Server | mcpWizardGo(1) |
-| 46 | button | mcpWizardTab2 | button | 2Transport & credentials | mcpWizardGo(2) |
-| 47 | button | mcpWizardTab3 | button | 3Policy & consent | mcpWizardGo(3) |
-| 48 | button | mcpWizardTab4 | button | 4Review & connect | mcpWizardGo(4) |
-| 49 | input | mcpAlias | text | context7 | syncMcpEditorState() |
-| 50 | input | mcpName | text | Context7 Live Docs | — |
-| 51 | select | mcpTransport | — | Remote server over HTTP (URL) Local command over stdio | toggleMcpTransportFields() |
-| 52 | input | mcpUrl | text | https://mcp.context7.com/mcp | mcpWizardRefresh() |
-| 53 | select | mcpAuthHeader | — | Authorization: Bearer x-api-key None (Zero-Key) | mcpWizardRefresh() |
-| 54 | input | mcpToken | password | Optional for free servers | mcpWizardRefresh() |
-| 55 | input | mcpCommand | text | python3, uv, npx, uvx, docker | mcpWizardRefresh() |
-| 56 | button | — | button | Browse Studio host executable files | openPathPicker('mcpCommand', {kind:'file'}) |
-| 57 | input | mcpArgs | text | -y @playwright/mcp@latest --headless | mcpWizardRefresh() |
-| 58 | button | — | button | Append file path… | openPathPicker('mcpArgs', {kind:'file',append:true}) |
-| 59 | button | — | button | Append folder path… | openPathPicker('mcpArgs', {append:true}) |
-| 60 | summary | — | — | Advanced: raw headers and environment JSON | — |
-| 61 | input | mcpHeadersJson | text | {"X-Workspace": "prod"} | — |
-| 62 | input | mcpEnvJson | text | {"API_KEY": "..."} | — |
-| 63 | button | — | button | Insert folder value… | openPathPicker('mcpEnvJson', {env:true}) |
-| 64 | button | — | button | Insert file value… | openPathPicker('mcpEnvJson', {kind:'file',env:true}) |
-| 65 | select | mcpApprovalPolicy | — | Auto-Run (Trusted Read/Search) Inherit Harness Policy Always Ask Human Approval | mcpWizardRefresh() |
-| 66 | input | mcpStdioConsent | checkbox | — | mcpWizardRefresh() |
-| 67 | button | mcpSaveBtn | — | Save & test connection | saveMcpServer() |
-| 68 | button | mcpWizardBack | button | Back | mcpWizardBack() |
-| 69 | button | mcpWizardNext | button | Continue | mcpWizardNext() |
-| 70 | summary | — | — | Paste mcpServers JSONClaude Desktop / Cursor / Windsurf format | — |
-| 71 | textarea | mcpImportJsonInput | — | {"mcpServers": {"exa": {"url": "https://mcp.exa.ai/mcp"}, "my-script": {"command": "python3", "args": ["server.py"]}}} | — |
-| 72 | button | — | — | Import & Sync All | importMcpJson() |
-| 73 | select | mcpPlayServer | — | — | onMcpPlayServerChange() |
-| 74 | select | mcpPlayTool | — | — | onMcpPlayToolChange() |
-| 75 | textarea | mcpPlayArgs | — | {} | validateMcpPlayArgs() |
-| 76 | button | mcpPlayBtn | — | Test Call | runMcpPlayground() |
-| 77 | input | mcpPlayConsentBox | checkbox | — | onMcpPlayConsentChange() |
-| 78 | button | mcpPlayMore | — | Show all | showFullMcpPlayOutput() |
-| 79 | summary | — | — | Raw response | — |
-| 80 | button | — | — | Close | closeExternalHarnessModal() |
-| 81 | button | — | — | Copy YAML | copyPreText('extDshYaml', this) |
-| 82 | button | — | — | Copy Python | copyPreText('extDshPy', this) |
-| 83 | button | — | — | Copy Commands | copyPreText('extOpenHarness', this) |
-| 84 | button | applyWorktreeBtn | — | Apply Worktree to Main Workspace | applyHarnessWorktree() |
-| 85 | button | — | — | Refresh | openHarnessDiffModal() |
-| 86 | button | — | — | Verification & artifacts | openHarnessEvidenceModal() |
-| 87 | button | — | — | Close | closeHarnessDiffModal() |
-| 88 | button | — | — | Refresh | refreshHarnessEvidence() |
-| 89 | button | — | — | Close | closeHarnessEvidenceModal() |
-| 90 | button | — | — | Refresh | refreshHarnessGrants() |
-| 91 | button | — | — | Close | closeHarnessGrants() |
-| 92 | button | — | — | Close | closeProvidersModal() |
-| 93 | input | provAlias | text | openrouter | — |
-| 94 | input | provName | text | OpenRouter | — |
-| 95 | select | provWire | — | OpenAI Compatible (/chat/completions) Anthropic Native (/v1/messages SSE) | — |
-| 96 | input | provUrl | text | https://openrouter.ai/api/v1 | — |
-| 97 | input | provKey | password | sk-... (optional for Pollinations / OmniRoute) | — |
-| 98 | button | fetchModelsBtn | — | Fetch Live Models from Endpoint | fetchRemoteModels() |
-| 99 | textarea | provModels | — | claude-sonnet-4-5, gemini-2.5-pro, qwen/qwen3-coder:free | — |
-| 100 | button | — | — | Save & Enable Provider | saveProvider() |
-| 101 | input | comboAlias | text | — | — |
-| 102 | input | comboName | text | — | — |
-| 103 | input | comboTargets | text | openrouter::qwen/qwen3-coder:free, Qwen3.8-27B-oQ4e-mtp | — |
-| 104 | button | — | — | Save Combo | saveCombo() |
-| 105 | button | — | — | Rescan | loadSkills() |
-| 106 | button | — | — | Close | closeSkillsModal() |
-| 107 | input | skillInstallInput | text | — | — |
-| 108 | button | skillInstallBtn | — | Install | installSkill() |
-| 109 | button | — | — | Refresh | refreshSdlcBoard() |
-| 110 | button | — | — | Close | closeSdlcModal() |
-| 111 | input | sdlcWorkspaceInput | text | ~/Projects/my-new-app | syncProjectDirInputs(this.value) |
-| 112 | button | — | button | Browse Studio host workspace folders | openPathPicker('sdlcWorkspaceInput', {workspace:true}) |
-| 113 | button | — | button | Set Directory | saveWorkspaceDirectory(document.getElementById('sdlcWorkspaceInput').value) |
-| 114 | textarea | sdlcVisionInput | — | e.g. Build a modern full-stack E-Commerce storefront with live search, filterable catalog, slide-over cart drawer, promo codes, SQLite order persistence, and unit/E2E tests — OR an end-to-end HTML5 Canvas survival roguelike game with wave progression, upgrades, spatial audio, and 60fps loop. | — |
-| 115 | select | sdlcMaxStories | — | 3 stories 5 stories 8 stories | — |
-| 116 | select | sdlcRunModeSelect | — | SDLC execution mode | — |
-| 117 | button | — | — | Launch SDLC | startSdlcSelectedMode() |
-| 118 | button | — | — | Research | switchSdlcArtifact('RESEARCH.md') |
-| 119 | button | — | — | PRD | switchSdlcArtifact('PRD.md') |
-| 120 | button | — | — | Arch | switchSdlcArtifact('ARCHITECTURE.md') |
-| 121 | button | — | — | Feedback | switchSdlcArtifact('FEEDBACK_LOG.md') |
-| 122 | input | sdlcFeedbackAutoImpl | checkbox | — | — |
-| 123 | input | sdlcFeedbackInput | text | e.g. Checkout feels clunky — research 1-page Stripe/Shopify cart drawers & add instant validation | — |
-| 124 | input | sdlcInspirationQuery | text | e.g. modern ecommerce slide-over cart ux | — |
-| 125 | button | — | — | Research & Iterate | submitSdlcFeedback() |
-| 126 | button | — | — | Close | closeSpawnModal() |
-| 127 | textarea | spawnRequestInput | — | Design an event-sourced local-first task queue on macOS with crash-safe SQLite WAL persistence, zero-polling wakeups, and backpressure. | — |
-| 128 | button | — | — | Cancel | closeSpawnModal() |
-| 129 | button | — | — | Open Empty Room | confirmSpawnSession(false) |
-| 130 | button | spawnConveneBtn | — | Spawn & Convene 4-LLM Council | confirmSpawnSession(true) |
-| 131 | button | harnessSessionsToggle | button | Sessions | toggleHarnessSessions() |
-| 132 | summary | — | — | Tools & integrations | — |
-| 133 | button | integrationMcpTab | button | MCP servers | setIntegrationKind('mcp') |
-| 134 | button | integrationSkillsTab | button | Skills | setIntegrationKind('skills') |
-| 135 | input | integrationSearch | search | Filter by name… | renderIntegrationPicker(true) |
-| 136 | button | integrationPrev | button | Previous integrations page | changeIntegrationPage(-1) |
-| 137 | button | integrationNext | button | Next integrations page | changeIntegrationPage(1) |
-| 138 | select | integrationsQuickMenu | — | Open studio tools and integrations | openIntegrationFromMenu(this) |
-| 139 | button | — | — | Unload every local model to free memory | unloadAllModels() |
-| 140 | button | monitorToggleBtn | — | Toggle the contextual inspector | toggleMonitorRail() |
-| 141 | summary | — | — | Run evidenceContracts, handoffs and measured verdicts | — |
-| 142 | button | — | button | Close inspector | toggleMonitorRail(true) |
-| 143 | button | — | button | Close path picker | closePathPicker() |
-| 144 | select | pathPickerRoots | — | Approved locations… | if(this.value)loadPathPicker(this.value) |
-| 145 | button | — | button | Default location | loadPathPicker('') |
-| 146 | button | pathPickerUp | button | Up | — |
-| 147 | input | pathPickerLocation | text | — | — |
-| 148 | button | — | button | Go | loadPathPicker(document.getElementById('pathPickerLocation').value) |
-| 149 | input | pathPickerSearch | search | — | — |
-| 150 | button | — | button | Filter | loadPathPicker(pathPickerState.path) |
-| 151 | input | pathPickerEnvKey | text | PROJECT_DIRECTORY | — |
-| 152 | summary | — | — | New folder… (optional) | — |
-| 153 | input | pathPickerNewName | text | — | pathPickerNameChanged() |
-| 154 | input | pathPickerCreateConfirm | checkbox | — | pathPickerCreateReady() |
-| 155 | button | pathPickerCreateBtn | button | Create folder | createPathPickerFolder() |
-| 156 | summary | — | — | Ask a model for a name (optional) | — |
-| 157 | select | pathPickerModel | — | Choose a model… | — |
-| 158 | textarea | pathPickerDescription | — | — | — |
-| 159 | button | pathPickerAskModel | button | Ask model for a name | askPathPickerModel() |
-| 160 | button | pathPickerUseSuggestion | button | Use suggested name | usePathPickerSuggestion() |
-| 161 | button | — | button | Cancel | closePathPicker() |
-| 162 | button | pathPickerApplyBtn | button | Choose folder | applyPathPicker() |
+| 1 | button | harnessSessionsToggle | button | Sessions | toggleHarnessSessions() |
+| 2 | summary | — | — | Tools & integrations | — |
+| 3 | button | integrationMcpTab | button | MCP servers | setIntegrationKind('mcp') |
+| 4 | button | integrationSkillsTab | button | Skills | setIntegrationKind('skills') |
+| 5 | input | integrationSearch | search | Filter by name… | renderIntegrationPicker(true) |
+| 6 | button | integrationPrev | button | Previous integrations page | changeIntegrationPage(-1) |
+| 7 | button | integrationNext | button | Next integrations page | changeIntegrationPage(1) |
+| 8 | select | integrationsQuickMenu | — | Open studio tools and integrations | openIntegrationFromMenu(this) |
+| 9 | button | — | — | Unload every local model to free memory | unloadAllModels() |
+| 10 | button | monitorToggleBtn | — | Toggle the contextual inspector | toggleMonitorRail() |
+| 11 | button | settingsBtn | button | Open Settings | openSettings() |
+| 12 | button | — | — | Open Command Palette (Cmd+K) | openCommandPalette() |
+| 13 | button | — | button | Close | toggleTelemetryPopover(false) |
+| 14 | select | omlxLoadModelPicker | — | Select local model to load | toggleCustomLoadInput(this.value) |
+| 15 | button | — | button | Load | loadSelectedOmlxModel() |
+| 16 | input | omlxCustomModelInput | text | Enter local oMLX or HF model ID… | — |
+| 17 | button | — | — | Clear SSD | clearSsdCache() |
+| 18 | button | — | button | Close | closeOverlay('settingsModal') |
+| 19 | button | themeToggleBtn | button | Switch to light theme | toggleTheme() |
+| 20 | button | telemetryPopoverBtn | button | Telemetry | openTelemetryFromSettings() |
+| 21 | button | tab-start | tab | Start | switchTab('start') |
+| 22 | button | tab-harness | tab | Harness | switchTab('harness') |
+| 23 | button | tab-hall | tab | Council | switchTab('hall') |
+| 24 | button | tab-council | tab | Pipeline | switchTab('council') |
+| 25 | button | tab-debate | tab | Compare | switchTab('debate') |
+| 26 | button | tab-chat | tab | Chat | switchTab('chat') |
+| 27 | input | cmdSearchInput | text | Search actions | renderCommandPaletteList(this.value) |
+| 28 | button | — | button | Close expanded conclusion | closeHallConclusionModal() |
+| 29 | button | ctxTabBtn-oc | — | Knowledge | switchCtxTab('oc') |
+| 30 | button | ctxTabBtn-cg | — | Code graph | switchCtxTab('cg') |
+| 31 | button | ctxTabBtn-gsd | — | Planning | switchCtxTab('gsd') |
+| 32 | button | — | — | Close | closeContextModal() |
+| 33 | input | ocDocId | hidden | — | — |
+| 34 | input | ocTitle | text | e.g. Auth Service JWT Rotation & Edge Cases | — |
+| 35 | select | ocFolder | — | architecture decisions preferences postmortems | — |
+| 36 | input | ocPinned | checkbox | — | — |
+| 37 | textarea | ocContent | — | Markdown architectural rules, decisions, commands, or lessons learned... | — |
+| 38 | input | ocSearchInput | text | Search OpenContext documents | searchOpenContextUI(this.value) |
+| 39 | button | — | — | Wiki Lint | runOpenContextLintUI() |
+| 40 | button | — | — | Clear | resetOcForm() |
+| 41 | button | — | — | Save to OpenContext | saveOpenContextDoc() |
+| 42 | button | — | — | Scan Workspace Graph | refreshCodeGraphOverview() |
+| 43 | input | cgWorkspaceInput | text | — | — |
+| 44 | button | — | button | Browse Studio host workspace folders | openPathPicker('cgWorkspaceInput', {workspace:true}) |
+| 45 | select | cgModeSelect | — | codegraph_architecture (Hubs & God Nodes) codegraph_path (Graphify Shortest Path A -> B) codegraph_impact (Caller Blast-Radius) codegraph_context (Symbol Search) codegraph_quality (Complexity Hotspots) ponytail-debt (Shortcut & Rationale Ledger) | — |
+| 46 | input | cgQueryInput | text | e.g. api_run_harness_turn -> stream_any_model | — |
+| 47 | button | — | — | Run Query | runCodeGraphPlayground() |
+| 48 | input | mcpHubSearch | search | Search MCP presets, connected servers and tools | renderMcpHub() |
+| 49 | button | — | — | Refresh | loadMcpServers() |
+| 50 | button | — | — | Close | closeMcpModal() |
+| 51 | button | mcpTabCatalog | tab | Catalog 0 | switchMcpTab('catalog') |
+| 52 | button | mcpTabConnected | tab | Connected 0 | switchMcpTab('connected') |
+| 53 | button | mcpTabTools | tab | Tools 0 | switchMcpTab('tools') |
+| 54 | button | mcpTabActivity | tab | Activity 0 | switchMcpTab('activity') |
+| 55 | summary | — | — | Add or edit a serverPick a catalog card to prefill, or enter your own. | — |
+| 56 | button | mcpWizardTab1 | button | 1Server | mcpWizardGo(1) |
+| 57 | button | mcpWizardTab2 | button | 2Transport & credentials | mcpWizardGo(2) |
+| 58 | button | mcpWizardTab3 | button | 3Policy & consent | mcpWizardGo(3) |
+| 59 | button | mcpWizardTab4 | button | 4Review & connect | mcpWizardGo(4) |
+| 60 | input | mcpAlias | text | context7 | syncMcpEditorState() |
+| 61 | input | mcpName | text | Context7 Live Docs | — |
+| 62 | select | mcpTransport | — | Remote server over HTTP (URL) Local command over stdio | toggleMcpTransportFields() |
+| 63 | input | mcpUrl | text | https://mcp.context7.com/mcp | mcpWizardRefresh() |
+| 64 | select | mcpAuthHeader | — | Authorization: Bearer x-api-key None (Zero-Key) | mcpWizardRefresh() |
+| 65 | input | mcpToken | password | Optional for free servers | mcpWizardRefresh() |
+| 66 | input | mcpCommand | text | python3, uv, npx, uvx, docker | mcpWizardRefresh() |
+| 67 | button | — | button | Browse Studio host executable files | openPathPicker('mcpCommand', {kind:'file'}) |
+| 68 | input | mcpArgs | text | -y @playwright/mcp@latest --headless | mcpWizardRefresh() |
+| 69 | button | — | button | Append file path… | openPathPicker('mcpArgs', {kind:'file',append:true}) |
+| 70 | button | — | button | Append folder path… | openPathPicker('mcpArgs', {append:true}) |
+| 71 | summary | — | — | Advanced: raw headers and environment JSON | — |
+| 72 | input | mcpHeadersJson | text | {"X-Workspace": "prod"} | — |
+| 73 | input | mcpEnvJson | text | {"API_KEY": "..."} | — |
+| 74 | button | — | button | Insert folder value… | openPathPicker('mcpEnvJson', {env:true}) |
+| 75 | button | — | button | Insert file value… | openPathPicker('mcpEnvJson', {kind:'file',env:true}) |
+| 76 | select | mcpApprovalPolicy | — | Auto-Run (Trusted Read/Search) Inherit Harness Policy Always Ask Human Approval | mcpWizardRefresh() |
+| 77 | input | mcpStdioConsent | checkbox | — | mcpWizardRefresh() |
+| 78 | button | mcpSaveBtn | — | Save & test connection | saveMcpServer() |
+| 79 | button | mcpWizardBack | button | Back | mcpWizardBack() |
+| 80 | button | mcpWizardNext | button | Continue | mcpWizardNext() |
+| 81 | summary | — | — | Paste mcpServers JSONClaude Desktop / Cursor / Windsurf format | — |
+| 82 | textarea | mcpImportJsonInput | — | {"mcpServers": {"exa": {"url": "https://mcp.exa.ai/mcp"}, "my-script": {"command": "python3", "args": ["server.py"]}}} | — |
+| 83 | button | — | — | Import & Sync All | importMcpJson() |
+| 84 | select | mcpPlayServer | — | — | onMcpPlayServerChange() |
+| 85 | select | mcpPlayTool | — | — | onMcpPlayToolChange() |
+| 86 | textarea | mcpPlayArgs | — | {} | validateMcpPlayArgs() |
+| 87 | button | mcpPlayBtn | — | Test Call | runMcpPlayground() |
+| 88 | input | mcpPlayConsentBox | checkbox | — | onMcpPlayConsentChange() |
+| 89 | button | mcpPlayMore | — | Show all | showFullMcpPlayOutput() |
+| 90 | summary | — | — | Raw response | — |
+| 91 | button | — | — | Close | closeExternalHarnessModal() |
+| 92 | button | — | — | Copy YAML | copyPreText('extDshYaml', this) |
+| 93 | button | — | — | Copy Python | copyPreText('extDshPy', this) |
+| 94 | button | — | — | Copy Commands | copyPreText('extOpenHarness', this) |
+| 95 | button | applyWorktreeBtn | — | Apply Worktree to Main Workspace | applyHarnessWorktree() |
+| 96 | button | — | — | Refresh | openHarnessDiffModal() |
+| 97 | button | — | — | Verification & artifacts | openHarnessEvidenceModal() |
+| 98 | button | — | — | Close | closeHarnessDiffModal() |
+| 99 | button | — | — | Refresh | refreshHarnessEvidence() |
+| 100 | button | — | — | Close | closeHarnessEvidenceModal() |
+| 101 | button | — | — | Refresh | refreshHarnessGrants() |
+| 102 | button | — | — | Close | closeHarnessGrants() |
+| 103 | button | — | — | Close | closeProvidersModal() |
+| 104 | input | provAlias | text | openrouter | — |
+| 105 | input | provName | text | OpenRouter | — |
+| 106 | select | provWire | — | OpenAI Compatible (/chat/completions) Anthropic Native (/v1/messages SSE) | — |
+| 107 | input | provUrl | text | https://openrouter.ai/api/v1 | — |
+| 108 | input | provKey | password | sk-... (optional for Pollinations / OmniRoute) | — |
+| 109 | button | fetchModelsBtn | — | Fetch Live Models from Endpoint | fetchRemoteModels() |
+| 110 | textarea | provModels | — | claude-sonnet-4-5, gemini-2.5-pro, qwen/qwen3-coder:free | — |
+| 111 | button | — | — | Save & Enable Provider | saveProvider() |
+| 112 | input | comboAlias | text | — | — |
+| 113 | input | comboName | text | — | — |
+| 114 | input | comboTargets | text | openrouter::qwen/qwen3-coder:free, Qwen3.8-27B-oQ4e-mtp | — |
+| 115 | button | — | — | Save Combo | saveCombo() |
+| 116 | button | — | — | Rescan | loadSkills() |
+| 117 | button | — | — | Close | closeSkillsModal() |
+| 118 | input | skillInstallInput | text | — | — |
+| 119 | button | skillInstallBtn | — | Install | installSkill() |
+| 120 | button | — | — | Refresh | refreshSdlcBoard() |
+| 121 | button | — | — | Close | closeSdlcModal() |
+| 122 | input | sdlcWorkspaceInput | text | ~/Projects/my-new-app | syncProjectDirInputs(this.value) |
+| 123 | button | — | button | Browse Studio host workspace folders | openPathPicker('sdlcWorkspaceInput', {workspace:true}) |
+| 124 | button | — | button | Set Directory | saveWorkspaceDirectory(document.getElementById('sdlcWorkspaceInput').value) |
+| 125 | textarea | sdlcVisionInput | — | e.g. Build a modern full-stack E-Commerce storefront with live search, filterable catalog, slide-over cart drawer, promo codes, SQLite order persistence, and unit/E2E tests — OR an end-to-end HTML5 Canvas survival roguelike game with wave progression, upgrades, spatial audio, and 60fps loop. | — |
+| 126 | select | sdlcMaxStories | — | 3 stories 5 stories 8 stories | — |
+| 127 | select | sdlcRunModeSelect | — | SDLC execution mode | — |
+| 128 | button | — | — | Launch SDLC | startSdlcSelectedMode() |
+| 129 | button | — | — | Research | switchSdlcArtifact('RESEARCH.md') |
+| 130 | button | — | — | PRD | switchSdlcArtifact('PRD.md') |
+| 131 | button | — | — | Arch | switchSdlcArtifact('ARCHITECTURE.md') |
+| 132 | button | — | — | Feedback | switchSdlcArtifact('FEEDBACK_LOG.md') |
+| 133 | input | sdlcFeedbackAutoImpl | checkbox | — | — |
+| 134 | input | sdlcFeedbackInput | text | e.g. Checkout feels clunky — research 1-page Stripe/Shopify cart drawers & add instant validation | — |
+| 135 | input | sdlcInspirationQuery | text | e.g. modern ecommerce slide-over cart ux | — |
+| 136 | button | — | — | Research & Iterate | submitSdlcFeedback() |
+| 137 | button | — | — | Close | closeSpawnModal() |
+| 138 | textarea | spawnRequestInput | — | Design an event-sourced local-first task queue on macOS with crash-safe SQLite WAL persistence, zero-polling wakeups, and backpressure. | — |
+| 139 | button | — | — | Cancel | closeSpawnModal() |
+| 140 | button | — | — | Open Empty Room | confirmSpawnSession(false) |
+| 141 | button | spawnConveneBtn | — | Spawn & Convene 4-LLM Council | confirmSpawnSession(true) |
+| 142 | summary | — | — | Run evidenceContracts, handoffs and measured verdicts | — |
+| 143 | button | — | button | Close inspector | toggleMonitorRail(true) |
+| 144 | button | — | button | Close path picker | closePathPicker() |
+| 145 | select | pathPickerRoots | — | Approved locations… | if(this.value)loadPathPicker(this.value) |
+| 146 | button | — | button | Default location | loadPathPicker('') |
+| 147 | button | pathPickerUp | button | Up | — |
+| 148 | input | pathPickerLocation | text | — | — |
+| 149 | button | — | button | Go | loadPathPicker(document.getElementById('pathPickerLocation').value) |
+| 150 | input | pathPickerSearch | search | — | — |
+| 151 | button | — | button | Filter | loadPathPicker(pathPickerState.path) |
+| 152 | input | pathPickerEnvKey | text | PROJECT_DIRECTORY | — |
+| 153 | summary | — | — | New folder… (optional) | — |
+| 154 | input | pathPickerNewName | text | — | pathPickerNameChanged() |
+| 155 | input | pathPickerCreateConfirm | checkbox | — | pathPickerCreateReady() |
+| 156 | button | pathPickerCreateBtn | button | Create folder | createPathPickerFolder() |
+| 157 | summary | — | — | Ask a model for a name (optional) | — |
+| 158 | select | pathPickerModel | — | Choose a model… | — |
+| 159 | textarea | pathPickerDescription | — | — | — |
+| 160 | button | pathPickerAskModel | button | Ask model for a name | askPathPickerModel() |
+| 161 | button | pathPickerUseSuggestion | button | Use suggested name | usePathPickerSuggestion() |
+| 162 | button | — | button | Cancel | closePathPicker() |
+| 163 | button | pathPickerApplyBtn | button | Choose folder | applyPathPicker() |
 
 ## Controls built by script
 

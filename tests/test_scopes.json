@@ -68,14 +68,17 @@
       "test_task_layout.py",
       "test_terminology.py",
       "test_ui_disclosure.py",
-      "test_uiv2_accessibility_adversarial.py",
-      "test_uiv2_performance_safety.py",
-      "test_uiv2_release_review.py",
-      "test_uiv2_cross_tab_reference.py",
       "test_uiux_accessible_overlays.py",
       "test_uiux_chat_composer.py",
+      "test_uiux_density_retirement.py",
+      "test_uiux_hall_narrow.py",
+      "test_uiux_header_fold.py",
       "test_uiux_interaction_polish.py",
-      "test_uiux_tokens.py"
+      "test_uiux_tokens.py",
+      "test_uiv2_accessibility_adversarial.py",
+      "test_uiv2_cross_tab_reference.py",
+      "test_uiv2_performance_safety.py",
+      "test_uiv2_release_review.py"
     ],
     "models.providers": [
       "test_omlx_*.py",
@@ -212,20 +215,70 @@
     "poetry.lock"
   ],
   "source_areas": {
-    "native_inference_scheduler.py": ["models.providers", "storage.history", "security.execution"],
-    "native_transition_driver.py": ["models.providers", "storage.history", "security.execution"],
-    "native_dispatch_executor.py": ["models.providers", "storage.history", "security.execution"],
-    "scripts/runtime_dispatch_inventory.py": ["models.providers", "security.execution"],
-    "runtime_dispatch_boundary.py": ["models.providers", "security.execution"],
-    "request_fit.py": ["models.providers", "security.execution"],
-    "request_fit_admission.py": ["models.providers", "storage.history", "security.execution"],
-    "lmstudio_lifecycle.py": ["models.providers", "storage.history", "security.execution"],
-    "lmstudio_protocol.py": ["models.providers", "security.execution"],
-    "ollama_lifecycle.py": ["models.providers", "storage.history", "security.execution"],
-    "ollama_protocol.py": ["models.providers", "security.execution"],
-    "omlx_lifecycle.py": ["models.providers", "storage.history", "security.execution"],
-    "shared_memory_admission.py": ["models.providers", "storage.history", "security.execution"],
-    "model_lifecycle_coordinator.py": ["models.providers", "storage.history"],
+    "native_inference_scheduler.py": [
+      "models.providers",
+      "storage.history",
+      "security.execution"
+    ],
+    "native_transition_driver.py": [
+      "models.providers",
+      "storage.history",
+      "security.execution"
+    ],
+    "native_dispatch_executor.py": [
+      "models.providers",
+      "storage.history",
+      "security.execution"
+    ],
+    "scripts/runtime_dispatch_inventory.py": [
+      "models.providers",
+      "security.execution"
+    ],
+    "runtime_dispatch_boundary.py": [
+      "models.providers",
+      "security.execution"
+    ],
+    "request_fit.py": [
+      "models.providers",
+      "security.execution"
+    ],
+    "request_fit_admission.py": [
+      "models.providers",
+      "storage.history",
+      "security.execution"
+    ],
+    "lmstudio_lifecycle.py": [
+      "models.providers",
+      "storage.history",
+      "security.execution"
+    ],
+    "lmstudio_protocol.py": [
+      "models.providers",
+      "security.execution"
+    ],
+    "ollama_lifecycle.py": [
+      "models.providers",
+      "storage.history",
+      "security.execution"
+    ],
+    "ollama_protocol.py": [
+      "models.providers",
+      "security.execution"
+    ],
+    "omlx_lifecycle.py": [
+      "models.providers",
+      "storage.history",
+      "security.execution"
+    ],
+    "shared_memory_admission.py": [
+      "models.providers",
+      "storage.history",
+      "security.execution"
+    ],
+    "model_lifecycle_coordinator.py": [
+      "models.providers",
+      "storage.history"
+    ],
     "scripts/check_lifecycle_feasibility.py": [
       "models.providers"
     ],

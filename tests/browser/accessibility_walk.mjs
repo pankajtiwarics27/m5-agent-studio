@@ -202,7 +202,10 @@ async function main() {
     await page.waitForFunction(() => !document.getElementById("harnessTaskSettings").open);
 
     // Command palette: shortcut, combobox semantics, active option and focus loop.
-    await page.focus("#themeToggleBtn");
+    // Theme now lives in the Settings dialog, which is closed here; the palette restores focus
+    // to whatever was focused before it opened, so the walk focuses the header trigger it can
+    // actually reach instead of a control inside a closed dialog.
+    await page.focus("#settingsBtn");
     await page.keyboard.down("Control");
     await page.keyboard.press("k");
     await page.keyboard.up("Control");
@@ -256,13 +259,13 @@ async function main() {
       expanded: document.getElementById("cmdSearchInput").getAttribute("aria-expanded"),
     }));
     results.push(check("Escape closes the palette and restores its trigger",
-      paletteClosed.closed && paletteClosed.focus === "themeToggleBtn" && paletteClosed.expanded === "false",
+      paletteClosed.closed && paletteClosed.focus === "settingsBtn" && paletteClosed.expanded === "false",
       JSON.stringify(paletteClosed)));
 
     // Nested overlays: close only the topmost dialog, restore into the parent,
     // then restore to the original trigger when the parent closes.
     await page.evaluate(() => {
-      document.getElementById("themeToggleBtn").focus();
+      document.getElementById("settingsBtn").focus();
       window.openContextModal();
     });
     await page.waitForFunction(() => document.getElementById("contextModal").classList.contains("open"));
@@ -301,7 +304,7 @@ async function main() {
       focus: document.activeElement?.id,
     }));
     results.push(check("closing the parent overlay restores the original focus",
-      parentClosed.closed && parentClosed.focus === "themeToggleBtn", JSON.stringify(parentClosed)));
+      parentClosed.closed && parentClosed.focus === "settingsBtn", JSON.stringify(parentClosed)));
 
     await page.setViewport({ width: 420, height: 800, deviceScaleFactor: 1 });
     await page.evaluate(() => window.openContextModal());

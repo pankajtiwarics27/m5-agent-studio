@@ -218,7 +218,7 @@ def test_an_undocumented_breakpoint_is_a_finding(sources):
         )
 
     report = sources(html_transform=extra)
-    assert "the stylesheet has the six documented breakpoints and no others" in failing(report)
+    assert "the stylesheet has only documented breakpoints" in failing(report)
 
 
 def test_a_stepper_that_stopped_scrolling_is_a_finding(sources):

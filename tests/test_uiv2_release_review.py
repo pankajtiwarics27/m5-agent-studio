@@ -20,6 +20,13 @@ property that actually matters: the summary must not drift from the measurement.
 If this module fails again, treat it as a real signal and read ``findings`` in
 ``product/M5_2_0_UIUX_V2_Release_Review.json`` -- do not re-park it without an
 owner decision, and never satisfy it by citing a CI run that did not happen.
+
+UNPARKED AGAIN 2026-09-11 -> 2026-11-09. P7-PARK-02 parked these assertions while the
+UIV2-P7-07 header fold made the committed release evidence stale. The unblock condition
+was met: ``main`` went green at merge commit ``6aca516``, a commit that already contains
+this ``static/index.html``, so the evidence could be imported against that run
+(Compare 15/15, visual 2200/2200, CI success). The assertions were never edited while
+parked, and the contract now reports ``ready`` with zero findings.
 """
 from __future__ import annotations
 
@@ -173,10 +180,13 @@ def test_ci_teardown_failure_is_disclosed_and_process_group_cleanup_is_fixed(pay
 def test_uiv2_29_final_summary_uses_actual_metrics_not_flat_transcription(payload: dict) -> None:
     memory = payload["measured_performance"]["memory"]
     nodes = [memory[key]["Nodes"] for key in ("baseline", "after_cycle_1", "after_cycle_2")]
-    assert nodes == [8481, 8481, 8481]
+    # Node counts are deterministic for a given markup, so the plateau is pinned rather than
+    # derived: UIV2-P7-07's single-row header and Settings overlay moved it from 8481 to 8544
+    # without repeated-cycle growth. The summary must quote the newest committed run.
+    assert nodes == [8544, 8544, 8544]
     tracking = next(story for story in roadmap()["stories"] if story["id"] == "UIV2-29")["tracking"]
-    final = next(row for row in tracking["tests_executed"] if row.startswith("Final full-window timing"))
-    assert "8481 -> 8481 -> 8481" in final
+    final = [row for row in tracking["tests_executed"] if row.startswith("Final full-window timing")][-1]
+    assert "8544 -> 8544 -> 8544" in final
     # The heap figures vary run to run, so the property worth asserting is that the ledger
     # quotes *the committed run*, not one particular sample. Hardcoding a sample meant any
     # legitimate regeneration of the UIV2-29 record failed this test for no real reason.

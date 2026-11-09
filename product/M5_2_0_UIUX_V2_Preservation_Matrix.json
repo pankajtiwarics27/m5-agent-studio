@@ -8,10 +8,10 @@
   "check_with": "python3 scripts/uiux_v2_preservation_matrix.py --check",
   "statement": "Control -> DOM handler -> API route -> test coverage for every interactive control in static/index.html, plus the three UIV2-02 contract investigations. api_status is existing when every call the handler makes resolves to a mounted @app route, absent-route when a call matches no mounted route, unknown when the resolver left an edge open, no-api for handlers that never fetch, and no-handler for controls without an inline handler. The contracts distinguish existing / partial / absent / unknown and cite file evidence; the generator hard-fails if the sources drift from the classification, so --check is a gate.",
   "pinned_source_commit": "9a584a36f1fbe29ba467562dd12a705626769f00",
-  "frontend_sha256": "7a938b83e3b512b80b20ed006436763117acb4445ce13b463bcc93f72699c6f6",
-  "app_sha256": "cc08dbdac9a26ac393bacf9a2e65397ed840fc99f84744f7cd53540b20b56385",
+  "frontend_sha256": "b37f117dd620b8a2d5b3a285eceb1e8738368e57b1ed187e52ce13b51337fe0d",
+  "app_sha256": "dd25de4b283746031c7dce0bb9310389b827b80e4847a77f2cdb1d963807aea2",
   "totals": {
-    "controls": 272,
+    "controls": 273,
     "by_pane": {
       "start": 15,
       "harness": 35,
@@ -20,10 +20,10 @@
       "debate": 10,
       "chat": 13
     },
-    "chrome_controls": 162,
+    "chrome_controls": 163,
     "api_status_counts": {
       "existing": 37,
-      "no-api": 142,
+      "no-api": 143,
       "no-handler": 93
     },
     "mounted_routes": 121,
@@ -1264,10 +1264,116 @@
     },
     {
       "pane": "chrome",
-      "id": "telemetryPopoverBtn",
+      "id": "harnessSessionsToggle",
       "tag": "button",
-      "text": "Telemetry",
-      "handler": "toggleTelemetryPopover",
+      "text": "Sessions",
+      "handler": "toggleHarnessSessions",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "summary",
+      "text": "Tools & integrations",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "integrationMcpTab",
+      "tag": "button",
+      "text": "MCP servers",
+      "handler": "setIntegrationKind",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "integrationSkillsTab",
+      "tag": "button",
+      "text": "Skills",
+      "handler": "setIntegrationKind",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "integrationSearch",
+      "tag": "input",
+      "text": null,
+      "handler": "renderIntegrationPicker",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "integrationPrev",
+      "tag": "button",
+      "text": "Previous",
+      "handler": "changeIntegrationPage",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "integrationNext",
+      "tag": "button",
+      "text": "Next",
+      "handler": "changeIntegrationPage",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "integrationsQuickMenu",
+      "tag": "select",
+      "text": "Manage integrations\u2026 Cloud & Local Providers MCP Tools Hub Agent Skills (SKILL.md) Knowledge & CodeGraph External Harness CLI Bridge",
+      "handler": "openIntegrationFromMenu",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Unload models",
+      "handler": "unloadAllModels",
+      "calls": [
+        {
+          "method": "POST",
+          "route": "/api/models/unload-all",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "monitorToggleBtn",
+      "tag": "button",
+      "text": "Inspector",
+      "handler": "toggleMonitorRail",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "settingsBtn",
+      "tag": "button",
+      "text": "Settings",
+      "handler": "openSettings",
       "calls": [],
       "api_status": "no-api",
       "tests": []
@@ -1278,26 +1384,6 @@
       "tag": "button",
       "text": "Search \u2318K",
       "handler": "openCommandPalette",
-      "calls": [],
-      "api_status": "no-api",
-      "tests": []
-    },
-    {
-      "pane": "chrome",
-      "id": "densityToggleBtn",
-      "tag": "button",
-      "text": "Density: comfortable",
-      "handler": "toggleDensity",
-      "calls": [],
-      "api_status": "no-api",
-      "tests": []
-    },
-    {
-      "pane": "chrome",
-      "id": "themeToggleBtn",
-      "tag": "button",
-      "text": "Light",
-      "handler": "toggleTheme",
       "calls": [],
       "api_status": "no-api",
       "tests": []
@@ -1359,6 +1445,36 @@
       "tests": [
         "test_local_integration_contracts.py"
       ]
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Close",
+      "handler": "closeOverlay",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "themeToggleBtn",
+      "tag": "button",
+      "text": "Light",
+      "handler": "toggleTheme",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "telemetryPopoverBtn",
+      "tag": "button",
+      "text": "Telemetry",
+      "handler": "openTelemetryFromSettings",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
     },
     {
       "pane": "chrome",
@@ -2876,112 +2992,6 @@
     },
     {
       "pane": "chrome",
-      "id": "harnessSessionsToggle",
-      "tag": "button",
-      "text": "Sessions",
-      "handler": "toggleHarnessSessions",
-      "calls": [],
-      "api_status": "no-api",
-      "tests": []
-    },
-    {
-      "pane": "chrome",
-      "id": null,
-      "tag": "summary",
-      "text": "Tools & integrations",
-      "handler": null,
-      "calls": [],
-      "api_status": "no-handler",
-      "tests": []
-    },
-    {
-      "pane": "chrome",
-      "id": "integrationMcpTab",
-      "tag": "button",
-      "text": "MCP servers",
-      "handler": "setIntegrationKind",
-      "calls": [],
-      "api_status": "no-api",
-      "tests": []
-    },
-    {
-      "pane": "chrome",
-      "id": "integrationSkillsTab",
-      "tag": "button",
-      "text": "Skills",
-      "handler": "setIntegrationKind",
-      "calls": [],
-      "api_status": "no-api",
-      "tests": []
-    },
-    {
-      "pane": "chrome",
-      "id": "integrationSearch",
-      "tag": "input",
-      "text": null,
-      "handler": "renderIntegrationPicker",
-      "calls": [],
-      "api_status": "no-api",
-      "tests": []
-    },
-    {
-      "pane": "chrome",
-      "id": "integrationPrev",
-      "tag": "button",
-      "text": "Previous",
-      "handler": "changeIntegrationPage",
-      "calls": [],
-      "api_status": "no-api",
-      "tests": []
-    },
-    {
-      "pane": "chrome",
-      "id": "integrationNext",
-      "tag": "button",
-      "text": "Next",
-      "handler": "changeIntegrationPage",
-      "calls": [],
-      "api_status": "no-api",
-      "tests": []
-    },
-    {
-      "pane": "chrome",
-      "id": "integrationsQuickMenu",
-      "tag": "select",
-      "text": "Manage integrations\u2026 Cloud & Local Providers MCP Tools Hub Agent Skills (SKILL.md) Knowledge & CodeGraph External Harness CLI Bridge",
-      "handler": "openIntegrationFromMenu",
-      "calls": [],
-      "api_status": "no-api",
-      "tests": []
-    },
-    {
-      "pane": "chrome",
-      "id": null,
-      "tag": "button",
-      "text": "Unload models",
-      "handler": "unloadAllModels",
-      "calls": [
-        {
-          "method": "POST",
-          "route": "/api/models/unload-all",
-          "kind": "exact"
-        }
-      ],
-      "api_status": "existing",
-      "tests": []
-    },
-    {
-      "pane": "chrome",
-      "id": "monitorToggleBtn",
-      "tag": "button",
-      "text": "Inspector",
-      "handler": "toggleMonitorRail",
-      "calls": [],
-      "api_status": "no-api",
-      "tests": []
-    },
-    {
-      "pane": "chrome",
       "id": null,
       "tag": "summary",
       "text": "Run evidenceContracts, handoffs and measured verdicts",
@@ -3247,7 +3257,7 @@
       "classification": "present_registry__picker_rendered_from_it",
       "picker": {
         "status": "rendered_from_registry",
-        "evidence": "select#chatPersona at static/index.html:3812 ships no <option>; renderChatPersonaPicker() fills it from CHAT_PERSONAS on load and on every filter",
+        "evidence": "select#chatPersona at static/index.html:3943 ships no <option>; renderChatPersonaPicker() fills it from CHAT_PERSONAS on load and on every filter",
         "option_source": "CHAT_PERSONAS"
       },
       "registry": {

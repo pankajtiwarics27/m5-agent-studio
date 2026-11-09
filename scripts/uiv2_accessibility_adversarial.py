@@ -96,7 +96,8 @@ MEASURED_REPAIRS = (
     ("#harnessProjectSummary", "113×18 CSS px", "24px minimum target height; responsive walk passes"),
     ("#hallClearSessionBtn", "right=430px at a 360px viewport", "contained horizontal action scrolling; the control remains reachable"),
     ("#chatPersona", "20×44 CSS px at 200% phone zoom", "140px group minimum wraps only when two columns cannot fit"),
-    ("#monitorToggleBtn", "clipped at a 195px effective viewport", "wrapping workspace toolbar; reachable at 200%"),
+    ("#monitorToggleBtn", "clipped at a 195px effective viewport",
+     "the header is one row and scrolls horizontally at narrow widths, so the toggle stays reachable at 200%; #hallClearSessionBtn uses the same contained-scroll remedy"),
     ("#startTaskInput", "220px fixed minimum caused horizontal overflow", "zero flex minimum with the desktop basis retained"),
     ("Start / Council / Chat recovery", "short-height content had no reachable scroll path", "native Start-shell and Council/Chat main overflow recovery"),
 )
@@ -351,7 +352,7 @@ def render_doc(payload: dict[str, Any]) -> str:
             lines.append(f"| {pane['title']} | {state} | `{producer}` |")
     lines.extend(["", "## Visual approval and preservation", "",
         "The UIV2-26 48-variant actual/reference/annotated matrix remains mandatory. Accessibility changes that alter the approved structural signature require a fresh candidate and explicit human approval; a passing accessibility walk cannot approve its own pixels.", "",
-        "The source-derived UIV2-02 control/API map (currently 272 controls and 121 mounted routes) and the UIV2-27 21-row preservation run remain mandatory. No backend route, payload, session/workspace rule, authorization, sandbox, action-ledger, lease-fencing or model-memory boundary is changed by this story.", "",
+        "The source-derived UIV2-02 control/API map (currently 273 controls and 121 mounted routes) and the UIV2-27 21-row preservation run remain mandatory. No backend route, payload, session/workspace rule, authorization, sandbox, action-ledger, lease-fencing or model-memory boundary is changed by this story.", "",
         "## Reproduce", "", "```bash",
         "node scripts/uiv2_accessibility_adversarial_walk.mjs --screenshots /tmp/uiv2-28-adversarial-after",
         "python3 scripts/uiv2_accessibility_adversarial.py --import-evidence /tmp/uiv2-28-adversarial-after/capture-manifest.json",

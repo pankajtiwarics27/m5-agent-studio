@@ -413,7 +413,10 @@ def roadmap_findings(document: dict[str, Any]) -> list[dict[str, str]]:
     nodes = " -> ".join(str(memory[key]["Nodes"]) for key in ("baseline", "after_cycle_1", "after_cycle_2"))
     heap = " -> ".join(str(memory[key]["JSHeapUsedSize"]) for key in ("baseline", "after_cycle_1", "after_cycle_2"))
     tracking = by_id.get("UIV2-29", {}).get("tracking", {})
-    final = next((row for row in tracking.get("tests_executed", []) if row.startswith("Final full-window timing")), "")
+    # The ledger appends runs chronologically, so the newest "Final" row is the authoritative one;
+    # reading the first match pinned the check to a superseded run.
+    finals = [row for row in tracking.get("tests_executed", []) if row.startswith("Final full-window timing")]
+    final = finals[-1] if finals else ""
     acceptance = " ".join(tracking.get("acceptance_evidence", []))
     if nodes not in final or heap not in final:
         findings.append({"check": "metric-summary", "detail": f"UIV2-29 final test summary must contain nodes {nodes} and heap {heap}"})
@@ -449,7 +452,7 @@ def artifact_findings() -> list[dict[str, str]]:
         findings.append({"check": "isolation", "detail": "this environment's unprobed isolation must remain unqualified and blocked"})
     if accessibility.get("findings") or accessibility.get("evidence", {}).get("totals") != {"checks": 120, "passed": 120, "failed": 0, "captures": 62}:
         findings.append({"check": "accessibility", "detail": "UIV2-28 accessibility evidence is not green"})
-    if preservation.get("totals", {}).get("controls") != 272 or preservation.get("totals", {}).get("mounted_routes") != 121:
+    if preservation.get("totals", {}).get("controls") != 273 or preservation.get("totals", {}).get("mounted_routes") != 121:
         findings.append({"check": "preservation", "detail": "six-pane control/route inventory drifted"})
     if preservation_e2e.get("totals", {}).get("matrix_rows") != 21 or preservation_e2e.get("totals", {}).get("mapped_rows") != 21 or preservation_e2e.get("findings"):
         findings.append({"check": "preservation-e2e", "detail": "all 21 preservation rows must be mapped without findings"})

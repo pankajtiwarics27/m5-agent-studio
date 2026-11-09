@@ -218,7 +218,16 @@ async function run(args) {
         const msg = chatHistory[chatHistory.length - 1];
         const nodes = [...document.querySelectorAll("#chatMessages .msg.assistant")];
         const node = nodes[nodes.length - 1];
+        // Markdown fences and emphasis are syntax, not visible reply text. Compare the
+        // complete rendered reply, not a raw tail containing a closing ``` fence.
+        const expected = document.createElement("div");
+        expected.innerHTML = renderMarkdown(String(msg && msg.content || ""));
+        const expectedBody = expected.querySelector(".md");
+        const actualBody = node && node.querySelector(":scope > .md");
+        const completeReplyMatches = Boolean(expectedBody && actualBody
+          && expectedBody.innerHTML === actualBody.innerHTML);
         return msg && msg.role === "assistant" ? {
+          completeReplyMatches,
           status: msg.status || (node && node.dataset.state), content: String(msg.content || ""),
           usage: msg.usage || null, dom: node ? String(node.textContent || "") : "", messages: chatHistory.length,
         } : { status: "missing", content: "", usage: null, dom: "", messages: chatHistory.length };
@@ -243,7 +252,7 @@ async function run(args) {
       await send("In two sentences, explain bounded streaming without hiding reader progress.");
       const slow = await waitComplete(45000, true);
       const slowTail = slow.state.content.trim().split(/\s+/).slice(-8).join(" ");
-      record("sse", "a real paced SSE reply keeps its complete text and reaches complete", slow.state.status === "complete" && slow.state.content.length > 80 && slow.state.dom.includes(slowTail), `model=${slowModel} chars=${slow.state.content.length} messages=${slow.state.messages} tail=${slowTail}`);
+      record("sse", "a real paced SSE reply keeps its complete text and reaches complete", slow.state.status === "complete" && slow.state.content.length > 80 && slow.state.completeReplyMatches, `model=${slowModel} chars=${slow.state.content.length} messages=${slow.state.messages} full_reply_matches=${slow.state.completeReplyMatches} tail=${slowTail}`);
       await shoot(page, "chat-complete", { group: "sse", viewport: "1440x900", theme: "dark", pane: "chat", state: "populated" });
       const chatDigests = captures.slice(0, 2).map((capture) => capture.sha256);
       record("sse", "the loading capture is a real partial reply and differs from completion", slow.partial > 0 && slow.partial < slow.state.content.length && captures.length === 2 && chatDigests[0] !== chatDigests[1], `partial=${slow.partial} complete=${slow.state.content.length} distinct_pngs=${chatDigests[0] !== chatDigests[1]}`);
@@ -271,7 +280,7 @@ async function run(args) {
       const modelTokens = Number(fast.state.usage && (fast.state.usage.completion_tokens || fast.state.usage.completionTokens)) || fast.state.content.trim().split(/\s+/).length;
       const ssePerSecond = fastTiming.schedules / Math.max(fastTiming.elapsed_ms / 1000, 0.001);
       const fastTail = fast.state.content.trim().split(/\s+/).slice(-8).join(" ");
-      record("sse", "high-frequency SSE tokens are coalesced without losing the final reply", fast.state.status === "complete" && fastTiming.schedules >= 20 && fastTiming.renders > 0 && fastTiming.renders < fastTiming.schedules && fast.state.dom.includes(fastTail), `schedules=${fastTiming.schedules} renders=${fastTiming.renders} model_tokens=${modelTokens} chars=${fast.state.content.length}`);
+      record("sse", "high-frequency SSE tokens are coalesced without losing the final reply", fast.state.status === "complete" && fastTiming.schedules >= 20 && fastTiming.renders > 0 && fastTiming.renders < fastTiming.schedules && fast.state.completeReplyMatches, `schedules=${fastTiming.schedules} renders=${fastTiming.renders} model_tokens=${modelTokens} chars=${fast.state.content.length} full_reply_matches=${fast.state.completeReplyMatches}`);
       record("sse", "the measured fast fixture actually exceeds fifty scheduled SSE updates per second", ssePerSecond >= MIN_FAST_SSE_PER_SECOND && fastTiming.schedules >= 20, `rate=${ssePerSecond.toFixed(1)}/s elapsed=${fastTiming.elapsed_ms.toFixed(1)}ms schedules=${fastTiming.schedules}`);
       await shoot(page, "chat-high-frequency-complete", { group: "sse", viewport: "1440x900", theme: "dark", pane: "chat", state: "populated" });
       metrics.chat.fast = { model: fastModel, ...fastTiming, model_tokens: modelTokens, sse_per_second: Number(ssePerSecond.toFixed(3)), complete_chars: fast.state.content.length };

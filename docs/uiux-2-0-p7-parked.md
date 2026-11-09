@@ -3,7 +3,7 @@
 **Owner:** repository owner
 **Parked:** 2026-11-08
 **Tracker:** PR #258
-**Status:** 0 items parked — P7-PARK-01 was resolved on 2026-11-08 (see its Unparked section)
+**Status:** 0 items parked — P7-PARK-01 resolved 2026-11-08, P7-PARK-02 resolved 2026-11-09 (entries are deleted once their unblock condition is met)
 
 This page exists so that work deliberately parked during `UIV2-P7` has an owner, a
 reason and a fix procedure written down in the repository rather than a merged PR
