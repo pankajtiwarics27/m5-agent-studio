@@ -22272,8 +22272,9 @@ async def _normalize_provider_errors(
     stream: AsyncIterator[dict[str, Any]], provider_alias: str
 ) -> AsyncIterator[dict[str, Any]]:
     try:
-        async for item in stream:
-            yield item
+        async with contextlib.aclosing(stream) as source:
+            async for item in source:
+                yield item
     except ProviderAdapterError:
         raise
     except httpx.HTTPError:
@@ -22587,8 +22588,11 @@ class OpenAICompatibleProviderAdapter:
     ) -> AsyncIterator[dict[str, Any]]:
         del reasoning_mode  # The current OpenAI-compatible wire request does not map this option.
         stream = _stream_cloud_openai(client, provider, remote_model, messages, temperature, max_tokens)
-        async for item in _normalize_provider_errors(stream, str(provider.get("alias") or "provider")):
-            yield item
+        async with contextlib.aclosing(
+            _normalize_provider_errors(stream, str(provider.get("alias") or "provider"))
+        ) as normalized:
+            async for item in normalized:
+                yield item
 
 
 class AnthropicProviderAdapter:
@@ -22607,8 +22611,11 @@ class AnthropicProviderAdapter:
         stream = _stream_cloud_anthropic(
             client, provider, remote_model, messages, temperature, max_tokens, reasoning_mode
         )
-        async for item in _normalize_provider_errors(stream, str(provider.get("alias") or "anthropic")):
-            yield item
+        async with contextlib.aclosing(
+            _normalize_provider_errors(stream, str(provider.get("alias") or "anthropic"))
+        ) as normalized:
+            async for item in normalized:
+                yield item
 
 
 PROVIDER_ADAPTERS: dict[str, ProviderAdapter] = {
@@ -22983,10 +22990,13 @@ async def stream_any_model(
         adapter = PROVIDER_ADAPTERS.get(wire)
         if adapter is None:
             raise RuntimeError(f"Unsupported provider wire: {wire or '(empty)'}")
-        async for item in adapter.stream(
-            client, meta, rem_model, clean_messages, temperature, max_tokens, reasoning_mode
-        ):
-            yield item
+        async with contextlib.aclosing(
+            adapter.stream(
+                client, meta, rem_model, clean_messages, temperature, max_tokens, reasoning_mode
+            )
+        ) as provider_source:
+            async for item in provider_source:
+                yield item
         return
 
     # Local inference is heavy: hold the single heavy-model slot for the stream.
