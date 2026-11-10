@@ -86,7 +86,7 @@ Environment: `linux` / `x64`, 2 CPUs, `HeadlessChrome/153.0.8010.0`; disposable 
 | Full-window frame | mean 1.83ms; p95 2.40ms; max 2.60ms | unchanged mean ≤4ms |
 | Post-GC nodes | 8544 → 8544 → 8544 | no repeated-cycle growth beyond the declared budget |
 | Post-GC JS heap | 3399592 → 3356304 → 3359700 bytes | repeated-cycle plateau, not zero allocation |
-| Backend safety | 302 tests; 16 isolation checks | zero failures |
+| Backend safety | 305 tests; 16 isolation checks | zero failures |
 | Local container isolation | unqualified; blocked (fail closed) | live probes not requested; not advertised as qualified |
 
 ## Corrections and resolved historical defects

@@ -1077,7 +1077,11 @@ class DurableActionLedger:
         *,
         now: float | None = None,
     ) -> runtime_persistence.ActionRecord:
-        """Durably finalize a completed, deterministically failed, or uncertain tool result."""
+        """Durably finalize a completed, deterministically failed, or uncertain tool result.
+
+        A result that arrives after the action was already declared ``uncertain`` is
+        fenced: the stored row is returned unchanged (see the late-result fence below).
+        """
         aid = _text(action_id, "action_id")
         out_digest = canonical_result_sha256(result)
         clean_ms = max(0, int(elapsed_ms))
@@ -1098,6 +1102,16 @@ class DurableActionLedger:
 
         def _tx(conn: sqlite3.Connection) -> runtime_persistence.ActionRecord:
             conn.row_factory = sqlite3.Row
+            current = conn.execute("SELECT * FROM runtime_actions WHERE action_id = ?", (aid,)).fetchone()
+            if current is None:
+                raise KeyError(f"Runtime action {aid!r} does not exist.")
+            if str(current["status"]) == "uncertain":
+                # AP-007 late-result fence: cancellation, a bounded stop, a takeover or
+                # crash recovery already declared this effect uncertain while the
+                # executor was still running.  Its late result must not resolve the
+                # effect in either direction; only explicit reconciliation
+                # (``resolve_uncertain_action``) may.  The row is left untouched.
+                return _sel_row_to_action(current)
             conn.execute(
                 """
                 UPDATE runtime_actions
@@ -1123,7 +1137,10 @@ class DurableActionLedger:
         *,
         now: float | None = None,
     ) -> runtime_persistence.ActionRecord:
-        """Finalize an exception raised during execution as ``uncertain`` (if ambiguous) or ``failed``."""
+        """Finalize an exception raised during execution as ``uncertain`` (if ambiguous) or ``failed``.
+
+        A late exception cannot turn an already ``uncertain`` effect into ``failed``.
+        """
         aid = _text(action_id, "action_id")
         ambiguous = is_ambiguous_exception(exc)
         final_status: LedgerActionStatus = "uncertain" if ambiguous else "failed"
@@ -1135,6 +1152,16 @@ class DurableActionLedger:
 
         def _tx(conn: sqlite3.Connection) -> runtime_persistence.ActionRecord:
             conn.row_factory = sqlite3.Row
+            current = conn.execute("SELECT * FROM runtime_actions WHERE action_id = ?", (aid,)).fetchone()
+            if current is None:
+                raise KeyError(f"Runtime action {aid!r} does not exist.")
+            if str(current["status"]) == "uncertain":
+                # AP-007 late-result fence: cancellation, a bounded stop, a takeover or
+                # crash recovery already declared this effect uncertain while the
+                # executor was still running.  Its late result must not resolve the
+                # effect in either direction; only explicit reconciliation
+                # (``resolve_uncertain_action``) may.  The row is left untouched.
+                return _sel_row_to_action(current)
             conn.execute(
                 """
                 UPDATE runtime_actions

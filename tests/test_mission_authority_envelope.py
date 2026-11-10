@@ -561,3 +561,84 @@ def test_harness_api_zero_tool_budget_denies_before_write_dispatch(
     assert not (mission_env / "must-not-exist.txt").exists()
     assert studio.get_task_state_machine().budgets.get_budget(sid).tool_calls_used == 0
     assert _audit_statuses("write_file")[-1] == "denied"
+
+
+def _ap007_running_task(
+    task_id: str,
+    *,
+    session_id: str,
+    parent_task_id: str | None = None,
+    **limits: Any,
+) -> None:
+    runtime_persistence.RuntimePersistenceStore(studio.STORAGE, studio.DB_PATH).create_task(
+        task_id,
+        parent_task_id=parent_task_id,
+        session_id=session_id,
+        state="running",
+        policy="autonomous",
+        budget_json=execution_budget.TaskBudgetState(
+            spec=execution_budget.TaskBudgetSpec(max_steps=50, max_tool_calls=10, **limits)
+        ).to_json(),
+        now=time.time(),
+    )
+
+
+def _ap007_tool_call(workspace: Path, session_id: str, task_id: str, tool: str, args: dict[str, Any]) -> dict[str, Any]:
+    return asyncio.run(
+        studio._execute_harness_tool(
+            None,
+            _session(workspace, session_id, task_id),
+            tool,
+            args,
+            step_id=1,
+            call_index=0,
+            mission_envelope=studio.capture_mission_authority_envelope(session_id, task_id),
+        )
+    )
+
+
+def test_ap007_required_isolation_and_bounded_stops_deny_dispatch_at_the_tool_boundary(
+    mission_env: Path,
+) -> None:
+    """AP-007 at the real dispatch seam: no isolation means no execution, not host execution.
+
+    No isolated runtime is activated, so this boundary presents no isolation
+    evidence.  A task whose budget chain requires isolation is therefore refused
+    before the tool runs, and so is a task that passed its deadline or a declared limit.
+    """
+    (mission_env / "sample.txt").write_text("authority\n", encoding="utf-8")
+    root, child = "ap007-isolated-root", "ap007-isolated-child"
+    _ap007_running_task(root, session_id=root, isolation_required=True)
+    _ap007_running_task(child, session_id=root, parent_task_id=root)  # declares nothing itself
+
+    for task_id, tool, args in (
+        (root, "write_file", {"path": "host-write.txt", "content": "written on the host\n"}),
+        (child, "write_file", {"path": "host-write.txt", "content": "written on the host\n"}),
+        (child, "read_file", {"path": "sample.txt"}),
+    ):
+        refused = _ap007_tool_call(mission_env, root, task_id, tool, args)
+        assert refused["ok"] is False, (task_id, tool)
+        assert refused["error_code"] == "isolation_unavailable"
+        assert "host shell is not used" in refused["output"]
+    assert not (mission_env / "host-write.txt").exists()
+    budgets = studio.get_task_state_machine().budgets
+    assert (budgets.get_budget(root).tool_calls_used, budgets.get_budget(child).tool_calls_used) == (0, 0)
+    assert _audit_statuses("write_file") == ["denied", "denied"]
+
+    # A passed deadline needs no report from anyone: the next dispatch is refused.
+    late = "ap007-late-root"
+    _ap007_running_task(late, session_id=late, deadline_at=time.time() - 5)
+    expired = _ap007_tool_call(mission_env, late, late, "read_file", {"path": "sample.txt"})
+    assert (expired["ok"], expired["error_code"]) == (False, "task_budget_exhausted")
+    assert "deadline exceeded" in expired["output"]
+
+    # A recorded breach of a declared limit stops the same boundary.
+    stalled = "ap007-stalled-root"
+    _ap007_running_task(stalled, session_id=stalled, max_no_progress=0)
+    assert _ap007_tool_call(mission_env, stalled, stalled, "read_file", {"path": "sample.txt"})["ok"] is True
+    with pytest.raises(execution_budget.BoundedStopRequired):
+        budgets.record_bounded_observation(stalled, root_task_id=stalled, session_id=stalled, progressed=False)
+    stopped = _ap007_tool_call(mission_env, stalled, stalled, "read_file", {"path": "sample.txt"})
+    assert (stopped["ok"], stopped["error_code"]) == (False, "task_budget_exhausted")
+    assert "no-progress limit exceeded" in stopped["output"]
+    assert budgets.get_budget(stalled).tool_calls_used == 1

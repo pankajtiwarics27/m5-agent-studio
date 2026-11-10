@@ -935,3 +935,109 @@ def test_standalone_studio_artifact_inlines_side_effect_ledger_outside_repo(tmp_
     assert rec is not None
     assert rec.status == "committed"
     assert rec.ok is True
+
+
+# ---------------------------------------------------------------------------
+# AP-007: a result that arrives after its action was fenced
+# ---------------------------------------------------------------------------
+
+
+def test_ap007_late_result_cannot_settle_an_action_already_declared_uncertain(isolated_env: Path) -> None:
+    """Once an in-flight effect is declared uncertain, only reconciliation settles it."""
+    ledger = studio.get_durable_action_ledger(isolated_env)
+    for action_id in ("act-late-ok", "act-late-false", "act-late-raise", "act-late-timeout"):
+        begun = ledger.begin(
+            action_id=action_id,
+            tool_name="run_bash",
+            args={"command": f"python3 deploy.py --target {action_id}"},
+            policy="autonomous",
+            action_class="consequential",
+            allowed=True,
+            explicit_approval=False,
+            session_id="sess-late",
+        )
+        assert begun.proceed is True and begun.status == "in_flight"
+
+    # A stop, a takeover or crash recovery declares the outcome unknown while the tool still runs.
+    fenced = ledger.reconcile_missing_results(session_id="sess-late", error_code="cancelled_in_flight")
+    assert {record.status for record in fenced} == {"uncertain"}
+
+    late_success = ledger.complete("act-late-ok", {"ok": True, "output": "deployed"}, 40)
+    late_failure = ledger.complete("act-late-false", {"ok": False, "error_code": "exit_1", "output": "boom"}, 40)
+    late_exception = ledger.record_exception("act-late-raise", RuntimeError("connection reset"), 40)
+    late_timeout = ledger.record_exception("act-late-timeout", TimeoutError("no answer"), 40)
+    for record in (late_success, late_failure, late_exception, late_timeout):
+        # Neither "it worked" nor "it failed" is accepted from the fenced executor.
+        assert (record.status, record.ok, record.error_code) == ("uncertain", None, "cancelled_in_flight")
+        stored = _read_action_direct(studio.DB_PATH, record.action_id)
+        assert stored is not None
+        assert (stored["status"], stored["ok"], stored["error_code"]) == ("uncertain", None, "cancelled_in_flight")
+        assert not stored["output_sha256"]  # the late output leaves no trace that could pass for a result
+
+    # Reconciliation is the only way out, in either direction.
+    committed = ledger.resolve_uncertain_action(
+        "act-late-ok", resolution="verified_committed", reason="the deployment is visible at the target"
+    )
+    not_applied = ledger.resolve_uncertain_action(
+        "act-late-false", resolution="verified_not_applied", reason="the target was not changed"
+    )
+    assert committed.status == "committed" and committed.ok is True
+    assert not_applied.status != "uncertain"
+    # A result for an action that was never fenced is recorded as before.
+    plain = ledger.begin(
+        action_id="act-on-time",
+        tool_name="run_bash",
+        args={"command": "python3 build.py"},
+        policy="autonomous",
+        action_class="consequential",
+        allowed=True,
+        explicit_approval=False,
+        session_id="sess-on-time",
+    )
+    assert plain.proceed is True
+    assert ledger.complete("act-on-time", {"ok": True, "output": "built"}, 7).status == "committed"
+    with pytest.raises(KeyError):
+        ledger.complete("act-never-begun", {"ok": True}, 1)
+
+
+def test_ap007_boundary_reports_a_fenced_late_result_as_uncertain_not_success(isolated_env: Path) -> None:
+    """The caller and the audit trail see the same verdict as the durable ledger."""
+    ledger = studio.get_durable_action_ledger(isolated_env)
+    boundary = spine.DurableActionBoundary(
+        studio._AppToolPolicy(),
+        studio._AppActionLedger(),
+        task_context_resolver=studio._AppTaskContextResolver(),
+        intent_ledger=studio._AppIntentLedger(workspace_root=isolated_env),
+    )
+
+    async def _finishes_after_the_stop() -> dict[str, Any]:
+        fenced = ledger.reconcile_missing_results(session_id="sess-late-boundary", error_code="cancelled_in_flight")
+        assert [record.action_id for record in fenced] == ["act-late-boundary"]
+        (isolated_env / "late.txt").write_text("written anyway\n", encoding="utf-8")
+        return {"ok": True, "output": "wrote late.txt", "diff": "", "elapsed_ms": 3}
+
+    result = asyncio.run(
+        boundary.admit_and_execute(
+            spine.ActionRequest(
+                tool_name="write_file",
+                args={"path": "late.txt", "content": "written anyway\n"},
+                policy="standard",
+                approved=False,
+                session_id="sess-late-boundary",
+                action_id="act-late-boundary",
+            ),
+            _finishes_after_the_stop,
+        )
+    )
+
+    assert result["ok"] is False
+    assert result["uncertain"] is True
+    assert result["error_code"] == "late_result_fenced"
+    assert result["ledger_status"] == "uncertain"
+    assert "must be reconciled" in result["output"]
+    record = ledger.get_action("act-late-boundary")
+    assert record is not None
+    assert (record.status, record.ok, record.error_code) == ("uncertain", None, "cancelled_in_flight")
+    with sqlite3.connect(studio.DB_PATH) as conn:
+        audit = conn.execute("SELECT status, ok FROM tool_audit_events ORDER BY id DESC LIMIT 1").fetchone()
+    assert tuple(audit) == ("uncertain", 0)
