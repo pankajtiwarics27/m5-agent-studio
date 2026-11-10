@@ -119,3 +119,44 @@ conversion and must not be erased.
   before/after root-generation evidence across provider changes.
 - Existing execution-profile, scoped-grant, MCP reconciliation, MoneyPrinter, standalone
   bundle, startup/isolation, and full-suite checks remain required regression evidence.
+
+## Post-merge completion record
+
+PR #292 final head `b146d8d92be71197f64308785c39fd352cd7562e`
+passed authoritative pull-request CI run `42776180763`: the source/release gate,
+all nine Python 3.11/3.12/3.13 shards, node-set/outcome identity on all three
+interpreters, all five browser-safety shards, and every aggregate check. The
+same-head push run `42776174104` passed its open-PR-aware selector and branch
+aggregates.
+
+The repository owner merged PR #292 at 2026-11-10T07:42:17Z as
+`a835231aeba9ab770f30bf460612f60d81e9f132`. Post-merge main CI run
+`42777147806` passed the full matrix on that exact merge commit, including 5,323
+nodes on each interpreter (5,288 passed and 35 intentional skips), all identity
+checks, and all browser-safety shards. The implementation head is present in
+`main` history and all five AP-004 acceptance criteria retain executable or
+architecture evidence, so AP-004 is `done` under the repository convention.
+Completion-record PR #294 carries only this tracking and documentation update.
+
+Completion activates no provider, account, network destination, browser, media
+service, filesystem grant, background worker, product runtime, or later AP
+behavior. U03, U04, and U06 remain pending. AP-004 requires no screenshot or
+playable-media acceptance and claims no independent-security, signing, or
+release approval; existing program-wide gates remain binding.
+
+After the merge and same-SHA post-merge CI were green, the owner instructed
+“Continue.” That authorizes AP-005 as the next **single** story for offline
+durable mission-task composition, dependency/join recovery, and populated-store
+migration tests. AP-005 remains `not_started` and unclaimed until this completion
+record merges and a separate fixed Arena branch/draft PR establishes its remote
+claim. AP-006 through AP-032 and all real external effects remain unauthorized.
+
+### Acceptance mapping
+
+| AP-004 acceptance criterion | Delivered evidence |
+|---|---|
+| API, MCP, scripts, browser, and media share authority checks | Actual FastAPI Harness, task-bound inbound/outbound MCP, skill-script, browser-MCP, and MoneyPrinter/media consumers converge on `_run_authorized_tool` and are exercised in `tests/test_mission_authority_envelope.py`. |
+| Child/retry/provider changes cannot reset or expand root budget/scopes | Atomic durable leaf/root charging, child subset checks, removed join/loop double debits, and provider-handoff before/after evidence pin the immutable root and grants. |
+| Revocation/policy generation invalidates queued and stale work | Session/global generation, live revocation, cancellation, task identity, exhaustion, and raced-epoch cases deny before dispatch without partial debit. |
+| Network-free startup and deny-by-default remain intact | Fixed HTTP tools are server-only, fixed URL/method, absent from model schemas, centrally admitted, and never called at startup; missing or malformed task-bound authority fails closed. |
+| Positive/negative tests use actual application consumers | The AP-004 suite invokes application endpoints/wrappers with mocked transports/executors rather than certifying only standalone helpers or contacting live services. |

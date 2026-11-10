@@ -5,15 +5,15 @@
   "program": "AP",
   "revision": "1.2",
   "prepared_date": "2026-11-08",
-  "lifecycle": "registered_tracking_ap004_in_review",
+  "lifecycle": "registered_tracking_ap004_done_ap005_authorized",
   "source_snapshot": "a67e8b291614f8afdac7c8d38ba51bcc8926d695",
   "source_repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "specification": "docs/autonomous-production-roadmap.md",
   "agent_prompt": "M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md",
   "authority": {
     "precedence": "AGENTS.md, existing security/approval rules and owning program ledgers remain binding.",
-    "scope": "AP-001, AP-002 and AP-003 are delivered. AP-004 is in review on its separate fixed Arena branch for offline mission-wide authority/budget enforcement and actual-consumer tests only; runtime activation, real external services and AP-005 through AP-032 remain unauthorized.",
-    "registration_gate": "AP-001 records the tracking source and claim protocol; its merge did not authorize downstream work. Later AP-002/AP-003 sequential authorization and the post-AP-003 AP-004 single-story authorization are separately recorded in program_registration.authorization_history.",
+    "scope": "AP-001 through AP-004 are delivered. AP-005 is owner-authorized as the next separate story for offline durable mission-task composition, dependency/join recovery and populated-store migration tests only; product runtime activation, real external services and AP-006 through AP-032 remain unauthorized.",
+    "registration_gate": "AP-001 records the tracking source and claim protocol; its merge did not authorize downstream work. Later AP-002/AP-003 sequential authorization, post-AP-003 AP-004 authorization and post-AP-004 AP-005 single-story authorization are separately recorded in program_registration.authorization_history.",
     "other_ledgers": "Do not alter AS/M5/UIUX/UIV2/LC tracking without the owning protocol.",
     "approval": "Agents cannot fabricate owner, screenshot, independent security or release approval."
   },
@@ -460,7 +460,7 @@
       "title": "Enforce a mission-wide authority and budget envelope",
       "priority": "P0",
       "optional": false,
-      "status": "in_review",
+      "status": "done",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-001",
@@ -520,11 +520,11 @@
         "owner": "arena/5eec0463-m5-agent-studio",
         "branch": "arena/5eec0463-m5-agent-studio",
         "base_sha": "305f3fb431dd2b983cc25ac4395b7fc919d516d5",
-        "head_sha": "652c67b4d1a3eca2c808339ab83b556d7536fa24",
+        "head_sha": "b146d8d92be71197f64308785c39fd352cd7562e",
         "claimed_at": "2026-11-10T04:41:35Z",
-        "heartbeat_at": "2026-11-10T07:33:30Z",
+        "heartbeat_at": "2026-11-10T07:42:17Z",
         "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/292",
-        "delivery_status": "pr_open",
+        "delivery_status": "merged",
         "acceptance_evidence": [
           "app._run_authorized_tool -> execution_spine.DurableActionBoundary is the one admission seam for Harness/API, task-bound inbound and outbound MCP, skill scripts, browser MCP, MoneyPrinter/media MCP, and the newly confined fixed-endpoint research HTTP adapters; tests/test_mission_authority_envelope.py exercises each actual consumer with no live service.",
           "execution_budget.DurableTaskBudgetManager.charge_hierarchical_tool_call resolves the durable parent chain and atomically charges leaf plus immutable root, while child joins and workflow loops no longer double-debit tool calls. Root exhaustion rolls both candidates back; child subset checks and provider-handoff budget/grant snapshots remain intact.",
@@ -539,14 +539,17 @@
           ".venv/bin/ruff check . passed; configured .venv/bin/mypy passed for 78 source files; scripts/validate_docs.py passed for 282 files; git diff --check and the 224-module CI shard manifest passed.",
           "Standalone/runtime/source-bound artifacts regenerated in owning dependency order. UIUX release gate passed 37/37 artifact checks and 7/7 phase gates with zero findings; UIV2-29 passed 21/21 browser checks, 11 captures and 302 backend tests; UIV2-30 passed 7/7 local, 2200/2200 visual and 15/15 Compare checks with zero findings.",
           "Implementation review head 00ef3d1b8f31d459a90286163e52eb88ac6ce484: pull-request CI run 42772839612 passed the source/release-independent gate, all nine deterministic Python 3.11/3.12/3.13 shards with 5319-node identity checks, all five browser-safety shards, and the four aggregate checks; push aggregate run 42772832884 also passed.",
-          "Current-main reconciliation: merged origin/main 191987dc10b205a6c993d132b1c818361583a5f3 (PR #293 risk-routed CI and refreshed UIV2 evidence; no AP runtime overlap). Combined CI-planner/scoped-selector plus mission/action/spine/handoff tests reported 69 passed with one upstream warning; Ruff, mypy (78 sources), docs/governance/roadmap, AP validators, shard map, standalone/runtime inventories, UIUX 37/37 + 7/7, and UIV2-29/30 checks passed with zero findings."
+          "Current-main reconciliation: merged origin/main 191987dc10b205a6c993d132b1c818361583a5f3 (PR #293 risk-routed CI and refreshed UIV2 evidence; no AP runtime overlap). Combined CI-planner/scoped-selector plus mission/action/spine/handoff tests reported 69 passed with one upstream warning; Ruff, mypy (78 sources), docs/governance/roadmap, AP validators, shard map, standalone/runtime inventories, UIUX 37/37 + 7/7, and UIV2-29/30 checks passed with zero findings.",
+          "Final reconciliation head b146d8d92be71197f64308785c39fd352cd7562e: pull-request CI run 42776180763 passed the source/release-independent gate, all nine deterministic Python 3.11/3.12/3.13 shards with node-set/outcome identity on all three interpreters, all five browser-safety shards and all aggregate checks; same-head push run 42776174104 passed the open-PR-aware selector and branch aggregates.",
+          "PR #292 merged at 2026-11-10T07:42:17Z as a835231aeba9ab770f30bf460612f60d81e9f132. Same-SHA post-merge main CI run 42777147806 passed the source/release gate, all nine Python shards (5323 nodes: 5288 passed and 35 intentional skips on each interpreter), all three outcome-identity checks, all five browser-safety shards and all aggregate checks.",
+          "Post-merge closeout working tree on main a835231aeba9ab770f30bf460612f60d81e9f132: the mapped quality.docs-ledger selection ran four modules with 44 passed in 6.94s; documentation (282 files), governance (7 required files), roadmap-dashboard freshness, deferred security-signoff consistency, pinned baseline, both offline AP validators and git diff checks passed."
         ],
         "blockers": [
-          "U03/U04/U06 remain pending. AP-004 may enforce and test local deny-by-default contracts with fictional/offline consumers, but may not activate a real provider, account, network destination, browser, media service, filesystem grant or runtime path.",
-          "AP-005 through AP-032 remain unauthorized. This claim is exactly one AP-004 story and does not authorize later program work or production release.",
-          "Implementation and pre-refresh review-head CI are green. The current-main reconciliation head must pass current-head CI before merge; repository-owner review/merge remains required, and no owner, independent-security, screenshot or release approval is claimed."
+          "U03/U04/U06 remain pending. AP-004 delivered offline deny-by-default enforcement and fictional/loopback tests only; it activated no real provider, account, network destination, browser, media service, filesystem grant or runtime path.",
+          "The owner instructed “Continue” after PR #292 merged and its same-SHA post-merge CI passed, authorizing AP-005 as the next single story. AP-005 remains not_started and unclaimed until this completion record merges and its own remote draft-PR claim is established; AP-006 through AP-032 remain unauthorized.",
+          "The repository owner merged PR #292. AP-004 claims no independent-security, screenshot, playable-media, signing or release approval; existing program and release gates remain unchanged."
         ],
-        "handoff": "AP-004 is in review on PR #292. Substantive implementation 652c67b4d1a3eca2c808339ab83b556d7536fa24 and pre-refresh review head c5f7a907e982281ddca1aafc23a69813b6840b4e passed local validation and the full pull-request matrix. The branch is reconciled with current main 191987dc10b205a6c993d132b1c818361583a5f3; local combined checks pass and same-head CI remains pending. A server-derived immutable mission envelope reaches the shared admission boundary; task-bound actions revalidate policy generations and atomically charge leaf/root tool budgets before intent/dispatch. Actual API, inbound/outbound MCP, script, browser, media and fixed-HTTP consumers are covered; stale/revoked/exhausted/cancelled/raced work does not dispatch or partially debit. No schema migration or runtime/service activation was added; U03/U04/U06 and AP-005+ remain unchanged.",
+        "handoff": "AP-004 is done: PR #292 final head b146d8d92be71197f64308785c39fd352cd7562e passed the authoritative full pull-request matrix, merged as a835231aeba9ab770f30bf460612f60d81e9f132, and same-SHA post-merge main CI run 42777147806 passed. The server-derived mission envelope reaches the shared admission boundary; task-bound actions revalidate policy generations and atomically charge leaf/root budgets before intent/dispatch, with actual API/MCP/script/browser/media/fixed-HTTP consumer coverage. No schema migration or runtime/service activation was added. The owner subsequently authorized AP-005 as the next separate single story; it remains not_started and unclaimed pending this closeout merge and its own branch/PR. U03/U04/U06 and AP-006+ remain unchanged.",
         "blast_radius": {
           "objective_and_gap": "Extend the existing admission path so every AP project action proves a server-owned mission/root authority and remaining budget. Existing grants, task epochs, profiles and durable ledgers are substantial, but root budget charging is not centralized and queued/retried/provider-switched operations do not all carry one immutable root-envelope generation.",
           "options": "Reject a second scheduler, duplicate grant store, per-consumer policy copies or trust in model-supplied budget fields. Prefer the smallest extension of ActionRequest/DurableActionBoundary and the existing durable task-budget, scoped-grant, child-delegation and policy-revision stores; route actual API, MCP, script, browser and media consumers through that one check.",
@@ -556,7 +559,7 @@
           "compatibility_and_rollback": "No activation flag or destructive migration is planned. Existing task-budget JSON and grant records remain readable. Rollback reverts the additive central envelope enforcement/adapters and tests; durable audit/budget history and all prior program ledgers remain intact.",
           "required_evidence": "Positive and negative actual-consumer tests for API, outbound/inbound MCP, skill scripts, browser and media dispatch; child/retry/provider scope and root-budget non-expansion; queued/stale policy-generation and revocation denials; cancellation/restart and network-free startup; existing execution spine/budget/grant/delegation/MoneyPrinter tests, scoped/full static, generated-drift, smoke and current-head CI evidence. No live external or human approval is claimed."
         },
-        "validated_against_main_sha": "191987dc10b205a6c993d132b1c818361583a5f3",
+        "validated_against_main_sha": "a835231aeba9ab770f30bf460612f60d81e9f132",
         "changed_files": [
           "AGENTS.md",
           "app.py",
@@ -595,10 +598,36 @@
           "tests/test_portable_handoff_and_switching.py",
           "tests/test_scopes.json"
         ],
-        "review_head_sha": "00ef3d1b8f31d459a90286163e52eb88ac6ce484",
-        "review_push_ci_url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42772832884",
-        "review_pr_ci_url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42772839612",
-        "reconciled_main_sha": "191987dc10b205a6c993d132b1c818361583a5f3"
+        "review_head_sha": "b146d8d92be71197f64308785c39fd352cd7562e",
+        "review_push_ci_url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42776174104",
+        "review_pr_ci_url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42776180763",
+        "reconciled_main_sha": "191987dc10b205a6c993d132b1c818361583a5f3",
+        "implementation_final_head_sha": "b146d8d92be71197f64308785c39fd352cd7562e",
+        "implementation_merge_sha": "a835231aeba9ab770f30bf460612f60d81e9f132",
+        "implementation_merged_at": "2026-11-10T07:42:17Z",
+        "implementation_push_ci_url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42776174104",
+        "implementation_pr_ci_url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42776180763",
+        "post_merge_ci_url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42777147806",
+        "completion_recorded_by": "arena/e0bd5906-m5-agent-studio",
+        "completion_recorded_at": "2026-11-10T07:50:52Z",
+        "completion_base_sha": "a835231aeba9ab770f30bf460612f60d81e9f132",
+        "completion_changed_files": [
+          "AGENTS.md",
+          "docs/autonomous-production-evaluation-briefs.md",
+          "docs/autonomous-production-operating-envelope.md",
+          "docs/mission-authority-envelope.md",
+          "product/M5_Autonomous_Production_Roadmap.json"
+        ],
+        "completion_evidence": [
+          "PR #292 merged at 2026-11-10T07:42:17Z as a835231aeba9ab770f30bf460612f60d81e9f132; final implementation head b146d8d92be71197f64308785c39fd352cd7562e is in main history.",
+          "Final implementation-head pull-request CI run 42776180763 passed the full source, nine-shard Python 3.11/3.12/3.13, three identity, five browser-safety and aggregate matrix; same-head push run 42776174104 passed its open-PR-aware selector and branch aggregates.",
+          "Post-merge main CI run 42777147806 passed the full matrix on exact merge commit a835231aeba9ab770f30bf460612f60d81e9f132.",
+          "The repository owner explicitly requested and completed PR #292 merge. AP-004 requires no screenshot or playable-media acceptance and claims no independent-security, signing or release approval.",
+          "All five AP-004 acceptance criteria remain mapped to actual-consumer, generation/revocation, hierarchical-budget, network-free startup and deny-by-default tests plus the mission-envelope architecture record; no runtime or external service was activated.",
+          "Closeout validation on main a835231aeba9ab770f30bf460612f60d81e9f132: the mapped quality.docs-ledger selection passed 44 tests; docs, governance, roadmap dashboard, deferred security-signoff consistency, pinned baseline, both offline AP validators and diff checks passed. Current-head closeout PR CI remains required before this record lands."
+        ],
+        "post_completion_authorization": "On 2026-11-10 the owner instructed “Continue” after PR #292 had merged and same-SHA post-merge main CI was green. AP-005 is therefore explicitly authorized as the next single story for durable mission-task composition, dependency/join recovery and populated-store migration tests. This does not resolve U01-U06, activate product runtime or real external effects, or authorize AP-006 through AP-032.",
+        "completion_pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/294"
       },
       "implementation_prompt": "Implement AP-004: Enforce a mission-wide authority and budget envelope. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
@@ -2796,12 +2825,13 @@
     "reconciliation_evidence": "docs/autonomous-production-ap001-reconciliation.md",
     "registered_by_story": "AP-001",
     "owner_authorized_date": "2026-11-10",
-    "activation_scope": "AP-001 through AP-003 are delivered. AP-004 is in review on its separate fixed Arena branch for offline mission-wide authority/budget enforcement and actual-consumer tests only; no product runtime activation or real external action.",
+    "activation_scope": "AP-001 through AP-004 are delivered. AP-005 is owner-authorized next for one separate offline durable mission-task/dependency/recoverable-join story; no product runtime activation or real external action.",
     "runtime_activation_authorized": false,
     "authorized_downstream_stories": [
       "AP-002",
       "AP-003",
-      "AP-004"
+      "AP-004",
+      "AP-005"
     ],
     "claim_authority": "A pushed draft pull request plus the matching story tracking block is the remote coordination claim; a local JSON edit alone is not atomic.",
     "fixed_branch_exception": "Arena sessions use their assigned arena/<session>-m5-agent-studio branch instead of renaming to the proposed ap-XXX-short-slug convention.",
@@ -2834,6 +2864,15 @@
         "mode": "single_story",
         "scope": "Mission-wide authority/budget enforcement and offline actual-consumer tests only; no real provider, account, network, media, browser, filesystem or runtime activation.",
         "source": "Owner instruction “Continue with the next story if we are good with this” after PR #286 and its post-merge CI were green."
+      },
+      {
+        "authorized_at": "2026-11-10",
+        "stories": [
+          "AP-005"
+        ],
+        "mode": "single_story",
+        "scope": "Durable mission graph/state mapping, lease/checkpoint integration, recoverable joins and populated-store migration tests only; no runtime activation, destructive reset or external action.",
+        "source": "Owner instruction “Continue” after PR #292 and its same-SHA post-merge main CI were green."
       }
     ]
   }
