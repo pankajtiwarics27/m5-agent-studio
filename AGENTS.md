@@ -161,6 +161,14 @@ tracking-ledger checks. Before merging or claiming an implementation story is
 done, the required gate for that change class must pass at the current head;
 CI remains authoritative.
 
+When landing is delegated, follow
+[`docs/async-delivery-pipeline.md`](docs/async-delivery-pipeline.md): assemble
+all tracked implementation/review metadata before the final ready run, record
+run URLs in the PR rather than a CI-only source commit, and hand the exact head
+to one landing session. This separates waiting from feature work but does not
+skip a required PR/main gate, permit two branch writers, or authorise the next
+story.
+
 ### 5.2 Scoped test selection
 
 The selector maps changed paths to feature areas through
