@@ -136,6 +136,7 @@ nodes on each interpreter (5,288 passed and 35 intentional skips), all identity
 checks, and all browser-safety shards. The implementation head is present in
 `main` history and all five AP-004 acceptance criteria retain executable or
 architecture evidence, so AP-004 is `done` under the repository convention.
+Completion-record PR #294 carries only this tracking and documentation update.
 
 Completion activates no provider, account, network destination, browser, media
 service, filesystem grant, background worker, product runtime, or later AP
