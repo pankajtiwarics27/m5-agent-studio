@@ -2,7 +2,9 @@
 """Select a conservative, feature-scoped pytest set from changed repository paths.
 
 The scope map is `tests/test_scopes.json`. Unknown, shared, or high-risk changes
-fall back to the complete suite. PR CI and scheduled CI still run the full suite.
+fall back to the complete suite. Ready implementation PRs and scheduled CI retain
+the full gate; draft PRs and explicitly mapped documentation paths use this
+selector for their scoped test phase.
 """
 from __future__ import annotations
 
@@ -160,7 +162,7 @@ def plan_for_paths(
         if path in {"README.md", "AGENTS.md", "CONTRIBUTING.md", "SECURITY.md"} or path.startswith(
             ("docs/", "product/")
         ) or path.endswith((".md", ".rst")):
-            selected_areas.add("quality.docs-ci")
+            selected_areas.add("quality.docs-ledger")
             if path.startswith("docs/media/"):
                 selected_areas.add("ui.shared")
             continue
@@ -285,6 +287,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base", help="base commit/ref for changed-file selection")
     parser.add_argument("--head", help="head commit/ref (defaults to HEAD)")
+    parser.add_argument("--paths-file", type=Path, help="JSON array of changed paths from an authoritative PR file listing")
     parser.add_argument("--worktree", action="store_true", help="include staged, unstaged, and untracked local changes")
     parser.add_argument("--area", action="append", default=[], help="run a named area; repeat to combine areas")
     parser.add_argument("--list", action="store_true", help="print the selection without running pytest")
@@ -305,7 +308,25 @@ def main(argv: list[str] | None = None) -> int:
             count = len(list(TESTS_DIR.glob("test_*.py")))
             print(f"Test scope map is valid: {count} test modules in {len(areas)} areas.")
             return 0
-        if args.area:
+        if args.paths_file is not None:
+            if args.area or args.base or args.worktree:
+                raise ValueError("--paths-file cannot be combined with --area, --base, or --worktree")
+            try:
+                changed_paths = json.loads(args.paths_file.read_text(encoding="utf-8"))
+                if not isinstance(changed_paths, list) or not all(
+                    isinstance(path, str) for path in changed_paths
+                ):
+                    raise ValueError("changed paths file must contain a JSON array of strings")
+                plan = plan_for_paths(changed_paths, data)
+            except (OSError, json.JSONDecodeError, ValueError) as exc:
+                plan = TestPlan(
+                    True,
+                    (),
+                    (),
+                    (),
+                    f"could not read authoritative changed paths: {exc}",
+                )
+        elif args.area:
             unknown = sorted(set(args.area) - set(data["areas"]))
             if unknown:
                 raise ValueError(f"unknown test area(s): {', '.join(unknown)}")

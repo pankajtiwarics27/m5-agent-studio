@@ -154,10 +154,12 @@ never relaxed by this table.
 | Test infrastructure, `tests/test_scopes.json`, workflow or CI config | the full suite (`python -m pytest -q`): the selector cannot reason about its own change |
 
 Anything not listed, any change spanning several rows, and any change whose
-blast radius you cannot state in one sentence: run the full suite. The same
-applies before asking for a review, before merging, and before claiming a story
-is done — the checklist below is what CI enforces, and it must pass in CI at
-the merge commit.
+blast radius you cannot state in one sentence: run the full suite. Before
+requesting review of an implementation PR, ensure it has left draft so the full
+merge gate runs. Documentation-only PRs use the focused documentation and
+tracking-ledger checks. Before merging or claiming an implementation story is
+done, the required gate for that change class must pass at the current head;
+CI remains authoritative.
 
 ### 5.2 Scoped test selection
 
@@ -178,20 +180,31 @@ selector itself.
 One run per event lane; the pull request owns the merge gate and is never
 cancelled by a cheaper push run:
 
-- **Pull request** (any branch): full suite on Python 3.11, 3.12, 3.13 plus
-  browser safety. This is the authoritative merge-gate run, and a newer push
-  supersedes an in-flight run for the same pull request.
-- **Push without an open pull request** (feature branch): scoped selection. The
-  `ci-preflight` job skips the heavy jobs entirely when that branch already has
-  an open pull request, because the pull request run covers the same commit;
-  `main` pushes always run in full.
+- **Draft pull request**: mapped implementation changes run the scoped Python
+  selection on Python 3.11, 3.12 and 3.13. Known documentation-only edits and
+  the AP tracking ledger run focused documentation/governance/ledger checks.
+  High-risk, unmapped, test-infrastructure, workflow and runtime product-input
+  changes fail closed to the full gate. Browser safety is deferred until the
+  full gate.
+- **Ready-for-review pull request**: implementation changes run the full Python
+  suite on Python 3.11, 3.12 and 3.13 plus browser safety. Known documentation-
+  only edits retain the focused gate. This is the authoritative merge-gate run;
+  a newer push supersedes an in-flight run for the same pull request. Converting
+  a draft to ready-for-review triggers the full gate.
+- **Push without an open pull request** (feature branch): scoped selection.
+  When a branch already has an open pull request, the push run is a cheap
+  placeholder because that PR's selected gate owns coverage. `main` pushes
+  always run in full.
 - **Push to `main`**, **nightly schedule** (`17 7 * * *`), **manual dispatch**:
   full suite plus browser safety, never cancelled by concurrency.
 - Every run streams pytest output and `--durations` while it executes, and
   prints the slowest tests and a `::notice` summary with the elapsed seconds.
 
-A pull request is mergeable only when all three Python legs and the browser
-safety check are green.
+A pull request is mergeable only when the stable Python (`test`) and browser
+safety check statuses are green. Those aggregate checks must confirm the
+selected gate succeeded: focused docs tests for the explicit documentation
+allowlist, mapped scoped Python tests for draft edits, or the full Python and
+browser gates for ready implementation and any uncertain/high-risk change.
 
 ### 5.4 Full gate
 
