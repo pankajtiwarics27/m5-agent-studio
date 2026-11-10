@@ -14,7 +14,7 @@
     "fit_source_sha": "250dc5874fc05bb8128298f7e1ae6936660133e8",
     "method": "quantize median module aggregates to 0.5 seconds, then deterministic longest-processing-time partitioning",
     "quantization_seconds": 0.5,
-    "collected_nodes": 5311,
+    "collected_nodes": 5312,
     "projected_median_aggregate_seconds": [
       644.598,
       645.516,
@@ -31,7 +31,7 @@
       74
     ],
     "node_counts": [
-      1521,
+      1522,
       1883,
       1907
     ],
@@ -87,6 +87,54 @@
           567,
           792
         ]
+      ]
+    },
+    "observed_run_id": 42745418732,
+    "observed_source_sha": "8839f2605ea45379c0c9c522301a351a6f693151",
+    "observed_shard_seconds": {
+      "basis": "sum of module_seconds emitted by each shard result",
+      "3.11": [
+        143.774,
+        214.183,
+        147.881
+      ],
+      "3.12": [
+        202.915,
+        141.26,
+        186.948
+      ],
+      "3.13": [
+        152.812,
+        254.12,
+        240.819
+      ],
+      "aggregate": [
+        499.501,
+        609.563,
+        575.648
+      ]
+    },
+    "observed_pytest_step_seconds": {
+      "basis": "Run deterministic pytest shard step wall time",
+      "3.11": [
+        150,
+        223,
+        157
+      ],
+      "3.12": [
+        216,
+        150,
+        199
+      ],
+      "3.13": [
+        161,
+        267,
+        255
+      ],
+      "aggregate": [
+        527,
+        640,
+        611
       ]
     }
   },

@@ -24,6 +24,8 @@ def test_committed_shard_manifest_partitions_every_test_module_once() -> None:
         str(run_id) for run_id in balance["fit_run_ids"]
     }
     assert len(balance["projected_median_aggregate_seconds"]) == len(ci_test_shard.SHARD_IDS)
+    assert balance["observed_run_id"] > 0
+    assert len(balance["observed_shard_seconds"]["aggregate"]) == len(ci_test_shard.SHARD_IDS)
 
 
 def test_canonical_outcome_hash_includes_outcomes_and_skip_reasons() -> None:
