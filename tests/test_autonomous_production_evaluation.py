@@ -282,18 +282,26 @@ def test_fixture_inventory_rejects_missing_cases_or_live_effects(tmp_path: Path)
         _mutated_bundle(tmp_path, fixtures=network)
 
 
-def test_roadmap_drift_cannot_activate_runtime_or_downstream_story(tmp_path: Path) -> None:
+def test_roadmap_drift_cannot_activate_runtime_or_falsify_ap003_completion(tmp_path: Path) -> None:
     def activate(value: dict[str, Any]) -> None:
         value["program_registration"]["runtime_activation_authorized"] = True
 
     with pytest.raises(EvaluationRegistryError, match="runtime activation"):
         _mutated_bundle(tmp_path, roadmap=activate)
 
-    def claim_ap004(value: dict[str, Any]) -> None:
-        next(story for story in value["stories"] if story["id"] == "AP-004")["status"] = "in_progress"
+    def reopen_ap003(value: dict[str, Any]) -> None:
+        next(story for story in value["stories"] if story["id"] == "AP-003")["status"] = "not_started"
 
-    with pytest.raises(EvaluationRegistryError, match="AP-004 through AP-032"):
-        _mutated_bundle(tmp_path, roadmap=claim_ap004)
+    with pytest.raises(EvaluationRegistryError, match="active or truthfully completed"):
+        _mutated_bundle(tmp_path, roadmap=reopen_ap003)
+
+    def unmerge_completed_ap003(value: dict[str, Any]) -> None:
+        story = next(story for story in value["stories"] if story["id"] == "AP-003")
+        story["status"] = "done"
+        story["tracking"]["delivery_status"] = "pr_open"
+
+    with pytest.raises(EvaluationRegistryError, match="merged delivery evidence"):
+        _mutated_bundle(tmp_path, roadmap=unmerge_completed_ap003)
 
 
 def test_record_paths_must_not_be_symbolic_links(tmp_path: Path) -> None:

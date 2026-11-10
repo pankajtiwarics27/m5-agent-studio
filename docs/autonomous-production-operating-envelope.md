@@ -7,11 +7,11 @@
 ## Authority and bounded outcome
 
 After AP-001 completed, the owner explicitly authorized **AP-002 and AP-003
-sequentially**. AP-002 was delivered from its fixed Arena branch and merged
-through PR #280. At AP-002 delivery, AP-003 remained `not_started` and
-unclaimed for its own later branch and pull request. AP-003 has since been
-separately claimed through draft PR #284; that does not alter AP-002 scope.
-AP-004 through AP-032 remain unauthorized.
+sequentially**. Both are now delivered: AP-002 through PR #280 and AP-003
+through PR #284, each from its own fixed Arena branch and pull request. On
+2026-11-10, after the preceding merge and post-merge CI were green, the owner
+separately authorized AP-004 as the next single story. AP-004 remains unclaimed
+until its own branch/PR; AP-005 through AP-032 remain unauthorized.
 
 AP-002 adds an offline, versioned decision/configuration boundary. It does not
 activate a provider, runtime, lifecycle coordinator, sandbox, browser, account,
@@ -182,7 +182,9 @@ resolves the story, not U01–U06: those owner values remain explicitly pending,
 target-host inventory remains `not_measured`, automatic promotion remains off,
 and no provider, account, file, egress, spending, runtime or lifecycle authority
 is activated. AP-003 was only the next authorized, separately claimable story
-at this completion point; its later draft PR #284 has its own scope and evidence.
+at this completion point; it later delivered through PR #284 and has its own
+scope and evidence. AP-004 was authorized only after AP-003 delivery and the
+later green merge sequence; that later authorization does not widen AP-002.
 Completion-record PR #281 passed its current-head CI before landing.
 
 ## Acceptance mapping

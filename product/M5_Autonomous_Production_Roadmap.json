@@ -5,15 +5,15 @@
   "program": "AP",
   "revision": "1.2",
   "prepared_date": "2026-11-08",
-  "lifecycle": "registered_tracking_ap003_in_review",
+  "lifecycle": "registered_tracking_ap003_done_ap004_authorized",
   "source_snapshot": "a67e8b291614f8afdac7c8d38ba51bcc8926d695",
   "source_repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "specification": "docs/autonomous-production-roadmap.md",
   "agent_prompt": "M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md",
   "authority": {
     "precedence": "AGENTS.md, existing security/approval rules and owning program ledgers remain binding.",
-    "scope": "AP-001 and AP-002 are delivered. AP-003 is owner-authorized and in review on its separate fixed Arena branch for offline evaluation-brief/fixture work only; runtime activation and AP-004 through AP-032 remain unauthorized.",
-    "registration_gate": "AP-001 records the tracking source and claim protocol; its merge did not authorize downstream work. The later AP-002/AP-003 authorization is separately recorded in program_registration.authorization_history.",
+    "scope": "AP-001, AP-002 and AP-003 are delivered. AP-004 is owner-authorized as the next separate story for offline mission-wide authority/budget enforcement and actual-consumer tests only; product runtime activation, real external services and AP-005 through AP-032 remain unauthorized.",
+    "registration_gate": "AP-001 records the tracking source and claim protocol; its merge did not authorize downstream work. Later AP-002/AP-003 sequential authorization and the post-AP-003 AP-004 single-story authorization are separately recorded in program_registration.authorization_history.",
     "other_ledgers": "Do not alter AS/M5/UIUX/UIV2/LC tracking without the owning protocol.",
     "approval": "Agents cannot fabricate owner, screenshot, independent security or release approval."
   },
@@ -320,7 +320,7 @@
       "title": "Establish versioned evaluation briefs and failure fixtures",
       "priority": "P0",
       "optional": false,
-      "status": "in_review",
+      "status": "done",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-001"
@@ -373,11 +373,11 @@
         "owner": "arena/1c8a9253-m5-agent-studio",
         "branch": "arena/1c8a9253-m5-agent-studio",
         "base_sha": "d48dcbe38075af8958e77c04cce2bf1e41130ca0",
-        "head_sha": "8f6fb0b5cd1aa953ad1acb3b886e24f780a91b3b",
+        "head_sha": "6e02146c481fd37a618065678b4ce17da5a74107",
         "claimed_at": "2026-11-09T18:52:05Z",
-        "heartbeat_at": "2026-11-09T19:16:37Z",
+        "heartbeat_at": "2026-11-09T19:33:43Z",
         "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/284",
-        "delivery_status": "pr_open",
+        "delivery_status": "merged",
         "acceptance_evidence": [
           "product/M5_Autonomous_Production_Evaluation_Briefs.json and docs/autonomous-production-evaluation-briefs.md keep technical, factual, creative and practical categories separate, each with versioned criteria/evidence, hard-gate rules and a prohibition on one grader certifying all categories.",
           "The versioned baseline protocol retains an unchanged one-agent/no-delegation incumbent, pins dataset/task/rubric/runtime/hardware/budget identity and requires the same ten resource-accounting fields for every candidate while reusing model_comparison, workflow_evaluation and execution_budget contracts.",
@@ -387,17 +387,19 @@
         ],
         "tests_executed": [
           "Focused AP-003 plus owning evaluator/failure/privacy/authority anchors: 149 passed with one upstream Starlette warning before the current-main refresh; after merging main 24288a4, the combined AP/docs/scope-map and changed UI regression selection reported 190 passed, 21 intentional P7-PARK-03 skips and one upstream warning.",
-          "Conservative selector full suite before the non-overlapping main refresh: 5247 passed, 32 environment/browser skips and one upstream Starlette warning on Linux x86_64 Python 3.11 in 925.09s. PR #283 then changed only UI/generated evidence; combined post-merge focused integration passed and current-head full PR CI remains required.",
+          "Conservative selector full suite before the non-overlapping main refresh: 5247 passed, 32 environment/browser skips and one upstream Starlette warning on Linux x86_64 Python 3.11 in 925.09s. PR #283 then changed only UI/generated evidence; combined post-merge focused integration passed.",
           "Ruff passed; mypy passed for 77 source files; tracked plus new-file compileall and frontend JavaScript syntax passed after merging current main.",
           "autonomous_production_evaluation.py: valid; digest b10b588134fbd2803daf660f5abc2c0449f1b3f53884435ee78e7dbcda7564c8; four quality categories; partition counts development=11/validation=5/held_out=4; baseline single_agent; target non-binding; exact six fixture kinds; activation false.",
-          "AP-002 validator, docs (279 files), governance, deferred security-record consistency, pinned baseline, 220-module scope map, roadmap-dashboard freshness and diff checks passed after the current-main refresh."
+          "AP-002 validator, docs (279 files), governance, deferred security-record consistency, pinned baseline, 220-module scope map, roadmap-dashboard freshness and diff checks passed after the implementation current-main refresh.",
+          "Final implementation-head push CI run 42681851797 and pull-request CI run 42681862794 each passed Python 3.11, 3.12 and 3.13 plus Browser safety regressions. Post-merge main CI run 42684526441 passed the same four jobs on merge commit 1dbd2697fc929103bb42cb8f2c182febffc2a26f.",
+          "Local post-merge closeout validation against main b4f777c76316956f3aec57bd63ddf26c0026265f: scoped selection ran 84 modules across six affected areas with 1659 passed, one intentional live-container skip and one upstream Starlette warning in 208.72s; focused AP validators ran 28 passed."
         ],
         "blockers": [
-          "AP-003 authorizes offline evaluation contracts, synthetic fixtures, protected-partition policy and tests only. It does not activate an optimizer, model, provider, network, account, filesystem grant, side effect or runtime path.",
-          "U01-U06, owner-host inventory, runtime qualification and release/security approvals remain unchanged and pending where already recorded. AP-004 through AP-032 remain unauthorized.",
-          "Current-head push and pull-request full Python/browser CI are required before merge. Browser-backed local checks remain environment-skipped and are delegated to the required CI browser job."
+          "AP-003 delivered offline evaluation contracts, synthetic fixtures, protected-partition policy and tests only. It activated no optimizer, model, provider, network, account, filesystem grant, side effect or runtime path.",
+          "U01-U06, owner-host inventory, runtime qualification and release/security approvals remain unchanged and pending where already recorded.",
+          "The owner authorized AP-004 as the next separate story after the preceding merge and post-merge CI were green. AP-004 remains not_started and unclaimed until its own remote draft-PR claim; AP-005 through AP-032 remain unauthorized."
         ],
-        "handoff": "AP-003 implementation is in review on draft PR #284. Versioned synthetic briefs, strict four-category rubric, 11/5/4 partitions, single-agent matched baseline, six required failure fixtures, optimizer held-out denial and metric-only private-trace scrubbing are implemented offline. No runner or authority was activated; current-head CI and repository-owner merge remain pending.",
+        "handoff": "AP-003 is done: PR #284 final head 6e02146c481fd37a618065678b4ce17da5a74107 passed the full Python/browser matrix and merged as 1dbd2697fc929103bb42cb8f2c182febffc2a26f. Same-SHA post-merge CI run 42684526441 passed. The records remain offline and activation-disabled. The owner subsequently authorized AP-004 as the next separate story; it remains unclaimed pending its own branch/PR.",
         "blast_radius": {
           "objective_and_gap": "Define the AP output-quality evidence bar before optimization: versioned briefs/rubrics, a matched single-agent baseline, explicit development/validation/held-out partitions, required fault/security fixtures and a scrub-before-use trace boundary. Existing evaluators aggregate supplied measurements but do not provide those AP records or access controls.",
           "options": "Do not add a runner, optimizer, scheduler or duplicate evaluator. Prefer additive AP-owned offline JSON records plus one strict parser/access-view boundary that reuses model_comparison/workflow_evaluation identities and existing failure-test concepts without activating them.",
@@ -407,7 +409,7 @@
           "compatibility_and_rollback": "No migration or feature flag. Existing evaluation/failure modules and consumers remain unchanged. Rollback removes the additive AP-003 records, validator, tests and docs while preserving AP-001/AP-002 history and all owning-program ledgers.",
           "required_evidence": "Strict schema/version/unknown-field tests; four-category separation; single-agent/matched-accounting checks; exact required fixture kinds; provisional-target checks; optimizer held-out denial and private-trace scrubbing tests; focused owning-boundary tests, scoped selection, static/docs/governance/generated-drift checks and current-head CI."
         },
-        "validated_against_main_sha": "24288a41303aed6f3ca6a118b63f5f3f1a1d5c59",
+        "validated_against_main_sha": "b4f777c76316956f3aec57bd63ddf26c0026265f",
         "changed_files": [
           "AGENTS.md",
           "autonomous_production_evaluation.py",
@@ -420,7 +422,35 @@
           "pyproject.toml",
           "tests/test_autonomous_production_evaluation.py",
           "tests/test_scopes.json"
-        ]
+        ],
+        "implementation_final_head_sha": "6e02146c481fd37a618065678b4ce17da5a74107",
+        "implementation_merge_sha": "1dbd2697fc929103bb42cb8f2c182febffc2a26f",
+        "implementation_merged_at": "2026-11-09T19:33:43Z",
+        "implementation_push_ci_url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42681851797",
+        "implementation_pr_ci_url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42681862794",
+        "post_merge_ci_url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42684526441",
+        "completion_recorded_by": "arena/edb265eb-m5-agent-studio",
+        "completion_recorded_at": "2026-11-10T04:17:43Z",
+        "completion_base_sha": "b4f777c76316956f3aec57bd63ddf26c0026265f",
+        "completion_changed_files": [
+          "AGENTS.md",
+          "autonomous_production_evaluation.py",
+          "docs/autonomous-production-evaluation-briefs.md",
+          "docs/autonomous-production-operating-envelope.md",
+          "product/M5_Autonomous_Production_Roadmap.json",
+          "tests/test_autonomous_production_evaluation.py"
+        ],
+        "completion_evidence": [
+          "PR #284 merged at 2026-11-09T19:33:43Z as 1dbd2697fc929103bb42cb8f2c182febffc2a26f; final implementation head 6e02146c481fd37a618065678b4ce17da5a74107 is in main history.",
+          "Final implementation-head push CI run 42681851797 and pull-request CI run 42681862794 each passed Python 3.11, 3.12 and 3.13 plus Browser safety regressions.",
+          "Post-merge main CI run 42684526441 passed all four jobs on merge commit 1dbd2697fc929103bb42cb8f2c182febffc2a26f.",
+          "The repository owner merged PR #284. AP-003 requires no screenshot, playable-media, independent-security or release approval and claims none.",
+          "All five AP-003 acceptance criteria remain mapped to versioned offline records, strict parser/access-boundary tests and documentation; activation remains false.",
+          "Current main b4f777c76316956f3aec57bd63ddf26c0026265f contains the AP-003 merge and passed full post-merge CI run 42753768177 after later non-AP changes.",
+          "Closeout validation on current main: Ruff passed; mypy passed for 78 sources; tracked compileall, frontend syntax, source and standalone smoke, AP-002/AP-003 validators, docs, ADR, governance, deferred security-record consistency, pinned baseline, 223-module scope map, roadmap-dashboard freshness and diff checks passed. Current-head closeout PR CI remains required before this record lands."
+        ],
+        "post_completion_authorization": "On 2026-11-10 the owner instructed “Continue with the next story if we are good with this.” The preceding PR #286 merge and same-SHA post-merge CI were green, so AP-004 is explicitly authorized as the next single story. This does not resolve U03/U04/U06, authorize live external effects or runtime activation, or authorize AP-005 through AP-032.",
+        "completion_pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/291"
       },
       "implementation_prompt": "Implement AP-003: Establish versioned evaluation briefs and failure fixtures. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
@@ -2695,12 +2725,13 @@
     "protocol": "M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md",
     "reconciliation_evidence": "docs/autonomous-production-ap001-reconciliation.md",
     "registered_by_story": "AP-001",
-    "owner_authorized_date": "2026-11-09",
-    "activation_scope": "AP-002 is delivered; AP-003 is in review on its separate fixed Arena branch for offline evaluation-brief/fixture work only; no product runtime activation.",
+    "owner_authorized_date": "2026-11-10",
+    "activation_scope": "AP-001 through AP-003 are delivered. AP-004 is owner-authorized next for one separate offline authority/budget-envelope story and actual-consumer tests; no product runtime activation or real external action.",
     "runtime_activation_authorized": false,
     "authorized_downstream_stories": [
       "AP-002",
-      "AP-003"
+      "AP-003",
+      "AP-004"
     ],
     "claim_authority": "A pushed draft pull request plus the matching story tracking block is the remote coordination claim; a local JSON edit alone is not atomic.",
     "fixed_branch_exception": "Arena sessions use their assigned arena/<session>-m5-agent-studio branch instead of renaming to the proposed ap-XXX-short-slug convention.",
@@ -2724,6 +2755,15 @@
         "mode": "sequential_one_story_per_branch_and_pr",
         "scope": "AP-002 decision-register/inventory/policy-fixture work, followed by AP-003 evaluation-brief/fixture work; no runtime activation or external action.",
         "source": "Owner selected “Authorize both sequentially” after AP-001 completion."
+      },
+      {
+        "authorized_at": "2026-11-10",
+        "stories": [
+          "AP-004"
+        ],
+        "mode": "single_story",
+        "scope": "Mission-wide authority/budget enforcement and offline actual-consumer tests only; no real provider, account, network, media, browser, filesystem or runtime activation.",
+        "source": "Owner instruction “Continue with the next story if we are good with this” after PR #286 and its post-merge CI were green."
       }
     ]
   }
