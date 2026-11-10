@@ -9,13 +9,15 @@ optimization. Its records are offline, synthetic, versioned, and explicitly
 provisional. They activate no evaluator runner, optimizer, model, provider,
 network destination, account, path, side effect, promotion, or runtime.
 
-The owner authorized AP-002 and AP-003 sequentially; AP-001 through AP-003 are
-now done. After AP-003 merged, the owner separately authorized AP-004 as the
-next single story. AP-004 remains unclaimed until its own branch/PR, and
-AP-005 through AP-032 remain unauthorized. U01–U06 remain pending, including
-the initial specialization choice. Therefore
-research, website, and short-video briefs below are generic fixture categories,
-not launch commitments or owner acceptance.
+The owner authorized AP-002 and AP-003 sequentially; AP-001 through AP-004 are
+now done after AP-004 delivered through PR #292. Once that merge and same-SHA
+post-merge CI were green, the owner's 2026-11-10 “Continue” instruction
+separately authorized AP-005 as the next single story. AP-005 remains
+`not_started` and unclaimed pending the AP-004 closeout and its own branch/PR;
+AP-006 through AP-032 remain unauthorized. U01–U06 remain pending, including
+the initial specialization choice. Therefore research, website, and short-video
+briefs below are generic fixture categories, not launch commitments or owner
+acceptance.
 
 The records are:
 
@@ -186,11 +188,13 @@ network, account, path, external effect or runtime, and it claims no screenshot,
 playable-media, independent-security or release approval.
 
 On 2026-11-10 the owner instructed the agent to continue with the next story
-after the preceding merge and post-merge CI were green. AP-004 is therefore
-owner-authorized as the next separate story, limited to offline authority and
-budget enforcement plus actual-consumer tests. U03, U04 and U06 stay pending;
-real external effects and runtime activation remain denied. AP-005 through
-AP-032 remain unauthorized.
+after the preceding merge and post-merge CI were green. AP-004 was therefore
+authorized as the next separate story, limited to offline authority and budget
+enforcement plus actual-consumer tests. U03, U04 and U06 stayed pending; real
+external effects and runtime activation remained denied. At this AP-003
+completion point AP-005 through AP-032 were unauthorized. AP-004 later delivered
+through PR #292; its separate completion record contains the subsequent AP-005
+authorization and does not retroactively widen AP-003.
 
 ## Acceptance mapping
 
