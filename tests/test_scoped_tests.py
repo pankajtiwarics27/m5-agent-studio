@@ -93,16 +93,20 @@ def test_git_name_status_parser_handles_additions_deletions_and_renames() -> Non
     assert parsed == ["static/index.html", "old.py", "new.py", "old_test.py"]
 
 
-def test_ci_keeps_full_pull_request_gate_and_scopes_only_feature_pushes() -> None:
-    workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+def test_ci_keeps_full_gates_and_scopes_only_unclaimed_feature_pushes() -> None:
+    workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(
+        encoding="utf-8"
+    )
 
     assert "pull_request:" in workflow
     assert "schedule:" in workflow
     assert "workflow_dispatch:" in workflow
-    assert "SCOPE_ON_PUSH" in workflow
+    assert "python scripts/ci_execution_plan.py" in workflow
+    assert "SELECTED_SUITE" in workflow
     assert "scripts/run_scoped_tests.py --base" in workflow
-    assert 'python -m pytest -q --tb=short -rf' in workflow
+    assert "python -m pytest -q --tb=short -rf" in workflow
     assert "Browser safety regressions" in workflow
+    assert 'python-version: ["3.11", "3.12", "3.13"]' in workflow
 
 
 def test_ci_does_not_run_the_heavy_jobs_twice_for_one_commit() -> None:
@@ -115,15 +119,17 @@ def test_ci_does_not_run_the_heavy_jobs_twice_for_one_commit() -> None:
     """
     workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
 
-    assert "preflight:" in workflow
-    assert "gh api \"repos/$REPO/pulls?state=open&head=$OWNER:$BRANCH\"" in workflow
-    # Fail open: a broken token or API call must cost minutes, never coverage.
-    assert 'reason="pull request lookup failed ($open); running to keep coverage"' in workflow
-    assert '[ "$BRANCH" != "main" ]' in workflow
-    assert "needs: preflight" in workflow
-    assert "if: needs.preflight.outputs.run == 'true'" in workflow
-    # The required check names are the merge gate; they must not change.
-    assert "name: Browser safety regressions" in workflow
+    assert "plan:" in workflow
+    assert 'gh api --method GET "repos/$REPOSITORY/pulls"' in workflow
+    # Fail closed: lookup failure selects scoped verification instead of
+    # suppressing the push or pretending its required contexts ran.
+    assert "Pull-request lookup failed" in workflow
+    assert "python scripts/ci_execution_plan.py" in workflow
+    assert "Delegate duplicate feature-push work to the pull request gate" in workflow
+    # Delegated push placeholders use non-required names; full gates still
+    # render the exact protected identities.
+    assert "'Branch test' || 'test'" in workflow
+    assert "'Branch browser safety regressions' || 'Browser safety regressions'" in workflow
     assert 'python-version: ["3.11", "3.12", "3.13"]' in workflow
 
 
@@ -138,10 +144,11 @@ def test_ci_concurrency_supersedes_within_an_event_lane_only() -> None:
     """
     workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
 
-    assert "group: ci-${{ format('{0}-{1}', github.event_name," in workflow
+    assert "ci-${{ github.workflow }}-${{" in workflow
     assert "github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'" in workflow
     assert "github.run_id" in workflow
-    assert "cancel-in-progress: ${{ github.ref != 'refs/heads/main'" in workflow
+    assert "format('pr-{0}', github.event.pull_request.number)" in workflow
+    assert "cancel-in-progress: ${{ github.ref != format('refs/heads/{0}', github.event.repository.default_branch)" in workflow
     assert "github.event_name != 'schedule'" in workflow
     assert "github.event_name != 'workflow_dispatch'" in workflow
     # The old ref-only group is what let the duplicate pair run side by side.
@@ -158,7 +165,11 @@ def test_ci_streams_pytest_and_reports_its_own_timing() -> None:
     assert "set +e\n          set -uo pipefail" in workflow
     assert "PYTHONUNBUFFERED" in workflow
     assert "--durations=15" in workflow
-    assert "::notice title=Pytest ${mode} suite" in workflow
+    assert "tail -n 1" in workflow
+    # Annotation properties are comma-delimited. A comma inside title= silently
+    # truncated the displayed title before its Python lane; keep it delimiter-free.
+    assert "::notice title=Pytest ${mode} suite - ${elapsed}s - Python ${{ matrix.python-version }}::" in workflow
+    assert "suite (${elapsed}s," not in workflow
     assert "status=${PIPESTATUS[0]}" in workflow
     # The slowest measured leg is 13.6 minutes; 15 left almost no headroom.
     assert "timeout-minutes: 25" in workflow

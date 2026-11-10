@@ -2,7 +2,10 @@ name: CI
 
 on:
   push:
+    # A branch with an open PR is verified by pull_request below; the planner
+    # leaves the push run as a cheap compatibility-check placeholder.
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
   schedule:
     - cron: "17 7 * * *"
@@ -11,135 +14,151 @@ permissions:
   contents: read
   pull-requests: read
 
-# Supersession is scoped per event lane, not per ref. Keying on `github.ref`
-# alone made `refs/heads/X` and `refs/pull/N/merge` distinct groups, so a push
-# and the pull request for the same commit ran side by side and neither ever
-# superseded the other. Keying every event on the branch name instead would let
-# a cheap scoped push run cancel an in-flight full-suite pull request run, which
-# loses coverage; the lanes stay separate so only same-kind runs supersede.
-# - push:            supersedes earlier pushes of the same branch, never `main`
-# - pull_request:    supersedes the earlier run for the same PR branch
-# - schedule/manual: unique per run, so a nightly is never cancelled
+# Supersession stays inside an event lane: a delegated push must never cancel
+# the pull request's full gate. Feature pushes and successive commits on one PR
+# cancel their own predecessors; main, scheduled, and manual runs never do.
 concurrency:
-  group: ci-${{ format('{0}-{1}', github.event_name, (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.run_id || github.head_ref || github.ref_name) }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.event_name != 'schedule' && github.event_name != 'workflow_dispatch' }}
+  group: >-
+    ci-${{ github.workflow }}-${{
+      ((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && format('{0}-{1}', github.event_name, github.run_id)) ||
+      (github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number)) ||
+      format('{0}-{1}', github.event_name, github.ref_name)
+    }}
+  cancel-in-progress: ${{ github.ref != format('refs/heads/{0}', github.event.repository.default_branch) && github.event_name != 'schedule' && github.event_name != 'workflow_dispatch' }}
 
 jobs:
-  # A branch push and the pull request opened for it run the same commit twice.
-  # The pull request run is the authoritative full-suite one (it is what branch
-  # protection sees at merge time), so a branch push that already has an open
-  # pull request skips the heavy jobs instead of paying for the same work twice.
-  # Everything else still runs: `main` pushes, scheduled runs, manual runs, and
-  # every pull request. Job-level `if:` reports the required checks as skipped,
-  # which branch protection treats as passing; the check names never change.
-  # Any failure of this probe returns `run=true`, so a broken token or API call
-  # costs runner minutes rather than coverage.
-  preflight:
-    name: ci-preflight
+  plan:
+    name: Select verification plan
     runs-on: ubuntu-latest
     timeout-minutes: 3
     outputs:
-      run: ${{ steps.decide.outputs.run }}
+      run_verification: ${{ steps.plan.outputs.run_verification }}
+      suite: ${{ steps.plan.outputs.suite }}
+      scope_base: ${{ steps.plan.outputs.scope_base }}
+      reason: ${{ steps.plan.outputs.reason }}
     steps:
-      - name: Decide whether this run owns the work
-        id: decide
+      - uses: actions/checkout@v7
+      - name: Detect an open pull request for a feature push
+        id: open-pr
         env:
           GH_TOKEN: ${{ github.token }}
           EVENT_NAME: ${{ github.event_name }}
-          REPO: ${{ github.repository }}
-          OWNER: ${{ github.repository_owner }}
-          BRANCH: ${{ github.head_ref || github.ref_name }}
+          REF_NAME: ${{ github.ref_name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          REPOSITORY: ${{ github.repository }}
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
         run: |
-          set -uo pipefail
-          run=true
-          reason="event '$EVENT_NAME' always runs"
-          if [ "$EVENT_NAME" = "push" ] && [ "$BRANCH" != "main" ]; then
-            if open=$(gh api "repos/$REPO/pulls?state=open&head=$OWNER:$BRANCH" --jq 'length' 2>&1); then
-              if [ "$open" != "0" ]; then
-                run=false
-                reason="push to '$BRANCH' has $open open pull request(s); the pull request run owns this commit"
-              else
-                reason="push to '$BRANCH' has no open pull request"
-              fi
+          set -u
+          count=-1
+          if [ "$EVENT_NAME" = "push" ] && [ "$REF_NAME" != "$DEFAULT_BRANCH" ]; then
+            if result=$(gh api --method GET "repos/$REPOSITORY/pulls" \
+              -f state=open -f "head=$REPOSITORY_OWNER:$REF_NAME" -f per_page=100 \
+              --jq 'length'); then
+              count="$result"
             else
-              reason="pull request lookup failed ($open); running to keep coverage"
+              echo "::warning title=Pull-request lookup failed::Running the scoped push gate instead of suppressing verification."
             fi
           fi
-          echo "::notice title=CI preflight::run=$run - $reason"
-          echo "run=$run" >> "$GITHUB_OUTPUT"
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+      - name: Select fail-closed verification work
+        id: plan
+        env:
+          BEFORE_SHA: ${{ github.event.before || '' }}
+        run: |
+          python scripts/ci_execution_plan.py \
+            --event "${{ github.event_name }}" \
+            --ref "${{ github.ref }}" \
+            --default-branch "${{ github.event.repository.default_branch }}" \
+            --before "$BEFORE_SHA" \
+            --open-pr-count "${{ steps.open-pr.outputs.count }}" \
+            --github-output "$GITHUB_OUTPUT"
 
   test:
-    needs: preflight
-    if: needs.preflight.outputs.run == 'true'
+    # Required full-gate identities still render as test (3.11), test (3.12),
+    # and test (3.13). A delegated feature push uses a non-required prefix, so
+    # its cheap placeholder cannot satisfy or obscure the pull request gate.
+    name: ${{ github.event_name == 'push' && github.ref != format('refs/heads/{0}', github.event.repository.default_branch) && 'Branch test' || 'test' }} (${{ matrix.python-version }})
+    needs: plan
+    if: always()
     runs-on: ubuntu-latest
-    # Worst measured leg is 13.6 min of work; the old 15 min ceiling left under
-    # 10% headroom, so a slow pip resolve or runner hiccup killed a healthy run.
+    # Preserve headroom for a cold dependency resolve or a slower hosted runner;
+    # measured latency is reported by the test step rather than hidden by this ceiling.
     timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
     steps:
+      - name: Refuse an invalid verification plan
+        if: needs.plan.result != 'success'
+        run: |
+          echo "Verification plan did not complete successfully."
+          exit 1
+      - name: Delegate duplicate feature-push work to the pull request gate
+        if: needs.plan.result == 'success' && needs.plan.outputs.run_verification != 'true'
+        run: echo "${{ needs.plan.outputs.reason }}"
       - uses: actions/checkout@v7
+        if: needs.plan.outputs.run_verification == 'true'
         with:
           # The pinned-baseline check verifies Git ancestry (BASELINE.md,
           # scripts/verify_baseline.py), so CI must fetch the full history.
-          # The default depth-1 clone is exactly what broke the suite.
           fetch-depth: 0
       - uses: actions/setup-python@v7
+        if: needs.plan.outputs.run_verification == 'true'
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
       - uses: actions/setup-node@v7
+        if: needs.plan.outputs.run_verification == 'true'
         with:
           node-version: 22
+      - name: Install project and test dependencies
+        if: needs.plan.outputs.run_verification == 'true'
+        run: python -m pip install -e '.[dev,supply-chain]'
       - name: Verify pinned source baseline
+        if: needs.plan.outputs.run_verification == 'true'
         run: python scripts/verify_baseline.py
       - name: Check commit messages are documented
+        if: needs.plan.outputs.run_verification == 'true'
         run: python scripts/check_commit_messages.py --base origin/main
       - name: Check AS-031 sign-off record and release gate
+        if: needs.plan.outputs.run_verification == 'true'
         run: python scripts/validate_security_signoff.py
       - name: Validate published documentation and links
+        if: needs.plan.outputs.run_verification == 'true'
         run: python scripts/validate_docs.py
-      - name: Install project and test dependencies
-        run: python -m pip install -e '.[dev,supply-chain]'
       - name: Lint sources (Ruff)
+        if: needs.plan.outputs.run_verification == 'true'
         run: ruff check .
       - name: Type-check contract modules (mypy)
+        if: needs.plan.outputs.run_verification == 'true'
         run: mypy
       - name: Compile all tracked Python sources
+        if: needs.plan.outputs.run_verification == 'true'
         run: git ls-files -z -- '*.py' | xargs -0 -r python -m compileall -q
       - name: Check frontend JavaScript syntax
+        if: needs.plan.outputs.run_verification == 'true'
         run: python scripts/check_frontend_syntax.py
       - name: Validate scoped test map
+        if: needs.plan.outputs.run_verification == 'true'
         run: python scripts/run_scoped_tests.py --check-map
       - name: Run tests
-        # Pushes to feature branches run the affected mapped areas. Pull requests,
-        # main pushes, scheduled runs, and manual runs retain the full suite.
-        # Unknown or high-risk changes fall back to the full suite in the selector.
-        # Failing tests are echoed as check annotations as well as logged, so a
-        # red run names the test even when its job log is not reachable. The log
-        # is also streamed while the suite runs: the previous version buffered
-        # everything to a file and printed only the last 40 lines at the end, so
-        # a 10-minute step showed nothing until it finished and a killed run
-        # showed nothing at all. `tee` plus unbuffered Python keeps the file for
-        # annotation, and --durations names the slow tests in the same log.
+        if: needs.plan.outputs.run_verification == 'true'
         env:
-          SCOPE_ON_PUSH: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/heads/') && github.ref != 'refs/heads/main' }}
-          SCOPE_BASE: ${{ github.event.before || '' }}
+          SELECTED_SUITE: ${{ needs.plan.outputs.suite }}
+          SCOPE_BASE: ${{ needs.plan.outputs.scope_base }}
           SCOPE_HEAD: ${{ github.sha }}
           PYTHONUNBUFFERED: "1"
           PYTEST_ADDOPTS: "--durations=15 --durations-min=1.0"
+        # Stream progress while retaining a log for annotations and measured
+        # timing. Disabling errexit is deliberate: diagnostics must still run
+        # after a failing pytest pipeline.
         run: |
-          # GitHub runs `run:` blocks with `bash -e`, which aborts on the first
-          # failing command - including the pytest pipeline. That would skip the
-          # annotations, the timing notice and the log tail below on exactly the
-          # runs that need them, so the errexit is turned off on purpose.
           set +e
           set -uo pipefail
           log="${RUNNER_TEMP:-/tmp}/pytest.log"
           started=$SECONDS
-          if [ "$SCOPE_ON_PUSH" = "true" ]; then
+          if [ "$SELECTED_SUITE" = "scoped" ]; then
             mode="scoped"
             python scripts/run_scoped_tests.py --base "$SCOPE_BASE" --head "$SCOPE_HEAD" 2>&1 | tee "$log"
           else
@@ -149,7 +168,7 @@ jobs:
           status=${PIPESTATUS[0]}
           elapsed=$((SECONDS - started))
           summary=$(grep -E '[0-9]+ (passed|failed)' "$log" | tail -n 1)
-          echo "::notice title=Pytest ${mode} suite (${elapsed}s, python ${{ matrix.python-version }})::${summary:-no summary line}"
+          echo "::notice title=Pytest ${mode} suite - ${elapsed}s - Python ${{ matrix.python-version }}::${summary:-no summary line}"
           echo "Slowest tests (wall clock, seconds):"
           grep -E '^[0-9]+\.[0-9]+s (call|setup|teardown)' "$log" | head -n 20 || true
           if [ "$status" -ne 0 ]; then
@@ -161,20 +180,25 @@ jobs:
           tail -n 40 "$log"
           exit "$status"
       - name: Check the demo transcript and screenshot manifest
+        if: needs.plan.outputs.run_verification == 'true'
         run: |
           python scripts/demo_tour.py --check
           python scripts/validate_screenshots.py
       - name: Smoke-test local loopback startup and auth
+        if: needs.plan.outputs.run_verification == 'true'
         run: |
           python scripts/smoke_local.py
           python scripts/smoke_local.py --standalone
       - name: Build release evidence (SBOM, scans, provenance)
+        if: needs.plan.outputs.run_verification == 'true'
         run: >-
           python scripts/release_supply_chain.py build
           --output dist/evidence --deterministic --source-commit "$GITHUB_SHA"
       - name: Verify release evidence matches the artifact
+        if: needs.plan.outputs.run_verification == 'true'
         run: python scripts/release_supply_chain.py verify --output dist/evidence
       - name: Upload release evidence
+        if: needs.plan.outputs.run_verification == 'true'
         uses: actions/upload-artifact@v7
         with:
           name: release-evidence-${{ matrix.python-version }}
@@ -182,6 +206,7 @@ jobs:
           retention-days: 14
           if-no-files-found: error
       - name: Verify generated artifacts are reproducible
+        if: needs.plan.outputs.run_verification == 'true'
         run: |
           python scripts/build_studio.py
           python scripts/generate_route_matrix.py
@@ -189,13 +214,16 @@ jobs:
           python scripts/generate_roadmap_status.py --check
           git diff --exit-code -- studio.py docs/route-security-matrix.md docs/subsystem-dependency-inventory.md
 
-  browser-safety:
-    name: Browser safety regressions
-    needs: preflight
-    if: needs.preflight.outputs.run == 'true'
+  browser_safety_shards:
+    name: Browser safety shard (${{ matrix.shard }})
+    needs: plan
+    if: needs.plan.result == 'success' && needs.plan.outputs.run_verification == 'true'
     runs-on: ubuntu-latest
-    # Measured 7.7 min of work; the ceiling only guards against a hung browser.
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [backend, regressions, visual, accessibility, performance]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -203,13 +231,16 @@ jobs:
           python-version: "3.11"
           cache: pip
       - uses: actions/setup-node@v7
+        if: matrix.shard != 'backend'
         with:
           node-version: "22.22.3"
-      - name: Install Python and locked browser dependencies
-        run: |
-          python -m pip install -e '.[dev]'
-          npm ci --prefix tests/browser --ignore-scripts
+      - name: Install Python test dependencies
+        run: python -m pip install -e '.[dev]'
+      - name: Install locked browser dependencies
+        if: matrix.shard != 'backend'
+        run: npm ci --prefix tests/browser --ignore-scripts
       - name: Prepare pinned Chromium and its libraries
+        if: matrix.shard != 'backend'
         run: |
           set -eu
           mkdir -p "$RUNNER_TEMP/m5-browser/tmp" "$RUNNER_TEMP/m5-browser/libs"
@@ -227,13 +258,13 @@ jobs:
           } >> "$GITHUB_ENV"
           LD_LIBRARY_PATH="$RUNNER_TEMP/m5-browser/libs/lib" "$chrome" --version
       - name: Run UIV2-29 backend authorization, recovery, ledger, fencing and isolation gate
+        if: matrix.shard == 'backend'
         run: |
           python scripts/uiv2_performance_safety.py --run-backend \
             --backend-output "${RUNNER_TEMP:-/tmp}/uiv2-29-backend-safety.json"
       - name: Run browser-backed screenshot, keyboard and adversarial refusal regressions
-        # Failing tests are echoed as check annotations, as the test job does: this job
-        # has no other readable output when its log is not reachable from where it is
-        # being triaged, and a red browser run that names no test is a dead end.
+        if: matrix.shard == 'regressions'
+        # Failing tests are echoed as check annotations, as the test job does.
         run: |
           set +e
           python -m pytest -q -p scripts.browser_ci_no_skips tests/test_screenshot_capture_browser.py tests/test_uiux_adversarial_browser.py --tb=short > "${RUNNER_TEMP:-/tmp}/browser.log" 2>&1
@@ -246,6 +277,7 @@ jobs:
           tail -n 60 "${RUNNER_TEMP:-/tmp}/browser.log"
           exit "$status"
       - name: Run approved cross-tab visual structure gate
+        if: matrix.shard == 'visual'
         run: |
           node scripts/uiux_v2_cross_tab_reference_walk.mjs \
             --check \
@@ -254,6 +286,7 @@ jobs:
         env:
           STUDIO_PYTHON: python
       - name: Run UIV2-28 keyboard, responsive and accessibility adversarial gates
+        if: matrix.shard == 'accessibility'
         run: |
           node scripts/a11y_walk.mjs \
             --screenshots "${RUNNER_TEMP:-/tmp}/uiv2-28-keyboard"
@@ -265,6 +298,7 @@ jobs:
         env:
           STUDIO_PYTHON: python
       - name: Run UIV2-29 stream performance, bounded memory and layout gates
+        if: matrix.shard == 'performance'
         run: |
           node scripts/stream_perf_walk.mjs \
             --screenshots "${RUNNER_TEMP:-/tmp}/uiv2-29-stream-legacy"
@@ -273,3 +307,32 @@ jobs:
             --timeout-ms 60000
         env:
           STUDIO_PYTHON: python
+
+  browser_safety:
+    # Full events retain the required Browser safety regressions identity. The
+    # delegated feature-push placeholder is deliberately non-required.
+    name: ${{ github.event_name == 'push' && github.ref != format('refs/heads/{0}', github.event.repository.default_branch) && 'Branch browser safety regressions' || 'Browser safety regressions' }}
+    needs: [plan, browser_safety_shards]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Require every selected browser safety shard
+        env:
+          PLAN_RESULT: ${{ needs.plan.result }}
+          RUN_VERIFICATION: ${{ needs.plan.outputs.run_verification }}
+          SHARD_RESULT: ${{ needs.browser_safety_shards.result }}
+        run: |
+          if [ "$PLAN_RESULT" != "success" ]; then
+            echo "Verification plan did not complete successfully."
+            exit 1
+          fi
+          if [ "$RUN_VERIFICATION" != "true" ]; then
+            echo "${{ needs.plan.outputs.reason }}"
+            exit 0
+          fi
+          if [ "$SHARD_RESULT" != "success" ]; then
+            echo "One or more browser safety shards did not pass: $SHARD_RESULT"
+            exit 1
+          fi
+          echo "Every browser safety shard passed."
