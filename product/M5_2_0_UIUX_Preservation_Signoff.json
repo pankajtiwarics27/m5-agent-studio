@@ -26,10 +26,10 @@
     "approved_inputs": null,
     "current_inputs": {
       "ledger_content_sha256": "cb04b1bdf0ec9be6b39d2233496d9e9e53ffb91b0f92397824c9964af333b85f",
-      "source_manifest_sha256": "a8d5c471fcabe71b2cecf588b8e8556b7542edf52e320cdc8f87067d46039969",
+      "source_manifest_sha256": "05748464e596ef91e7a803a9e844f88d31a13ce623670a4b3ff2707a818d70c3",
       "control_inventory_sha256": "17684f9f3f6f3cc3b50d77ffdad460fade3787e5ba01df3a53a2f4c0e5306c00",
-      "route_map_sha256": "1183626629f1dcdd8825763f998a42ea7ff29c7795a8e19fd16599478e84b4cf",
-      "authorization_trace_sha256": "64969a77ba3b3f8871007abd13242e4a1d7febc7eabcc7748d710b7009f817b4",
+      "route_map_sha256": "7d3b4e29afeebae4c1226f2d8b14c30126d77ba5be374250abdac89273c645ca",
+      "authorization_trace_sha256": "e813cbf8905c1a39e71991b295cb03550c61cb0cca761a86074de3efc626c2d8",
       "frontend_sha256": "397c3ae069fe281d8150485e1b88e73c7970de8a1ac07841c6790f7fe685da0f",
       "screenshot_manifest_sha256": "b488bf453ae260b6564ae592f0455e3d70cff3121dca1e7c823c7abb270b44d3",
       "screenshot_index_sha256": "16b0620ca1d02a1b181ad15b3a2b0c6aae9e7aa539654d27ed80d9147189634e",
@@ -40,10 +40,10 @@
   },
   "inputs": {
     "ledger_sha256": "96f9ca873e9d2105935e73c8df6a807095e6b11e4ab48a4d64926941e1ccd28a",
-    "source_manifest_sha256": "a8d5c471fcabe71b2cecf588b8e8556b7542edf52e320cdc8f87067d46039969",
+    "source_manifest_sha256": "05748464e596ef91e7a803a9e844f88d31a13ce623670a4b3ff2707a818d70c3",
     "control_inventory_sha256": "17684f9f3f6f3cc3b50d77ffdad460fade3787e5ba01df3a53a2f4c0e5306c00",
-    "route_map_sha256": "1183626629f1dcdd8825763f998a42ea7ff29c7795a8e19fd16599478e84b4cf",
-    "authorization_trace_sha256": "64969a77ba3b3f8871007abd13242e4a1d7febc7eabcc7748d710b7009f817b4",
+    "route_map_sha256": "7d3b4e29afeebae4c1226f2d8b14c30126d77ba5be374250abdac89273c645ca",
+    "authorization_trace_sha256": "e813cbf8905c1a39e71991b295cb03550c61cb0cca761a86074de3efc626c2d8",
     "frontend_sha256": "397c3ae069fe281d8150485e1b88e73c7970de8a1ac07841c6790f7fe685da0f"
   },
   "approval_request": [
