@@ -76,12 +76,15 @@ AS source/status record rather than a fourth interchangeable claim ledger.
   Follow-up UI work needs its own owner/PR scope and must preserve generated
   source, control, route, authorization, visual and release evidence.
 - **Autonomous Production program** ([`product/M5_Autonomous_Production_Roadmap.json`](product/M5_Autonomous_Production_Roadmap.json)):
-  AP-001 through AP-004 are `done`. AP-005 is `in_review` on PR #296 after its
-  offline durable mission-task, dependency/join recovery, and populated-store
-  migration implementation passed the full ready-for-review Python/browser
-  matrix. Its metadata-only review transition still requires current-head CI;
-  repository-owner merge remains required. AP-006…AP-032, product runtime
-  activation, destructive resets, and real external services remain unauthorized.
+  AP-001 through AP-005 are `done`. AP-005 PR #296's final head
+  `3c57cb16a51cc0f014a4f4767fa4d437f71c4a2e` merged as
+  `acec9aebe4f86f968c077541392a2bfc3cd71fd7`; its exact-merge main CI passed.
+  The AP-005 docs/ledger closeout PR #298 merged as
+  `69092eda00d7e42de06a3ced3c054e3b7d7f2393`, so AP-006 is now owner-authorized
+  and dependency-ready as the next **single** story; it remains unclaimed and is
+  not implemented by the closeout record. AP-007…AP-032, product runtime
+  activation, destructive resets, and real external services remain
+  unauthorized.
 
 Within the program you are working on, choose exactly one story that is both
 owner-authorized and dependency-ready, respect phase order, and take one story

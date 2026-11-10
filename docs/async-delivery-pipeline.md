@@ -272,17 +272,47 @@ The merge command is executed only after the exact head is green and must name
 the PR explicitly. The handoff never carries credentials, approval tokens, or
 an instruction to bypass branch protections.
 
-## 9. Current AP-005 closeout handoff
+## 9. AP-005 closeout landing record
 
-AP-005 PR #296 merged at `2026-11-10T10:20:13Z` as
-`acec9aebe4f86f968c077541392a2bfc3cd71fd7`. Exact-merge main CI run
+AP-005 implementation PR #296 is merged. Its final PR head was
+`3c57cb16a51cc0f014a4f4767fa4d437f71c4a2e`; substantive implementation snapshot
+`514f65e07ab8961053539c0521c2cf5c912f3115`; merge commit
+`acec9aebe4f86f968c077541392a2bfc3cd71fd7`. Final PR CI
+[`42797113026`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42797113026)
+and push aggregate
+[`42797098242`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42797098242)
+passed on the final head. Exact-merge main CI
 [`42798276827`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42798276827)
-passed the full source, Python 3.11/3.12/3.13 identity, browser, and aggregate
-matrix. The AP ledger on that merge still says `in_review` because completion is
-a separate post-merge record.
+passed the source, Python 3.11/3.12/3.13 identity, browser, and aggregate matrix.
+The AP ledger at that merge still said `in_review`, so this docs/ledger-only PR
+records the completion after merge.
 
-A new closeout session should make only the AP-005 completion/merged-evidence
-updates, run the documentation/ledger gate, and open a small closeout PR. It
-must not mix AP-006 implementation into that change. A separate builder session
-may prepare the next story only after checking explicit owner authority and the
-merged AP-005 dependency under the AP protocol.
+Delivery-process PR #297 then merged as `63f674fb402f0e09dc56b3d3429ddf4cfcdd834c`.
+Its post-merge main run
+[`42800439626`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42800439626)
+passed on that exact main SHA. The final PR head and merge tree were identical
+(`216c9357acc2c045d3860288dea6b21e7a67eafb`).
+
+This closeout preserves the AP-005 acceptance map, schema-v4 additive migration
+and populated-v3 rollback evidence, and the offline/no-activation limitations.
+The owner authorized AP-006 as the next single dependency-ready story after this
+closeout PR merges. Do not mix AP-006 implementation into this PR. AP-007 through
+AP-032, runtime activation, real external actions, and owner/independent/security
+or release approvals remain outside this authorization.
+
+The AP-005 closeout PR #298 was landed by the delegated landing session
+(`arena/25975e0f-m5-agent-studio`) after its exact head
+`84d6d415491862c2fab46e0f5ee94a68056fdc19` passed the current-head
+documentation/ledger and browser-safety gate in run
+[`42802006871`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42802006871).
+It merged at `2026-11-10T10:50:23Z` as `69092eda00d7e42de06a3ced3c054e3b7d7f2393`,
+and the exact-main run
+[`42802513165`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42802513165)
+passed in full. AP-005 is therefore `done` on `main`, AP-006 is authorized as the
+next single story and still unclaimed, and AP-007 through AP-032 remain
+unauthorized.
+
+The AP-005 status record is terminal at this point: this landing record's own
+merge SHA, merge time, and post-merge main run are recorded in its pull-request
+comment, because a commit cannot contain its own merge identity. No further AP-005
+completion PR is required, and that precedent applies to later AP deliveries.
