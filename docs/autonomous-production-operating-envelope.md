@@ -15,9 +15,10 @@ instruction authorized AP-005 as the next single story. AP-005 is now done:
 PR #296 merged as `acec9aebe4f86f968c077541392a2bfc3cd71fd7`, and exact-merge
 main CI run 42798276827 passed. The AP-005 closeout PR #298 then merged as
 `69092eda00d7e42de06a3ced3c054e3b7d7f2393` with a green exact-main run
-(42802513165), so AP-006 is authorized as the next single story and remains
-unclaimed; AP-007 through AP-032 remain unauthorized. This remains separate from
-product runtime activation and real external actions.
+(42802513165). AP-006 is now done too: PR #299 merged as
+`5872cc612cb1cf521cbfbe5a32ef5dbaaed40116` and its exact-main run 42806442354
+passed. No later story is authorized; AP-007 through AP-032 remain unauthorized.
+This remains separate from product runtime activation and real external actions.
 
 AP-002 adds an offline, versioned decision/configuration boundary. It does not
 activate a provider, runtime, lifecycle coordinator, sandbox, browser, account,

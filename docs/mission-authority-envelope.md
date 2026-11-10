@@ -152,9 +152,10 @@ migration tests. AP-005 is now done: PR #296 merged as
 42798276827 green. [Durable mission graphs](durable-mission-graphs.md)
 documents how checkpoint bindings reuse this AP-004 envelope without changing
 its final action-admission ownership. The AP-005 closeout PR #298 merged as
-`69092eda00d7e42de06a3ced3c054e3b7d7f2393` with a green exact-main run, so
-AP-006 is authorized as the next single story and remains unclaimed; AP-007
-through AP-032 and all real external effects remain unauthorized.
+`69092eda00d7e42de06a3ced3c054e3b7d7f2393` with a green exact-main run. AP-006
+then landed as PR #299, merge `5872cc612cb1cf521cbfbe5a32ef5dbaaed40116`, with
+its exact-main run green. No later story is authorized: AP-007 through AP-032 and
+all real external effects remain unauthorized.
 
 ### Acceptance mapping
 
