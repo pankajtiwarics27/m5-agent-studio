@@ -36,7 +36,7 @@ SQLite schema v4 adds six normalized tables:
 | `runtime_mission_dependencies` | Directed prerequisite edges and the prerequisite outputs needed by each edge. |
 | `runtime_mission_outputs` | Insert-only output key/reference/SHA-256/evidence identity and producing worker epoch; never artifact bytes. |
 | `runtime_mission_checkpoint_bindings` | Plan/input/policy/budget identity plus server-derived task state version and checkpoint/resumed epochs. |
-| `runtime_mission_joins` | Hash-addressed snapshots of explicit `pending`, `partial`, `failed`, or `succeeded` parent join reports. |
+| `runtime_mission_joins` | Hash-addressed snapshots of explicit `pending`, `partial`, `failed`, or `succeeded` parent join reports. AP-007 stores its `mission_recovery` reports in the same table. |
 
 All mission rows use foreign keys into the v3 execution spine. Plan versions are
 contiguous and immutable. Creating a successor marks the prior active version
@@ -125,6 +125,11 @@ missing output with no completed nodes is `failed`; untouched/in-flight work is
 `pending`. Root `complete_task` computes the report again inside its final
 transaction and cannot succeed on a partial, failed, pending, or missing-output
 join.
+
+AP-007 adds a mission-scoped stop, bounded limits and a recovery report on top of
+these plans without changing the schema. A stopped plan is `cancelled` or `failed`,
+and no new plan is accepted on its root task until the stop is settled. See
+[Bounded mission execution](bounded-mission-execution.md).
 
 ## Migration, privacy, and rollback
 

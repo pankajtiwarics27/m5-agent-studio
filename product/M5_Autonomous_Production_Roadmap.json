@@ -5,15 +5,15 @@
   "program": "AP",
   "revision": "1.2",
   "prepared_date": "2026-11-08",
-  "lifecycle": "registered_tracking_ap005_ap006_landed_ap007_unauthorized",
+  "lifecycle": "registered_tracking_ap006_landed_ap007_offline_subset_in_review",
   "source_snapshot": "a67e8b291614f8afdac7c8d38ba51bcc8926d695",
   "source_repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "specification": "docs/autonomous-production-roadmap.md",
   "agent_prompt": "M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md",
   "authority": {
     "precedence": "AGENTS.md, existing security/approval rules and owning program ledgers remain binding.",
-    "scope": "AP-001 through AP-006 are delivered. AP-006 landed through PR #299 (merge 5872cc612cb1cf521cbfbe5a32ef5dbaaed40116) and its exact-main CI passed. No further story is authorized: AP-007 through AP-032, product runtime activation and real external actions remain unauthorized, and a new story needs its own explicit owner authorization, dependency evidence and fixed branch/PR before any work starts.",
-    "registration_gate": "AP-001 records the tracking source and claim protocol; its merge did not authorize downstream work. AP-002/AP-003, AP-004, AP-005 and AP-006 were separately authorized and delivered; AP-006 landed through PR #299. The program is now idle: no story is authorized beyond AP-006, and AP-007 or any later story requires its own explicit owner authorization plus dependency and authority gates.",
+    "scope": "AP-001 through AP-006 are delivered. AP-006 landed through PR #299 (merge 5872cc612cb1cf521cbfbe5a32ef5dbaaed40116) and its exact-main CI passed. AP-007 is in review on PR #303 for its safe fail-closed offline subset only, under the scoped owner instruction quoted in stories[AP-007].tracking.authorization_record. That instruction is not a full AP-007 authorization and does not resolve U06. The remainder of AP-007 (execution on a qualified backend, installed-runtime qualification and any activation), AP-008 through AP-032, product runtime activation and real external actions remain unauthorized, and a new story needs its own explicit owner authorization, dependency evidence and fixed branch/PR before any work starts.",
+    "registration_gate": "AP-001 records the tracking source and claim protocol; its merge did not authorize downstream work. AP-002/AP-003, AP-004, AP-005 and AP-006 were separately authorized and delivered; AP-006 landed through PR #299. AP-007's fail-closed offline subset was then claimed on PR #303 on two recorded owner instructions: “No new session is required, continue with next story.” (issue #301) and the Relay selection rule for “a safe fail-closed subset of a blocked story”. A reviewer or the owner judges that basis from the story's authorization_record; this ledger does not present it as a full AP-007 authorization. Nothing is authorized beyond that subset: the remainder of AP-007 stays blocked by U06, and AP-008 or any later story requires its own explicit owner authorization plus dependency and authority gates.",
     "other_ledgers": "Do not alter AS/M5/UIUX/UIV2/LC tracking without the owning protocol.",
     "approval": "Agents cannot fabricate owner, screenshot, independent security or release approval."
   },
@@ -989,7 +989,7 @@
       "title": "Implement bounded execution, cancellation and truthful recovery",
       "priority": "P0",
       "optional": false,
-      "status": "in_progress",
+      "status": "in_review",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-004",
@@ -1047,11 +1047,11 @@
         "owner": "arena/cbf9f2b0-m5-agent-studio",
         "branch": "arena/cbf9f2b0-m5-agent-studio",
         "base_sha": "bc406fd0d967ec79386e7d5aa718ef217d5c0d08",
-        "head_sha": null,
+        "head_sha": "de73e9ef825c8083dea0fef331e7ed83b9942ea4",
         "claimed_at": "2026-11-10T11:36:00Z",
-        "heartbeat_at": "2026-11-10T11:36:00Z",
-        "pr_url": null,
-        "delivery_status": "not_pushed",
+        "heartbeat_at": "2026-11-10T14:10:00Z",
+        "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/303",
+        "delivery_status": "pr_open",
         "authorization_record": {
           "authorization": "Scoped owner instruction for a safe fail-closed offline subset only. It is not a resolution of U06 and not an authorization of installed, qualified-backend or live execution.",
           "owner_instructions": [
@@ -1061,16 +1061,29 @@
           "selection_evidence": "Selection order checked in full before this claim. (1) No explicitly authorized, dependency-ready, unclaimed story: main at bc406fd records AP-007 through AP-032 as unauthorized and AP-007 as blocked by U06. (2) Nothing to stack: predecessor PR #299 (AP-006) is already merged as 5872cc612cb1cf521cbfbe5a32ef5dbaaed40116 and its completion record PR #302 merged as bc406fd0d967ec79386e7d5aa718ef217d5c0d08. (3) No independent explicitly authorized engineering item: tested-tree CI reuse still needs design review and a named CI owner (PR #297, docs/verification-critical-path-plan.md), and the remaining follow-up documents describe finished or unaccepted work. (4) AP-007 is the blocked story whose decision register lists safe work, so its fail-closed offline subset is the selected item.",
           "blocker_state_from_issue_301": "Issue #301 named three blockers. The unmerged AP-006 dependency is cleared (AP-004, AP-005 and AP-006 are done on main). Story isolation is cleared (this is a separate session, fixed branch and pull request carrying only AP-007). The open owner decision U06 is NOT cleared and stays pending.",
           "scope_limit": "Only the U06 safe work recorded in product/M5_Autonomous_Production_Operating_Envelope.json: “Audit call paths and implement offline refusal, cancellation and uncertain-effect tests.”, “Coordinate with the owning runtime/LC program while preserving legacy defaults.” and “Keep activation false and record installed qualification as not run or blocked.” The U06 blocked actions stay blocked: no dormant native lifecycle, sandbox, browser, media or guest-desktop backend is activated; no installed isolation, physical load/unload or machine-wide exclusivity is claimed; and no path falls back to host execution when isolation or lifecycle qualification is absent, stale or blocked.",
-          "ledger_caveat": "The AP-006 completion record on main (PR #302) states that no story beyond AP-006 is authorized. That was accurate for the landing session that wrote it and grants or removes no authority. This claim does not treat AP-007 as fully authorized: it records the two owner instructions above verbatim, limits the work to the fail-closed subset, and leaves program_registration.runtime_activation_authorized false and blocked_by_decisions [U06] unchanged. The lifecycle, authority and authorization_history regions are reconciled in the final candidate of this same pull request rather than by this ledger-only claim."
+          "ledger_caveat": "The AP-006 completion record on main (PR #302) stated that no story beyond AP-006 was authorized. That was accurate for the landing session that wrote it. This candidate reconciles the lifecycle, authority.scope, authority.registration_gate, program_registration.activation_scope and authorization_history regions, plus the matching sentences in AGENTS.md and four AP documents, to say exactly this: AP-007's safe fail-closed offline subset is in review under a scoped owner instruction; it is not a full authorization; U06 is pending; AP-007 is not added to authorized_downstream_stories; runtime_activation_authorized stays false."
         },
-        "acceptance_evidence": [],
-        "tests_executed": [],
-        "blockers": [
-          "U06 (current lifecycle/sandbox qualification and activation) remains pending. Execution on a qualified backend, installed-runtime qualification and any activation are out of scope and stay blocked; this story delivers offline fail-closed behaviour and tests only.",
-          "No browser, provider, model, account, network destination, media service, guest desktop, background worker, credential or billable action is activated. Owned-work termination is exercised only against local fixture subprocesses that the tests themselves start, as the existing process-supervision tests already do.",
-          "AP-008 through AP-032, product runtime activation and real external actions remain unauthorized; this story resolves none of U01-U06 and claims no owner, independent-security, screenshot, media, signing or release approval."
+        "acceptance_evidence": [
+          "AC1 cancellation stops dispatch and terminates owned work with measured cleanup latency: workflow_state.DurableTaskStateMachine.halt_mission stops one plan version in one transaction (every owned unfinished task, including delegated descendants: lease fenced, in-flight consequential actions uncertain, budget cancel flag set, task cancelled), fences the halted leases at the process layer and, with a ProcessSupervisor, terminates the registered processes and records dispatch_fenced_ms, cleanup_latency_ms and slowest_process_ms from the stop request. Tests in tests/test_durable_task_state_machine.py: test_ap007_cancellation_stops_dispatch_and_terminates_owned_work_with_measured_latency, test_ap007_cleanup_latency_is_measured_from_the_stop_request, test_ap007_halt_reaches_delegated_descendants_and_their_processes, test_ap007_containment_retry_never_upgrades_a_lingering_stop_without_evidence, test_ap007_lingering_count_without_identities_is_carried_forward, test_ap007_containment_failure_is_reported_and_the_durable_stop_stands, test_ap007_halt_rejects_unknown_plans_wrong_identity_and_finished_versions; tests/test_process_supervision.py::test_still_running_reports_only_the_same_live_process. Terminated processes are local fixture subprocesses started by the tests.",
+          "AC2 late outputs are fenced and unresolved effects stay uncertain until reconciled: side_effect_ledger.DurableActionLedger.complete and record_exception leave an uncertain action unchanged; execution_spine.DurableActionBoundary returns ok false, uncertain true, error_code late_result_fenced; only resolve_uncertain_action resolves; create_mission_plan raises MissionHaltUnsettled until every uncertain action is reconciled and a supervised stop is clean. Tests: test_ap007_late_results_are_fenced_and_unresolved_effects_stay_uncertain, test_ap007_stopped_plan_must_be_settled_before_new_work_is_planned, test_ap007_halted_plan_is_not_revived_by_recovery_or_resume (state machine); test_ap007_late_result_cannot_settle_an_action_already_declared_uncertain, test_ap007_boundary_reports_a_fenced_late_result_as_uncertain_not_success (tests/test_durable_intent_ledger.py).",
+          "AC3 no-progress, repeated repair, deadline and memory/storage exhaustion stop boundedly: optional max_no_progress, max_repair_attempts, deadline_at, max_memory_bytes and max_storage_bytes in the existing budget document, plus measurement_unavailable for a declared ceiling that cannot be read; the stop reason is committed before BoundedStopRequired is raised; counters and peaks stop on strictly greater than the limit and the deadline at the deadline. Tests: test_ap007_declared_limits_stop_the_mission_boundedly, test_ap007_deadline_stops_claims_dispatch_and_resume_without_any_observation, test_ap007_one_task_at_its_limit_stops_the_plan_with_task_scope, test_ap007_unmeasurable_ceiling_stops_until_a_real_reading_arrives, test_ap007_stale_or_fenced_workers_cannot_record_observations, test_ap007_control_operations_keep_bounded_counters (state machine); the 25 AP-007 cases in tests/test_execution_budget.py, including unchanged stored documents and identity digests for budgets that declare no new limit.",
+          "AC4 runtime isolation absence blocks dependent execution rather than switching to the host shell: a budget can declare isolation_required; claims and resumes raise MissionIsolationRejected and every dispatch charge raises IsolationUnavailable anywhere in the task chain unless IsolationEvidence proves sandbox mode, literal admission, a literally qualified backend and a backend id. The app tool boundary answers isolation_unavailable, debits no tool call and writes no file. No production caller presents isolation evidence, so such a mission is always refused in this build; the accepting path runs only with a test fixture. Tests: test_ap007_missing_isolation_blocks_dependent_execution_without_host_fallback, test_ap007_cancellation_and_isolation_bind_the_whole_task_chain (state machine); test_ap007_isolation_needs_literal_proof_and_has_no_host_fallback (budget); tests/test_mission_authority_envelope.py::test_ap007_required_isolation_and_bounded_stops_deny_dispatch_at_the_tool_boundary. Not shown: execution on a qualified backend (blocked by U06).",
+          "AC5 the user receives retained partial artifacts and an actionable limitation instead of false success: mission_recovery_report lists retained outputs per task with their artifact verdict, unresolved action ids and one next action per limitation; claims_success is true only when the outcome is succeeded and no limitation remains; reports are stored as hash-addressed rows in runtime_mission_joins. Tests: test_ap007_recovery_report_claims_success_only_for_checked_complete_artifacts, test_ap007_report_names_a_required_stop_that_nobody_carried_out, and the report assertions in the cancellation and bounded-stop cases. No user interface or route surfaces the report; that is later owner-authorized work."
         ],
-        "handoff": null,
+        "tests_executed": [
+          "At implementation commit de73e9ef825c8083dea0fef331e7ed83b9942ea4 (author-run, Linux, Python 3.11, no container runtime): 55 AP-007 test cases in five existing modules (state machine 26, execution budget 25, intent ledger 2, process supervision 1, mission authority envelope 1).",
+          "Owning-module regression at de73e9ef825c8083dea0fef331e7ed83b9942ea4: 174 passed across tests/test_durable_task_state_machine.py, test_execution_budget.py, test_durable_intent_ledger.py, test_process_supervision.py, test_mission_authority_envelope.py, test_side_effect_ledger.py, test_worker_leases_and_fencing.py, test_child_delegation.py, test_execution_spine.py, test_runtime_persistence.py, test_workflow_checkpoints.py and test_sandbox_boundary.py.",
+          "Generated-artifact suites at de73e9ef825c8083dea0fef331e7ed83b9942ea4: 223 passed across tests/test_pipeline_workspace.py, test_runtime_dispatch_boundary.py, test_start_recent.py, test_uiux_authorization_trace.py, test_uiux_docs_verification.py, test_uiux_release_gate.py and test_uiux_route_map.py.",
+          "UIV2-29 backend gate regenerated at de73e9ef825c8083dea0fef331e7ed83b9942ea4: 305 tests passed across its 13 owning modules and 16 isolation checks passed; isolation is reported unqualified and blocked, as before.",
+          "Static and generator gates at de73e9ef825c8083dea0fef331e7ed83b9942ea4: ruff check . clean; mypy clean across the 78 configured modules; scripts/build_studio.py rebuilt studio.py; every source-bound generator --check passes, including scripts/uiux_release_gate.py --check (37/37 artifact checks, 7/7 phase gates) and scripts/uiux_screenshot_review.py --check.",
+          "Rollback measurement (one-off, not a repository test): the base commit's execution_budget.py (bc406fd0d967ec79386e7d5aa718ef217d5c0d08) accepts a document written with the new limits, ignores the new keys and drops them on its next write; the budget identity then differs. Recorded as a rollback hazard in docs/bounded-mission-execution.md."
+        ],
+        "blockers": [
+          "U06 (current lifecycle/sandbox qualification and activation) remains pending. Not delivered and still blocked: execution on a qualified isolation backend, installed-runtime qualification, and any activation or production caller of the AP-007 functions. The accepting isolation path is exercised only with a test fixture.",
+          "No browser, provider, model, account, network destination, media service, guest desktop, background worker, credential or billable action is activated. Owned-work termination is exercised only against local fixture subprocesses that the tests themselves start.",
+          "AP-008 through AP-032, product runtime activation and real external actions remain unauthorized; this story resolves none of U01-U06 and claims no owner, independent-security, screenshot, media, signing or release approval. ADR-0041 is review_status not-reviewed."
+        ],
+        "handoff": "AP-007 offline fail-closed subset is in review on PR #303. Implementation commit de73e9ef825c8083dea0fef331e7ed83b9942ea4 adds the mission-scoped stop (halt_mission), the late-result fence, the bounded limits, the isolation requirement and the recovery report; docs/bounded-mission-execution.md and ADR-0041 describe them. Nothing is activated and no production caller exists. U06 stays pending, so after merge the story should be recorded as blocked on U06 for its remainder unless the owner decides the offline subset completes it; that decision and all merge identities belong to the closeout, not to this candidate. Reviewer attention: the authorization basis in authorization_record, the HTTP 400 for the six new budget keys, the rollback hazard and the planning gate after an unsupervised stop.",
         "blast_radius": {
           "objective_and_gap": "Make mission work stop, resume and report failure honestly. Reading the current code shows the pieces exist per task or per process but are not joined at mission scope. workflow_state.cancel_task already fences root and direct-child epochs and turns in-flight consequential actions uncertain, and claim_ready_mission_task already refuses a cancelled or exhausted root; process_supervision already measures bounded terminate/kill/reap per supervised record; complete_mission_task already refuses a stale epoch and unresolved consequential actions; recovery_guard already bounds retries and detects stagnation per task; sandbox_boundary already refuses unqualified backends. Missing: one mission-scoped cancellation that stops dispatch, contains every owned supervised process of the mission and reports a single measured cleanup latency with durable evidence; memory and storage exhaustion limits (execution_budget has none), plus no-progress, repair-attempt and wall-clock deadline limits bound to AP-005 mission tasks and stopped boundedly with the reason committed before the refusal; a mission-level isolation gate that refuses dependent work instead of ever using the host; and a truthful recovery report that names retained partial artifacts, uncertain effects needing reconciliation and an actionable limitation instead of success.",
           "options": "(a) A new mission supervisor, scheduler loop or second state store — rejected: competing control plane beside workflow_state, execution_budget and process_supervision (roadmap section 3 forbids it). (b) Extend the existing owners additively: optional bounded-stop limits and counters inside runtime_tasks.budget_json through execution_budget, mission-scoped cancel/stop/report methods on workflow_state.DurableTaskStateMachine, and reuse of ProcessSupervisor containment and its measured TerminationOutcome — chosen as the smallest complete slice. (c) Declare AP-007 satisfied by M5-P3-03/M5-P2-05/M5-P1-05 — rejected: docs/autonomous-production-ap001-reconciliation.md and issue #301 record these exact mission-wide gaps. (d) Wait for U06 — rejected for the fail-closed subset: the decision register lists refusal, cancellation and uncertain-effect tests as safe work that assumes no outcome.",
@@ -1079,7 +1092,57 @@
           "authority_and_resources": "No credential, provider or model inference, network egress, browser worker, account, billable action, background process or new filesystem grant. Mission cancellation needs the typed server-created AP-004 MissionAuthorityEnvelope, never request JSON or model arguments. Memory and storage readings are supplied by the caller or measured read-only on already-owned processes and confined paths; an unavailable reading for a declared limit stops the work rather than assuming headroom. Isolation that is absent, unqualified, stale or under incident refuses dependent execution and never selects the host shell.",
           "compatibility_and_rollback": "Existing budget documents parse unchanged and keep their identity digest; a task without the new limits behaves exactly as before. Rollback is a source revert: an older binary ignores unknown optional keys only if none were written, so the candidate must prove with a test what an older reader does with a document that carries the new keys, and document that outcome instead of assuming it. No data is deleted, no destructive reset is used, and cancel/stop transitions append history rather than rewrite it.",
           "required_evidence": "Positive and negative tests for mission cancellation (dispatch refused afterwards, owned fixture subprocesses terminated, one measured cleanup latency recorded); stale and race tests (late completion, late checkpoint and late spawn after cancel are fenced; a second cancel is idempotent); uncertain consequential effects stay uncertain and block completion until reconciled; bounded stops for no-progress, repeated repair, deadline, memory and storage including the unavailable-measurement case and restart persistence of the committed stop reason; isolation-absent refusal with proof that no host execution path ran; truthful report tests proving a stopped mission never reads as succeeded and lists retained partial artifacts with a limitation; budget-identity compatibility for existing documents; existing budget, mission, supervision, side-effect, sandbox, recovery-guard and artifact-lineage regressions; static checks and generated-artifact drift."
-        }
+        },
+        "scope_deviations": [
+          "Stop evidence location: blast_radius.contracts_and_data said cancellation and bounded-stop evidence goes to runtime_task_transitions evidence_json. Per-task transitions do record the mission, plan version, stop kind, stop code and unresolved action ids, but the measured stop record (latency, survivors, fences) is stored in mission_recovery report rows in the existing runtime_mission_joins table. No table, column, store file or schema version was added.",
+          "Files: execution_spine.py (late_result_fenced at the action boundary) and app.py (isolation_unavailable denial; HTTP 400 for the six new budget keys) were changed although the pre-edit list did not name them. sandbox_boundary.py, recovery_guard.py and artifact_lineage.py were anticipated and not changed.",
+          "HTTP behaviour: no route was added or removed, but /api/harness/run and /api/harness/gsd-wave now answer 400 when the budget object names max_no_progress, max_repair_attempts, deadline_at, max_memory_bytes, max_storage_bytes or isolation_required. The parser ignored unknown keys before, so a client sending one of these names was accepted and is now refused. No caller in this repository sends them.",
+          "Tests: no dedicated AP-007 test module was added. The 55 cases live in five existing modules, so the CI shard map and test scope map are unchanged.",
+          "Older-reader proof: blast_radius.compatibility_and_rollback said a test must prove what an older reader does with the new keys. A repository test cannot import the previous release's reader, so the outcome was measured once against the base commit's module and documented as a rollback hazard instead.",
+          "Reuse: recovery_guard was not reused for no-progress and repair limits, because its task identifiers cannot hold mission task ids; the counters live in the budget document. cancel_task keeps its one-level cascade; a whole-task cancel with an active mission is cancel_task(root) followed by halt_mission."
+        ],
+        "changed_files": [
+          "AGENTS.md",
+          "app.py",
+          "docs/adr/0041-mission-halt-bounded-stops-and-recovery-reports.md",
+          "docs/async-delivery-pipeline.md",
+          "docs/autonomous-production-ap001-reconciliation.md",
+          "docs/autonomous-production-evaluation-briefs.md",
+          "docs/autonomous-production-operating-envelope.md",
+          "docs/bounded-mission-execution.md",
+          "docs/durable-mission-graphs.md",
+          "docs/mission-authority-envelope.md",
+          "docs/runtime-dispatch-entry-points.md",
+          "docs/subsystem-dependency-inventory.md",
+          "docs/uiux-2-0-authorization-trace.md",
+          "docs/uiux-2-0-p0-signoff.md",
+          "docs/uiux-2-0-recent-work.md",
+          "docs/uiux-2-0-route-map.md",
+          "docs/uiv2-v2-performance-safety.md",
+          "docs/uiv2-v2-release-review.md",
+          "execution_budget.py",
+          "execution_spine.py",
+          "process_supervision.py",
+          "product/M5_2_0_UIUX_Authorization_Trace.json",
+          "product/M5_2_0_UIUX_Pipeline_Workspace.json",
+          "product/M5_2_0_UIUX_Preservation_Signoff.json",
+          "product/M5_2_0_UIUX_Recent_Work.json",
+          "product/M5_2_0_UIUX_Route_Map.json",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "product/M5_2_0_UIUX_V2_Backend_Safety_Run.json",
+          "product/M5_2_0_UIUX_V2_Performance_Safety.json",
+          "product/M5_2_0_UIUX_V2_Preservation_Matrix.json",
+          "product/M5_2_0_UIUX_V2_Release_Review.json",
+          "product/M5_Autonomous_Production_Roadmap.json",
+          "side_effect_ledger.py",
+          "studio.py",
+          "tests/test_durable_intent_ledger.py",
+          "tests/test_durable_task_state_machine.py",
+          "tests/test_execution_budget.py",
+          "tests/test_mission_authority_envelope.py",
+          "tests/test_process_supervision.py",
+          "workflow_state.py"
+        ]
       },
       "implementation_prompt": "Implement AP-007: Implement bounded execution, cancellation and truthful recovery. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
@@ -3058,7 +3121,7 @@
     "reconciliation_evidence": "docs/autonomous-production-ap001-reconciliation.md",
     "registered_by_story": "AP-001",
     "owner_authorized_date": "2026-11-10",
-    "activation_scope": "AP-001 through AP-006 are delivered. AP-006 merged as 5872cc612cb1cf521cbfbe5a32ef5dbaaed40116 and its exact-main CI passed; this completion record claims no new authority. AP-007 through AP-032, product runtime activation and real external actions remain unauthorized, and no later story may start without its own explicit owner authorization.",
+    "activation_scope": "AP-001 through AP-006 are delivered. AP-006 merged as 5872cc612cb1cf521cbfbe5a32ef5dbaaed40116 and its exact-main CI passed. AP-007 is in review on PR #303 for its safe fail-closed offline subset only, under the scoped owner instruction quoted in stories[AP-007].tracking.authorization_record. That instruction is not a full AP-007 authorization and does not resolve U06. It activates nothing: no route, scheduler, provider, model, network, browser, account or background worker calls the AP-007 functions. The remainder of AP-007, AP-008 through AP-032, product runtime activation and real external actions remain unauthorized, and no later story may start without its own explicit owner authorization.",
     "runtime_activation_authorized": false,
     "authorized_downstream_stories": [
       "AP-002",
@@ -3116,6 +3179,15 @@
         "mode": "single_story_after_AP-005_closeout",
         "scope": "After the AP-005 closeout PR merges, AP-006 may proceed on a separate fixed Arena branch/PR for artifact identity, provenance and selective invalidation only. No AP-007 through AP-032 work, product runtime activation, or external action is authorized.",
         "source": "Owner instruction in the closeout request: “While you can start new story.” Recorded as authorization for AP-006 to be the next single dependency-ready story after AP-005 closeout."
+      },
+      {
+        "authorized_at": null,
+        "stories": [
+          "AP-007"
+        ],
+        "mode": "safe_fail_closed_offline_subset_of_a_blocked_story",
+        "scope": "Offline refusal, cancellation, bounded-stop, uncertain-effect and truthful-report behaviour with activation kept false: the U06 safe work in product/M5_Autonomous_Production_Operating_Envelope.json. Not a full AP-007 authorization. U06 stays pending; execution on a qualified backend, installed-runtime qualification, any activation and AP-008 through AP-032 are not authorized. AP-007 is deliberately not added to authorized_downstream_stories.",
+        "source": "Owner instruction to the AP-006 builder, recorded verbatim in issue #301: “No new session is required, continue with next story.” Applied through the Autonomous Relay selection order item 4: “A safe fail-closed subset of a blocked story, but only when it does not assume the unresolved decision's outcome or activate anything.” No timestamp is recorded for the instruction, so authorized_at is null."
       }
     ]
   }
