@@ -12,16 +12,16 @@ PNG captures remain local review evidence; the committed browser record carries 
 
 **21/21 checks passed; 11 captures; 0 failures.**
 
-Environment: `linux` / `x64`, 4 CPUs, Node `v22.22.3`, `Python 3.11.18`, `HeadlessChrome/153.0.8010.0` headless Chromium.
+Environment: `linux` / `x64`, 2 CPUs, Node `v22.22.3`, `Python 3.11.2`, `HeadlessChrome/153.0.8010.0` headless Chromium.
 
 | Metric | Actual | Gate |
 | --- | ---: | ---: |
-| Fast real SSE schedules | 58 in 328.6ms (176.5/s) | ≥20 and ≥50/s |
+| Fast real SSE schedules | 58 in 334.9ms (173.2/s) | ≥20 and ≥50/s |
 | Coalesced chat renders | 18 | fewer than 58 schedules, complete text retained |
-| Full-window ten-event frame | mean 1.78ms; nearest-rank p95 2.10ms; max 2.80ms | mean ≤4ms |
+| Full-window ten-event frame | mean 1.83ms; nearest-rank p95 2.40ms; max 2.60ms | mean ≤4ms |
 | Events / cache / cards | 30,000 / 5,000 / 300 | 5,000 / 300 ceilings |
 | Post-GC document nodes | 8544 → 8544 → 8544 | repeated-cycle growth ≤64 |
-| Post-GC JS heap | 3.24 MiB → 3.19 MiB → 3.21 MiB | cycle growth ≤8 MiB; baseline growth ≤16 MiB |
+| Post-GC JS heap | 3.24 MiB → 3.20 MiB → 3.20 MiB | cycle growth ≤8 MiB; baseline growth ≤16 MiB |
 
 Memory readings use CDP `Performance.getMetrics` immediately after `HeapProfiler.collectGarbage`. They are repeated-cycle plateau checks, not a claim that a browser never allocates during a frame.
 
@@ -31,9 +31,9 @@ Streaming intentionally moves cards inside the trajectory scroller. The gate rep
 
 | Viewport | Theme | Total shift | Internal stream | External shell | Geometry delta | Overflow |
 | --- | --- | ---: | ---: | ---: | ---: | ---: |
-| 1640x900 | light | 0.18835 | 0.18835 | 0.00000 | 0.00px | 0px |
+| 1640x900 | light | 0.18827 | 0.18827 | 0.00000 | 0.00px | 0px |
 | 1640x900 | dark | 0.29613 | 0.29613 | 0.00000 | 0.00px | 0px |
-| 1440x900 | light | 0.23046 | 0.23046 | 0.00000 | 0.00px | 0px |
+| 1440x900 | light | 0.26887 | 0.26887 | 0.00000 | 0.00px | 0px |
 | 1440x900 | dark | 0.38410 | 0.38410 | 0.00000 | 0.00px | 0px |
 | 1280x800 | light | 0.23537 | 0.23537 | 0.00000 | 0.00px | 0px |
 | 1280x800 | dark | 0.39229 | 0.39229 | 0.00000 | 0.00px | 0px |

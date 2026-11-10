@@ -6,7 +6,7 @@
   "source_sha256": {
     "static/index.html": "397c3ae069fe281d8150485e1b88e73c7970de8a1ac07841c6790f7fe685da0f",
     "scripts/uiv2_performance_safety_walk.mjs": "db65e34744d881132250aba25da39f6d239adcf43c407ac4ebaf85f840070643",
-    ".github/workflows/ci.yml": "68bf1ee1a2b945d61d8d7a4f013caf5c4e24ef50c6a24993cbfe82fd89234375"
+    ".github/workflows/ci.yml": "4fe495feed12f9a88c94ec4fcb5442cc83239e698d73044d685f4deac50123f3"
   },
   "thresholds": {
     "render_window": 300,
@@ -97,11 +97,11 @@
       "node": "v22.22.3",
       "platform": "linux",
       "arch": "x64",
-      "cpu_count": 4,
-      "cpu_model": "AMD EPYC 7763 64-Core Processor",
+      "cpu_count": 2,
+      "cpu_model": "Intel(R) Xeon(R) Processor @ 2.60GHz",
       "chrome_version": "HeadlessChrome/153.0.8010.0",
       "chrome_headless": true,
-      "python": "Python 3.11.18",
+      "python": "Python 3.11.2",
       "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36",
       "fixture": "council_readiness_seed.py; real loopback app and SSE provider",
       "memory_method": "CDP Performance.getMetrics after HeapProfiler.collectGarbage",
@@ -116,11 +116,11 @@
         },
         "fast": {
           "model": "Gemma-4-21B-REAP-4bit",
-          "elapsed_ms": 328.59999999999127,
+          "elapsed_ms": 334.89999999990687,
           "renders": 18,
           "schedules": 58,
           "model_tokens": 58,
-          "sse_per_second": 176.506,
+          "sse_per_second": 173.186,
           "complete_chars": 330
         }
       },
@@ -130,7 +130,7 @@
             "Nodes": 8544,
             "Documents": 2,
             "JSEventListeners": 336,
-            "JSHeapUsedSize": 3400048,
+            "JSHeapUsedSize": 3399592,
             "JSHeapTotalSize": 3932160,
             "LayoutCount": 1,
             "RecalcStyleCount": 3
@@ -139,8 +139,8 @@
             "Nodes": 8544,
             "Documents": 2,
             "JSEventListeners": 336,
-            "JSHeapUsedSize": 3347212,
-            "JSHeapTotalSize": 3641344,
+            "JSHeapUsedSize": 3356304,
+            "JSHeapTotalSize": 3903488,
             "LayoutCount": 123,
             "RecalcStyleCount": 245
           },
@@ -148,13 +148,13 @@
             "Nodes": 8544,
             "Documents": 2,
             "JSEventListeners": 336,
-            "JSHeapUsedSize": 3367188,
+            "JSHeapUsedSize": 3359700,
             "JSHeapTotalSize": 3903488,
             "LayoutCount": 245,
             "RecalcStyleCount": 487
           },
           "cycle_1": {
-            "elapsed_ms": 3983.7999999999884,
+            "elapsed_ms": 3976.600000000093,
             "cursor": 18000,
             "cached": 5000,
             "cards": 300,
@@ -162,7 +162,7 @@
             "last": 18000
           },
           "cycle_2": {
-            "elapsed_ms": 3978,
+            "elapsed_ms": 3969.899999999907,
             "cursor": 30000,
             "cached": 5000,
             "cards": 300,
@@ -173,9 +173,9 @@
         },
         "steady": {
           "calls": 20,
-          "mean_ms": 1.7750000000007276,
-          "p95_ms": 2.1000000000058208,
-          "max_ms": 2.8000000000029104,
+          "mean_ms": 1.8300000000512227,
+          "p95_ms": 2.400000000372529,
+          "max_ms": 2.6000000000931323,
           "cards": 300
         }
       },
@@ -183,8 +183,8 @@
         {
           "viewport": "1640x900",
           "theme": "light",
-          "cls_total": 0.18835,
-          "cls_internal_stream": 0.18835,
+          "cls_total": 0.18827,
+          "cls_internal_stream": 0.18827,
           "cls_external_shell": 0,
           "shifts": 6,
           "overflow": 0,
@@ -207,10 +207,10 @@
         {
           "viewport": "1440x900",
           "theme": "light",
-          "cls_total": 0.23046,
-          "cls_internal_stream": 0.23046,
+          "cls_total": 0.26887,
+          "cls_internal_stream": 0.26887,
           "cls_external_shell": 0,
-          "shifts": 6,
+          "shifts": 7,
           "overflow": 0,
           "max_geometry_delta": 0,
           "cards": 300,
@@ -320,7 +320,7 @@
         "  [PASS] no new privileges — --security-opt=no-new-privileges",
         "  [PASS] no implicit image pull — --pull=never",
         "  [PASS] resource limits — --pids-limit=128 --memory=2g --cpus=2",
-        "  [PASS] single workspace bind mount — type=bind,source=/tmp/m5-isolation-smoke-_xekl0ks,target=/workspace",
+        "  [PASS] single workspace bind mount — type=bind,source=/tmp/m5-evidence-browser/tmp/m5-isolation-smoke-zxbn7sd4,target=/workspace",
         "",
         "== 3. Skill-code execution gates (app._run_skill_script) ==",
         "  [PASS] default-off skill-code denial — PermissionError",
