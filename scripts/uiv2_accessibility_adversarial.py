@@ -87,7 +87,7 @@ REQUIRED_WORKFLOW = {
     "ci-keyboard": "node scripts/a11y_walk.mjs",
     "ci-responsive": "node scripts/responsive_walk.mjs",
     "ci-adversarial": "node scripts/uiv2_accessibility_adversarial_walk.mjs",
-    "ci-browser-job": "name: Browser safety regressions",
+    "ci-browser-job": "'Browser safety regressions'",
     "ci-required-browser": "M5_REQUIRE_BROWSER_TESTS=1",
 }
 
