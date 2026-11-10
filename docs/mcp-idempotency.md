@@ -59,8 +59,9 @@ and idempotency metadata without mutating undeclared business fields:
 
 `McpExternalEffectStore` persists connector policies and secret-redacted external-effect
 records in `$HARNESS_STORE_DIR/mcp_effects/state.json` (mode `0o600`, temp-file write +
-`os.fsync(fd)` + atomic `os.replace` + directory `os.fsync(dir_fd)`), keeping SQLite at
-`SCHEMA_VERSION = 3`:
+`os.fsync(fd)` + atomic `os.replace` + directory `os.fsync(dir_fd)`). This kept the
+application SQLite schema at v3 when introduced; AP-005 later adds unrelated
+application schema v4 mission-graph tables without moving MCP effect records into SQLite:
 
 - **Redaction of the record:** argument names are matched after folding to
   `snake_case` and splitting camelCase, so `Authorization`, `X-Api-Key`,

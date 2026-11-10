@@ -145,11 +145,13 @@ playable-media acceptance and claims no independent-security, signing, or
 release approval; existing program-wide gates remain binding.
 
 After the merge and same-SHA post-merge CI were green, the owner instructed
-“Continue.” That authorizes AP-005 as the next **single** story for offline
+“Continue.” That authorized AP-005 as the next **single** story for offline
 durable mission-task composition, dependency/join recovery, and populated-store
-migration tests. AP-005 remains `not_started` and unclaimed until this completion
-record merges and a separate fixed Arena branch/draft PR establishes its remote
-claim. AP-006 through AP-032 and all real external effects remain unauthorized.
+migration tests. AP-005 is now separately claimed and implemented for review on
+its fixed branch; [durable mission graphs](durable-mission-graphs.md) documents
+how checkpoint bindings reuse this AP-004 envelope without changing its final
+action-admission ownership. AP-006 through AP-032 and all real external effects
+remain unauthorized.
 
 ### Acceptance mapping
 

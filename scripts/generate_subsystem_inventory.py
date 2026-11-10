@@ -53,6 +53,12 @@ TABLES: dict[str, str] = {
     "runtime_task_transitions": "Append-only durable state transitions per runtime task and epoch.",
     "runtime_actions": "Durable action/effect records with idempotency keys, request/result digests, and execution status.",
     "runtime_task_checkpoints": "Hash-verified durable task checkpoints and typed evidence references per task and sequence.",
+    "runtime_mission_plans": "Immutable versioned mission identity, root, input/authority/budget bindings, and lifecycle.",
+    "runtime_mission_tasks": "Ordered mission-node membership mapped onto authoritative runtime tasks and required outputs.",
+    "runtime_mission_dependencies": "Directed prerequisite edges and edge-level required-output contracts.",
+    "runtime_mission_outputs": "Insert-only artifact references, digests, evidence summaries, and producer epochs.",
+    "runtime_mission_checkpoint_bindings": "Checkpoint plan/input/policy/budget/state/epoch resume bindings.",
+    "runtime_mission_joins": "Hash-addressed recoverable parent join reports with explicit aggregate status.",
 }
 
 # Function references are resolved from app.py on every generation, so line anchors stay current.

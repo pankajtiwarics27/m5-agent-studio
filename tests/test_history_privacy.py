@@ -162,7 +162,16 @@ def test_export_covers_history_tables_and_applies_redaction(isolated_app: Path) 
     for excluded in ("cloud_providers", "mcp_servers", "model_combos", "tool_audit_events", "schema_migrations"):
         assert excluded not in tables
         assert excluded not in json.dumps(bundle["tables"])
-    assert "tool_audit_events" in bundle["excluded_tables"]["security_and_integrity_trails"]
+    integrity_trails = bundle["excluded_tables"]["security_and_integrity_trails"]
+    assert "tool_audit_events" in integrity_trails
+    assert {
+        "runtime_mission_plans",
+        "runtime_mission_tasks",
+        "runtime_mission_dependencies",
+        "runtime_mission_outputs",
+        "runtime_mission_checkpoint_bindings",
+        "runtime_mission_joins",
+    } <= set(integrity_trails)
 
 
 def test_export_can_be_requested_without_redaction(isolated_app: Path) -> None:

@@ -2208,7 +2208,7 @@ AGENT_ROLES: dict[str, dict[str, str]] = {
 # =============================================================================
 
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 
 def _apply_schema_migrations(conn: sqlite3.Connection) -> None:

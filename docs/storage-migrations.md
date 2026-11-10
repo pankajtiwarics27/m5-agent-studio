@@ -46,10 +46,11 @@ from source — that is how the two stores added after the original three were f
 
 ## Migration invariants and persistence discipline
 
-- The current schema is `SCHEMA_VERSION = 3` (mirrored by `RUNTIME_SCHEMA_VERSION = 3` in `runtime_persistence.py`), recorded in `PRAGMA user_version` and `schema_migrations`:
+- The current schema is `SCHEMA_VERSION = 4` (mirrored by `RUNTIME_SCHEMA_VERSION = 4` in `runtime_persistence.py`), recorded in `PRAGMA user_version` and `schema_migrations`:
   - **Version 1**: additive columns on legacy Studio tables (`runs`, `perf_samples`, `hall_sessions`, `hall_messages`, `cloud_providers`, `model_combos`, `harness_sessions`, `mcp_servers`, `opencontext_docs`, `ctx_vault_chunks`, `ctx_session_metrics`).
   - **Version 2**: `tool_audit_events` privacy-preserving tool attempt log.
-  - **Version 3** (`M5-P1-01`, [ADR-0003](adr/0003-sqlite-schema-v3-and-persistence-discipline.md)): durable execution-spine tables `runtime_tasks`, `runtime_task_epochs`, `runtime_task_transitions`, and `runtime_actions` with `FOREIGN KEY` constraints (`ON DELETE RESTRICT`) and state/policy `CHECK` invariants.
+  - **Version 3** (`M5-P1-01`, [ADR-0003](adr/0003-sqlite-schema-v3-and-persistence-discipline.md)): durable execution-spine tables `runtime_tasks`, `runtime_task_epochs`, `runtime_task_transitions`, `runtime_actions`, and `runtime_task_checkpoints` with `FOREIGN KEY` constraints (`ON DELETE RESTRICT`) and state/policy `CHECK` invariants.
+  - **Version 4** (AP-005, [ADR-0039](adr/0039-durable-versioned-mission-graphs.md)): immutable mission plan/task/dependency rows, insert-only required-output references, checkpoint resume bindings, and recoverable join reports. See [durable mission graphs](durable-mission-graphs.md).
 - Upgrades are additive and idempotent. `upgrade_database` validates file headers, `PRAGMA quick_check`, and `PRAGMA user_version` before mutating any bytes; corrupted files (`DatabaseCorruptionError`) and future schema versions (`SchemaMigrationError`) fail closed immediately.
 - Write transactions (`run_write_transaction`) acquire `BEGIN IMMEDIATE` synchronously, apply bounded `SQLITE_BUSY` / `SQLITE_LOCKED` retries (`BusyRetryPolicy`), reject async/awaitable or nested write callbacks (`TransactionDisciplineError`), perform OS keyring I/O outside the SQLite write lock, and fail closed without retry on disk-full/quota (`DatabaseCapacityError`) or corruption (`DatabaseCorruptionError`).
 - `assert_no_active_write_transaction` prevents any active SQLite write transaction from spanning tool execution (`DurableActionBoundary` `pre_execute_guard`), subprocess launch (`_start_code_process`), or model inference (`stream_any_model`).
@@ -57,7 +58,7 @@ from source — that is how the two stores added after the original three were f
 
 ## Backup and failed-migration recovery
 
-Studio does not silently retain long-lived pre-migration copies after a successful startup. History databases can contain prompts, code, tool output, and credentials from older schemas; permanent hidden backups would create additional sensitive files with unclear retention. During an upgrade of an existing populated database (`user_version < 3`), `upgrade_database` creates an ephemeral owner-only (`0600`) online SQLite snapshot before entering `BEGIN IMMEDIATE`, automatically restores from that verified snapshot if an interrupted upgrade disturbs live integrity or schema state, and unlinks the ephemeral snapshot once post-upgrade integrity succeeds (unless an explicit `backup_path` is passed). Operators should still back up explicitly before upgrading releases:
+Studio does not silently retain long-lived pre-migration copies after a successful startup. History databases can contain prompts, code, tool output, and credentials from older schemas; permanent hidden backups would create additional sensitive files with unclear retention. During an upgrade of an existing populated database (`user_version < 4`), `upgrade_database` creates an ephemeral owner-only (`0600`) online SQLite snapshot before entering `BEGIN IMMEDIATE`, automatically restores from that verified snapshot if an interrupted upgrade disturbs live integrity or schema state, and unlinks the ephemeral snapshot once post-upgrade integrity succeeds (unless an explicit `backup_path` is passed). Operators should still back up explicitly before upgrading releases:
 
 ```bash
 python3 scripts/db_maintenance.py backup --database "${STUDIO_DB_PATH:-./studio_history.db}" --output /secure/path/studio-pre-upgrade.sqlite3
@@ -79,6 +80,7 @@ python3 scripts/db_maintenance.py restore \
 - `test_storage_connection_seam_is_injectable` verifies application connection calls use the injected storage seam and current `DB_PATH`; `test_storage_failure_is_not_bypassed` verifies the app does not bypass a failed backend.
 - `test_schema_upgrade_preserves_rows_and_is_idempotent` and `test_schema_failure_rolls_back_partial_ddl` verify upgrade, idempotence, and transactional rollback behavior.
 - `test_verified_backup_restores_after_failed_migration` exercises the explicit backup → failed migration → validated restore path and confirms both data and schema version are preserved.
+- AP-005's populated v3-to-v4 and injected-fault tests preserve user rows, durable tasks, and checkpoints, reject an older target against v4, and prove that failed DDL leaves no partial mission tables.
 - Backup integrity, permissions, future-version rejection, force protection, and safety-backup behavior remain tested in `tests/test_db_maintenance.py`.
 
 Run the local storage/migration tests with:
