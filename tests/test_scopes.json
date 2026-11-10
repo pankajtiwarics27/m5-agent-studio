@@ -177,7 +177,8 @@
       "test_uiux_preservation_signoff.py",
       "test_uiux_roadmap.py",
       "test_uiux_route_map.py",
-      "test_uiux_source_manifest.py"
+      "test_uiux_source_manifest.py",
+      "test_verify_test_identity.py"
     ],
     "runtime.misc": [
       "test_configuration_contracts.py",
@@ -436,6 +437,9 @@
       "quality.docs-ci"
     ],
     "scripts/ci_test_shard.py": [
+      "quality.docs-ci"
+    ],
+    "scripts/verify_test_identity.py": [
       "quality.docs-ci"
     ],
     "tests/ci_test_shards.json": [
