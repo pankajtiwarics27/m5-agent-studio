@@ -11,10 +11,12 @@ sequentially**. Both are now delivered: AP-002 through PR #280 and AP-003
 through PR #284, each from its own fixed Arena branch and pull request. AP-004
 was separately authorized and is now delivered through PR #292. After that
 merge and its same-SHA post-merge CI passed, the owner's 2026-11-10 “Continue”
-instruction authorized AP-005 as the next single story. AP-005 remains
-`not_started` and unclaimed until the AP-004 completion record merges and its
-own branch/PR establishes a remote claim; AP-006 through AP-032 remain
-unauthorized.
+instruction authorized AP-005 as the next single story. AP-005 is now done:
+PR #296 merged as `acec9aebe4f86f968c077541392a2bfc3cd71fd7`, and exact-merge
+main CI run 42798276827 passed. The owner has authorized AP-006 as the next
+single story after the AP-005 closeout PR merges; AP-007 through AP-032 remain
+unauthorized. This remains separate from product runtime activation and real
+external actions.
 
 AP-002 adds an offline, versioned decision/configuration boundary. It does not
 activate a provider, runtime, lifecycle coordinator, sandbox, browser, account,
