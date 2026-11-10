@@ -14,9 +14,10 @@ are now done. AP-004 delivered through PR #292 and AP-005 through PR #296
 (final head `3c57cb16a51cc0f014a4f4767fa4d437f71c4a2e`, merge
 `acec9aebe4f86f968c077541392a2bfc3cd71fd7`). The exact-merge main CI for
 AP-005 passed as run 42798276827, and the AP-005 closeout PR #298 merged as
-`69092eda00d7e42de06a3ced3c054e3b7d7f2393`. The owner has authorized AP-006 as
-the next single story now that the closeout has landed; AP-006 remains
-unclaimed, and AP-007 through AP-032 remain unauthorized. U01–U06 remain pending, including the initial specialization
+`69092eda00d7e42de06a3ced3c054e3b7d7f2393`. AP-006 is now done as well: PR #299
+merged as `5872cc612cb1cf521cbfbe5a32ef5dbaaed40116` with a green exact-main run
+(42806442354). No further story is authorized, so AP-007 through AP-032 remain
+unauthorized. U01–U06 remain pending, including the initial specialization
 choice. Therefore research, website, and short-video briefs below are generic
 fixture categories, not launch commitments or owner acceptance.
 

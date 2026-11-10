@@ -308,11 +308,42 @@ documentation/ledger and browser-safety gate in run
 It merged at `2026-11-10T10:50:23Z` as `69092eda00d7e42de06a3ced3c054e3b7d7f2393`,
 and the exact-main run
 [`42802513165`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42802513165)
-passed in full. AP-005 is therefore `done` on `main`, AP-006 is authorized as the
-next single story and still unclaimed, and AP-007 through AP-032 remain
+passed in full. AP-005 is therefore `done` on `main`; AP-006 was subsequently
+authorized, delivered and landed (see below), and AP-007 through AP-032 remain
 unauthorized.
 
 The AP-005 status record is terminal at this point: this landing record's own
 merge SHA, merge time, and post-merge main run are recorded in its pull-request
 comment, because a commit cannot contain its own merge identity. No further AP-005
 completion PR is required, and that precedent applies to later AP deliveries.
+
+## 10. AP-006 landing record
+
+AP-006 (artifact identity, completeness and confined references) is the second
+delivery landed under this runbook, and the first full ready-for-review
+implementation delivery it carried end to end.
+
+- Builder: `arena/930387b7-m5-agent-studio`, PR #299, handoff with
+  `writer_state: released` at exact head
+  `accfda81c814c961390875b61cb07a078469a5d7` on a base that had merged current
+  `main` (`353afa76599e7d545c053ab21c363a33595d88a7`).
+- Gate: ready-for-review `pull_request` run
+  [`42805493859`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42805493859)
+  passed on the exact head — source gates, nine Python shards over 3.11/3.12/3.13,
+  shard-identity checks, five browser-safety shards, browser-safety regressions and
+  the `test` aggregates. The same-head run `42805454781` was cancelled by same-PR
+  concurrency and is recorded as superseded, not as a failure.
+- Landed by `arena/fe410bc3-m5-agent-studio` at `2026-11-10T11:18:50Z` as
+  `5872cc612cb1cf521cbfbe5a32ef5dbaaed40116` after re-verifying the unchanged head,
+  `MERGEABLE`/`CLEAN` state and an unchanged base. Exact-main run
+  [`42806442354`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42806442354)
+  passed on that merge SHA.
+- No takeover was needed, no commit was written to the released builder branch, and
+  the builder's own local results stay attributed to the builder while the gate and
+  main results stay attributed to CI.
+
+AP-006 remains an offline, local capability: no endpoint, route, control, provider,
+model, network, browser, account or background worker was added or activated.
+ADR-0040 remains `review_status: not-reviewed`, and AP-007 through AP-032 remain
+unauthorized. As with AP-005, this landing record's own merge identity is recorded in
+its pull-request comment rather than in a further commit.
