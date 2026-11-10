@@ -121,9 +121,10 @@ def test_ci_does_not_run_the_heavy_jobs_twice_for_one_commit() -> None:
 
     assert "plan:" in workflow
     assert 'gh api --method GET "repos/$REPOSITORY/pulls"' in workflow
-    # Fail closed: lookup failure selects scoped verification instead of
-    # suppressing the push or pretending its required contexts ran.
+    # Fail closed: lookup failure selects full verification because no pull
+    # request can be trusted to own coverage.
     assert "Pull-request lookup failed" in workflow
+    assert "Running the full push gate" in workflow
     assert "python scripts/ci_execution_plan.py" in workflow
     assert 'if [ "$RUN_VERIFICATION" != "true" ]' in workflow
     assert 'echo "$REASON"' in workflow

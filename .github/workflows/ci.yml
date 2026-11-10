@@ -71,7 +71,7 @@ jobs:
               --jq 'length'); then
               count="$result"
             else
-              echo "::warning title=Pull-request lookup failed::Running the scoped push gate instead of suppressing verification."
+              echo "::warning title=Pull-request lookup failed::Running the full push gate because no pull request can be trusted to own coverage."
             fi
           fi
           echo "count=$count" >> "$GITHUB_OUTPUT"

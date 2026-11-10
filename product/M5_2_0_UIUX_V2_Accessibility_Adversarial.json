@@ -21,7 +21,7 @@
     "scripts/uiv2_accessibility_adversarial_walk.mjs": "831d65473af6d28d3e77294420fa49130addb5c02d132b433d0141ded525e0c7",
     "scripts/a11y_walk.mjs": "191400491161725465f2f87acd78456e75be08938e29cfcef99d733ea9037c7d",
     "scripts/responsive_walk.mjs": "f39b774a33f1122458c5435d8e566c57e30cba64834239091a26034b1cd40cbd",
-    ".github/workflows/ci.yml": "bf8725cedbb19999ec1f0442fd99af4f4d8a59359c13b3d7c8af15e4ed8297eb"
+    ".github/workflows/ci.yml": "68bf1ee1a2b945d61d8d7a4f013caf5c4e24ef50c6a24993cbfe82fd89234375"
   },
   "matrix": {
     "panes": [

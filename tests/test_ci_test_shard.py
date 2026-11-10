@@ -17,6 +17,13 @@ def test_committed_shard_manifest_partitions_every_test_module_once() -> None:
     assert stats["modules"] == len(tuple((ROOT / "tests").glob("test_*.py")))
     assert set(stats["module_counts"]) == set(ci_test_shard.SHARD_IDS)
     assert all(count > 0 for count in stats["module_counts"].values())
+    balance = manifest["balance"]
+    assert balance["module_counts"] == [stats["module_counts"][shard] for shard in ci_test_shard.SHARD_IDS]
+    assert len(balance["fit_run_ids"]) >= 2
+    assert set(balance["input_partition_observed"]["seconds_by_run"]) == {
+        str(run_id) for run_id in balance["fit_run_ids"]
+    }
+    assert len(balance["projected_median_aggregate_seconds"]) == len(ci_test_shard.SHARD_IDS)
 
 
 def test_canonical_outcome_hash_includes_outcomes_and_skip_reasons() -> None:
@@ -30,6 +37,24 @@ def test_canonical_outcome_hash_includes_outcomes_and_skip_reasons() -> None:
     assert ci_test_shard.canonical_outcome_hash(baseline) == ci_test_shard.canonical_outcome_hash(reordered)
     assert ci_test_shard.canonical_outcome_hash(baseline) != ci_test_shard.canonical_outcome_hash(changed)
     assert ci_test_shard.canonical_skip_hash(baseline) != ci_test_shard.canonical_skip_hash(changed)
+
+
+def test_failed_and_error_outcomes_emit_one_error_annotation_each(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    ci_test_shard._emit_failure_annotations(
+        {
+            "tests/test_alpha.py::test_pass": {"outcome": "passed", "skip_reason": ""},
+            "tests/test_alpha.py::test_failure[100%]": {"outcome": "failed", "skip_reason": ""},
+            "tests/test_beta.py::test_error": {"outcome": "error", "skip_reason": ""},
+            "tests/test_beta.py::test_skip": {"outcome": "skipped", "skip_reason": "expected"},
+        }
+    )
+
+    assert capsys.readouterr().out.splitlines() == [
+        "::error title=Pytest failure::tests/test_alpha.py::test_failure[100%25]: failed",
+        "::error title=Pytest failure::tests/test_beta.py::test_error: error",
+    ]
 
 
 def test_result_verifier_rejects_duplicates_and_proves_collection_identity(

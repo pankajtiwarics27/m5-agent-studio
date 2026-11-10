@@ -37,10 +37,23 @@ def _workflow_escape(value: str) -> str:
     return value.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
 
 
-def _notice(title: str, message: str) -> None:
+def _workflow_annotation(level: str, title: str, message: str) -> None:
+    if level not in {"notice", "error"}:
+        raise ValueError(f"unsupported workflow annotation level: {level}")
     if "," in title or "\n" in title or "\r" in title:
         raise ValueError("workflow-command titles must not contain property delimiters or newlines")
-    print(f"::notice title={title}::{_workflow_escape(message)}", flush=True)
+    print(f"::{level} title={title}::{_workflow_escape(message)}", flush=True)
+
+
+def _notice(title: str, message: str) -> None:
+    _workflow_annotation("notice", title, message)
+
+
+def _emit_failure_annotations(outcomes: dict[str, dict[str, str]]) -> None:
+    for nodeid, item in sorted(outcomes.items()):
+        outcome = item["outcome"]
+        if outcome in {"failed", "error"}:
+            _workflow_annotation("error", "Pytest failure", f"{nodeid}: {outcome}")
 
 
 def load_manifest(path: Path = MANIFEST_PATH) -> dict[str, Any]:
@@ -184,6 +197,7 @@ def run_pytest(*, modules: Sequence[str], label: str, python_version: str, outpu
     )
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(_json_dump(payload), encoding="utf-8")
+    _emit_failure_annotations(payload["outcomes"])
     counts = ", ".join(f"{name}={count}" for name, count in payload["outcome_counts"].items())
     _notice(
         f"Pytest {label} - {round(elapsed)}s - Python {python_version}",

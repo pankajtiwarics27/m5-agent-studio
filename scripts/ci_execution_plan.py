@@ -59,12 +59,14 @@ def plan_for_event(
                 fallback_base,
                 "open_pull_request_owns_required_checks",
             )
-        reason = (
-            "feature_push_scoped_gate"
-            if open_pr_count == 0
-            else "feature_push_pr_lookup_failed_run_scoped"
+        if open_pr_count == 0:
+            return VerificationPlan(True, "scoped", fallback_base, "feature_push_scoped_gate")
+        return VerificationPlan(
+            True,
+            "full",
+            f"origin/{default_branch}",
+            "feature_push_pr_lookup_failed_run_full",
         )
-        return VerificationPlan(True, "scoped", fallback_base, reason)
     if event_name == "schedule":
         return VerificationPlan(True, "full", f"origin/{default_branch}", "scheduled_full_gate")
     if event_name == "workflow_dispatch":
@@ -79,7 +81,7 @@ def concurrency_key(
     ref_name: str,
     pr_number: int | None = None,
 ) -> str:
-    """Mirror the workflow key without cross-event cancellation races."""
+    """Document the intended key shape; the workflow expression is authoritative."""
     if event_name == "pull_request" and pr_number is not None:
         identity = f"pr-{pr_number}"
     else:

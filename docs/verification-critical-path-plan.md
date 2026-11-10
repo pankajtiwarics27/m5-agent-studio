@@ -83,7 +83,7 @@ rebase must not silently undo the merged guarantees:
 
 **Must survive the rebase** (each is pinned by a test or a run):
 
-- Fail-closed pull request lookup: a lookup error runs the verification.
+- Fail-closed pull request lookup: a lookup error runs the **full** verification gate, because no pull request can be trusted to own coverage.
 - Per-lane concurrency with `main` never cancelled. Observed live on
   `eab31d7`: main runs `42698201085` and `42697477881` finished side by side.
   The branch's `cancel-in-progress: true` for every event would cancel a
@@ -290,6 +290,48 @@ step can annotate them), `2` means the input could not be trusted — an
 unreadable report, an empty baseline, or a test case that maps to no collected
 node id. `--json` emits the report for retention beside the run id. It never
 runs pytest and never treats an unmapped case as a match.
+
+### 7.1.1 Implemented shard and qualification contract
+
+The job-level implementation keeps one pytest process in one checkout per
+shard; it never supplies `-n`/xdist, `-k`, markers, or deselection. The committed
+`tests/ci_test_shards.json` assigns every `tests/test_*.py` module exactly once.
+`scripts/ci_test_shard.py` rejects an empty shard before execution and each job
+retains four forms of evidence for 14 days: result JSON, collected node ids,
+JUnit XML, and per-module report seconds. A failed or errored node also becomes
+an individual `::error` annotation rather than being hidden in the pytest log.
+
+The same-run identity job downloads all three shard artifacts for one Python
+version, rejects duplicate ownership, compares the collected-node union with an
+unsharded collection, and requires an outcome for every collected node. This is
+the fast invariant checked on every full event. The cross-run comparison is a
+separate, stronger qualification chain:
+
+1. Freeze the candidate commit and dispatch `python_mode=unsharded_baseline`.
+2. Retain that run id; its three artifacts contain the source SHA, full
+   collection, JUnit outcomes, skips, and release evidence.
+3. Dispatch `python_mode=sharded` with that id in `baseline_run_id`.
+4. Refuse the download if the baseline artifact's source SHA differs from
+   `GITHUB_SHA`, then run `verify_test_identity.py` against all three shard
+   phases for each interpreter.
+5. Keep five consecutive sharded dispatches on the unchanged commit. A failure
+   is part of the qualification result and is never replaced by a retry.
+
+The equivalent dispatch shape is:
+
+```bash
+gh workflow run .github/workflows/ci.yml --ref <candidate-branch> \
+  -f python_mode=unsharded_baseline -f baseline_run_id=''
+
+gh workflow run .github/workflows/ci.yml --ref <candidate-branch> \
+  -f python_mode=sharded -f baseline_run_id=<baseline-run-id>
+```
+
+The baseline mode and every shard install the same
+`.[dev,supply-chain]` dependency set on Python 3.11, 3.12 and 3.13. Release
+evidence remains one artifact per interpreter. The unchanged required names are
+produced only after the selected source, outcome-identity, and browser jobs have
+passed.
 
 ### 7.4 In-place writers stay serial
 

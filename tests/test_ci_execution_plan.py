@@ -32,8 +32,8 @@ WORKFLOW = ROOT / ".github" / "workflows" / "ci.yml"
             "refs/heads/feature/query-failed",
             -1,
             True,
-            "scoped",
-            "feature_push_pr_lookup_failed_run_scoped",
+            "full",
+            "feature_push_pr_lookup_failed_run_full",
         ),
         ("schedule", "refs/heads/main", -1, True, "full", "scheduled_full_gate"),
         (
