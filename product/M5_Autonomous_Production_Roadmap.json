@@ -5,14 +5,14 @@
   "program": "AP",
   "revision": "1.2",
   "prepared_date": "2026-11-08",
-  "lifecycle": "registered_tracking_ap004_done_ap005_authorized",
+  "lifecycle": "registered_tracking_ap005_in_progress",
   "source_snapshot": "a67e8b291614f8afdac7c8d38ba51bcc8926d695",
   "source_repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "specification": "docs/autonomous-production-roadmap.md",
   "agent_prompt": "M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md",
   "authority": {
     "precedence": "AGENTS.md, existing security/approval rules and owning program ledgers remain binding.",
-    "scope": "AP-001 through AP-004 are delivered. AP-005 is owner-authorized as the next separate story for offline durable mission-task composition, dependency/join recovery and populated-store migration tests only; product runtime activation, real external services and AP-006 through AP-032 remain unauthorized.",
+    "scope": "AP-001 through AP-004 are delivered. AP-005 is owner-authorized, dependency-ready and claimed on its fixed Arena branch for offline durable mission-task composition, dependency/join recovery and populated-store migration tests only; product runtime activation, real external services and AP-006 through AP-032 remain unauthorized.",
     "registration_gate": "AP-001 records the tracking source and claim protocol; its merge did not authorize downstream work. Later AP-002/AP-003 sequential authorization, post-AP-003 AP-004 authorization and post-AP-004 AP-005 single-story authorization are separately recorded in program_registration.authorization_history.",
     "other_ledgers": "Do not alter AS/M5/UIUX/UIV2/LC tracking without the owning protocol.",
     "approval": "Agents cannot fabricate owner, screenshot, independent security or release approval."
@@ -637,7 +637,7 @@
       "title": "Compose durable mission tasks and recoverable joins",
       "priority": "P0",
       "optional": false,
-      "status": "not_started",
+      "status": "in_progress",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-004"
@@ -689,18 +689,30 @@
         "Push/PR state; owner/independent approvals where required"
       ],
       "tracking": {
-        "owner": null,
-        "branch": null,
-        "base_sha": null,
-        "head_sha": null,
-        "claimed_at": null,
-        "heartbeat_at": null,
+        "owner": "arena/e0bd5906-m5-agent-studio",
+        "branch": "arena/e0bd5906-m5-agent-studio",
+        "base_sha": "b1ee43c80bbf3f4f9f2fe44cced9ce4afe3065e3",
+        "head_sha": "b1ee43c80bbf3f4f9f2fe44cced9ce4afe3065e3",
+        "claimed_at": "2026-11-10T08:05:14Z",
+        "heartbeat_at": "2026-11-10T08:05:14Z",
         "pr_url": null,
-        "delivery_status": "not_pushed",
+        "delivery_status": "delivery_pending",
         "acceptance_evidence": [],
         "tests_executed": [],
-        "blockers": [],
-        "handoff": null
+        "blockers": [
+          "AP-005 authorizes local durable mission-graph, checkpoint/resume, join and additive migration work only. It does not activate a scheduler, model, provider, account, network, filesystem grant, background runtime, external effect or destructive reset.",
+          "AP-006 through AP-032 remain unauthorized. This claim is exactly one AP-005 story and does not resolve U01-U06, authorize later program work or claim owner, independent-security, screenshot, media, signing or release approval."
+        ],
+        "handoff": "AP-005 is the sole active AP claim on the fixed Arena branch after AP-004 closeout PR #294 merged as b1ee43c80bbf3f4f9f2fe44cced9ce4afe3065e3 and same-SHA main CI run 42779004645 passed. The branch was fast-forwarded to that merge before this claim, so the new PR diff is AP-005-only. Initial audit found reusable runtime_tasks/epochs/transitions, durable checkpoints, completion verification, child-delegation joins and transactional migrations. The gap is a versioned persisted mission graph with dependency/cycle rules, resume bindings for current plan/input/authority/budget versions, and graph-level required-output/partial-failure joins.",
+        "blast_radius": {
+          "objective_and_gap": "Reuse the existing durable task/checkpoint spine for versioned project plans and task dependencies. Current runtime_tasks support root/milestone/child rows, legal state transitions, epochs, checkpoints and false-completion barriers, but there is no persisted versioned mission DAG or dependency edge/cycle validation. Resume verifies checkpoint integrity/epoch and recovery evidence but does not bind one plan/input version plus current grant/policy generation and budget identity. Child joins fence leases/actions yet do not provide a graph-level required-output contract or explicit partial/failed dependency report.",
+          "options": "Do not add a second scheduler, task database or filesystem plan log. Prefer additive typed mission-plan/dependency records beside runtime_tasks, with workflow_state as the sole state transition owner, workflow_checkpoints as the resume boundary, and existing child delegation plus completion verification reused for joins. Persist normalized identities rather than trusting client/model-supplied state.",
+          "anticipated_files": "runtime_persistence.py, workflow_state.py, workflow_checkpoints.py and child_delegation.py are the primary source surfaces; execution_budget.py, scoped_grants.py and app.py change only if the audit proves a missing live binding/consumer. Focused workflow/checkpoint/delegation, migration, epoch and actual-consumer tests; AP ledger/docs; studio.py and source-bound inventories will be updated as applicable. Exact files will be narrowed before behavior edits.",
+          "contracts_and_data": "Add schema-versioned local mission plan/task/dependency and resume-binding metadata using stable task IDs, plan/input digests and server-derived authority generations. Reuse existing runtime_tasks, checkpoints, transitions, budgets, grants and action evidence; do not duplicate artifact bytes or accept caller-owned completion/authority fields.",
+          "authority_and_resources": "No credentials, provider/network access, model execution, accounts, billable actions, new filesystem scope or background workers. Resume and dispatch must revalidate AP-004 mission authority, live grants/revocations, budget and epoch; missing/stale versions deny. Default tests remain offline with temporary populated SQLite stores.",
+          "compatibility_and_rollback": "Use an additive transactional schema migration through the existing backup/integrity/restore path. Tests must prove populated sessions, tasks, checkpoints and user data survive upgrade and migration faults roll back without a reset. A pre-upgrade binary must reject a newer schema rather than delete data; rollback/forward recovery preserves the verified snapshot and durable history.",
+          "required_evidence": "Positive/negative DAG creation and dependency-cycle/illegal-transition tests; completed artifact/checkpoint restart tests; stale plan/input/grant/policy/budget/epoch resume denials; success, partial, failed and missing-required-output join reports; stale-worker completion fencing; populated-store migration and injected-failure preservation; existing workflow, checkpoint, budget, grant, delegation, recovery, task-event and migration regressions; static, generated-drift, smoke and current-head CI evidence. No live service or human approval is claimed."
+        }
       },
       "implementation_prompt": "Implement AP-005: Compose durable mission tasks and recoverable joins. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
@@ -2825,7 +2837,7 @@
     "reconciliation_evidence": "docs/autonomous-production-ap001-reconciliation.md",
     "registered_by_story": "AP-001",
     "owner_authorized_date": "2026-11-10",
-    "activation_scope": "AP-001 through AP-004 are delivered. AP-005 is owner-authorized next for one separate offline durable mission-task/dependency/recoverable-join story; no product runtime activation or real external action.",
+    "activation_scope": "AP-001 through AP-004 are delivered. AP-005 is claimed on its fixed Arena branch for offline durable mission-task composition, dependency/join recovery and populated-store migration tests only; no product runtime activation or real external action.",
     "runtime_activation_authorized": false,
     "authorized_downstream_stories": [
       "AP-002",
