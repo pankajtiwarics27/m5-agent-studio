@@ -1,4 +1,4 @@
-"""Tests for M5-P1-01: SQLite schema v3 migration and persistence discipline.
+"""Tests for additive SQLite schema migrations and persistence discipline.
 
 Covers:
 1. Legacy (v0, v1, v2) database upgrades preserving existing relational + FTS5 data.
@@ -30,6 +30,7 @@ import context_store
 import execution_spine
 import history_privacy
 import runtime_persistence as rp
+import workflow_checkpoints
 from scripts.db_maintenance import _validate_database, backup_database, restore_database
 
 
@@ -66,7 +67,7 @@ class _LocalStorage:
 # =============================================================================
 
 
-def test_v0_legacy_database_survives_upgrade_to_v3_with_fts5_intact(
+def test_v0_legacy_database_survives_upgrade_to_v4_with_fts5_intact(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     memory_keyring: _MemoryKeyring,
@@ -118,21 +119,22 @@ def test_v0_legacy_database_survives_upgrade_to_v3_with_fts5_intact(
         assert conn.execute("PRAGMA user_version").fetchone()[0] == 0
 
     studio.init_db()
-    # Second call verifies idempotency on an already-upgraded v3 database.
+    # Second call verifies idempotency on an already-upgraded v4 database.
     studio.init_db()
 
     # Ephemeral pre-migration backup snapshot must be cleaned up after verified commit.
-    assert list(tmp_path.glob("*.pre-v3-*")) == []
+    assert list(tmp_path.glob("*.pre-v4-*")) == []
     if os.name == "posix":
         assert stat.S_IMODE(db_path.stat().st_mode) == 0o600
 
     with sqlite3.connect(db_path) as conn:
-        assert conn.execute("PRAGMA user_version").fetchone()[0] == studio.SCHEMA_VERSION == 3
+        assert conn.execute("PRAGMA user_version").fetchone()[0] == studio.SCHEMA_VERSION == 4
         assert conn.execute("PRAGMA journal_mode").fetchone()[0].lower() == "wal"
         assert conn.execute("SELECT version FROM schema_migrations ORDER BY version").fetchall() == [
             (1,),
             (2,),
             (3,),
+            (4,),
         ]
         run_row = conn.execute("SELECT title, mode, payload_json FROM runs WHERE id = 1").fetchone()
         assert run_row == ("legacy-v0-run", "", "{}")
@@ -149,6 +151,13 @@ def test_v0_legacy_database_survives_upgrade_to_v3_with_fts5_intact(
             "runtime_task_epochs",
             "runtime_task_transitions",
             "runtime_actions",
+            "runtime_task_checkpoints",
+            "runtime_mission_plans",
+            "runtime_mission_tasks",
+            "runtime_mission_dependencies",
+            "runtime_mission_outputs",
+            "runtime_mission_checkpoint_bindings",
+            "runtime_mission_joins",
         ):
             exists = conn.execute(
                 "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
@@ -233,6 +242,117 @@ def test_v2_database_upgrades_to_v3_preserving_audit_history_and_backup_contract
     assert restored_task is not None and restored_task.title == "Verify upgraded spine"
     restored_epoch = restored_store.get_epoch("tsk-after-v2-upgrade", 1)
     assert restored_epoch is not None and restored_epoch.worker_id == "worker-1"
+
+
+def test_populated_v3_store_upgrades_to_v4_preserving_user_tasks_and_checkpoints(
+    tmp_path: Path,
+) -> None:
+    """AP-005 migration is additive across both user history and the durable v3 spine."""
+    db_path = tmp_path / "populated-v3.db"
+    storage = _LocalStorage()
+    with sqlite3.connect(db_path) as conn:
+        studio._ensure_base_tables(conn)
+        rp.apply_schema_migrations(conn, target_version=3)
+        conn.execute(
+            "INSERT INTO runs(created_at, mode, title, payload_json) VALUES (1.0, 'chat', 'keep-user-row', '{}')"
+        )
+        conn.commit()
+    store = rp.RuntimePersistenceStore(storage, db_path)
+    store.create_task("keep-root", session_id="keep-session", title="Keep runtime task", now=2.0)
+    checkpoints = workflow_checkpoints.DurableTaskCheckpointStore(storage, db_path)
+    kept_checkpoint = checkpoints.save_checkpoint(
+        "keep-root",
+        step=3,
+        payload={"completed": ["one", "two"]},
+        now=3.0,
+    )
+
+    assert rp.upgrade_database(
+        storage,
+        db_path,
+        base_ddl=studio._ensure_base_tables,
+        target_version=4,
+    ) == 4
+
+    with sqlite3.connect(db_path) as conn:
+        assert conn.execute("PRAGMA user_version").fetchone()[0] == 4
+        assert conn.execute("SELECT title FROM runs").fetchall() == [("keep-user-row",)]
+        assert conn.execute("SELECT title FROM runtime_tasks WHERE task_id = 'keep-root'").fetchone() == (
+            "Keep runtime task",
+        )
+        assert conn.execute(
+            "SELECT payload_hash FROM runtime_task_checkpoints WHERE checkpoint_id = ?",
+            (kept_checkpoint.checkpoint_id,),
+        ).fetchone() == (kept_checkpoint.payload_hash,)
+        assert conn.execute("SELECT version FROM schema_migrations ORDER BY version").fetchall() == [
+            (1,),
+            (2,),
+            (3,),
+            (4,),
+        ]
+        mission_tables = {
+            row[0]
+            for row in conn.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'runtime_mission_%'"
+            ).fetchall()
+        }
+        assert mission_tables == {
+            "runtime_mission_plans",
+            "runtime_mission_tasks",
+            "runtime_mission_dependencies",
+            "runtime_mission_outputs",
+            "runtime_mission_checkpoint_bindings",
+            "runtime_mission_joins",
+        }
+
+    # Simulate a pre-v4 binary opening the populated upgraded store: reject, never reset.
+    with pytest.raises(rp.SchemaMigrationError, match="newer than supported"):
+        rp.upgrade_database(storage, db_path, target_version=3)
+    with sqlite3.connect(db_path) as conn:
+        assert conn.execute("PRAGMA user_version").fetchone()[0] == 4
+        assert conn.execute("SELECT title FROM runs").fetchall() == [("keep-user-row",)]
+        assert conn.execute("SELECT task_id FROM runtime_tasks").fetchall() == [("keep-root",)]
+
+
+def test_interrupted_v4_migration_rolls_back_populated_v3_without_reset(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "interrupted-v3.db"
+    storage = _LocalStorage()
+    with sqlite3.connect(db_path) as conn:
+        studio._ensure_base_tables(conn)
+        rp.apply_schema_migrations(conn, target_version=3)
+        conn.execute(
+            "INSERT INTO runs(created_at, mode, title, payload_json) VALUES (5.0, 'chat', 'survives-v4-fault', '{}')"
+        )
+        conn.commit()
+    rp.RuntimePersistenceStore(storage, db_path).create_task(
+        "survives-v4-task",
+        session_id="survives-v4-session",
+        now=6.0,
+    )
+
+    def _inject_v4_fault(step_version: int, _conn: sqlite3.Connection) -> None:
+        if step_version == 4:
+            raise sqlite3.IntegrityError("simulated AP-005 v4 migration fault")
+
+    with pytest.raises(sqlite3.IntegrityError, match="simulated AP-005 v4 migration fault"):
+        rp.upgrade_database(
+            storage,
+            db_path,
+            base_ddl=studio._ensure_base_tables,
+            target_version=4,
+            fault_hook=_inject_v4_fault,
+        )
+
+    with sqlite3.connect(db_path) as conn:
+        assert conn.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+        assert conn.execute("PRAGMA user_version").fetchone()[0] == 3
+        assert conn.execute("SELECT title FROM runs").fetchall() == [("survives-v4-fault",)]
+        assert conn.execute("SELECT task_id FROM runtime_tasks").fetchall() == [("survives-v4-task",)]
+        assert conn.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'runtime_mission_%'"
+        ).fetchall() == []
 
 
 # =============================================================================

@@ -272,6 +272,38 @@ class TaskCheckpointRecord:
         }
 
 
+@dataclass(frozen=True, slots=True)
+class MissionCheckpointBinding:
+    """Captured immutable mission identity attached at the checkpoint boundary."""
+
+    mission_id: str
+    plan_version: int
+    plan_digest: str
+    input_digest: str
+    session_policy_revision: int
+    global_policy_revision: int
+    budget_digest: str
+
+
+@dataclass(frozen=True, slots=True)
+class MissionCheckpointBindingRecord:
+    """Persisted AP-005 mission binding plus server-derived task fencing state."""
+
+    checkpoint_id: str
+    task_id: str
+    mission_id: str
+    plan_version: int
+    plan_digest: str
+    input_digest: str
+    session_policy_revision: int
+    global_policy_revision: int
+    budget_digest: str
+    task_state_version: int
+    checkpoint_epoch: int
+    resumed_epoch: int | None
+    created_at: float
+
+
 def compute_task_checkpoint_digest(payload_json: str, evidence_refs_json: str) -> str:
     """Compute canonical SHA-256 digest covering both payload and evidence references."""
     material = f"{payload_json}\n{evidence_refs_json}".encode("utf-8")
@@ -437,6 +469,7 @@ class DurableTaskCheckpointStore:
         milestone_id: str = "",
         status: Literal["committed", "interrupted"] = "committed",
         require_active_epoch: bool = False,
+        mission_binding: MissionCheckpointBinding | None = None,
         now: float | None = None,
     ) -> TaskCheckpointRecord:
         """Atomically persist checkpoint + evidence refs and advance ``runtime_tasks.checkpoint_ref``."""
@@ -449,7 +482,7 @@ class DurableTaskCheckpointStore:
 
         def _tx(conn: sqlite3.Connection) -> TaskCheckpointRecord:
             conn.row_factory = sqlite3.Row
-            task_row = conn.execute("SELECT current_epoch FROM runtime_tasks WHERE task_id = ?", (tid,)).fetchone()
+            task_row = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (tid,)).fetchone()
             if task_row is None:
                 raise KeyError(f"Runtime task {tid!r} does not exist.")
             current_epoch = int(task_row["current_epoch"])
@@ -458,7 +491,9 @@ class DurableTaskCheckpointStore:
                     f"Stale epoch {epoch} cannot checkpoint task {tid!r} at current_epoch={current_epoch}."
                 )
             effective_epoch = current_epoch if epoch is None else int(epoch)
-            if require_active_epoch and effective_epoch > 0:
+            if mission_binding is not None and effective_epoch < 1:
+                raise ResumeRejected("Mission checkpoints require an active positive worker epoch.")
+            if (require_active_epoch or mission_binding is not None) and effective_epoch > 0:
                 ep_row = conn.execute(
                     "SELECT status, lease_expires_at FROM runtime_task_epochs WHERE task_id = ? AND epoch = ?",
                     (tid, effective_epoch),
@@ -471,6 +506,48 @@ class DurableTaskCheckpointStore:
                     raise runtime_persistence.LeaseExpiredError(
                         f"Expired epoch {effective_epoch} cannot checkpoint task {tid!r}."
                     )
+            if mission_binding is not None:
+                plan = conn.execute(
+                    """
+                    SELECT mp.*, rt.budget_json AS root_budget_json
+                    FROM runtime_mission_plans AS mp
+                    JOIN runtime_tasks AS rt ON rt.task_id = mp.root_task_id
+                    JOIN runtime_mission_tasks AS mt
+                      ON mt.mission_id = mp.mission_id
+                     AND mt.plan_version = mp.plan_version
+                     AND mt.task_id = ?
+                    WHERE mp.mission_id = ? AND mp.plan_version = ?
+                    """,
+                    (tid, mission_binding.mission_id, int(mission_binding.plan_version)),
+                ).fetchone()
+                if plan is None:
+                    raise ResumeRejected("Mission checkpoint task is not part of the captured plan version.")
+                if str(plan["status"]) != "active":
+                    raise ResumeRejected("Mission checkpoint plan version is no longer active.")
+                expected = (
+                    str(plan["plan_digest"]),
+                    str(plan["input_digest"]),
+                    int(plan["session_policy_revision"]),
+                    int(plan["global_policy_revision"]),
+                    str(plan["budget_digest"]),
+                )
+                presented = (
+                    str(mission_binding.plan_digest),
+                    str(mission_binding.input_digest),
+                    int(mission_binding.session_policy_revision),
+                    int(mission_binding.global_policy_revision),
+                    str(mission_binding.budget_digest),
+                )
+                if presented != expected:
+                    raise ResumeRejected("Mission checkpoint binding is stale or does not match the active plan.")
+                try:
+                    current_budget_digest = runtime_persistence.compute_task_budget_identity(
+                        str(plan["root_budget_json"])
+                    )
+                except ValueError as exc:
+                    raise ResumeRejected(f"Mission budget identity is unreadable: {exc}") from exc
+                if current_budget_digest != str(plan["budget_digest"]):
+                    raise ResumeRejected("Mission budget identity changed before checkpoint commit.")
             conn.execute(
                 """
                 UPDATE runtime_task_checkpoints
@@ -507,6 +584,31 @@ class DurableTaskCheckpointStore:
                     ts,
                 ),
             )
+            if mission_binding is not None:
+                conn.execute(
+                    """
+                    INSERT INTO runtime_mission_checkpoint_bindings (
+                        checkpoint_id, mission_id, plan_version, task_id,
+                        plan_digest, input_digest, session_policy_revision,
+                        global_policy_revision, budget_digest, task_state_version,
+                        checkpoint_epoch, resumed_epoch, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)
+                    """,
+                    (
+                        ckpt_id,
+                        mission_binding.mission_id,
+                        int(mission_binding.plan_version),
+                        tid,
+                        mission_binding.plan_digest,
+                        mission_binding.input_digest,
+                        int(mission_binding.session_policy_revision),
+                        int(mission_binding.global_policy_revision),
+                        mission_binding.budget_digest,
+                        int(task_row["state_version"]),
+                        effective_epoch,
+                        ts,
+                    ),
+                )
             conn.execute(
                 "UPDATE runtime_tasks SET checkpoint_ref = ?, updated_at = ? WHERE task_id = ?",
                 (ckpt_id, ts, tid),
@@ -544,6 +646,41 @@ class DurableTaskCheckpointStore:
             return _decode_and_verify_checkpoint_row(row, verify_integrity=verify_integrity)
 
         return runtime_persistence.run_read(self._storage, self._db_path, _read, retry_policy=self._retry_policy)
+
+    def get_mission_binding(self, checkpoint_id: str) -> MissionCheckpointBindingRecord | None:
+        """Return the persisted mission/version/authority binding for a checkpoint."""
+        cid = _workflow_id(checkpoint_id)
+
+        def _read(conn: sqlite3.Connection) -> MissionCheckpointBindingRecord | None:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute(
+                "SELECT * FROM runtime_mission_checkpoint_bindings WHERE checkpoint_id = ?",
+                (cid,),
+            ).fetchone()
+            if row is None:
+                return None
+            return MissionCheckpointBindingRecord(
+                checkpoint_id=str(row["checkpoint_id"]),
+                task_id=str(row["task_id"]),
+                mission_id=str(row["mission_id"]),
+                plan_version=int(row["plan_version"]),
+                plan_digest=str(row["plan_digest"]),
+                input_digest=str(row["input_digest"]),
+                session_policy_revision=int(row["session_policy_revision"]),
+                global_policy_revision=int(row["global_policy_revision"]),
+                budget_digest=str(row["budget_digest"]),
+                task_state_version=int(row["task_state_version"]),
+                checkpoint_epoch=int(row["checkpoint_epoch"]),
+                resumed_epoch=(int(row["resumed_epoch"]) if row["resumed_epoch"] is not None else None),
+                created_at=float(row["created_at"]),
+            )
+
+        return runtime_persistence.run_read(
+            self._storage,
+            self._db_path,
+            _read,
+            retry_policy=self._retry_policy,
+        )
 
     def load_latest_checkpoint(
         self,

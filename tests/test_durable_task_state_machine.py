@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+from dataclasses import replace
 from pathlib import Path
 import sqlite3
 import sys
@@ -15,6 +16,8 @@ from fastapi.testclient import TestClient
 import pytest
 
 import execution_budget
+import execution_spine
+import runtime_persistence
 import studio
 import workflow_checkpoints
 import workflow_state
@@ -805,6 +808,515 @@ def test_standalone_studio_bundle_runs_durable_state_machine_in_isolation(tmp_pa
         plan = sm2.prepare_resume("tsk-standalone")
         assert plan.next_step == 2
         assert plan.budget.recoveries_used == 1
+
+        # AP-005 contracts are inlined too; no sibling source module is available.
+        sm2.ensure_root_task("mission-standalone", session_id="mission-standalone")
+        mission_authority = mod.MissionAuthorityEnvelope(
+            "mission-standalone",
+            "mission-standalone",
+            "mission-standalone",
+            1,
+            1,
+        )
+        sm2.create_mission_plan(
+            "mission-standalone",
+            "standalone-plan",
+            1,
+            (mod.MissionTaskSpec("only", required_outputs=("result",)),),
+            inputs={"source": "standalone"},
+            authority=mission_authority,
+        )
+        assert sm2.list_mission_readiness("standalone-plan", 1)[0].ready is True
     finally:
         sys.path = old_sys_path
         sys.modules.pop(mod_name, None)
+
+
+# =============================================================================
+# AP-005: versioned mission DAGs, fenced workers, resume bindings, and joins
+# =============================================================================
+
+
+def _mission_authority(
+    root_task_id: str,
+    task_id: str | None = None,
+    *,
+    session_revision: int = 7,
+    global_revision: int = 11,
+) -> execution_spine.MissionAuthorityEnvelope:
+    return execution_spine.MissionAuthorityEnvelope(
+        session_id=root_task_id,
+        root_task_id=root_task_id,
+        task_id=task_id or root_task_id,
+        session_policy_revision=session_revision,
+        global_policy_revision=global_revision,
+    )
+
+
+def test_ap005_dependency_dag_rejects_cycles_and_fences_false_completion(
+    isolated_env: Path,
+) -> None:
+    sm = workflow_state.DurableTaskStateMachine(studio.STORAGE, studio.DB_PATH)
+    root = "ap005-dag-root"
+    sm.ensure_root_task(
+        root,
+        session_id=root,
+        workspace_dir=str(isolated_env),
+        budget_spec=execution_budget.TaskBudgetSpec(max_steps=20),
+        override_budget_spec=True,
+    )
+    inputs = {"request": "build the offline release", "input_version": 3}
+    root_authority = _mission_authority(root)
+
+    with pytest.raises(workflow_state.MissionGraphError, match="cycle"):
+        sm.create_mission_plan(
+            root,
+            "ap005-cycle",
+            1,
+            (
+                workflow_state.MissionTaskSpec("a", required_outputs=("a-out",)),
+                workflow_state.MissionTaskSpec("b", required_outputs=("b-out",)),
+            ),
+            (
+                workflow_state.MissionDependencySpec("a", "b", ("b-out",)),
+                workflow_state.MissionDependencySpec("b", "a", ("a-out",)),
+            ),
+            inputs=inputs,
+            authority=root_authority,
+        )
+
+    plan = sm.create_mission_plan(
+        root,
+        "ap005-build",
+        1,
+        (
+            workflow_state.MissionTaskSpec("spec", "Write spec", ("spec",)),
+            workflow_state.MissionTaskSpec("build", "Build package", ("package",)),
+        ),
+        (workflow_state.MissionDependencySpec("build", "spec", ("spec",)),),
+        inputs=inputs,
+        authority=root_authority,
+    )
+    assert plan.status == "active"
+    binding = sm.capture_mission_binding("ap005-build", 1)
+    spec_task, build_task = sm.list_mission_tasks("ap005-build", 1)
+    readiness = sm.list_mission_readiness("ap005-build", 1)
+    assert [item.ready for item in readiness] == [True, False]
+    assert readiness[1].blocked_by_task_keys == ("spec",)
+
+    with pytest.raises(workflow_state.MissionDependencyRejected, match="not dependency-ready"):
+        sm.claim_ready_mission_task(
+            "ap005-build",
+            1,
+            "build",
+            binding=binding,
+            current_inputs=inputs,
+            current_authority=_mission_authority(root, build_task.task_id),
+            worker_id="worker-build-too-early",
+        )
+
+    spec_lease = sm.claim_ready_mission_task(
+        "ap005-build",
+        1,
+        "spec",
+        binding=binding,
+        current_inputs=inputs,
+        current_authority=_mission_authority(root, spec_task.task_id),
+        worker_id="worker-spec",
+        now=10.0,
+    )
+    with pytest.raises(workflow_state.FalseCompletionRejected, match="missing required output"):
+        sm.complete_mission_task(
+            "ap005-build",
+            1,
+            "spec",
+            binding=binding,
+            current_inputs=inputs,
+            current_authority=_mission_authority(root, spec_task.task_id),
+            worker_id="worker-spec",
+            epoch=spec_lease.epoch.epoch,
+            expected_state_version=spec_lease.task.state_version,
+            outputs=(),
+            now=11.0,
+        )
+    sm.complete_mission_task(
+        "ap005-build",
+        1,
+        "spec",
+        binding=binding,
+        current_inputs=inputs,
+        current_authority=_mission_authority(root, spec_task.task_id),
+        worker_id="worker-spec",
+        epoch=spec_lease.epoch.epoch,
+        expected_state_version=spec_lease.task.state_version,
+        outputs=(workflow_state.MissionOutputRef("spec", "artifacts/spec.json", "a" * 64),),
+        now=11.0,
+    )
+    partial = sm.evaluate_mission_join("ap005-build", 1)
+    assert partial.status == "partial"
+    assert partial.incomplete_task_keys == ("build",)
+    assert sm.list_mission_readiness("ap005-build", 1)[1].ready is True
+    with pytest.raises(workflow_state.MissionDependencyRejected, match="not dependency-ready"):
+        sm.claim_ready_mission_task(
+            "ap005-build",
+            1,
+            "spec",
+            binding=binding,
+            current_inputs=inputs,
+            current_authority=_mission_authority(root, spec_task.task_id),
+            worker_id="illegal-second-spec-worker",
+        )
+
+    build_lease = sm.claim_ready_mission_task(
+        "ap005-build",
+        1,
+        "build",
+        binding=binding,
+        current_inputs=inputs,
+        current_authority=_mission_authority(root, build_task.task_id),
+        worker_id="worker-build-old",
+        now=12.0,
+    )
+    successor, superseded = sm.store.acquire_worker_lease(
+        build_task.task_id,
+        "worker-build-successor",
+        force_takeover=True,
+        now=13.0,
+    )
+    assert successor.epoch == build_lease.epoch.epoch + 1
+    assert superseded[0].status == "fenced"
+    with pytest.raises(runtime_persistence.StaleEpochError):
+        sm.complete_mission_task(
+            "ap005-build",
+            1,
+            "build",
+            binding=binding,
+            current_inputs=inputs,
+            current_authority=_mission_authority(root, build_task.task_id),
+            worker_id="worker-build-old",
+            epoch=build_lease.epoch.epoch,
+            expected_state_version=build_lease.task.state_version,
+            outputs=(workflow_state.MissionOutputRef("package", "artifacts/app.tar", "b" * 64),),
+            now=14.0,
+        )
+    sm.complete_mission_task(
+        "ap005-build",
+        1,
+        "build",
+        binding=binding,
+        current_inputs=inputs,
+        current_authority=_mission_authority(root, build_task.task_id),
+        worker_id="worker-build-successor",
+        epoch=successor.epoch,
+        expected_state_version=build_lease.task.state_version,
+        outputs=(workflow_state.MissionOutputRef("package", "artifacts/app.tar", "b" * 64),),
+        now=14.0,
+    )
+    assert sm.evaluate_mission_join("ap005-build", 1).status == "succeeded"
+
+    reopened = workflow_state.DurableTaskStateMachine(studio.STORAGE, studio.DB_PATH)
+    durable = reopened.evaluate_mission_join("ap005-build", 1, persist=False)
+    assert durable.status == "succeeded"
+    assert [result.present_outputs for result in durable.tasks] == [("spec",), ("package",)]
+
+
+def test_ap005_restart_resume_revalidates_every_binding_and_fences_old_worker(
+    isolated_env: Path,
+) -> None:
+    sm = workflow_state.DurableTaskStateMachine(studio.STORAGE, studio.DB_PATH)
+    root = "ap005-resume-root"
+    original_budget = execution_budget.TaskBudgetSpec(max_steps=17, max_recoveries=2)
+    sm.ensure_root_task(
+        root,
+        session_id=root,
+        workspace_dir=str(isolated_env),
+        budget_spec=original_budget,
+        override_budget_spec=True,
+    )
+    inputs = {"source": "fixture", "revision": 9}
+    sm.create_mission_plan(
+        root,
+        "ap005-resume",
+        1,
+        (workflow_state.MissionTaskSpec("render", required_outputs=("rendered",)),),
+        inputs=inputs,
+        authority=_mission_authority(root),
+        now=20.0,
+    )
+    binding = sm.capture_mission_binding("ap005-resume", 1)
+    task = sm.list_mission_tasks("ap005-resume", 1)[0]
+    authority = _mission_authority(root, task.task_id)
+    lease = sm.claim_ready_mission_task(
+        "ap005-resume",
+        1,
+        "render",
+        binding=binding,
+        current_inputs=inputs,
+        current_authority=authority,
+        worker_id="resume-worker-old",
+        lease_ttl_s=2.0,
+        now=21.0,
+    )
+    checkpoint = sm.checkpoint_mission_task(
+        "ap005-resume",
+        1,
+        "render",
+        binding=binding,
+        current_inputs=inputs,
+        current_authority=authority,
+        worker_id="resume-worker-old",
+        epoch=lease.epoch.epoch,
+        expected_state_version=lease.task.state_version,
+        step=4,
+        payload={"completed_chunks": [1, 2, 3]},
+        now=22.0,
+    )
+    report = sm.recover_incomplete_transitions(now=24.0)
+    assert task.task_id in report.recovered_task_ids
+
+    restarted = workflow_state.DurableTaskStateMachine(studio.STORAGE, studio.DB_PATH)
+    paused = restarted.store.get_task(task.task_id)
+    assert paused is not None and paused.state == "paused"
+    assert restarted.checkpoints.get_checkpoint(checkpoint.checkpoint_id).status == "interrupted"  # type: ignore[union-attr]
+
+    stale_cases = (
+        ({"source": "fixture", "revision": 10}, authority, binding, "input digest"),
+        (inputs, _mission_authority(root, task.task_id, session_revision=8), binding, "session policy"),
+        (inputs, _mission_authority(root, task.task_id, global_revision=12), binding, "global policy"),
+        (inputs, authority, replace(binding, plan_digest="f" * 64), "plan/version"),
+    )
+    for current_inputs, current_authority, current_binding, message in stale_cases:
+        with pytest.raises(workflow_state.MissionBindingRejected, match=message):
+            restarted.prepare_mission_task_resume(
+                "ap005-resume",
+                1,
+                "render",
+                binding=current_binding,
+                current_inputs=current_inputs,
+                current_authority=current_authority,
+                worker_id="resume-worker-new",
+                expected_state_version=paused.state_version,
+                now=25.0,
+            )
+
+    restarted.budgets.ensure_budget(
+        root,
+        spec=execution_budget.TaskBudgetSpec(max_steps=99, max_recoveries=2),
+        override_spec=True,
+        now=25.0,
+    )
+    with pytest.raises(workflow_state.MissionBindingRejected, match="budget identity"):
+        restarted.prepare_mission_task_resume(
+            "ap005-resume",
+            1,
+            "render",
+            binding=binding,
+            current_inputs=inputs,
+            current_authority=authority,
+            worker_id="resume-worker-new",
+            expected_state_version=paused.state_version,
+            now=25.0,
+        )
+    restarted.budgets.ensure_budget(root, spec=original_budget, override_spec=True, now=25.0)
+
+    with pytest.raises(workflow_checkpoints.ResumeRejected, match="state_version"):
+        restarted.prepare_mission_task_resume(
+            "ap005-resume",
+            1,
+            "render",
+            binding=binding,
+            current_inputs=inputs,
+            current_authority=authority,
+            worker_id="resume-worker-new",
+            expected_state_version=paused.state_version - 1,
+            now=25.0,
+        )
+    resumed = restarted.prepare_mission_task_resume(
+        "ap005-resume",
+        1,
+        "render",
+        binding=binding,
+        current_inputs=inputs,
+        current_authority=authority,
+        worker_id="resume-worker-new",
+        expected_state_version=paused.state_version,
+        now=25.0,
+    )
+    assert resumed.next_step == 5
+    assert resumed.epoch.epoch == lease.epoch.epoch + 1
+    assert restarted.checkpoints.get_mission_binding(checkpoint.checkpoint_id).resumed_epoch == resumed.epoch.epoch  # type: ignore[union-attr]
+
+    with pytest.raises((workflow_state.MissionBindingRejected, runtime_persistence.StaleEpochError)):
+        restarted.complete_mission_task(
+            "ap005-resume",
+            1,
+            "render",
+            binding=binding,
+            current_inputs=inputs,
+            current_authority=authority,
+            worker_id="resume-worker-old",
+            epoch=lease.epoch.epoch,
+            expected_state_version=lease.task.state_version,
+            outputs=(workflow_state.MissionOutputRef("rendered", "out/render.txt", "c" * 64),),
+            now=26.0,
+        )
+    restarted.complete_mission_task(
+        "ap005-resume",
+        1,
+        "render",
+        binding=binding,
+        current_inputs=inputs,
+        current_authority=authority,
+        worker_id="resume-worker-new",
+        epoch=resumed.epoch.epoch,
+        expected_state_version=resumed.task.state_version,
+        outputs=(workflow_state.MissionOutputRef("rendered", "out/render.txt", "c" * 64),),
+        now=26.0,
+    )
+    assert workflow_state.DurableTaskStateMachine(studio.STORAGE, studio.DB_PATH).evaluate_mission_join(
+        "ap005-resume", 1, persist=False
+    ).status == "succeeded"
+
+
+def test_ap005_superseded_plan_fences_workers_and_only_successor_is_schedulable(
+    isolated_env: Path,
+) -> None:
+    sm = workflow_state.DurableTaskStateMachine(studio.STORAGE, studio.DB_PATH)
+    root = "ap005-version-root"
+    sm.ensure_root_task(root, session_id=root, workspace_dir=str(isolated_env))
+    inputs = {"versioned": True}
+    sm.create_mission_plan(
+        root,
+        "ap005-versioned",
+        1,
+        (workflow_state.MissionTaskSpec("old", required_outputs=("out",)),),
+        inputs=inputs,
+        authority=_mission_authority(root),
+        now=30.0,
+    )
+    old_binding = sm.capture_mission_binding("ap005-versioned", 1)
+    old_task = sm.list_mission_tasks("ap005-versioned", 1)[0]
+    old_authority = _mission_authority(root, old_task.task_id)
+    old_lease = sm.claim_ready_mission_task(
+        "ap005-versioned",
+        1,
+        "old",
+        binding=old_binding,
+        current_inputs=inputs,
+        current_authority=old_authority,
+        worker_id="old-plan-worker",
+        now=31.0,
+    )
+    sm.create_mission_plan(
+        root,
+        "ap005-versioned",
+        2,
+        (workflow_state.MissionTaskSpec("new", required_outputs=("out",)),),
+        inputs=inputs,
+        authority=_mission_authority(root),
+        now=32.0,
+    )
+    assert sm.get_mission_plan("ap005-versioned", 1).status == "superseded"  # type: ignore[union-attr]
+    assert sm.store.get_epoch(old_task.task_id, old_lease.epoch.epoch).status == "fenced"  # type: ignore[union-attr]
+    with pytest.raises(workflow_state.MissionBindingRejected, match="not active"):
+        sm.complete_mission_task(
+            "ap005-versioned",
+            1,
+            "old",
+            binding=old_binding,
+            current_inputs=inputs,
+            current_authority=old_authority,
+            worker_id="old-plan-worker",
+            epoch=old_lease.epoch.epoch,
+            expected_state_version=old_lease.task.state_version,
+            outputs=(workflow_state.MissionOutputRef("out", "old.out", "d" * 64),),
+            now=33.0,
+        )
+    active_milestones = sm.list_milestones(root)
+    assert [task.task_id for task in active_milestones] == [sm.list_mission_tasks("ap005-versioned", 2)[0].task_id]
+
+
+def test_ap005_join_reports_failed_and_missing_outputs_and_blocks_parent_success(
+    isolated_env: Path,
+) -> None:
+    sm = workflow_state.DurableTaskStateMachine(studio.STORAGE, studio.DB_PATH)
+
+    failed_root = "ap005-failed-root"
+    sm.ensure_root_task(failed_root, session_id=failed_root, workspace_dir=str(isolated_env))
+    sm.create_mission_plan(
+        failed_root,
+        "ap005-failed",
+        1,
+        (workflow_state.MissionTaskSpec("only", required_outputs=("result",)),),
+        inputs={},
+        authority=_mission_authority(failed_root),
+        now=40.0,
+    )
+    failed_binding = sm.capture_mission_binding("ap005-failed", 1)
+    failed_task = sm.list_mission_tasks("ap005-failed", 1)[0]
+    failed_authority = _mission_authority(failed_root, failed_task.task_id)
+    failed_lease = sm.claim_ready_mission_task(
+        "ap005-failed",
+        1,
+        "only",
+        binding=failed_binding,
+        current_inputs={},
+        current_authority=failed_authority,
+        worker_id="failure-worker",
+        now=41.0,
+    )
+    sm.fail_mission_task(
+        "ap005-failed",
+        1,
+        "only",
+        binding=failed_binding,
+        current_inputs={},
+        current_authority=failed_authority,
+        worker_id="failure-worker",
+        epoch=failed_lease.epoch.epoch,
+        expected_state_version=failed_lease.task.state_version,
+        reason="fixture_failure",
+        now=42.0,
+    )
+    failed_join = sm.evaluate_mission_join("ap005-failed", 1)
+    assert failed_join.status == "failed"
+    assert failed_join.failed_task_keys == ("only",)
+
+    missing_root = "ap005-missing-root"
+    sm.ensure_root_task(missing_root, session_id=missing_root, workspace_dir=str(isolated_env))
+    sm.create_mission_plan(
+        missing_root,
+        "ap005-missing",
+        1,
+        (workflow_state.MissionTaskSpec("producer", required_outputs=("artifact",)),),
+        inputs={},
+        authority=_mission_authority(missing_root),
+        now=43.0,
+    )
+    missing_task = sm.list_mission_tasks("ap005-missing", 1)[0]
+
+    def _simulate_legacy_false_completion(conn: sqlite3.Connection) -> None:
+        conn.execute(
+            "UPDATE runtime_tasks SET state = 'completed', state_version = state_version + 1 WHERE task_id = ?",
+            (missing_task.task_id,),
+        )
+
+    runtime_persistence.run_write_transaction(
+        studio.STORAGE,
+        studio.DB_PATH,
+        _simulate_legacy_false_completion,
+    )
+    missing_join = sm.evaluate_mission_join("ap005-missing", 1)
+    assert missing_join.status == "failed"
+    assert missing_join.missing_output_task_keys == ("producer",)
+    assert missing_join.tasks[0].missing_outputs == ("artifact",)
+
+    root_epoch, _ = sm.store.acquire_worker_lease(missing_root, "parent-worker", now=44.0)
+    sm.transition_task(missing_root, "running", epoch=root_epoch.epoch, now=44.0)
+    with pytest.raises(workflow_state.FalseCompletionRejected, match="missing_outputs"):
+        sm.complete_task(
+            missing_root,
+            worker_id="parent-worker",
+            epoch=root_epoch.epoch,
+            now=45.0,
+        )

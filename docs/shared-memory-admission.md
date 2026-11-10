@@ -122,7 +122,7 @@ required even if action memory was reconciled first.
 LC-03 added `memory_domains` and `memory_reservations` in private schema v2.
 New private journals are now **schema v3** for LC08 explicit-load purpose (see
 [coordinator compatibility](model-lifecycle-coordinator.md)). Initial DDL/version tags are atomic. The
-active Studio database remains schema v3. Old private v1/v2, unknown/future/corrupt
+active Studio database is independently schema v4 after AP-005. Old private v1/v2, unknown/future/corrupt
 or incomplete journals are preserved and refused, without resetting holds or
 modifying their bytes. There is no automatic populated migration or backup
 implementation: reviewed backup/migration and rollback evidence are mandatory

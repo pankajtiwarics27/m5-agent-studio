@@ -9,12 +9,14 @@ import os
 import sqlite3
 import subprocess
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Callable, Literal, Sequence
 
 import child_delegation
 import execution_budget
+import execution_spine
 import process_supervision
 import recovery_guard
 import runtime_persistence
@@ -59,6 +61,18 @@ class WorkflowTransitionRejected(RuntimeError):
 
 class FalseCompletionRejected(WorkflowTransitionRejected):
     """Raised when a task claims completion without verified patch/test/ledger evidence."""
+
+
+class MissionGraphError(WorkflowStateError):
+    """Raised when a versioned mission graph is malformed or conflicts with durable state."""
+
+
+class MissionDependencyRejected(WorkflowTransitionRejected):
+    """Raised when a mission node is not dependency-ready or its required outputs are absent."""
+
+
+class MissionBindingRejected(WorkflowTransitionRejected):
+    """Raised when a captured plan/input/authority/budget identity is stale."""
 
 
 _SAFE_VERIFY_ENV_KEYS: frozenset[str] = frozenset(
@@ -519,6 +533,444 @@ def _encode_evidence_json(
     return json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
 
+@dataclass(frozen=True, slots=True)
+class MissionTaskSpec:
+    """One immutable node in a versioned mission plan."""
+
+    task_key: str
+    title: str = ""
+    required_outputs: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class MissionDependencySpec:
+    """Directed edge: ``task_key`` waits for ``depends_on_task_key``."""
+
+    task_key: str
+    depends_on_task_key: str
+    required_outputs: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class MissionOutputRef:
+    """Verified-by-caller artifact identity persisted at mission-node completion."""
+
+    output_key: str
+    artifact_ref: str
+    artifact_sha256: str
+    evidence: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True, slots=True)
+class MissionPlanRecord:
+    mission_id: str
+    plan_version: int
+    root_task_id: str
+    plan_digest: str
+    input_digest: str
+    session_policy_revision: int
+    global_policy_revision: int
+    budget_digest: str
+    status: str
+    created_at: float
+    updated_at: float
+
+
+@dataclass(frozen=True, slots=True)
+class MissionExecutionBinding:
+    """Server-captured immutable plan identity; never client/model authority."""
+
+    mission_id: str
+    plan_version: int
+    root_task_id: str
+    session_id: str
+    plan_digest: str
+    input_digest: str
+    session_policy_revision: int
+    global_policy_revision: int
+    budget_digest: str
+
+    def checkpoint_binding(self) -> workflow_checkpoints.MissionCheckpointBinding:
+        return workflow_checkpoints.MissionCheckpointBinding(
+            mission_id=self.mission_id,
+            plan_version=self.plan_version,
+            plan_digest=self.plan_digest,
+            input_digest=self.input_digest,
+            session_policy_revision=self.session_policy_revision,
+            global_policy_revision=self.global_policy_revision,
+            budget_digest=self.budget_digest,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class MissionTaskReadiness:
+    mission_id: str
+    plan_version: int
+    task_key: str
+    task: runtime_persistence.TaskRecord
+    ready: bool
+    blocked_by_task_keys: tuple[str, ...] = ()
+    failed_dependency_keys: tuple[str, ...] = ()
+    missing_required_outputs: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class MissionTaskLease:
+    task: runtime_persistence.TaskRecord
+    epoch: runtime_persistence.TaskEpochRecord
+
+
+@dataclass(frozen=True, slots=True)
+class MissionJoinTaskResult:
+    task_key: str
+    task_id: str
+    state: str
+    outcome: str
+    required_outputs: tuple[str, ...]
+    present_outputs: tuple[str, ...]
+    missing_outputs: tuple[str, ...]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "task_key": self.task_key,
+            "task_id": self.task_id,
+            "state": self.state,
+            "outcome": self.outcome,
+            "required_outputs": list(self.required_outputs),
+            "present_outputs": list(self.present_outputs),
+            "missing_outputs": list(self.missing_outputs),
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class MissionJoinReport:
+    mission_id: str
+    plan_version: int
+    status: Literal["pending", "partial", "failed", "succeeded"]
+    tasks: tuple[MissionJoinTaskResult, ...]
+    evaluated_at: float
+    report_hash: str
+
+    @property
+    def failed_task_keys(self) -> tuple[str, ...]:
+        return tuple(item.task_key for item in self.tasks if item.outcome in {"failed", "cancelled"})
+
+    @property
+    def incomplete_task_keys(self) -> tuple[str, ...]:
+        return tuple(item.task_key for item in self.tasks if item.outcome == "incomplete")
+
+    @property
+    def missing_output_task_keys(self) -> tuple[str, ...]:
+        return tuple(item.task_key for item in self.tasks if item.outcome == "missing_required_outputs")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "mission_id": self.mission_id,
+            "plan_version": self.plan_version,
+            "status": self.status,
+            "tasks": [item.to_dict() for item in self.tasks],
+            "failed_task_keys": list(self.failed_task_keys),
+            "incomplete_task_keys": list(self.incomplete_task_keys),
+            "missing_output_task_keys": list(self.missing_output_task_keys),
+            "evaluated_at": self.evaluated_at,
+            "report_hash": self.report_hash,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class MissionResumePlan:
+    task: runtime_persistence.TaskRecord
+    epoch: runtime_persistence.TaskEpochRecord
+    checkpoint: workflow_checkpoints.TaskCheckpointRecord
+    next_step: int
+
+
+def _mission_clean_name(value: object, label: str, *, max_len: int = 128) -> str:
+    if not isinstance(value, str) or not value.strip() or "\x00" in value:
+        raise MissionGraphError(f"{label} must be a non-empty NUL-free string.")
+    cleaned = value.strip()
+    if len(cleaned) > max_len or any(not (ch.isalnum() or ch in "._:-") for ch in cleaned):
+        raise MissionGraphError(
+            f"{label} must be at most {max_len} characters using letters, digits, '.', '_', ':', or '-'."
+        )
+    return cleaned
+
+
+def _mission_sha256(value: object, label: str) -> str:
+    cleaned = str(value or "").strip().lower()
+    if len(cleaned) != 64 or any(ch not in "0123456789abcdef" for ch in cleaned):
+        raise MissionGraphError(f"{label} must be a 64-character lowercase SHA-256 digest.")
+    return cleaned
+
+
+def mission_input_digest(inputs: Mapping[str, Any]) -> str:
+    """Compute a canonical digest without persisting potentially sensitive input bytes."""
+    if not isinstance(inputs, Mapping):
+        raise MissionGraphError("mission inputs must be a mapping.")
+    try:
+        canonical = json.dumps(
+            dict(inputs),
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+        )
+    except (TypeError, ValueError) as exc:
+        raise MissionGraphError("mission inputs must be JSON serializable.") from exc
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def mission_task_id(root_task_id: str, plan_version: int, task_key: str) -> str:
+    """Build a deterministic runtime-task identity scoped to one immutable plan version."""
+    root = _validate_identifier(root_task_id, "root_task_id")
+    key = _mission_clean_name(task_key, "task_key")
+    if isinstance(plan_version, bool) or not isinstance(plan_version, int) or plan_version < 1:
+        raise MissionGraphError("plan_version must be an integer >= 1.")
+    candidate = f"{root}::plan:{plan_version}:{key}"
+    if len(candidate) <= 128:
+        return candidate
+    digest = hashlib.sha256(f"{plan_version}:{key}".encode("utf-8")).hexdigest()[:20]
+    return f"{root[:88]}::plan:{plan_version}:{digest}"[:128]
+
+
+def _mission_plan_from_row(row: sqlite3.Row) -> MissionPlanRecord:
+    return MissionPlanRecord(
+        mission_id=str(row["mission_id"]),
+        plan_version=int(row["plan_version"]),
+        root_task_id=str(row["root_task_id"]),
+        plan_digest=str(row["plan_digest"]),
+        input_digest=str(row["input_digest"]),
+        session_policy_revision=int(row["session_policy_revision"]),
+        global_policy_revision=int(row["global_policy_revision"]),
+        budget_digest=str(row["budget_digest"]),
+        status=str(row["status"]),
+        created_at=float(row["created_at"]),
+        updated_at=float(row["updated_at"]),
+    )
+
+
+def _mission_normalize_graph(
+    root_task_id: str,
+    mission_id: str,
+    plan_version: int,
+    tasks: Sequence[MissionTaskSpec],
+    dependencies: Sequence[MissionDependencySpec],
+) -> tuple[tuple[MissionTaskSpec, ...], tuple[MissionDependencySpec, ...], str]:
+    mid = _mission_clean_name(mission_id, "mission_id")
+    root = _validate_identifier(root_task_id, "root_task_id")
+    if isinstance(plan_version, bool) or not isinstance(plan_version, int) or plan_version < 1:
+        raise MissionGraphError("plan_version must be an integer >= 1.")
+    if not tasks:
+        raise MissionGraphError("a mission plan requires at least one task.")
+    if len(tasks) > 512:
+        raise MissionGraphError("a mission plan may contain at most 512 tasks.")
+
+    normalized_tasks: list[MissionTaskSpec] = []
+    task_outputs: dict[str, tuple[str, ...]] = {}
+    for task_raw in tasks:
+        if not isinstance(task_raw, MissionTaskSpec):
+            raise MissionGraphError("tasks must contain MissionTaskSpec values.")
+        key = _mission_clean_name(task_raw.task_key, "task_key")
+        if key in task_outputs:
+            raise MissionGraphError(f"duplicate mission task key {key!r}.")
+        outputs = tuple(
+            dict.fromkeys(
+                _mission_clean_name(item, "required_output")
+                for item in task_raw.required_outputs
+            )
+        )
+        title = str(task_raw.title or key).strip()[:240]
+        normalized = MissionTaskSpec(key, title, outputs)
+        normalized_tasks.append(normalized)
+        task_outputs[key] = outputs
+
+    normalized_deps: list[MissionDependencySpec] = []
+    seen_edges: set[tuple[str, str]] = set()
+    adjacency: dict[str, list[str]] = {key: [] for key in task_outputs}
+    indegree: dict[str, int] = {key: 0 for key in task_outputs}
+    for dependency_raw in dependencies:
+        if not isinstance(dependency_raw, MissionDependencySpec):
+            raise MissionGraphError("dependencies must contain MissionDependencySpec values.")
+        task_key = _mission_clean_name(dependency_raw.task_key, "dependency.task_key")
+        prerequisite = _mission_clean_name(
+            dependency_raw.depends_on_task_key,
+            "dependency.depends_on_task_key",
+        )
+        if task_key not in task_outputs or prerequisite not in task_outputs:
+            raise MissionGraphError(
+                f"dependency {task_key!r} <- {prerequisite!r} references an unknown mission task."
+            )
+        if task_key == prerequisite:
+            raise MissionGraphError(f"mission task {task_key!r} cannot depend on itself.")
+        edge = (task_key, prerequisite)
+        if edge in seen_edges:
+            raise MissionGraphError(f"duplicate mission dependency {task_key!r} <- {prerequisite!r}.")
+        seen_edges.add(edge)
+        required = tuple(
+            dict.fromkeys(
+                _mission_clean_name(item, "dependency.required_output")
+                for item in dependency_raw.required_outputs
+            )
+        )
+        undeclared = sorted(set(required) - set(task_outputs[prerequisite]))
+        if undeclared:
+            raise MissionGraphError(
+                f"dependency on {prerequisite!r} requires undeclared output(s): {', '.join(undeclared)}."
+            )
+        normalized_deps.append(MissionDependencySpec(task_key, prerequisite, required))
+        adjacency[prerequisite].append(task_key)
+        indegree[task_key] += 1
+
+    queue = [item.task_key for item in normalized_tasks if indegree[item.task_key] == 0]
+    visited = 0
+    while queue:
+        current = queue.pop(0)
+        visited += 1
+        for successor in adjacency[current]:
+            indegree[successor] -= 1
+            if indegree[successor] == 0:
+                queue.append(successor)
+    if visited != len(normalized_tasks):
+        cyclic = sorted(key for key, count in indegree.items() if count > 0)
+        raise MissionGraphError(f"mission dependency cycle detected involving: {', '.join(cyclic)}.")
+
+    graph_payload = {
+        "mission_id": mid,
+        "plan_version": plan_version,
+        "root_task_id": root,
+        "tasks": [
+            {
+                "task_key": item.task_key,
+                "task_id": mission_task_id(root, plan_version, item.task_key),
+                "title": item.title,
+                "required_outputs": list(item.required_outputs),
+            }
+            for item in normalized_tasks
+        ],
+        "dependencies": [
+            {
+                "task_key": item.task_key,
+                "depends_on_task_key": item.depends_on_task_key,
+                "required_outputs": list(item.required_outputs),
+            }
+            for item in sorted(
+                normalized_deps,
+                key=lambda dep: (dep.task_key, dep.depends_on_task_key),
+            )
+        ],
+    }
+    canonical = json.dumps(graph_payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return tuple(normalized_tasks), tuple(normalized_deps), hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _mission_join_report_locked(
+    conn: sqlite3.Connection,
+    mission_id: str,
+    plan_version: int,
+    *,
+    now: float,
+) -> MissionJoinReport:
+    plan = conn.execute(
+        "SELECT 1 FROM runtime_mission_plans WHERE mission_id = ? AND plan_version = ?",
+        (mission_id, plan_version),
+    ).fetchone()
+    if plan is None:
+        raise MissionGraphError(f"Mission plan {mission_id!r} v{plan_version} does not exist.")
+    rows = conn.execute(
+        """
+        SELECT mt.task_key, mt.task_id, mt.required_outputs_json, rt.state
+        FROM runtime_mission_tasks AS mt
+        JOIN runtime_tasks AS rt ON rt.task_id = mt.task_id
+        WHERE mt.mission_id = ? AND mt.plan_version = ?
+        ORDER BY mt.position ASC, mt.task_key ASC
+        """,
+        (mission_id, plan_version),
+    ).fetchall()
+    results: list[MissionJoinTaskResult] = []
+    completed_count = 0
+    has_failure = False
+    has_incomplete = False
+    for row in rows:
+        try:
+            raw_required = json.loads(str(row["required_outputs_json"]))
+        except (TypeError, ValueError) as exc:
+            raise MissionGraphError("persisted mission output contract is malformed.") from exc
+        if not isinstance(raw_required, list):
+            raise MissionGraphError("persisted mission output contract must be a list.")
+        required = tuple(str(item) for item in raw_required)
+        output_rows = conn.execute(
+            """
+            SELECT output_key FROM runtime_mission_outputs
+            WHERE mission_id = ? AND plan_version = ? AND task_id = ?
+            ORDER BY output_key ASC
+            """,
+            (mission_id, plan_version, str(row["task_id"])),
+        ).fetchall()
+        present = tuple(str(item["output_key"]) for item in output_rows)
+        missing = tuple(sorted(set(required) - set(present)))
+        state = str(row["state"])
+        if state == "completed" and not missing:
+            outcome = "completed"
+            completed_count += 1
+        elif state == "completed":
+            outcome = "missing_required_outputs"
+            has_failure = True
+        elif state in {"failed", "cancelled"}:
+            outcome = state
+            has_failure = True
+        else:
+            outcome = "incomplete"
+            has_incomplete = True
+        results.append(
+            MissionJoinTaskResult(
+                task_key=str(row["task_key"]),
+                task_id=str(row["task_id"]),
+                state=state,
+                outcome=outcome,
+                required_outputs=required,
+                present_outputs=present,
+                missing_outputs=missing,
+            )
+        )
+    if results and completed_count == len(results):
+        status: Literal["pending", "partial", "failed", "succeeded"] = "succeeded"
+    elif completed_count > 0:
+        status = "partial"
+    elif has_failure:
+        status = "failed"
+    elif has_incomplete:
+        status = "pending"
+    else:
+        status = "failed"
+    core = {
+        "mission_id": mission_id,
+        "plan_version": plan_version,
+        "status": status,
+        "tasks": [item.to_dict() for item in results],
+    }
+    report_hash = hashlib.sha256(
+        json.dumps(core, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    ).hexdigest()
+    return MissionJoinReport(mission_id, plan_version, status, tuple(results), now, report_hash)
+
+
+def _mission_persist_join_locked(conn: sqlite3.Connection, report: MissionJoinReport) -> None:
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO runtime_mission_joins (
+            mission_id, plan_version, status, report_json, report_hash, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (
+            report.mission_id,
+            report.plan_version,
+            report.status,
+            json.dumps(report.to_dict(), sort_keys=True, separators=(",", ":"), ensure_ascii=False),
+            report.report_hash,
+            report.evaluated_at,
+        ),
+    )
+
+
 class DurableTaskStateMachine:
     """Authoritative SQLite state machine for root tasks, child milestones, and checkpoints."""
 
@@ -544,6 +996,1336 @@ class DurableTaskStateMachine:
         )
         self.recovery = recovery_memory if recovery_memory is not None else recovery_guard.RecoveryGuard(
             db_path.parent / "recovery"
+        )
+
+    def _mission_validate_binding_locked(
+        self,
+        conn: sqlite3.Connection,
+        *,
+        mission_id: str,
+        plan_version: int,
+        binding: MissionExecutionBinding,
+        current_inputs: Mapping[str, Any],
+        current_authority: execution_spine.MissionAuthorityEnvelope,
+        expected_task_id: str,
+    ) -> sqlite3.Row:
+        """Revalidate every captured identity against current durable/server authority."""
+        mid = _mission_clean_name(mission_id, "mission_id")
+        if not isinstance(binding, MissionExecutionBinding):
+            raise MissionBindingRejected("A server-captured MissionExecutionBinding is required.")
+        plan = conn.execute(
+            """
+            SELECT mp.*, rt.session_id AS root_session_id, rt.state AS root_state,
+                   rt.budget_json AS root_budget_json
+            FROM runtime_mission_plans AS mp
+            JOIN runtime_tasks AS rt ON rt.task_id = mp.root_task_id
+            WHERE mp.mission_id = ? AND mp.plan_version = ?
+            """,
+            (mid, int(plan_version)),
+        ).fetchone()
+        if plan is None:
+            raise MissionBindingRejected(f"Mission plan {mid!r} v{plan_version} does not exist.")
+        if str(plan["status"]) != "active":
+            raise MissionBindingRejected(
+                f"Mission plan {mid!r} v{plan_version} is {plan['status']!r}, not active."
+            )
+        expected_binding = (
+            mid,
+            int(plan_version),
+            str(plan["root_task_id"]),
+            str(plan["root_session_id"]),
+            str(plan["plan_digest"]),
+            str(plan["input_digest"]),
+            int(plan["session_policy_revision"]),
+            int(plan["global_policy_revision"]),
+            str(plan["budget_digest"]),
+        )
+        presented_binding = (
+            binding.mission_id,
+            int(binding.plan_version),
+            binding.root_task_id,
+            binding.session_id,
+            binding.plan_digest,
+            binding.input_digest,
+            int(binding.session_policy_revision),
+            int(binding.global_policy_revision),
+            binding.budget_digest,
+        )
+        if presented_binding != expected_binding:
+            raise MissionBindingRejected("Captured mission plan/version binding is stale or mismatched.")
+
+        current_input_digest = mission_input_digest(current_inputs)
+        if current_input_digest != str(plan["input_digest"]):
+            raise MissionBindingRejected("Mission input digest changed after the plan was captured.")
+        if not isinstance(current_authority, execution_spine.MissionAuthorityEnvelope):
+            raise MissionBindingRejected("Current server mission authority envelope is required.")
+        if (
+            current_authority.session_id != str(plan["root_session_id"])
+            or current_authority.root_task_id != str(plan["root_task_id"])
+            or current_authority.task_id != expected_task_id
+        ):
+            raise MissionBindingRejected("Current mission session/root/task authority identity does not match.")
+        if current_authority.session_policy_revision != int(plan["session_policy_revision"]):
+            raise MissionBindingRejected("Mission session policy/grant generation is stale.")
+        if current_authority.global_policy_revision != int(plan["global_policy_revision"]):
+            raise MissionBindingRejected("Mission global policy generation is stale.")
+        try:
+            current_budget_digest = runtime_persistence.compute_task_budget_identity(
+                str(plan["root_budget_json"])
+            )
+        except ValueError as exc:
+            raise MissionBindingRejected(f"Mission budget identity is unreadable: {exc}") from exc
+        if current_budget_digest != str(plan["budget_digest"]):
+            raise MissionBindingRejected("Mission budget identity changed after the plan was captured.")
+        member = conn.execute(
+            """
+            SELECT 1 FROM runtime_mission_tasks
+            WHERE mission_id = ? AND plan_version = ? AND task_id = ?
+            """,
+            (mid, int(plan_version), expected_task_id),
+        ).fetchone()
+        if member is None:
+            raise MissionBindingRejected("Current task is not a member of the active mission plan version.")
+        return plan
+
+    @staticmethod
+    def _mission_readiness_locked(
+        conn: sqlite3.Connection,
+        *,
+        mission_id: str,
+        plan_version: int,
+        task_row: sqlite3.Row,
+    ) -> MissionTaskReadiness:
+        blocked: list[str] = []
+        failed: list[str] = []
+        missing: list[str] = []
+        deps = conn.execute(
+            """
+            SELECT dep.task_id, dep.depends_on_task_id, dep.required_outputs_json,
+                   prereq.task_key AS prerequisite_key, rt.state AS prerequisite_state
+            FROM runtime_mission_dependencies AS dep
+            JOIN runtime_mission_tasks AS prereq
+              ON prereq.mission_id = dep.mission_id
+             AND prereq.plan_version = dep.plan_version
+             AND prereq.task_id = dep.depends_on_task_id
+            JOIN runtime_tasks AS rt ON rt.task_id = dep.depends_on_task_id
+            WHERE dep.mission_id = ? AND dep.plan_version = ? AND dep.task_id = ?
+            ORDER BY prereq.position ASC, prereq.task_key ASC
+            """,
+            (mission_id, plan_version, str(task_row["task_id"])),
+        ).fetchall()
+        for dep in deps:
+            dep_key = str(dep["prerequisite_key"])
+            dep_state = str(dep["prerequisite_state"])
+            if dep_state != "completed":
+                blocked.append(dep_key)
+                if dep_state in {"failed", "cancelled"}:
+                    failed.append(dep_key)
+                continue
+            try:
+                required = json.loads(str(dep["required_outputs_json"]))
+            except (TypeError, ValueError) as exc:
+                raise MissionGraphError("persisted mission dependency output contract is malformed.") from exc
+            if not isinstance(required, list):
+                raise MissionGraphError("persisted mission dependency output contract must be a list.")
+            present_rows = conn.execute(
+                """
+                SELECT output_key FROM runtime_mission_outputs
+                WHERE mission_id = ? AND plan_version = ? AND task_id = ?
+                """,
+                (mission_id, plan_version, str(dep["depends_on_task_id"])),
+            ).fetchall()
+            present = {str(row["output_key"]) for row in present_rows}
+            for output_key in required:
+                if str(output_key) not in present:
+                    blocked.append(dep_key)
+                    missing.append(f"{dep_key}:{output_key}")
+        task = runtime_persistence._row_to_task(task_row)
+        ready_state = task.state in {"pending", "blocked", "failed"}
+        return MissionTaskReadiness(
+            mission_id=mission_id,
+            plan_version=plan_version,
+            task_key=str(task_row["task_key"]),
+            task=task,
+            ready=ready_state and not blocked and not failed and not missing,
+            blocked_by_task_keys=tuple(dict.fromkeys(blocked)),
+            failed_dependency_keys=tuple(dict.fromkeys(failed)),
+            missing_required_outputs=tuple(dict.fromkeys(missing)),
+        )
+
+    def create_mission_plan(
+        self,
+        root_task_id: str,
+        mission_id: str,
+        plan_version: int,
+        tasks: Sequence[MissionTaskSpec],
+        dependencies: Sequence[MissionDependencySpec] = (),
+        *,
+        inputs: Mapping[str, Any],
+        authority: execution_spine.MissionAuthorityEnvelope,
+        now: float | None = None,
+    ) -> MissionPlanRecord:
+        """Persist one immutable DAG version and its runtime-task decomposition atomically."""
+        root_id = _validate_identifier(root_task_id, "root_task_id")
+        mid = _mission_clean_name(mission_id, "mission_id")
+        normalized_tasks, normalized_deps, plan_digest = _mission_normalize_graph(
+            root_id,
+            mid,
+            plan_version,
+            tasks,
+            dependencies,
+        )
+        input_digest = mission_input_digest(inputs)
+        if not isinstance(authority, execution_spine.MissionAuthorityEnvelope):
+            raise MissionBindingRejected("A server-created mission authority envelope is required.")
+        ts = time.time() if now is None else float(now)
+
+        def _tx(conn: sqlite3.Connection) -> MissionPlanRecord:
+            conn.row_factory = sqlite3.Row
+            root = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (root_id,)).fetchone()
+            if root is None:
+                raise MissionGraphError(f"Root task {root_id!r} does not exist.")
+            if root["parent_task_id"] is not None:
+                raise MissionGraphError(f"Mission root {root_id!r} must be a root runtime task.")
+            if str(root["state"]) in {"completed", "cancelled"}:
+                raise MissionGraphError(f"Terminal root task {root_id!r} cannot receive a mission plan.")
+            if (
+                authority.session_id != str(root["session_id"])
+                or authority.root_task_id != root_id
+                or authority.task_id != root_id
+            ):
+                raise MissionBindingRejected("Mission-plan authority does not match the root task/session.")
+            if min(authority.session_policy_revision, authority.global_policy_revision) < 0:
+                raise MissionBindingRejected("Mission policy generations must be non-negative.")
+            try:
+                budget_digest = runtime_persistence.compute_task_budget_identity(str(root["budget_json"]))
+                root_budget = execution_budget.TaskBudgetState.from_json(str(root["budget_json"]))
+            except (ValueError, execution_budget.BudgetError) as exc:
+                raise MissionGraphError(f"Root task budget is unreadable: {exc}") from exc
+
+            existing = conn.execute(
+                "SELECT * FROM runtime_mission_plans WHERE mission_id = ? AND plan_version = ?",
+                (mid, plan_version),
+            ).fetchone()
+            if existing is not None:
+                same = (
+                    str(existing["root_task_id"]) == root_id
+                    and str(existing["plan_digest"]) == plan_digest
+                    and str(existing["input_digest"]) == input_digest
+                    and int(existing["session_policy_revision"]) == authority.session_policy_revision
+                    and int(existing["global_policy_revision"]) == authority.global_policy_revision
+                    and str(existing["budget_digest"]) == budget_digest
+                )
+                if not same:
+                    raise MissionGraphError(
+                        f"Mission plan {mid!r} v{plan_version} already exists with different immutable content."
+                    )
+                return _mission_plan_from_row(existing)
+            max_row = conn.execute(
+                "SELECT COALESCE(MAX(plan_version), 0) FROM runtime_mission_plans WHERE mission_id = ?",
+                (mid,),
+            ).fetchone()
+            expected_version = int(max_row[0]) + 1 if max_row else 1
+            if plan_version != expected_version:
+                raise MissionGraphError(
+                    f"Mission plan versions must be contiguous; expected v{expected_version}, got v{plan_version}."
+                )
+
+            previous = conn.execute(
+                "SELECT plan_version FROM runtime_mission_plans WHERE mission_id = ? AND status = 'active'",
+                (mid,),
+            ).fetchall()
+            for previous_row in previous:
+                previous_version = int(previous_row["plan_version"])
+                old_nodes = conn.execute(
+                    """
+                    SELECT task_id FROM runtime_mission_tasks
+                    WHERE mission_id = ? AND plan_version = ?
+                    """,
+                    (mid, previous_version),
+                ).fetchall()
+                for old_node in old_nodes:
+                    conn.execute(
+                        """
+                        UPDATE runtime_task_epochs
+                        SET status = 'fenced', fenced_at = ?, fence_reason = 'mission_plan_superseded'
+                        WHERE task_id = ? AND status = 'active'
+                        """,
+                        (ts, str(old_node["task_id"])),
+                    )
+                conn.execute(
+                    """
+                    UPDATE runtime_mission_plans
+                    SET status = 'superseded', updated_at = ?
+                    WHERE mission_id = ? AND plan_version = ? AND status = 'active'
+                    """,
+                    (ts, mid, previous_version),
+                )
+
+            conn.execute(
+                """
+                INSERT INTO runtime_mission_plans (
+                    mission_id, plan_version, root_task_id, plan_digest, input_digest,
+                    session_policy_revision, global_policy_revision, budget_digest,
+                    status, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
+                """,
+                (
+                    mid,
+                    plan_version,
+                    root_id,
+                    plan_digest,
+                    input_digest,
+                    authority.session_policy_revision,
+                    authority.global_policy_revision,
+                    budget_digest,
+                    ts,
+                    ts,
+                ),
+            )
+            child_budget = execution_budget.TaskBudgetState(spec=root_budget.spec).to_json()
+            task_ids: dict[str, str] = {}
+            for position, task_spec in enumerate(normalized_tasks):
+                task_id = mission_task_id(root_id, plan_version, task_spec.task_key)
+                task_ids[task_spec.task_key] = task_id
+                conn.execute(
+                    """
+                    INSERT INTO runtime_tasks (
+                        task_id, parent_task_id, session_id, title, state,
+                        current_epoch, state_version, workspace_dir, policy,
+                        budget_json, checkpoint_ref, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, 'pending', 0, 0, ?, ?, ?, '', ?, ?)
+                    """,
+                    (
+                        task_id,
+                        root_id,
+                        str(root["session_id"]),
+                        task_spec.title,
+                        str(root["workspace_dir"]),
+                        str(root["policy"]),
+                        child_budget,
+                        ts,
+                        ts,
+                    ),
+                )
+                conn.execute(
+                    """
+                    INSERT INTO runtime_mission_tasks (
+                        mission_id, plan_version, task_id, task_key, position,
+                        required_outputs_json, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        mid,
+                        plan_version,
+                        task_id,
+                        task_spec.task_key,
+                        position,
+                        json.dumps(list(task_spec.required_outputs), separators=(",", ":")),
+                        ts,
+                    ),
+                )
+            for dependency in normalized_deps:
+                conn.execute(
+                    """
+                    INSERT INTO runtime_mission_dependencies (
+                        mission_id, plan_version, task_id, depends_on_task_id,
+                        required_outputs_json, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        mid,
+                        plan_version,
+                        task_ids[dependency.task_key],
+                        task_ids[dependency.depends_on_task_key],
+                        json.dumps(list(dependency.required_outputs), separators=(",", ":")),
+                        ts,
+                    ),
+                )
+            created = conn.execute(
+                "SELECT * FROM runtime_mission_plans WHERE mission_id = ? AND plan_version = ?",
+                (mid, plan_version),
+            ).fetchone()
+            assert created is not None
+            return _mission_plan_from_row(created)
+
+        return runtime_persistence.run_write_transaction(
+            self._storage,
+            self._db_path,
+            _tx,
+            retry_policy=self._retry_policy,
+        )
+
+    def get_mission_plan(self, mission_id: str, plan_version: int) -> MissionPlanRecord | None:
+        mid = _mission_clean_name(mission_id, "mission_id")
+
+        def _read(conn: sqlite3.Connection) -> MissionPlanRecord | None:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute(
+                "SELECT * FROM runtime_mission_plans WHERE mission_id = ? AND plan_version = ?",
+                (mid, int(plan_version)),
+            ).fetchone()
+            return _mission_plan_from_row(row) if row is not None else None
+
+        return runtime_persistence.run_read(
+            self._storage,
+            self._db_path,
+            _read,
+            retry_policy=self._retry_policy,
+        )
+
+    def capture_mission_binding(self, mission_id: str, plan_version: int) -> MissionExecutionBinding:
+        """Capture the persisted immutable identity to carry across queue/wait/restart boundaries."""
+        mid = _mission_clean_name(mission_id, "mission_id")
+
+        def _read(conn: sqlite3.Connection) -> MissionExecutionBinding:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute(
+                """
+                SELECT mp.*, rt.session_id AS root_session_id
+                FROM runtime_mission_plans AS mp
+                JOIN runtime_tasks AS rt ON rt.task_id = mp.root_task_id
+                WHERE mp.mission_id = ? AND mp.plan_version = ?
+                """,
+                (mid, int(plan_version)),
+            ).fetchone()
+            if row is None:
+                raise MissionGraphError(f"Mission plan {mid!r} v{plan_version} does not exist.")
+            return MissionExecutionBinding(
+                mission_id=mid,
+                plan_version=int(row["plan_version"]),
+                root_task_id=str(row["root_task_id"]),
+                session_id=str(row["root_session_id"]),
+                plan_digest=str(row["plan_digest"]),
+                input_digest=str(row["input_digest"]),
+                session_policy_revision=int(row["session_policy_revision"]),
+                global_policy_revision=int(row["global_policy_revision"]),
+                budget_digest=str(row["budget_digest"]),
+            )
+
+        return runtime_persistence.run_read(
+            self._storage,
+            self._db_path,
+            _read,
+            retry_policy=self._retry_policy,
+        )
+
+    def list_mission_tasks(self, mission_id: str, plan_version: int) -> tuple[runtime_persistence.TaskRecord, ...]:
+        mid = _mission_clean_name(mission_id, "mission_id")
+
+        def _read(conn: sqlite3.Connection) -> tuple[runtime_persistence.TaskRecord, ...]:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                """
+                SELECT rt.* FROM runtime_mission_tasks AS mt
+                JOIN runtime_tasks AS rt ON rt.task_id = mt.task_id
+                WHERE mt.mission_id = ? AND mt.plan_version = ?
+                ORDER BY mt.position ASC, mt.task_key ASC
+                """,
+                (mid, int(plan_version)),
+            ).fetchall()
+            return tuple(runtime_persistence._row_to_task(row) for row in rows)
+
+        return runtime_persistence.run_read(
+            self._storage,
+            self._db_path,
+            _read,
+            retry_policy=self._retry_policy,
+        )
+
+    def list_mission_readiness(self, mission_id: str, plan_version: int) -> tuple[MissionTaskReadiness, ...]:
+        """Return deterministic dependency-aware scheduling state without dispatching work."""
+        mid = _mission_clean_name(mission_id, "mission_id")
+
+        def _read(conn: sqlite3.Connection) -> tuple[MissionTaskReadiness, ...]:
+            conn.row_factory = sqlite3.Row
+            plan = conn.execute(
+                "SELECT status FROM runtime_mission_plans WHERE mission_id = ? AND plan_version = ?",
+                (mid, int(plan_version)),
+            ).fetchone()
+            if plan is None:
+                raise MissionGraphError(f"Mission plan {mid!r} v{plan_version} does not exist.")
+            rows = conn.execute(
+                """
+                SELECT rt.*, mt.task_key FROM runtime_mission_tasks AS mt
+                JOIN runtime_tasks AS rt ON rt.task_id = mt.task_id
+                WHERE mt.mission_id = ? AND mt.plan_version = ?
+                ORDER BY mt.position ASC, mt.task_key ASC
+                """,
+                (mid, int(plan_version)),
+            ).fetchall()
+            return tuple(
+                self._mission_readiness_locked(
+                    conn,
+                    mission_id=mid,
+                    plan_version=int(plan_version),
+                    task_row=row,
+                )
+                for row in rows
+            )
+
+        return runtime_persistence.run_read(
+            self._storage,
+            self._db_path,
+            _read,
+            retry_policy=self._retry_policy,
+        )
+
+    def claim_ready_mission_task(
+        self,
+        mission_id: str,
+        plan_version: int,
+        task_key: str,
+        *,
+        binding: MissionExecutionBinding,
+        current_inputs: Mapping[str, Any],
+        current_authority: execution_spine.MissionAuthorityEnvelope,
+        worker_id: str,
+        expected_state_version: int | None = None,
+        lease_ttl_s: float = 30.0,
+        now: float | None = None,
+    ) -> MissionTaskLease:
+        """Atomically revalidate bindings/dependencies, then mint a fenced worker epoch."""
+        mid = _mission_clean_name(mission_id, "mission_id")
+        key = _mission_clean_name(task_key, "task_key")
+        wid = _validate_identifier(worker_id, "worker_id")
+        if not isinstance(lease_ttl_s, (int, float)) or isinstance(lease_ttl_s, bool) or not 0 < float(lease_ttl_s) <= 86_400:
+            raise MissionGraphError("lease_ttl_s must be in (0, 86400].")
+        ts = time.time() if now is None else float(now)
+
+        def _tx(conn: sqlite3.Connection) -> MissionTaskLease:
+            conn.row_factory = sqlite3.Row
+            node = conn.execute(
+                """
+                SELECT rt.*, mt.task_key FROM runtime_mission_tasks AS mt
+                JOIN runtime_tasks AS rt ON rt.task_id = mt.task_id
+                WHERE mt.mission_id = ? AND mt.plan_version = ? AND mt.task_key = ?
+                """,
+                (mid, int(plan_version), key),
+            ).fetchone()
+            if node is None:
+                raise MissionGraphError(f"Mission task {key!r} does not exist in {mid!r} v{plan_version}.")
+            plan = self._mission_validate_binding_locked(
+                conn,
+                mission_id=mid,
+                plan_version=int(plan_version),
+                binding=binding,
+                current_inputs=current_inputs,
+                current_authority=current_authority,
+                expected_task_id=str(node["task_id"]),
+            )
+            if str(plan["root_state"]) in {"completed", "failed", "cancelled"}:
+                raise MissionDependencyRejected(
+                    f"Mission root is {plan['root_state']!r}; no new node can be scheduled."
+                )
+            try:
+                root_budget = execution_budget.TaskBudgetState.from_json(str(plan["root_budget_json"]))
+            except execution_budget.BudgetError as exc:
+                raise MissionBindingRejected(f"Mission root budget is unreadable: {exc}") from exc
+            violation = root_budget.violation_reason(check_recovery=False)
+            if root_budget.cancel_requested or violation:
+                raise MissionBindingRejected(violation or "Mission root cancellation is active.")
+            if expected_state_version is not None and int(node["state_version"]) != expected_state_version:
+                raise MissionBindingRejected("Mission task state_version changed before scheduling.")
+            readiness = self._mission_readiness_locked(
+                conn,
+                mission_id=mid,
+                plan_version=int(plan_version),
+                task_row=node,
+            )
+            if not readiness.ready:
+                details = [
+                    *(f"blocked:{item}" for item in readiness.blocked_by_task_keys),
+                    *(f"failed:{item}" for item in readiness.failed_dependency_keys),
+                    *(f"missing:{item}" for item in readiness.missing_required_outputs),
+                ]
+                raise MissionDependencyRejected(
+                    f"Mission task {key!r} is not dependency-ready ({', '.join(details) or readiness.task.state})."
+                )
+            active_rows = conn.execute(
+                "SELECT * FROM runtime_task_epochs WHERE task_id = ? AND status = 'active'",
+                (str(node["task_id"]),),
+            ).fetchall()
+            for active in active_rows:
+                if float(active["lease_expires_at"]) > ts:
+                    raise runtime_persistence.LeaseOwnershipConflictError(
+                        f"Mission task {key!r} already has active worker {active['worker_id']!r}."
+                    )
+                conn.execute(
+                    """
+                    UPDATE runtime_task_epochs
+                    SET status = 'expired', fenced_at = ?, fence_reason = 'mission_lease_expired'
+                    WHERE task_id = ? AND epoch = ? AND status = 'active'
+                    """,
+                    (ts, str(node["task_id"]), int(active["epoch"])),
+                )
+            next_epoch = int(node["current_epoch"]) + 1
+            next_state_version = int(node["state_version"]) + 1
+            conn.execute(
+                """
+                INSERT INTO runtime_task_epochs (
+                    task_id, epoch, worker_id, status, claimed_at, heartbeat_at, lease_expires_at
+                ) VALUES (?, ?, ?, 'active', ?, ?, ?)
+                """,
+                (str(node["task_id"]), next_epoch, wid, ts, ts, ts + float(lease_ttl_s)),
+            )
+            conn.execute(
+                """
+                UPDATE runtime_tasks
+                SET state = 'running', current_epoch = ?, state_version = ?, updated_at = ?
+                WHERE task_id = ?
+                """,
+                (next_epoch, next_state_version, ts, str(node["task_id"])),
+            )
+            seq_row = conn.execute(
+                "SELECT COALESCE(MAX(seq), 0) + 1 FROM runtime_task_transitions WHERE task_id = ?",
+                (str(node["task_id"]),),
+            ).fetchone()
+            conn.execute(
+                """
+                INSERT INTO runtime_task_transitions (
+                    task_id, seq, from_state, to_state, epoch, reason, evidence_json, created_at
+                ) VALUES (?, ?, ?, 'running', ?, 'mission_dependency_ready', ?, ?)
+                """,
+                (
+                    str(node["task_id"]),
+                    int(seq_row[0]) if seq_row else 1,
+                    str(node["state"]),
+                    next_epoch,
+                    json.dumps(
+                        {"mission_id": mid, "plan_version": int(plan_version), "task_key": key},
+                        sort_keys=True,
+                        separators=(",", ":"),
+                    ),
+                    ts,
+                ),
+            )
+            task_after = conn.execute(
+                "SELECT * FROM runtime_tasks WHERE task_id = ?",
+                (str(node["task_id"]),),
+            ).fetchone()
+            epoch_after = conn.execute(
+                "SELECT * FROM runtime_task_epochs WHERE task_id = ? AND epoch = ?",
+                (str(node["task_id"]), next_epoch),
+            ).fetchone()
+            assert task_after is not None and epoch_after is not None
+            return MissionTaskLease(
+                runtime_persistence._row_to_task(task_after),
+                runtime_persistence._row_to_epoch(epoch_after),
+            )
+
+        return runtime_persistence.run_write_transaction(
+            self._storage,
+            self._db_path,
+            _tx,
+            retry_policy=self._retry_policy,
+        )
+
+    def checkpoint_mission_task(
+        self,
+        mission_id: str,
+        plan_version: int,
+        task_key: str,
+        *,
+        binding: MissionExecutionBinding,
+        current_inputs: Mapping[str, Any],
+        current_authority: execution_spine.MissionAuthorityEnvelope,
+        worker_id: str,
+        epoch: int,
+        expected_state_version: int,
+        step: int,
+        payload: dict[str, Any],
+        evidence_refs: Sequence[workflow_checkpoints.EvidenceRef | dict[str, Any]] = (),
+        interrupt: bool = False,
+        now: float | None = None,
+    ) -> workflow_checkpoints.TaskCheckpointRecord:
+        """Commit a hash-verified checkpoint bound to current plan/input/authority/budget."""
+        mid = _mission_clean_name(mission_id, "mission_id")
+        key = _mission_clean_name(task_key, "task_key")
+        wid = _validate_identifier(worker_id, "worker_id")
+        ts = time.time() if now is None else float(now)
+
+        def _precheck(conn: sqlite3.Connection) -> str:
+            conn.row_factory = sqlite3.Row
+            node = conn.execute(
+                """
+                SELECT rt.* FROM runtime_mission_tasks AS mt
+                JOIN runtime_tasks AS rt ON rt.task_id = mt.task_id
+                WHERE mt.mission_id = ? AND mt.plan_version = ? AND mt.task_key = ?
+                """,
+                (mid, int(plan_version), key),
+            ).fetchone()
+            if node is None:
+                raise MissionGraphError(f"Mission task {key!r} does not exist.")
+            task_id = str(node["task_id"])
+            self._mission_validate_binding_locked(
+                conn,
+                mission_id=mid,
+                plan_version=int(plan_version),
+                binding=binding,
+                current_inputs=current_inputs,
+                current_authority=current_authority,
+                expected_task_id=task_id,
+            )
+            if str(node["state"]) != "running":
+                raise MissionBindingRejected(f"Mission task {key!r} is not running.")
+            if int(node["state_version"]) != int(expected_state_version):
+                raise MissionBindingRejected("Mission task state_version changed before checkpointing.")
+            if int(node["current_epoch"]) != int(epoch):
+                raise runtime_persistence.StaleEpochError(
+                    f"Stale epoch {epoch} cannot checkpoint mission task {key!r}."
+                )
+            lease = conn.execute(
+                "SELECT * FROM runtime_task_epochs WHERE task_id = ? AND epoch = ?",
+                (task_id, int(epoch)),
+            ).fetchone()
+            if lease is None or str(lease["status"]) != "active" or str(lease["worker_id"]) != wid:
+                raise runtime_persistence.StaleEpochError(
+                    f"Mission task {key!r} epoch {epoch} is not actively owned by {wid!r}."
+                )
+            if float(lease["lease_expires_at"]) <= ts:
+                raise runtime_persistence.LeaseExpiredError(
+                    f"Mission task {key!r} epoch {epoch} expired before checkpointing."
+                )
+            return task_id
+
+        task_id = runtime_persistence.run_read(
+            self._storage,
+            self._db_path,
+            _precheck,
+            retry_policy=self._retry_policy,
+        )
+        checkpoint = self.checkpoints.save_checkpoint(
+            task_id,
+            step=step,
+            payload=payload,
+            evidence_refs=evidence_refs,
+            epoch=int(epoch),
+            status="interrupted" if interrupt else "committed",
+            require_active_epoch=True,
+            mission_binding=binding.checkpoint_binding(),
+            now=ts,
+        )
+        if not interrupt:
+            return checkpoint
+
+        def _pause(conn: sqlite3.Connection) -> None:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (task_id,)).fetchone()
+            if row is None:
+                raise MissionGraphError(f"Mission task {key!r} disappeared after checkpoint commit.")
+            if str(row["checkpoint_ref"]) != checkpoint.checkpoint_id:
+                raise MissionBindingRejected("A successor checkpoint replaced the interrupt checkpoint.")
+            if int(row["state_version"]) != int(expected_state_version):
+                raise MissionBindingRejected("Mission task state_version changed before interrupt committed.")
+            if str(row["state"]) != "running" or int(row["current_epoch"]) != int(epoch):
+                raise runtime_persistence.StaleEpochError("Mission worker lost ownership before interrupt committed.")
+            lease = conn.execute(
+                "SELECT * FROM runtime_task_epochs WHERE task_id = ? AND epoch = ?",
+                (task_id, int(epoch)),
+            ).fetchone()
+            if lease is None or str(lease["status"]) != "active" or str(lease["worker_id"]) != wid:
+                raise runtime_persistence.StaleEpochError("Mission worker lease is no longer active at interrupt.")
+            conn.execute(
+                """
+                UPDATE runtime_task_epochs SET status = 'released', heartbeat_at = ?
+                WHERE task_id = ? AND epoch = ? AND status = 'active'
+                """,
+                (ts, task_id, int(epoch)),
+            )
+            conn.execute(
+                """
+                UPDATE runtime_tasks
+                SET state = 'paused', state_version = state_version + 1, updated_at = ?
+                WHERE task_id = ?
+                """,
+                (ts, task_id),
+            )
+            seq_row = conn.execute(
+                "SELECT COALESCE(MAX(seq), 0) + 1 FROM runtime_task_transitions WHERE task_id = ?",
+                (task_id,),
+            ).fetchone()
+            conn.execute(
+                """
+                INSERT INTO runtime_task_transitions (
+                    task_id, seq, from_state, to_state, epoch, reason, evidence_json, created_at
+                ) VALUES (?, ?, 'running', 'paused', ?, 'mission_checkpoint_interrupted', ?, ?)
+                """,
+                (
+                    task_id,
+                    int(seq_row[0]) if seq_row else 1,
+                    int(epoch),
+                    _encode_evidence_json(checkpoint_id=checkpoint.checkpoint_id),
+                    ts,
+                ),
+            )
+
+        runtime_persistence.run_write_transaction(
+            self._storage,
+            self._db_path,
+            _pause,
+            retry_policy=self._retry_policy,
+        )
+        return checkpoint
+
+    def complete_mission_task(
+        self,
+        mission_id: str,
+        plan_version: int,
+        task_key: str,
+        *,
+        binding: MissionExecutionBinding,
+        current_inputs: Mapping[str, Any],
+        current_authority: execution_spine.MissionAuthorityEnvelope,
+        worker_id: str,
+        epoch: int,
+        expected_state_version: int,
+        outputs: Sequence[MissionOutputRef],
+        reason: str = "mission_task_completed",
+        now: float | None = None,
+    ) -> runtime_persistence.TaskRecord:
+        """Atomically persist required outputs and complete only the owning live epoch."""
+        mid = _mission_clean_name(mission_id, "mission_id")
+        key = _mission_clean_name(task_key, "task_key")
+        wid = _validate_identifier(worker_id, "worker_id")
+        normalized_outputs: dict[str, MissionOutputRef] = {}
+        for raw in outputs:
+            if not isinstance(raw, MissionOutputRef):
+                raise MissionGraphError("outputs must contain MissionOutputRef values.")
+            output_key = _mission_clean_name(raw.output_key, "output_key")
+            if output_key in normalized_outputs:
+                raise MissionGraphError(f"duplicate mission output key {output_key!r}.")
+            artifact_ref = str(raw.artifact_ref or "").strip()
+            if not artifact_ref or "\x00" in artifact_ref or len(artifact_ref) > 512:
+                raise MissionGraphError("artifact_ref must be a non-empty NUL-free string of at most 512 characters.")
+            artifact_sha = _mission_sha256(raw.artifact_sha256, "artifact_sha256")
+            try:
+                json.dumps(raw.evidence, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+            except (TypeError, ValueError) as exc:
+                raise MissionGraphError("mission output evidence must be JSON serializable.") from exc
+            normalized_outputs[output_key] = MissionOutputRef(
+                output_key,
+                artifact_ref,
+                artifact_sha,
+                dict(raw.evidence),
+            )
+        ts = time.time() if now is None else float(now)
+
+        def _tx(conn: sqlite3.Connection) -> runtime_persistence.TaskRecord:
+            conn.row_factory = sqlite3.Row
+            node = conn.execute(
+                """
+                SELECT rt.*, mt.task_key, mt.required_outputs_json
+                FROM runtime_mission_tasks AS mt
+                JOIN runtime_tasks AS rt ON rt.task_id = mt.task_id
+                WHERE mt.mission_id = ? AND mt.plan_version = ? AND mt.task_key = ?
+                """,
+                (mid, int(plan_version), key),
+            ).fetchone()
+            if node is None:
+                raise MissionGraphError(f"Mission task {key!r} does not exist.")
+            task_id = str(node["task_id"])
+            plan = self._mission_validate_binding_locked(
+                conn,
+                mission_id=mid,
+                plan_version=int(plan_version),
+                binding=binding,
+                current_inputs=current_inputs,
+                current_authority=current_authority,
+                expected_task_id=task_id,
+            )
+            if str(node["state"]) != "running":
+                raise MissionDependencyRejected(
+                    f"Mission task {key!r} in state {node['state']!r} cannot complete."
+                )
+            if int(node["state_version"]) != int(expected_state_version):
+                raise MissionBindingRejected("Mission task state_version changed before completion.")
+            if int(node["current_epoch"]) != int(epoch):
+                raise runtime_persistence.StaleEpochError(
+                    f"Stale epoch {epoch} cannot complete mission task {key!r}."
+                )
+            lease = conn.execute(
+                "SELECT * FROM runtime_task_epochs WHERE task_id = ? AND epoch = ?",
+                (task_id, int(epoch)),
+            ).fetchone()
+            if lease is None or str(lease["status"]) != "active" or str(lease["worker_id"]) != wid:
+                raise runtime_persistence.StaleEpochError(
+                    f"Mission task {key!r} epoch {epoch} is not actively owned by {wid!r}."
+                )
+            if float(lease["lease_expires_at"]) <= ts:
+                raise runtime_persistence.LeaseExpiredError(
+                    f"Mission task {key!r} epoch {epoch} expired before completion."
+                )
+            readiness = self._mission_readiness_locked(
+                conn,
+                mission_id=mid,
+                plan_version=int(plan_version),
+                task_row=node,
+            )
+            if readiness.blocked_by_task_keys or readiness.failed_dependency_keys or readiness.missing_required_outputs:
+                raise MissionDependencyRejected(
+                    f"Mission task {key!r} dependencies changed before completion committed."
+                )
+            try:
+                required_raw = json.loads(str(node["required_outputs_json"]))
+            except (TypeError, ValueError) as exc:
+                raise MissionGraphError("persisted mission output contract is malformed.") from exc
+            if not isinstance(required_raw, list):
+                raise MissionGraphError("persisted mission output contract must be a list.")
+            required = {str(item) for item in required_raw}
+            presented = set(normalized_outputs)
+            missing = sorted(required - presented)
+            unexpected = sorted(presented - required)
+            if missing or unexpected:
+                parts = []
+                if missing:
+                    parts.append(f"missing required output(s): {', '.join(missing)}")
+                if unexpected:
+                    parts.append(f"undeclared output(s): {', '.join(unexpected)}")
+                raise FalseCompletionRejected(
+                    f"Mission task {key!r} cannot complete; {'; '.join(parts)}."
+                )
+            unresolved = conn.execute(
+                """
+                SELECT action_id FROM runtime_actions
+                WHERE task_id = ? AND status IN ('in_flight', 'uncertain') AND action_class != 'read_only'
+                """,
+                (task_id,),
+            ).fetchall()
+            if unresolved:
+                raise FalseCompletionRejected(
+                    f"Mission task {key!r} has unresolved consequential action(s)."
+                )
+            existing_outputs = conn.execute(
+                """
+                SELECT output_key FROM runtime_mission_outputs
+                WHERE mission_id = ? AND plan_version = ? AND task_id = ?
+                """,
+                (mid, int(plan_version), task_id),
+            ).fetchall()
+            if existing_outputs:
+                raise FalseCompletionRejected(
+                    f"Mission task {key!r} already has durable outputs; refusing overwrite."
+                )
+            for output in normalized_outputs.values():
+                conn.execute(
+                    """
+                    INSERT INTO runtime_mission_outputs (
+                        mission_id, plan_version, task_id, output_key, artifact_ref,
+                        artifact_sha256, evidence_json, producer_epoch, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        mid,
+                        int(plan_version),
+                        task_id,
+                        output.output_key,
+                        output.artifact_ref,
+                        output.artifact_sha256,
+                        json.dumps(output.evidence, sort_keys=True, separators=(",", ":"), ensure_ascii=False),
+                        int(epoch),
+                        ts,
+                    ),
+                )
+            conn.execute(
+                """
+                UPDATE runtime_task_epochs SET status = 'released', heartbeat_at = ?
+                WHERE task_id = ? AND epoch = ? AND status = 'active'
+                """,
+                (ts, task_id, int(epoch)),
+            )
+            conn.execute(
+                """
+                UPDATE runtime_tasks
+                SET state = 'completed', state_version = state_version + 1, updated_at = ?
+                WHERE task_id = ?
+                """,
+                (ts, task_id),
+            )
+            seq_row = conn.execute(
+                "SELECT COALESCE(MAX(seq), 0) + 1 FROM runtime_task_transitions WHERE task_id = ?",
+                (task_id,),
+            ).fetchone()
+            conn.execute(
+                """
+                INSERT INTO runtime_task_transitions (
+                    task_id, seq, from_state, to_state, epoch, reason, evidence_json, created_at
+                ) VALUES (?, ?, 'running', 'completed', ?, ?, ?, ?)
+                """,
+                (
+                    task_id,
+                    int(seq_row[0]) if seq_row else 1,
+                    int(epoch),
+                    str(reason)[:240],
+                    json.dumps(
+                        {
+                            "mission_id": mid,
+                            "plan_version": int(plan_version),
+                            "outputs": [
+                                {
+                                    "output_key": item.output_key,
+                                    "artifact_ref": item.artifact_ref,
+                                    "artifact_sha256": item.artifact_sha256,
+                                }
+                                for item in normalized_outputs.values()
+                            ],
+                            "plan_digest": str(plan["plan_digest"]),
+                        },
+                        sort_keys=True,
+                        separators=(",", ":"),
+                    ),
+                    ts,
+                ),
+            )
+            updated = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (task_id,)).fetchone()
+            assert updated is not None
+            return runtime_persistence._row_to_task(updated)
+
+        return runtime_persistence.run_write_transaction(
+            self._storage,
+            self._db_path,
+            _tx,
+            retry_policy=self._retry_policy,
+        )
+
+    def fail_mission_task(
+        self,
+        mission_id: str,
+        plan_version: int,
+        task_key: str,
+        *,
+        binding: MissionExecutionBinding,
+        current_inputs: Mapping[str, Any],
+        current_authority: execution_spine.MissionAuthorityEnvelope,
+        worker_id: str,
+        epoch: int,
+        expected_state_version: int,
+        reason: str,
+        now: float | None = None,
+    ) -> runtime_persistence.TaskRecord:
+        """Record an explicit terminal node failure under the same worker/version fences."""
+        mid = _mission_clean_name(mission_id, "mission_id")
+        key = _mission_clean_name(task_key, "task_key")
+        wid = _validate_identifier(worker_id, "worker_id")
+        ts = time.time() if now is None else float(now)
+
+        def _tx(conn: sqlite3.Connection) -> runtime_persistence.TaskRecord:
+            conn.row_factory = sqlite3.Row
+            node = conn.execute(
+                """
+                SELECT rt.* FROM runtime_mission_tasks AS mt
+                JOIN runtime_tasks AS rt ON rt.task_id = mt.task_id
+                WHERE mt.mission_id = ? AND mt.plan_version = ? AND mt.task_key = ?
+                """,
+                (mid, int(plan_version), key),
+            ).fetchone()
+            if node is None:
+                raise MissionGraphError(f"Mission task {key!r} does not exist.")
+            task_id = str(node["task_id"])
+            self._mission_validate_binding_locked(
+                conn,
+                mission_id=mid,
+                plan_version=int(plan_version),
+                binding=binding,
+                current_inputs=current_inputs,
+                current_authority=current_authority,
+                expected_task_id=task_id,
+            )
+            if str(node["state"]) != "running" or int(node["state_version"]) != int(expected_state_version):
+                raise MissionBindingRejected("Mission task state/version changed before failure commit.")
+            if int(node["current_epoch"]) != int(epoch):
+                raise runtime_persistence.StaleEpochError("Stale mission worker cannot fail its successor.")
+            lease = conn.execute(
+                "SELECT * FROM runtime_task_epochs WHERE task_id = ? AND epoch = ?",
+                (task_id, int(epoch)),
+            ).fetchone()
+            if lease is None or str(lease["status"]) != "active" or str(lease["worker_id"]) != wid:
+                raise runtime_persistence.StaleEpochError("Mission failure worker lease is not active/owned.")
+            conn.execute(
+                "UPDATE runtime_task_epochs SET status = 'released', heartbeat_at = ? WHERE task_id = ? AND epoch = ?",
+                (ts, task_id, int(epoch)),
+            )
+            ckpt_ref = str(node["checkpoint_ref"] or "").strip()
+            if ckpt_ref:
+                conn.execute(
+                    "UPDATE runtime_task_checkpoints SET status = 'interrupted', updated_at = ? WHERE checkpoint_id = ?",
+                    (ts, ckpt_ref),
+                )
+            conn.execute(
+                "UPDATE runtime_tasks SET state = 'failed', state_version = state_version + 1, updated_at = ? WHERE task_id = ?",
+                (ts, task_id),
+            )
+            seq_row = conn.execute(
+                "SELECT COALESCE(MAX(seq), 0) + 1 FROM runtime_task_transitions WHERE task_id = ?",
+                (task_id,),
+            ).fetchone()
+            conn.execute(
+                """
+                INSERT INTO runtime_task_transitions (
+                    task_id, seq, from_state, to_state, epoch, reason, evidence_json, created_at
+                ) VALUES (?, ?, 'running', 'failed', ?, ?, ?, ?)
+                """,
+                (
+                    task_id,
+                    int(seq_row[0]) if seq_row else 1,
+                    int(epoch),
+                    str(reason)[:240],
+                    json.dumps({"mission_id": mid, "plan_version": int(plan_version)}, separators=(",", ":")),
+                    ts,
+                ),
+            )
+            updated = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (task_id,)).fetchone()
+            assert updated is not None
+            return runtime_persistence._row_to_task(updated)
+
+        return runtime_persistence.run_write_transaction(
+            self._storage,
+            self._db_path,
+            _tx,
+            retry_policy=self._retry_policy,
+        )
+
+    def evaluate_mission_join(
+        self,
+        mission_id: str,
+        plan_version: int,
+        *,
+        persist: bool = True,
+        now: float | None = None,
+    ) -> MissionJoinReport:
+        """Evaluate and optionally persist explicit success/partial/failure/output state."""
+        mid = _mission_clean_name(mission_id, "mission_id")
+        ts = time.time() if now is None else float(now)
+
+        def _evaluate(conn: sqlite3.Connection) -> MissionJoinReport:
+            conn.row_factory = sqlite3.Row
+            report = _mission_join_report_locked(conn, mid, int(plan_version), now=ts)
+            if persist:
+                _mission_persist_join_locked(conn, report)
+            return report
+
+        runner = runtime_persistence.run_write_transaction if persist else runtime_persistence.run_read
+        return runner(
+            self._storage,
+            self._db_path,
+            _evaluate,
+            retry_policy=self._retry_policy,
+        )
+
+    def prepare_mission_task_resume(
+        self,
+        mission_id: str,
+        plan_version: int,
+        task_key: str,
+        *,
+        binding: MissionExecutionBinding,
+        current_inputs: Mapping[str, Any],
+        current_authority: execution_spine.MissionAuthorityEnvelope,
+        worker_id: str,
+        expected_state_version: int,
+        lease_ttl_s: float = 30.0,
+        now: float | None = None,
+    ) -> MissionResumePlan:
+        """Atomically validate checkpoint bindings and mint the sole successor epoch."""
+        mid = _mission_clean_name(mission_id, "mission_id")
+        key = _mission_clean_name(task_key, "task_key")
+        wid = _validate_identifier(worker_id, "worker_id")
+        if not isinstance(lease_ttl_s, (int, float)) or isinstance(lease_ttl_s, bool) or not 0 < float(lease_ttl_s) <= 86_400:
+            raise MissionGraphError("lease_ttl_s must be in (0, 86400].")
+        ts = time.time() if now is None else float(now)
+
+        def _tx(conn: sqlite3.Connection) -> MissionResumePlan:
+            conn.row_factory = sqlite3.Row
+            node = conn.execute(
+                """
+                SELECT rt.* FROM runtime_mission_tasks AS mt
+                JOIN runtime_tasks AS rt ON rt.task_id = mt.task_id
+                WHERE mt.mission_id = ? AND mt.plan_version = ? AND mt.task_key = ?
+                """,
+                (mid, int(plan_version), key),
+            ).fetchone()
+            if node is None:
+                raise workflow_checkpoints.ResumeRejected(f"Mission task {key!r} does not exist.")
+            task_id = str(node["task_id"])
+            plan = self._mission_validate_binding_locked(
+                conn,
+                mission_id=mid,
+                plan_version=int(plan_version),
+                binding=binding,
+                current_inputs=current_inputs,
+                current_authority=current_authority,
+                expected_task_id=task_id,
+            )
+            if str(node["state"]) not in {"paused", "failed"}:
+                raise workflow_checkpoints.ResumeRejected(
+                    f"Mission task {key!r} in state {node['state']!r} is not resumable."
+                )
+            if int(node["state_version"]) != int(expected_state_version):
+                raise workflow_checkpoints.ResumeRejected("Mission task state_version changed before resume.")
+            ckpt_id = str(node["checkpoint_ref"] or "").strip()
+            if not ckpt_id:
+                raise workflow_checkpoints.ResumeRejected("Mission task has no recoverable checkpoint.")
+            ckpt_row = conn.execute(
+                "SELECT * FROM runtime_task_checkpoints WHERE checkpoint_id = ? AND task_id = ?",
+                (ckpt_id, task_id),
+            ).fetchone()
+            if ckpt_row is None:
+                raise workflow_checkpoints.ResumeRejected("Mission task references a missing checkpoint.")
+            checkpoint = workflow_checkpoints._decode_and_verify_checkpoint_row(
+                ckpt_row,
+                verify_integrity=True,
+            )
+            if checkpoint.status != "interrupted":
+                raise workflow_checkpoints.ResumeRejected(
+                    f"Mission checkpoint must be interrupted before resume, not {checkpoint.status!r}."
+                )
+            bound = conn.execute(
+                "SELECT * FROM runtime_mission_checkpoint_bindings WHERE checkpoint_id = ?",
+                (ckpt_id,),
+            ).fetchone()
+            if bound is None:
+                raise workflow_checkpoints.ResumeRejected("Checkpoint is missing its mission resume binding.")
+            bound_identity = (
+                str(bound["mission_id"]),
+                int(bound["plan_version"]),
+                str(bound["task_id"]),
+                str(bound["plan_digest"]),
+                str(bound["input_digest"]),
+                int(bound["session_policy_revision"]),
+                int(bound["global_policy_revision"]),
+                str(bound["budget_digest"]),
+            )
+            current_identity = (
+                mid,
+                int(plan_version),
+                task_id,
+                str(plan["plan_digest"]),
+                str(plan["input_digest"]),
+                int(plan["session_policy_revision"]),
+                int(plan["global_policy_revision"]),
+                str(plan["budget_digest"]),
+            )
+            if bound_identity != current_identity:
+                raise workflow_checkpoints.ResumeRejected("Checkpoint mission binding is stale.")
+            checkpoint_epoch = int(bound["checkpoint_epoch"])
+            if checkpoint.epoch != checkpoint_epoch or int(node["current_epoch"]) != checkpoint_epoch:
+                raise workflow_checkpoints.ResumeRejected(
+                    "Checkpoint worker epoch was superseded; stale work cannot resume."
+                )
+            if int(node["state_version"]) != int(bound["task_state_version"]) + 1:
+                raise workflow_checkpoints.ResumeRejected(
+                    "Mission task changed beyond the single checkpoint interruption transition."
+                )
+            unresolved = conn.execute(
+                """
+                SELECT action_id FROM runtime_actions
+                WHERE task_id = ? AND status IN ('in_flight', 'uncertain') AND action_class != 'read_only'
+                """,
+                (task_id,),
+            ).fetchall()
+            if unresolved:
+                raise workflow_checkpoints.ResumeRejected(
+                    "Mission task has unresolved consequential actions and cannot resume."
+                )
+            try:
+                root_budget = execution_budget.TaskBudgetState.from_json(str(plan["root_budget_json"]))
+            except execution_budget.BudgetError as exc:
+                raise workflow_checkpoints.ResumeRejected(f"Mission root budget is unreadable: {exc}") from exc
+            violation = root_budget.violation_reason(check_recovery=False)
+            if root_budget.cancel_requested or violation:
+                raise workflow_checkpoints.ResumeRejected(violation or "Mission cancellation is active.")
+            active_rows = conn.execute(
+                "SELECT * FROM runtime_task_epochs WHERE task_id = ? AND status = 'active'",
+                (task_id,),
+            ).fetchall()
+            for active in active_rows:
+                if float(active["lease_expires_at"]) > ts:
+                    raise workflow_checkpoints.ResumeRejected(
+                        f"Mission task already has active successor worker {active['worker_id']!r}."
+                    )
+                conn.execute(
+                    """
+                    UPDATE runtime_task_epochs
+                    SET status = 'expired', fenced_at = ?, fence_reason = 'mission_resume_expired'
+                    WHERE task_id = ? AND epoch = ? AND status = 'active'
+                    """,
+                    (ts, task_id, int(active["epoch"])),
+                )
+            next_epoch = int(node["current_epoch"]) + 1
+            conn.execute(
+                """
+                INSERT INTO runtime_task_epochs (
+                    task_id, epoch, worker_id, status, claimed_at, heartbeat_at, lease_expires_at
+                ) VALUES (?, ?, ?, 'active', ?, ?, ?)
+                """,
+                (task_id, next_epoch, wid, ts, ts, ts + float(lease_ttl_s)),
+            )
+            conn.execute(
+                """
+                UPDATE runtime_task_checkpoints
+                SET status = 'resumed', epoch = ?, updated_at = ? WHERE checkpoint_id = ?
+                """,
+                (next_epoch, ts, ckpt_id),
+            )
+            conn.execute(
+                """
+                UPDATE runtime_mission_checkpoint_bindings
+                SET resumed_epoch = ? WHERE checkpoint_id = ?
+                """,
+                (next_epoch, ckpt_id),
+            )
+            conn.execute(
+                """
+                UPDATE runtime_tasks
+                SET state = 'running', current_epoch = ?, state_version = state_version + 1, updated_at = ?
+                WHERE task_id = ?
+                """,
+                (next_epoch, ts, task_id),
+            )
+            seq_row = conn.execute(
+                "SELECT COALESCE(MAX(seq), 0) + 1 FROM runtime_task_transitions WHERE task_id = ?",
+                (task_id,),
+            ).fetchone()
+            conn.execute(
+                """
+                INSERT INTO runtime_task_transitions (
+                    task_id, seq, from_state, to_state, epoch, reason, evidence_json, created_at
+                ) VALUES (?, ?, ?, 'running', ?, 'mission_checkpoint_resumed', ?, ?)
+                """,
+                (
+                    task_id,
+                    int(seq_row[0]) if seq_row else 1,
+                    str(node["state"]),
+                    next_epoch,
+                    _encode_evidence_json(checkpoint_id=ckpt_id),
+                    ts,
+                ),
+            )
+            updated_task = conn.execute("SELECT * FROM runtime_tasks WHERE task_id = ?", (task_id,)).fetchone()
+            updated_epoch = conn.execute(
+                "SELECT * FROM runtime_task_epochs WHERE task_id = ? AND epoch = ?",
+                (task_id, next_epoch),
+            ).fetchone()
+            updated_ckpt = conn.execute(
+                "SELECT * FROM runtime_task_checkpoints WHERE checkpoint_id = ?",
+                (ckpt_id,),
+            ).fetchone()
+            assert updated_task is not None and updated_epoch is not None and updated_ckpt is not None
+            return MissionResumePlan(
+                task=runtime_persistence._row_to_task(updated_task),
+                epoch=runtime_persistence._row_to_epoch(updated_epoch),
+                checkpoint=workflow_checkpoints._decode_and_verify_checkpoint_row(
+                    updated_ckpt,
+                    verify_integrity=True,
+                ),
+                next_step=checkpoint.step + 1,
+            )
+
+        return runtime_persistence.run_write_transaction(
+            self._storage,
+            self._db_path,
+            _tx,
+            retry_policy=self._retry_policy,
         )
 
     def ensure_root_task(
@@ -630,10 +2412,41 @@ class DurableTaskStateMachine:
 
     def list_milestones(self, root_task_id: str) -> list[runtime_persistence.TaskRecord]:
         root_id = _validate_identifier(root_task_id, "root_task_id")
-        return [
-            t for t in self.store.list_child_tasks(root_id)
-            if not child_delegation.is_child_subtask_id(t.task_id)
-        ]
+
+        def _read(conn: sqlite3.Connection) -> list[runtime_persistence.TaskRecord]:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                """
+                SELECT rt.* FROM runtime_tasks AS rt
+                WHERE rt.parent_task_id = ?
+                  AND (
+                    NOT EXISTS (
+                        SELECT 1 FROM runtime_mission_tasks AS mt WHERE mt.task_id = rt.task_id
+                    )
+                    OR EXISTS (
+                        SELECT 1 FROM runtime_mission_tasks AS mt
+                        JOIN runtime_mission_plans AS mp
+                          ON mp.mission_id = mt.mission_id
+                         AND mp.plan_version = mt.plan_version
+                        WHERE mt.task_id = rt.task_id AND mp.status IN ('active', 'completed')
+                    )
+                  )
+                ORDER BY rt.created_at ASC, rt.task_id ASC
+                """,
+                (root_id,),
+            ).fetchall()
+            return [
+                runtime_persistence._row_to_task(row)
+                for row in rows
+                if not child_delegation.is_child_subtask_id(str(row["task_id"]))
+            ]
+
+        return runtime_persistence.run_read(
+            self._storage,
+            self._db_path,
+            _read,
+            retry_policy=self._retry_policy,
+        )
 
     def list_child_subtasks(self, root_task_id: str) -> list[runtime_persistence.TaskRecord]:
         """Return delegated child subagent tasks (`::sub:`) under ``root_task_id`` (M5-P4-03)."""
@@ -2256,6 +4069,38 @@ class DurableTaskStateMachine:
             raise WorkflowTransitionRejected(
                 f"Task {tid!r} cannot complete while milestone(s) remain incomplete: {', '.join(incomplete_ms)}."
             )
+
+        def _read_active_join(conn: sqlite3.Connection) -> MissionJoinReport | None:
+            conn.row_factory = sqlite3.Row
+            active = conn.execute(
+                """
+                SELECT mission_id, plan_version FROM runtime_mission_plans
+                WHERE root_task_id = ? AND status = 'active'
+                """,
+                (tid,),
+            ).fetchone()
+            if active is None:
+                return None
+            return _mission_join_report_locked(
+                conn,
+                str(active["mission_id"]),
+                int(active["plan_version"]),
+                now=ts,
+            )
+
+        mission_join = runtime_persistence.run_read(
+            self._storage,
+            self._db_path,
+            _read_active_join,
+            retry_policy=self._retry_policy,
+        )
+        if mission_join is not None and mission_join.status != "succeeded":
+            raise FalseCompletionRejected(
+                f"Task {tid!r} mission join is {mission_join.status!r}; "
+                f"failed={list(mission_join.failed_task_keys)}, "
+                f"incomplete={list(mission_join.incomplete_task_keys)}, "
+                f"missing_outputs={list(mission_join.missing_output_task_keys)}."
+            )
         child_subtasks = self.list_child_subtasks(tid)
         unjoined_subs = [
             sub.task_id
@@ -2396,7 +4241,23 @@ class DurableTaskStateMachine:
                     (ts, tid, int(epoch)),
                 )
             child_rows = conn.execute(
-                "SELECT task_id, state, checkpoint_ref FROM runtime_tasks WHERE parent_task_id = ?",
+                """
+                SELECT rt.task_id, rt.state, rt.checkpoint_ref
+                FROM runtime_tasks AS rt
+                WHERE rt.parent_task_id = ?
+                  AND (
+                    NOT EXISTS (
+                        SELECT 1 FROM runtime_mission_tasks AS mt WHERE mt.task_id = rt.task_id
+                    )
+                    OR EXISTS (
+                        SELECT 1 FROM runtime_mission_tasks AS mt
+                        JOIN runtime_mission_plans AS mp
+                          ON mp.mission_id = mt.mission_id
+                         AND mp.plan_version = mt.plan_version
+                        WHERE mt.task_id = rt.task_id AND mp.status = 'active'
+                    )
+                  )
+                """,
                 (tid,),
             ).fetchall()
             bad_ms = [
@@ -2433,6 +4294,26 @@ class DurableTaskStateMachine:
                 raise WorkflowTransitionRejected(
                     f"Task {tid!r} has unresolved action(s) inside completion commit."
                 )
+            active_plan = conn.execute(
+                """
+                SELECT mission_id, plan_version FROM runtime_mission_plans
+                WHERE root_task_id = ? AND status = 'active'
+                """,
+                (tid,),
+            ).fetchone()
+            committed_join: MissionJoinReport | None = None
+            if active_plan is not None:
+                committed_join = _mission_join_report_locked(
+                    conn,
+                    str(active_plan["mission_id"]),
+                    int(active_plan["plan_version"]),
+                    now=ts,
+                )
+                if committed_join.status != "succeeded":
+                    raise FalseCompletionRejected(
+                        f"Task {tid!r} mission join changed to {committed_join.status!r} before completion committed."
+                    )
+                _mission_persist_join_locked(conn, committed_join)
             seq_row = conn.execute(
                 "SELECT COALESCE(MAX(seq), 0) + 1 FROM runtime_task_transitions WHERE task_id = ?",
                 (tid,),
@@ -2447,6 +4328,15 @@ class DurableTaskStateMachine:
                 """,
                 (ts, tid),
             )
+            if committed_join is not None:
+                conn.execute(
+                    """
+                    UPDATE runtime_mission_plans
+                    SET status = 'completed', updated_at = ?
+                    WHERE mission_id = ? AND plan_version = ? AND status = 'active'
+                    """,
+                    (ts, committed_join.mission_id, committed_join.plan_version),
+                )
             conn.execute(
                 """
                 INSERT INTO runtime_task_transitions (
@@ -2557,6 +4447,12 @@ class DurableTaskStateMachine:
                     UPDATE runtime_task_epochs
                     SET status = 'expired', fenced_at = ?, fence_reason = 'parent_recovery_sweep'
                     WHERE task_id IN (SELECT task_id FROM runtime_tasks WHERE parent_task_id = ?)
+                      AND task_id NOT IN (
+                          SELECT mt.task_id FROM runtime_mission_tasks AS mt
+                          JOIN runtime_mission_plans AS mp
+                            ON mp.mission_id = mt.mission_id AND mp.plan_version = mt.plan_version
+                          WHERE mp.status = 'active'
+                      )
                       AND status = 'active'
                     """,
                     (ts, tid),
@@ -2565,7 +4461,17 @@ class DurableTaskStateMachine:
                     """
                     UPDATE runtime_actions
                     SET status = 'uncertain', error_code = 'orphaned_in_flight_on_recovery', updated_at = ?
-                    WHERE (task_id = ? OR task_id IN (SELECT task_id FROM runtime_tasks WHERE parent_task_id = ?))
+                    WHERE (
+                        task_id = ? OR (
+                            task_id IN (SELECT task_id FROM runtime_tasks WHERE parent_task_id = ?)
+                            AND task_id NOT IN (
+                                SELECT mt.task_id FROM runtime_mission_tasks AS mt
+                                JOIN runtime_mission_plans AS mp
+                                  ON mp.mission_id = mt.mission_id AND mp.plan_version = mt.plan_version
+                                WHERE mp.status = 'active'
+                            )
+                        )
+                    )
                       AND status = 'in_flight' AND action_class != 'read_only'
                     """,
                     (ts, tid, tid),
@@ -2574,7 +4480,17 @@ class DurableTaskStateMachine:
                     """
                     UPDATE runtime_actions
                     SET status = 'failed', ok = 0, error_code = 'orphaned_in_flight_on_recovery', updated_at = ?
-                    WHERE (task_id = ? OR task_id IN (SELECT task_id FROM runtime_tasks WHERE parent_task_id = ?))
+                    WHERE (
+                        task_id = ? OR (
+                            task_id IN (SELECT task_id FROM runtime_tasks WHERE parent_task_id = ?)
+                            AND task_id NOT IN (
+                                SELECT mt.task_id FROM runtime_mission_tasks AS mt
+                                JOIN runtime_mission_plans AS mp
+                                  ON mp.mission_id = mt.mission_id AND mp.plan_version = mt.plan_version
+                                WHERE mp.status = 'active'
+                            )
+                        )
+                    )
                       AND status = 'in_flight' AND action_class = 'read_only'
                     """,
                     (ts, tid, tid),
@@ -2591,7 +4507,17 @@ class DurableTaskStateMachine:
                     unresolved_rows = conn.execute(
                         """
                         SELECT action_id FROM runtime_actions
-                        WHERE (task_id = ? OR task_id IN (SELECT task_id FROM runtime_tasks WHERE parent_task_id = ?))
+                        WHERE (
+                            task_id = ? OR (
+                                task_id IN (SELECT task_id FROM runtime_tasks WHERE parent_task_id = ?)
+                                AND task_id NOT IN (
+                                    SELECT mt.task_id FROM runtime_mission_tasks AS mt
+                                    JOIN runtime_mission_plans AS mp
+                                      ON mp.mission_id = mt.mission_id AND mp.plan_version = mt.plan_version
+                                    WHERE mp.status = 'active'
+                                )
+                            )
+                        )
                           AND status IN ('in_flight', 'uncertain') AND action_class != 'read_only'
                         ORDER BY created_at ASC
                         """,
@@ -2694,7 +4620,16 @@ class DurableTaskStateMachine:
                         else "state IN ('running', 'waiting_approval')"
                     )
                     skewed_ms = conn.execute(
-                        f"SELECT task_id, state FROM runtime_tasks WHERE parent_task_id = ? AND {ms_filter}",
+                        f"""
+                        SELECT task_id, state FROM runtime_tasks
+                        WHERE parent_task_id = ? AND {ms_filter}
+                          AND task_id NOT IN (
+                              SELECT mt.task_id FROM runtime_mission_tasks AS mt
+                              JOIN runtime_mission_plans AS mp
+                                ON mp.mission_id = mt.mission_id AND mp.plan_version = mt.plan_version
+                              WHERE mp.status = 'active'
+                          )
+                        """,
                         (tid,),
                     ).fetchall()
                     for ms_row in skewed_ms:
@@ -2722,6 +4657,169 @@ class DurableTaskStateMachine:
                             (ms_tid, ms_seq, ms_from, ms_target, current_epoch, ts),
                         )
                         reconciled_milestones.append(ms_tid)
+
+            # 4. Recover active mission nodes independently from the root's legacy
+            # milestone lease. Mission nodes own their own epochs and resume bindings.
+            mission_rows = conn.execute(
+                """
+                SELECT rt.*, mt.mission_id, mt.plan_version, mt.task_key,
+                       mp.plan_digest, mp.input_digest, mp.session_policy_revision,
+                       mp.global_policy_revision, mp.budget_digest
+                FROM runtime_mission_tasks AS mt
+                JOIN runtime_mission_plans AS mp
+                  ON mp.mission_id = mt.mission_id AND mp.plan_version = mt.plan_version
+                JOIN runtime_tasks AS rt ON rt.task_id = mt.task_id
+                WHERE mp.status = 'active' AND rt.state IN ('running', 'waiting_approval')
+                ORDER BY rt.created_at ASC, mt.position ASC
+                """
+            ).fetchall()
+            for mission_row in mission_rows:
+                task_id = str(mission_row["task_id"])
+                current_epoch = int(mission_row["current_epoch"])
+                active = conn.execute(
+                    "SELECT * FROM runtime_task_epochs WHERE task_id = ? AND epoch = ?",
+                    (task_id, current_epoch),
+                ).fetchone()
+                if (
+                    active is not None
+                    and str(active["status"]) == "active"
+                    and float(active["lease_expires_at"]) > ts
+                ):
+                    continue
+                if active is not None and str(active["status"]) == "active":
+                    conn.execute(
+                        """
+                        UPDATE runtime_task_epochs
+                        SET status = 'expired', fenced_at = ?, fence_reason = 'mission_lease_expired_on_recovery'
+                        WHERE task_id = ? AND epoch = ? AND status = 'active'
+                        """,
+                        (ts, task_id, current_epoch),
+                    )
+                conn.execute(
+                    """
+                    UPDATE runtime_actions
+                    SET status = 'uncertain', error_code = 'orphaned_mission_action_on_recovery', updated_at = ?
+                    WHERE task_id = ? AND status = 'in_flight' AND action_class != 'read_only'
+                    """,
+                    (ts, task_id),
+                )
+                conn.execute(
+                    """
+                    UPDATE runtime_actions
+                    SET status = 'failed', ok = 0, error_code = 'orphaned_mission_action_on_recovery', updated_at = ?
+                    WHERE task_id = ? AND status = 'in_flight' AND action_class = 'read_only'
+                    """,
+                    (ts, task_id),
+                )
+                unresolved_rows = conn.execute(
+                    """
+                    SELECT action_id FROM runtime_actions
+                    WHERE task_id = ? AND status IN ('in_flight', 'uncertain') AND action_class != 'read_only'
+                    ORDER BY created_at ASC
+                    """,
+                    (task_id,),
+                ).fetchall()
+                unresolved_ids = [str(row["action_id"]) for row in unresolved_rows]
+                checkpoint_id = str(mission_row["checkpoint_ref"] or "").strip()
+                checkpoint_invalid = not checkpoint_id
+                if checkpoint_id:
+                    checkpoint_row = conn.execute(
+                        "SELECT * FROM runtime_task_checkpoints WHERE checkpoint_id = ? AND task_id = ?",
+                        (checkpoint_id, task_id),
+                    ).fetchone()
+                    binding_row = conn.execute(
+                        "SELECT * FROM runtime_mission_checkpoint_bindings WHERE checkpoint_id = ?",
+                        (checkpoint_id,),
+                    ).fetchone()
+                    if checkpoint_row is None or binding_row is None:
+                        checkpoint_invalid = True
+                    else:
+                        try:
+                            checkpoint = workflow_checkpoints._decode_and_verify_checkpoint_row(
+                                checkpoint_row,
+                                verify_integrity=True,
+                            )
+                            expected_binding = (
+                                str(mission_row["mission_id"]),
+                                int(mission_row["plan_version"]),
+                                task_id,
+                                str(mission_row["plan_digest"]),
+                                str(mission_row["input_digest"]),
+                                int(mission_row["session_policy_revision"]),
+                                int(mission_row["global_policy_revision"]),
+                                str(mission_row["budget_digest"]),
+                                current_epoch,
+                            )
+                            stored_binding = (
+                                str(binding_row["mission_id"]),
+                                int(binding_row["plan_version"]),
+                                str(binding_row["task_id"]),
+                                str(binding_row["plan_digest"]),
+                                str(binding_row["input_digest"]),
+                                int(binding_row["session_policy_revision"]),
+                                int(binding_row["global_policy_revision"]),
+                                str(binding_row["budget_digest"]),
+                                int(binding_row["checkpoint_epoch"]),
+                            )
+                            checkpoint_invalid = (
+                                expected_binding != stored_binding
+                                or checkpoint.epoch != current_epoch
+                            )
+                        except workflow_checkpoints.ResumeRejected:
+                            checkpoint_invalid = True
+                    if not checkpoint_invalid:
+                        conn.execute(
+                            """
+                            UPDATE runtime_task_checkpoints
+                            SET status = 'interrupted', updated_at = ? WHERE checkpoint_id = ?
+                            """,
+                            (ts, checkpoint_id),
+                        )
+                if unresolved_ids or checkpoint_invalid:
+                    target = "blocked"
+                    recovery_reason = (
+                        "mission_checkpoint_invalid_on_recovery"
+                        if checkpoint_invalid
+                        else "mission_unresolved_effect_on_recovery"
+                    )
+                    blocked_tasks.append(task_id)
+                else:
+                    target = "paused"
+                    recovery_reason = "mission_checkpoint_recovered"
+                    recovered_tasks.append(task_id)
+                conn.execute(
+                    """
+                    UPDATE runtime_tasks
+                    SET state = ?, state_version = state_version + 1, updated_at = ?
+                    WHERE task_id = ?
+                    """,
+                    (target, ts, task_id),
+                )
+                seq_row = conn.execute(
+                    "SELECT COALESCE(MAX(seq), 0) + 1 FROM runtime_task_transitions WHERE task_id = ?",
+                    (task_id,),
+                ).fetchone()
+                conn.execute(
+                    """
+                    INSERT INTO runtime_task_transitions (
+                        task_id, seq, from_state, to_state, epoch, reason, evidence_json, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        task_id,
+                        int(seq_row[0]) if seq_row else 1,
+                        str(mission_row["state"]),
+                        target,
+                        current_epoch,
+                        recovery_reason,
+                        _encode_evidence_json(
+                            checkpoint_id=checkpoint_id,
+                            extra={"unresolved_action_ids": unresolved_ids} if unresolved_ids else None,
+                        ),
+                        ts,
+                    ),
+                )
+                reconciled_milestones.append(task_id)
 
             return RecoverySweepReport(
                 recovered_task_ids=tuple(recovered_tasks),

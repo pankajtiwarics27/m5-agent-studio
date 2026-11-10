@@ -1,16 +1,18 @@
-"""SQLite schema v3 migrations and fail-closed persistence discipline (M5-P1-01).
+"""SQLite schema v4 migrations and fail-closed persistence discipline.
 
 Provides the authoritative local persistence discipline for the M5 2.0
 single-agent execution spine without introducing an ORM or external migration
 dependency:
 
-1. **Additive versioned schema (`RUNTIME_SCHEMA_VERSION = 3`)**:
+1. **Additive versioned schema (`RUNTIME_SCHEMA_VERSION = 4`)**:
    - Version 1: additive columns on legacy Studio tables and ``schema_migrations``.
    - Version 2: ``tool_audit_events`` privacy-preserving tool attempt log.
    - Version 3: durable spine tables for autonomous ``runtime_tasks``,
      ``runtime_task_epochs`` (worker leases and monotonic fencing epochs),
      ``runtime_task_transitions`` (append-only state transitions), and
      ``runtime_actions`` (durable action intents, outcomes, and replay policy).
+   - Version 4: immutable versioned mission plans, dependency edges, required
+     output references, checkpoint resume bindings, and recoverable join reports.
 2. **Pre-migration backup and rollback protection**:
    - Pre-flight checks reject corrupted databases and future ``user_version``
      databases before mutating any bytes.
@@ -39,7 +41,9 @@ from __future__ import annotations
 import contextlib
 import contextvars
 import errno
+import hashlib
 import inspect
+import json
 import os
 import sqlite3
 import tempfile
@@ -49,7 +53,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol, TypeVar
 
-RUNTIME_SCHEMA_VERSION = 3
+RUNTIME_SCHEMA_VERSION = 4
 
 T = TypeVar("T")
 
@@ -84,6 +88,55 @@ ACTION_STATUSES: frozenset[str] = frozenset(
 CHECKPOINT_STATUSES: frozenset[str] = frozenset(
     {"pending_commit", "committed", "interrupted", "resumed", "superseded"}
 )
+
+MISSION_PLAN_STATUSES: frozenset[str] = frozenset(
+    {"active", "superseded", "completed", "failed", "cancelled"}
+)
+
+MISSION_JOIN_STATUSES: frozenset[str] = frozenset(
+    {"pending", "partial", "failed", "succeeded"}
+)
+
+
+def compute_task_budget_identity(budget_json: str) -> str:
+    """Hash the immutable budget/verification contract, excluding usage counters.
+
+    Mission resume and dispatch bindings must survive ordinary usage accounting,
+    while any authority-changing budget-spec or verification-contract update must
+    invalidate the captured binding. Malformed state fails closed.
+    """
+    try:
+        parsed = json.loads(str(budget_json or "{}"))
+    except (TypeError, ValueError) as exc:
+        raise ValueError("persisted task budget JSON is malformed.") from exc
+    if not isinstance(parsed, dict):
+        raise ValueError("persisted task budget JSON must be an object.")
+    spec = parsed.get("spec")
+    if spec is None:
+        # Legacy rows stored the limits at top level.
+        spec = {
+            key: parsed[key]
+            for key in (
+                "max_steps",
+                "max_tool_calls",
+                "max_tokens",
+                "max_elapsed_s",
+                "max_recoveries",
+            )
+            if key in parsed
+        }
+    if not isinstance(spec, dict):
+        raise ValueError("persisted task budget spec must be an object.")
+    contract = parsed.get("verification_contract")
+    if contract is not None and not isinstance(contract, dict):
+        raise ValueError("persisted verification contract must be an object or null.")
+    canonical = json.dumps(
+        {"spec": spec, "verification_contract": contract},
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 class StorageProvider(Protocol):
@@ -706,6 +759,143 @@ def _apply_v3_execution_spine_tables(conn: sqlite3.Connection) -> None:
     )
 
 
+def _apply_v4_mission_graph_tables(conn: sqlite3.Connection) -> None:
+    """Add AP-005's normalized mission DAG and recoverable join metadata."""
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS runtime_mission_plans (
+            mission_id TEXT NOT NULL CHECK (length(trim(mission_id)) > 0),
+            plan_version INTEGER NOT NULL CHECK (plan_version >= 1),
+            root_task_id TEXT NOT NULL REFERENCES runtime_tasks(task_id) ON DELETE RESTRICT,
+            plan_digest TEXT NOT NULL CHECK (length(plan_digest) = 64),
+            input_digest TEXT NOT NULL CHECK (length(input_digest) = 64),
+            session_policy_revision INTEGER NOT NULL CHECK (session_policy_revision >= 0),
+            global_policy_revision INTEGER NOT NULL CHECK (global_policy_revision >= 0),
+            budget_digest TEXT NOT NULL CHECK (length(budget_digest) = 64),
+            status TEXT NOT NULL DEFAULT 'active'
+                CHECK (status IN ('active', 'superseded', 'completed', 'failed', 'cancelled')),
+            created_at REAL NOT NULL,
+            updated_at REAL NOT NULL,
+            PRIMARY KEY (mission_id, plan_version),
+            UNIQUE (root_task_id, plan_version)
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS runtime_mission_tasks (
+            mission_id TEXT NOT NULL,
+            plan_version INTEGER NOT NULL,
+            task_id TEXT NOT NULL REFERENCES runtime_tasks(task_id) ON DELETE RESTRICT,
+            task_key TEXT NOT NULL CHECK (length(trim(task_key)) > 0),
+            position INTEGER NOT NULL CHECK (position >= 0),
+            required_outputs_json TEXT NOT NULL DEFAULT '[]',
+            created_at REAL NOT NULL,
+            PRIMARY KEY (mission_id, plan_version, task_id),
+            UNIQUE (mission_id, plan_version, task_key),
+            FOREIGN KEY (mission_id, plan_version)
+                REFERENCES runtime_mission_plans(mission_id, plan_version) ON DELETE RESTRICT
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS runtime_mission_dependencies (
+            mission_id TEXT NOT NULL,
+            plan_version INTEGER NOT NULL,
+            task_id TEXT NOT NULL,
+            depends_on_task_id TEXT NOT NULL,
+            required_outputs_json TEXT NOT NULL DEFAULT '[]',
+            created_at REAL NOT NULL,
+            CHECK (task_id != depends_on_task_id),
+            PRIMARY KEY (mission_id, plan_version, task_id, depends_on_task_id),
+            FOREIGN KEY (mission_id, plan_version, task_id)
+                REFERENCES runtime_mission_tasks(mission_id, plan_version, task_id) ON DELETE RESTRICT,
+            FOREIGN KEY (mission_id, plan_version, depends_on_task_id)
+                REFERENCES runtime_mission_tasks(mission_id, plan_version, task_id) ON DELETE RESTRICT
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS runtime_mission_outputs (
+            mission_id TEXT NOT NULL,
+            plan_version INTEGER NOT NULL,
+            task_id TEXT NOT NULL,
+            output_key TEXT NOT NULL CHECK (length(trim(output_key)) > 0),
+            artifact_ref TEXT NOT NULL CHECK (length(trim(artifact_ref)) > 0),
+            artifact_sha256 TEXT NOT NULL CHECK (length(artifact_sha256) = 64),
+            evidence_json TEXT NOT NULL DEFAULT '{}',
+            producer_epoch INTEGER NOT NULL CHECK (producer_epoch >= 1),
+            created_at REAL NOT NULL,
+            PRIMARY KEY (mission_id, plan_version, task_id, output_key),
+            FOREIGN KEY (mission_id, plan_version, task_id)
+                REFERENCES runtime_mission_tasks(mission_id, plan_version, task_id) ON DELETE RESTRICT
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS runtime_mission_checkpoint_bindings (
+            checkpoint_id TEXT PRIMARY KEY
+                REFERENCES runtime_task_checkpoints(checkpoint_id) ON DELETE RESTRICT,
+            mission_id TEXT NOT NULL,
+            plan_version INTEGER NOT NULL CHECK (plan_version >= 1),
+            task_id TEXT NOT NULL,
+            plan_digest TEXT NOT NULL CHECK (length(plan_digest) = 64),
+            input_digest TEXT NOT NULL CHECK (length(input_digest) = 64),
+            session_policy_revision INTEGER NOT NULL CHECK (session_policy_revision >= 0),
+            global_policy_revision INTEGER NOT NULL CHECK (global_policy_revision >= 0),
+            budget_digest TEXT NOT NULL CHECK (length(budget_digest) = 64),
+            task_state_version INTEGER NOT NULL CHECK (task_state_version >= 0),
+            checkpoint_epoch INTEGER NOT NULL CHECK (checkpoint_epoch >= 1),
+            resumed_epoch INTEGER CHECK (resumed_epoch IS NULL OR resumed_epoch >= 1),
+            created_at REAL NOT NULL,
+            FOREIGN KEY (mission_id, plan_version, task_id)
+                REFERENCES runtime_mission_tasks(mission_id, plan_version, task_id) ON DELETE RESTRICT
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS runtime_mission_joins (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            mission_id TEXT NOT NULL,
+            plan_version INTEGER NOT NULL CHECK (plan_version >= 1),
+            status TEXT NOT NULL
+                CHECK (status IN ('pending', 'partial', 'failed', 'succeeded')),
+            report_json TEXT NOT NULL,
+            report_hash TEXT NOT NULL CHECK (length(report_hash) = 64),
+            created_at REAL NOT NULL,
+            UNIQUE (mission_id, plan_version, report_hash),
+            FOREIGN KEY (mission_id, plan_version)
+                REFERENCES runtime_mission_plans(mission_id, plan_version) ON DELETE RESTRICT
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_runtime_mission_one_active
+        ON runtime_mission_plans(mission_id) WHERE status = 'active'
+        """
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_runtime_mission_plans_root ON runtime_mission_plans(root_task_id, status)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_runtime_mission_tasks_plan ON runtime_mission_tasks(mission_id, plan_version, position)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_runtime_mission_tasks_task ON runtime_mission_tasks(task_id)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_runtime_mission_dependencies_task ON runtime_mission_dependencies(mission_id, plan_version, task_id)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_runtime_mission_outputs_task ON runtime_mission_outputs(mission_id, plan_version, task_id)"
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class MigrationStep:
     """One additive, idempotent SQLite schema upgrade step."""
@@ -719,6 +909,7 @@ MIGRATION_STEPS: tuple[MigrationStep, ...] = (
     MigrationStep(1, "v1_legacy_additive_columns", _apply_v1_legacy_columns),
     MigrationStep(2, "v2_tool_audit_events", _apply_v2_tool_audit_events),
     MigrationStep(3, "v3_runtime_execution_spine", _apply_v3_execution_spine_tables),
+    MigrationStep(4, "v4_durable_mission_graph", _apply_v4_mission_graph_tables),
 )
 
 

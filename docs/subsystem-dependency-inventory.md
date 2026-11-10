@@ -160,7 +160,7 @@ The public `/static/*` ASGI mount is registered when the static directory exists
 
 ## SQLite tables and schema contracts
 
-`DB_PATH` is local SQLite; initialization and additive schema upgrades are implemented by `init_db` and `_apply_schema_migrations` ([`app.py:L2400`](../app.py#L2400), [`app.py:L2214`](../app.py#L2214)) delegating to `runtime_persistence.py`. Current `SCHEMA_VERSION` is 3. Credential values are migrated to the OS keyring; history/context remains local SQLite data.
+`DB_PATH` is local SQLite; initialization and additive schema upgrades are implemented by `init_db` and `_apply_schema_migrations` ([`app.py:L2400`](../app.py#L2400), [`app.py:L2214`](../app.py#L2214)) delegating to `runtime_persistence.py`. Current `SCHEMA_VERSION` is 4. Credential values are migrated to the OS keyring; history/context remains local SQLite data.
 
 | Table | Kind | Responsibility | Declaration source |
 |---|---|---|---|
@@ -177,13 +177,19 @@ The public `/static/*` ASGI mount is registered when the static directory exists
 | `opencontext_fts` | FTS5 virtual table | SQLite FTS5 index for OpenContext document search. | [`app.py:L2360`](../app.py#L2360) |
 | `perf_samples` | table | Per-run/model performance measurements and token counters. | [`app.py:L2233`](../app.py#L2233) |
 | `runs` | table | Saved run summaries and payload JSON. | [`app.py:L2222`](../app.py#L2222) |
-| `runtime_actions` | table | Durable action/effect records with idempotency keys, request/result digests, and execution status. | [`runtime_persistence.py:L641`](../runtime_persistence.py#L641) |
-| `runtime_task_checkpoints` | table | Hash-verified durable task checkpoints and typed evidence references per task and sequence. | [`runtime_persistence.py:L668`](../runtime_persistence.py#L668) |
-| `runtime_task_epochs` | table | Append-only runtime task execution epochs and stale-writer fencing metadata. | [`runtime_persistence.py:L607`](../runtime_persistence.py#L607) |
-| `runtime_task_transitions` | table | Append-only durable state transitions per runtime task and epoch. | [`runtime_persistence.py:L624`](../runtime_persistence.py#L624) |
-| `runtime_tasks` | table | Durable runtime task state, monotonic epoch counter, budget snapshot, and terminal outcome. | [`runtime_persistence.py:L587`](../runtime_persistence.py#L587) |
-| `schema_migrations` | table | Applied SQLite schema version history. | [`runtime_persistence.py:L728`](../runtime_persistence.py#L728) |
-| `tool_audit_events` | table | Tool execution metadata, approval state, and argument/output hashes; no raw argument/output fields. | [`runtime_persistence.py:L567`](../runtime_persistence.py#L567) |
+| `runtime_actions` | table | Durable action/effect records with idempotency keys, request/result digests, and execution status. | [`runtime_persistence.py:L694`](../runtime_persistence.py#L694) |
+| `runtime_mission_checkpoint_bindings` | table | Checkpoint plan/input/policy/budget/state/epoch resume bindings. | [`runtime_persistence.py:L839`](../runtime_persistence.py#L839) |
+| `runtime_mission_dependencies` | table | Directed prerequisite edges and edge-level required-output contracts. | [`runtime_persistence.py:L803`](../runtime_persistence.py#L803) |
+| `runtime_mission_joins` | table | Hash-addressed recoverable parent join reports with explicit aggregate status. | [`runtime_persistence.py:L861`](../runtime_persistence.py#L861) |
+| `runtime_mission_outputs` | table | Insert-only artifact references, digests, evidence summaries, and producer epochs. | [`runtime_persistence.py:L821`](../runtime_persistence.py#L821) |
+| `runtime_mission_plans` | table | Immutable versioned mission identity, root, input/authority/budget bindings, and lifecycle. | [`runtime_persistence.py:L766`](../runtime_persistence.py#L766) |
+| `runtime_mission_tasks` | table | Ordered mission-node membership mapped onto authoritative runtime tasks and required outputs. | [`runtime_persistence.py:L786`](../runtime_persistence.py#L786) |
+| `runtime_task_checkpoints` | table | Hash-verified durable task checkpoints and typed evidence references per task and sequence. | [`runtime_persistence.py:L721`](../runtime_persistence.py#L721) |
+| `runtime_task_epochs` | table | Append-only runtime task execution epochs and stale-writer fencing metadata. | [`runtime_persistence.py:L660`](../runtime_persistence.py#L660) |
+| `runtime_task_transitions` | table | Append-only durable state transitions per runtime task and epoch. | [`runtime_persistence.py:L677`](../runtime_persistence.py#L677) |
+| `runtime_tasks` | table | Durable runtime task state, monotonic epoch counter, budget snapshot, and terminal outcome. | [`runtime_persistence.py:L640`](../runtime_persistence.py#L640) |
+| `schema_migrations` | table | Applied SQLite schema version history. | [`runtime_persistence.py:L919`](../runtime_persistence.py#L919) |
+| `tool_audit_events` | table | Tool execution metadata, approval state, and argument/output hashes; no raw argument/output fields. | [`runtime_persistence.py:L620`](../runtime_persistence.py#L620) |
 
 ## External and local process boundaries
 
