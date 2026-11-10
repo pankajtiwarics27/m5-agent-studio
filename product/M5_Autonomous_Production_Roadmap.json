@@ -5,15 +5,15 @@
   "program": "AP",
   "revision": "1.2",
   "prepared_date": "2026-11-08",
-  "lifecycle": "registered_tracking_ap005_done_ap006_authorized",
+  "lifecycle": "registered_tracking_ap005_landed_ap006_authorized",
   "source_snapshot": "a67e8b291614f8afdac7c8d38ba51bcc8926d695",
   "source_repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "specification": "docs/autonomous-production-roadmap.md",
   "agent_prompt": "M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md",
   "authority": {
     "precedence": "AGENTS.md, existing security/approval rules and owning program ledgers remain binding.",
-    "scope": "AP-001 through AP-005 are delivered. AP-006 is owner-authorized as the next single story after the AP-005 closeout PR merges, limited to artifact identity, provenance and selective invalidation on its own fixed Arena branch/PR. This closeout contains no AP-006 implementation. AP-007 through AP-032, product runtime activation and real external actions remain unauthorized.",
-    "registration_gate": "AP-001 records the tracking source and claim protocol; its merge did not authorize downstream work. AP-002/AP-003, AP-004 and AP-005 were separately authorized and delivered. The owner has authorized AP-006 as the next single story after AP-005 closeout; later stories still require their own dependency and authority gates.",
+    "scope": "AP-001 through AP-005 are delivered and the AP-005 closeout PR #298 is merged, so AP-006 is now owner-authorized and dependency-ready as the next single story, limited to artifact identity, provenance and selective invalidation on its own fixed Arena branch/PR. AP-006 remains unclaimed and is not implemented by any closeout record. AP-007 through AP-032, product runtime activation and real external actions remain unauthorized.",
+    "registration_gate": "AP-001 records the tracking source and claim protocol; its merge did not authorize downstream work. AP-002/AP-003, AP-004 and AP-005 were separately authorized and delivered. The AP-005 closeout landed through PR #298, so the owner-authorized AP-006 is now the next single dependency-ready story; later stories still require their own dependency and authority gates.",
     "other_ledgers": "Do not alter AS/M5/UIUX/UIV2/LC tracking without the owning protocol.",
     "approval": "Agents cannot fabricate owner, screenshot, independent security or release approval."
   },
@@ -812,7 +812,24 @@
           "The owner authorized AP-006 as the next single dependency-ready story after this AP-005 closeout PR merges. AP-006 is not claimed or implemented here; AP-007 through AP-032 and runtime/external actions remain unauthorized.",
           "Closeout-only local verification passed: documentation validation (285 files), governance validation (7 required files), roadmap dashboard freshness, both AP contract validators, 28 AP contract tests, and git diff --check. No implementation or unrelated program-ledger paths were changed."
         ],
-        "post_completion_authorization": "The owner instructed “While you can start new story.” Per the closeout instruction, this authorizes AP-006 as the next single dependency-ready story only after the AP-005 closeout PR merges, on its own fixed Arena branch/PR. It does not authorize AP-007 through AP-032, runtime activation, real external actions, or any human, independent-security, screenshot, media, signing or release approval."
+        "post_completion_authorization": "The owner instructed “While you can start new story.” Per the closeout instruction, this authorizes AP-006 as the next single dependency-ready story only after the AP-005 closeout PR merges, on its own fixed Arena branch/PR. It does not authorize AP-007 through AP-032, runtime activation, real external actions, or any human, independent-security, screenshot, media, signing or release approval.",
+        "closeout_pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/298",
+        "closeout_final_head_sha": "84d6d415491862c2fab46e0f5ee94a68056fdc19",
+        "closeout_merge_sha": "69092eda00d7e42de06a3ced3c054e3b7d7f2393",
+        "closeout_merged_at": "2026-11-10T10:50:23Z",
+        "closeout_pr_ci_url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42802006871",
+        "closeout_post_merge_ci_url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42802513165",
+        "closeout_landing_state": "landed",
+        "closeout_landed_by": "arena/25975e0f-m5-agent-studio",
+        "closeout_landing_evidence": [
+          "AP-005 closeout PR #298 exact head 84d6d415491862c2fab46e0f5ee94a68056fdc19 passed the current-head pull_request gate in run 42802006871 (plan, documentation/tracking-ledger gates, browser-safety regressions and the test 3.11/3.12/3.13 aggregates all succeeded). The same-head push run 42801959839 was a branch placeholder and did not own the gate.",
+          "Closeout PR #298 merged at 2026-11-10T10:50:23Z as 69092eda00d7e42de06a3ced3c054e3b7d7f2393 (standard merge commit, explicit PR-number merge, no automatic merge). The exact-merge main push run 42802513165 on that SHA completed successfully.",
+          "The landed closeout is documentation/ledger only (AGENTS.md, docs/async-delivery-pipeline.md, docs/autonomous-production-evaluation-briefs.md, docs/autonomous-production-operating-envelope.md, docs/mission-authority-envelope.md, product/M5_Autonomous_Production_Roadmap.json). It added no runtime source, generated artifact, workflow, test map or unrelated program-ledger change, and it rewrote no prior AP-005 commit.",
+          "The landing session independently replayed the documentation gate on the fetched exact head in a disposable clone: documentation validation (285 files), governance validation (7 required files), roadmap dashboard freshness, security-record consistency and git diff --check all passed. AP contract tests are evidenced by the CI documentation/ledger job; pytest was unavailable in that sandbox, which is a local-execution limit rather than a skipped required gate.",
+          "AP-005 remains an offline persistence/contract delivery. This landing record claims no owner, independent-security, screenshot, media, signing or release approval, does not activate product runtime, and does not begin AP-006 implementation.",
+          "This is the terminal AP-005 status record. Its own merge SHA, merge time and post-merge main run are recorded in its pull-request comment, because a commit cannot carry its own merge identity; no further AP-005 completion PR is required."
+        ],
+        "post_landing_authorization": "The AP-005 closeout has landed, so the previously recorded owner authorization makes AP-006 the next single dependency-ready story. AP-006 remains unclaimed (status not_started, no branch or PR); this record does not claim or implement it. AP-007 through AP-032, runtime activation, real external actions and all human, independent-security, screenshot, media, signing and release approvals remain unauthorized."
       },
       "implementation_prompt": "Implement AP-005: Compose durable mission tasks and recoverable joins. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
@@ -2937,7 +2954,7 @@
     "reconciliation_evidence": "docs/autonomous-production-ap001-reconciliation.md",
     "registered_by_story": "AP-001",
     "owner_authorized_date": "2026-11-10",
-    "activation_scope": "AP-001 through AP-005 are delivered. AP-006 is authorized as the next single dependency-ready story after the AP-005 closeout PR merges; no AP-006 implementation is included in this closeout. AP-007 through AP-032, product runtime activation and real external actions remain unauthorized.",
+    "activation_scope": "AP-001 through AP-005 are delivered and the AP-005 closeout PR #298 is merged. AP-006 is authorized as the next single dependency-ready story and remains unclaimed; no AP-006 implementation is included in this landing record. AP-007 through AP-032, product runtime activation and real external actions remain unauthorized.",
     "runtime_activation_authorized": false,
     "authorized_downstream_stories": [
       "AP-002",
