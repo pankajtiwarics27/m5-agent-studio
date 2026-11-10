@@ -79,10 +79,12 @@ AS source/status record rather than a fourth interchangeable claim ledger.
   AP-001 through AP-005 are `done`. AP-005 PR #296's final head
   `3c57cb16a51cc0f014a4f4767fa4d437f71c4a2e` merged as
   `acec9aebe4f86f968c077541392a2bfc3cd71fd7`; its exact-merge main CI passed.
-  AP-006 is owner-authorized as the next single story after the AP-005
-  docs/ledger closeout PR merges; it is not part of that closeout. AP-007…AP-032,
-  product runtime activation, destructive resets, and real external services
-  remain unauthorized.
+  The AP-005 docs/ledger closeout PR #298 merged as
+  `69092eda00d7e42de06a3ced3c054e3b7d7f2393`, so AP-006 is now owner-authorized
+  and dependency-ready as the next **single** story; it remains unclaimed and is
+  not implemented by the closeout record. AP-007…AP-032, product runtime
+  activation, destructive resets, and real external services remain
+  unauthorized.
 
 Within the program you are working on, choose exactly one story that is both
 owner-authorized and dependency-ready, respect phase order, and take one story
