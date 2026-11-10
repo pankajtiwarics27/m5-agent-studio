@@ -159,6 +159,7 @@
       "test_baseline.py",
       "test_browser_ci_configuration.py",
       "test_ci_execution_plan.py",
+      "test_ci_test_shard.py",
       "test_demo_*.py",
       "test_docs.py",
       "test_governance.py",
@@ -432,6 +433,12 @@
       "security.execution"
     ],
     "scripts/ci_execution_plan.py": [
+      "quality.docs-ci"
+    ],
+    "scripts/ci_test_shard.py": [
+      "quality.docs-ci"
+    ],
+    "tests/ci_test_shards.json": [
       "quality.docs-ci"
     ]
   }

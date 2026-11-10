@@ -7,6 +7,15 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
+    inputs:
+      python_mode:
+        description: Run job shards or capture an unsharded same-commit outcome baseline
+        required: true
+        default: sharded
+        type: choice
+        options:
+          - sharded
+          - unsharded_baseline
   schedule:
     - cron: "17 7 * * *"
 
@@ -73,146 +82,339 @@ jobs:
             --open-pr-count "${{ steps.open-pr.outputs.count }}" \
             --github-output "$GITHUB_OUTPUT"
 
-  test:
-    # Required full-gate identities still render as test (3.11), test (3.12),
-    # and test (3.13). A delegated feature push uses a non-required prefix, so
-    # its cheap placeholder cannot satisfy or obscure the pull request gate.
-    name: ${{ github.event_name == 'push' && github.ref != format('refs/heads/{0}', github.event.repository.default_branch) && 'Branch test' || 'test' }} (${{ matrix.python-version }})
+  source_gates:
+    name: Source and release-independent gates
     needs: plan
-    if: always()
+    if: needs.plan.result == 'success' && needs.plan.outputs.run_verification == 'true'
     runs-on: ubuntu-latest
-    # Preserve headroom for a cold dependency resolve or a slower hosted runner;
-    # measured latency is reported by the test step rather than hidden by this ceiling.
-    timeout-minutes: 25
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.11", "3.12", "3.13"]
+    timeout-minutes: 15
     steps:
-      - name: Refuse an invalid verification plan
-        if: needs.plan.result != 'success'
-        run: |
-          echo "Verification plan did not complete successfully."
-          exit 1
-      - name: Delegate duplicate feature-push work to the pull request gate
-        if: needs.plan.result == 'success' && needs.plan.outputs.run_verification != 'true'
-        run: echo "${{ needs.plan.outputs.reason }}"
       - uses: actions/checkout@v7
-        if: needs.plan.outputs.run_verification == 'true'
         with:
-          # The pinned-baseline check verifies Git ancestry (BASELINE.md,
-          # scripts/verify_baseline.py), so CI must fetch the full history.
           fetch-depth: 0
       - uses: actions/setup-python@v7
-        if: needs.plan.outputs.run_verification == 'true'
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.11"
           cache: pip
       - uses: actions/setup-node@v7
-        if: needs.plan.outputs.run_verification == 'true'
         with:
           node-version: 22
-      - name: Install project and test dependencies
-        if: needs.plan.outputs.run_verification == 'true'
+      - name: Install source-gate dependencies
         run: python -m pip install -e '.[dev,supply-chain]'
       - name: Verify pinned source baseline
-        if: needs.plan.outputs.run_verification == 'true'
         run: python scripts/verify_baseline.py
       - name: Check commit messages are documented
-        if: needs.plan.outputs.run_verification == 'true'
         run: python scripts/check_commit_messages.py --base origin/main
       - name: Check AS-031 sign-off record and release gate
-        if: needs.plan.outputs.run_verification == 'true'
         run: python scripts/validate_security_signoff.py
       - name: Validate published documentation and links
-        if: needs.plan.outputs.run_verification == 'true'
         run: python scripts/validate_docs.py
       - name: Lint sources (Ruff)
-        if: needs.plan.outputs.run_verification == 'true'
         run: ruff check .
       - name: Type-check contract modules (mypy)
-        if: needs.plan.outputs.run_verification == 'true'
         run: mypy
       - name: Compile all tracked Python sources
-        if: needs.plan.outputs.run_verification == 'true'
         run: git ls-files -z -- '*.py' | xargs -0 -r python -m compileall -q
       - name: Check frontend JavaScript syntax
-        if: needs.plan.outputs.run_verification == 'true'
         run: python scripts/check_frontend_syntax.py
-      - name: Validate scoped test map
-        if: needs.plan.outputs.run_verification == 'true'
-        run: python scripts/run_scoped_tests.py --check-map
-      - name: Run tests
-        if: needs.plan.outputs.run_verification == 'true'
-        env:
-          SELECTED_SUITE: ${{ needs.plan.outputs.suite }}
-          SCOPE_BASE: ${{ needs.plan.outputs.scope_base }}
-          SCOPE_HEAD: ${{ github.sha }}
-          PYTHONUNBUFFERED: "1"
-          PYTEST_ADDOPTS: "--durations=15 --durations-min=1.0"
-        # Stream progress while retaining a log for annotations and measured
-        # timing. Disabling errexit is deliberate: diagnostics must still run
-        # after a failing pytest pipeline.
+      - name: Validate scoped test and CI shard maps
         run: |
-          set +e
-          set -uo pipefail
-          log="${RUNNER_TEMP:-/tmp}/pytest.log"
-          started=$SECONDS
-          if [ "$SELECTED_SUITE" = "scoped" ]; then
-            mode="scoped"
-            python scripts/run_scoped_tests.py --base "$SCOPE_BASE" --head "$SCOPE_HEAD" 2>&1 | tee "$log"
-          else
-            mode="full"
-            python -m pytest -q --tb=short -rf 2>&1 | tee "$log"
-          fi
-          status=${PIPESTATUS[0]}
-          elapsed=$((SECONDS - started))
-          summary=$(grep -E '[0-9]+ (passed|failed)' "$log" | tail -n 1)
-          echo "::notice title=Pytest ${mode} suite - ${elapsed}s - Python ${{ matrix.python-version }}::${summary:-no summary line}"
-          echo "Slowest tests (wall clock, seconds):"
-          grep -E '^[0-9]+\.[0-9]+s (call|setup|teardown)' "$log" | head -n 20 || true
-          if [ "$status" -ne 0 ]; then
-            grep -E '^(FAILED|ERROR)' "$log" | head -25 | while IFS= read -r line; do
-              echo "::error title=Pytest failure::${line}"
-            done
-          fi
-          echo "--- pytest tail ---"
-          tail -n 40 "$log"
-          exit "$status"
+          python scripts/run_scoped_tests.py --check-map
+          python scripts/ci_test_shard.py --validate
       - name: Check the demo transcript and screenshot manifest
-        if: needs.plan.outputs.run_verification == 'true'
         run: |
           python scripts/demo_tour.py --check
           python scripts/validate_screenshots.py
       - name: Smoke-test local loopback startup and auth
-        if: needs.plan.outputs.run_verification == 'true'
         run: |
           python scripts/smoke_local.py
           python scripts/smoke_local.py --standalone
-      - name: Build release evidence (SBOM, scans, provenance)
-        if: needs.plan.outputs.run_verification == 'true'
-        run: >-
-          python scripts/release_supply_chain.py build
-          --output dist/evidence --deterministic --source-commit "$GITHUB_SHA"
-      - name: Verify release evidence matches the artifact
-        if: needs.plan.outputs.run_verification == 'true'
-        run: python scripts/release_supply_chain.py verify --output dist/evidence
-      - name: Upload release evidence
-        if: needs.plan.outputs.run_verification == 'true'
-        uses: actions/upload-artifact@v7
-        with:
-          name: release-evidence-${{ matrix.python-version }}
-          path: dist/evidence
-          retention-days: 14
-          if-no-files-found: error
       - name: Verify generated artifacts are reproducible
-        if: needs.plan.outputs.run_verification == 'true'
         run: |
           python scripts/build_studio.py
           python scripts/generate_route_matrix.py
           python scripts/generate_subsystem_inventory.py
           python scripts/generate_roadmap_status.py --check
           git diff --exit-code -- studio.py docs/route-security-matrix.md docs/subsystem-dependency-inventory.md
+
+  python_test_shards:
+    name: Python test shard (${{ matrix.python-version }}, ${{ matrix.shard }})
+    needs: plan
+    if: >-
+      needs.plan.result == 'success' &&
+      needs.plan.outputs.run_verification == 'true' &&
+      needs.plan.outputs.suite == 'full' &&
+      (github.event_name != 'workflow_dispatch' || inputs.python_mode != 'unsharded_baseline')
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+        shard: ["1", "2", "3"]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Install identical test dependencies
+        run: python -m pip install -e '.[dev,supply-chain]'
+      - name: Run deterministic pytest shard
+        env:
+          PYTHONUNBUFFERED: "1"
+          PYTEST_ADDOPTS: "--durations=15 --durations-min=1.0"
+        run: >-
+          python scripts/ci_test_shard.py
+          --run-shard "${{ matrix.shard }}"
+          --python-version "${{ matrix.python-version }}"
+          --output "${RUNNER_TEMP}/pytest-result-${{ matrix.python-version }}-${{ matrix.shard }}.json"
+      - name: Upload pytest outcome evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: pytest-result-${{ matrix.python-version }}-${{ matrix.shard }}
+          path: ${{ runner.temp }}/pytest-result-${{ matrix.python-version }}-${{ matrix.shard }}.json
+          retention-days: 14
+          if-no-files-found: error
+      - name: Build release evidence once per interpreter
+        if: success() && matrix.shard == '1'
+        run: >-
+          python scripts/release_supply_chain.py build
+          --output dist/evidence --deterministic --source-commit "$GITHUB_SHA"
+      - name: Verify release evidence once per interpreter
+        if: success() && matrix.shard == '1'
+        run: python scripts/release_supply_chain.py verify --output dist/evidence
+      - name: Upload release evidence once per interpreter
+        if: success() && matrix.shard == '1'
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-evidence-${{ matrix.python-version }}
+          path: dist/evidence
+          retention-days: 14
+          if-no-files-found: error
+
+  python_identity:
+    name: Python shard identity (${{ matrix.python-version }})
+    needs: [plan, python_test_shards]
+    if: >-
+      needs.plan.result == 'success' &&
+      needs.plan.outputs.run_verification == 'true' &&
+      needs.plan.outputs.suite == 'full' &&
+      needs.python_test_shards.result == 'success' &&
+      (github.event_name != 'workflow_dispatch' || inputs.python_mode != 'unsharded_baseline')
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install identical test dependencies
+        run: python -m pip install -e '.[dev,supply-chain]'
+      - name: Download this interpreter's shard outcomes
+        uses: actions/download-artifact@v7
+        with:
+          pattern: pytest-result-${{ matrix.python-version }}-*
+          path: ${{ runner.temp }}/pytest-results
+          merge-multiple: true
+      - name: Prove node-set and outcome-union identity
+        run: >-
+          python scripts/ci_test_shard.py
+          --verify-results "${RUNNER_TEMP}/pytest-results"
+          --python-version "${{ matrix.python-version }}"
+          --output "${RUNNER_TEMP}/pytest-union-${{ matrix.python-version }}.json"
+      - name: Upload sharded union evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: pytest-union-${{ matrix.python-version }}
+          path: ${{ runner.temp }}/pytest-union-${{ matrix.python-version }}.json
+          retention-days: 14
+          if-no-files-found: error
+
+  python_unsharded_baseline:
+    name: Python unsharded baseline (${{ matrix.python-version }})
+    needs: plan
+    if: >-
+      needs.plan.result == 'success' &&
+      needs.plan.outputs.run_verification == 'true' &&
+      needs.plan.outputs.suite == 'full' &&
+      github.event_name == 'workflow_dispatch' &&
+      inputs.python_mode == 'unsharded_baseline'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Install identical test dependencies
+        run: python -m pip install -e '.[dev,supply-chain]'
+      - name: Run unsharded outcome baseline
+        env:
+          PYTHONUNBUFFERED: "1"
+          PYTEST_ADDOPTS: "--durations=15 --durations-min=1.0"
+        run: >-
+          python scripts/ci_test_shard.py
+          --run-baseline
+          --python-version "${{ matrix.python-version }}"
+          --output "${RUNNER_TEMP}/pytest-baseline-${{ matrix.python-version }}.json"
+      - name: Upload unsharded outcome evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: pytest-baseline-${{ matrix.python-version }}
+          path: ${{ runner.temp }}/pytest-baseline-${{ matrix.python-version }}.json
+          retention-days: 14
+          if-no-files-found: error
+      - name: Build release evidence
+        if: success()
+        run: >-
+          python scripts/release_supply_chain.py build
+          --output dist/evidence --deterministic --source-commit "$GITHUB_SHA"
+      - name: Verify release evidence
+        if: success()
+        run: python scripts/release_supply_chain.py verify --output dist/evidence
+      - name: Upload release evidence
+        if: success()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-evidence-${{ matrix.python-version }}
+          path: dist/evidence
+          retention-days: 14
+          if-no-files-found: error
+
+  python_scoped:
+    name: Python scoped test (${{ matrix.python-version }})
+    needs: plan
+    if: >-
+      needs.plan.result == 'success' &&
+      needs.plan.outputs.run_verification == 'true' &&
+      needs.plan.outputs.suite == 'scoped'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Install identical test dependencies
+        run: python -m pip install -e '.[dev,supply-chain]'
+      - name: Run scoped tests
+        env:
+          SCOPE_BASE: ${{ needs.plan.outputs.scope_base }}
+          SCOPE_HEAD: ${{ github.sha }}
+          PYTHONUNBUFFERED: "1"
+          PYTEST_ADDOPTS: "--durations=15 --durations-min=1.0"
+        run: |
+          set +e
+          set -uo pipefail
+          log="${RUNNER_TEMP:-/tmp}/pytest.log"
+          started=$SECONDS
+          python scripts/run_scoped_tests.py --base "$SCOPE_BASE" --head "$SCOPE_HEAD" 2>&1 | tee "$log"
+          status=${PIPESTATUS[0]}
+          elapsed=$((SECONDS - started))
+          summary=$(grep -E '[0-9]+ (passed|failed)' "$log" | tail -n 1)
+          echo "::notice title=Pytest scoped suite - ${elapsed}s - Python ${{ matrix.python-version }}::${summary:-no summary line}"
+          if [ "$status" -ne 0 ]; then
+            grep -E '^(FAILED|ERROR)' "$log" | head -25 | while IFS= read -r line; do
+              echo "::error title=Pytest failure::${line}"
+            done
+          fi
+          tail -n 40 "$log"
+          exit "$status"
+      - name: Build release evidence
+        if: success()
+        run: >-
+          python scripts/release_supply_chain.py build
+          --output dist/evidence --deterministic --source-commit "$GITHUB_SHA"
+      - name: Verify release evidence
+        if: success()
+        run: python scripts/release_supply_chain.py verify --output dist/evidence
+      - name: Upload release evidence
+        if: success()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-evidence-${{ matrix.python-version }}
+          path: dist/evidence
+          retention-days: 14
+          if-no-files-found: error
+
+  test:
+    name: ${{ github.event_name == 'push' && github.ref != format('refs/heads/{0}', github.event.repository.default_branch) && 'Branch test' || 'test' }} (${{ matrix.python-version }})
+    needs: [plan, source_gates, python_test_shards, python_identity, python_unsharded_baseline, python_scoped]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - name: Require every selected Python gate
+        env:
+          PLAN_RESULT: ${{ needs.plan.result }}
+          RUN_VERIFICATION: ${{ needs.plan.outputs.run_verification }}
+          SUITE: ${{ needs.plan.outputs.suite }}
+          REASON: ${{ needs.plan.outputs.reason }}
+          SOURCE_RESULT: ${{ needs.source_gates.result }}
+          SHARD_RESULT: ${{ needs.python_test_shards.result }}
+          IDENTITY_RESULT: ${{ needs.python_identity.result }}
+          BASELINE_RESULT: ${{ needs.python_unsharded_baseline.result }}
+          SCOPED_RESULT: ${{ needs.python_scoped.result }}
+          PYTHON_MODE: ${{ inputs.python_mode || 'sharded' }}
+        run: |
+          if [ "$PLAN_RESULT" != "success" ]; then
+            echo "Verification plan did not complete successfully."
+            exit 1
+          fi
+          if [ "$RUN_VERIFICATION" != "true" ]; then
+            echo "$REASON"
+            exit 0
+          fi
+          if [ "$SOURCE_RESULT" != "success" ]; then
+            echo "Source gates did not pass: $SOURCE_RESULT"
+            exit 1
+          fi
+          if [ "$SUITE" = "scoped" ]; then
+            [ "$SCOPED_RESULT" = "success" ] || { echo "Scoped tests did not pass: $SCOPED_RESULT"; exit 1; }
+          elif [ "$PYTHON_MODE" = "unsharded_baseline" ]; then
+            [ "$BASELINE_RESULT" = "success" ] || { echo "Unsharded baseline did not pass: $BASELINE_RESULT"; exit 1; }
+          else
+            [ "$SHARD_RESULT" = "success" ] || { echo "Python shards did not pass: $SHARD_RESULT"; exit 1; }
+            [ "$IDENTITY_RESULT" = "success" ] || { echo "Python identity checks did not pass: $IDENTITY_RESULT"; exit 1; }
+          fi
+          echo "Every selected Python gate passed for ${{ matrix.python-version }}."
 
   browser_safety_shards:
     name: Browser safety shard (${{ matrix.shard }})

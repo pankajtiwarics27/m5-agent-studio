@@ -175,10 +175,11 @@ def test_workflow_preserves_required_checks_and_shards_browser_work() -> None:
     assert "open_pull_request_owns_required_checks" not in workflow
     assert "python scripts/ci_execution_plan.py" in workflow
     assert "&& 'Branch test' || 'test'" in workflow
-    assert "test (3.11), test (3.12)" in workflow
     assert 'python-version: ["3.11", "3.12", "3.13"]' in workflow
+    assert "Python test shard (${{ matrix.python-version }}, ${{ matrix.shard }})" in workflow
+    assert "needs.python_identity.result" in workflow
     assert "&& 'Branch browser safety regressions' || 'Browser safety regressions'" in workflow
     assert "Browser safety shard (${{ matrix.shard }})" in workflow
     assert "needs.browser_safety_shards.result" in workflow
-    assert "python -m pytest -q --tb=short -rf" in workflow
+    assert "python scripts/ci_test_shard.py" in workflow
     assert "python -m pip install -e '.[dev,supply-chain]'" in workflow

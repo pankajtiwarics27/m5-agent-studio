@@ -102,9 +102,9 @@ def test_ci_keeps_full_gates_and_scopes_only_unclaimed_feature_pushes() -> None:
     assert "schedule:" in workflow
     assert "workflow_dispatch:" in workflow
     assert "python scripts/ci_execution_plan.py" in workflow
-    assert "SELECTED_SUITE" in workflow
+    assert "needs.plan.outputs.suite == 'full'" in workflow
     assert "scripts/run_scoped_tests.py --base" in workflow
-    assert "python -m pytest -q --tb=short -rf" in workflow
+    assert "python scripts/ci_test_shard.py" in workflow
     assert "Browser safety regressions" in workflow
     assert 'python-version: ["3.11", "3.12", "3.13"]' in workflow
 
@@ -125,7 +125,8 @@ def test_ci_does_not_run_the_heavy_jobs_twice_for_one_commit() -> None:
     # suppressing the push or pretending its required contexts ran.
     assert "Pull-request lookup failed" in workflow
     assert "python scripts/ci_execution_plan.py" in workflow
-    assert "Delegate duplicate feature-push work to the pull request gate" in workflow
+    assert 'if [ "$RUN_VERIFICATION" != "true" ]' in workflow
+    assert 'echo "$REASON"' in workflow
     # Delegated push placeholders use non-required names; full gates still
     # render the exact protected identities.
     assert "'Branch test' || 'test'" in workflow
@@ -168,7 +169,7 @@ def test_ci_streams_pytest_and_reports_its_own_timing() -> None:
     assert "tail -n 1" in workflow
     # Annotation properties are comma-delimited. A comma inside title= silently
     # truncated the displayed title before its Python lane; keep it delimiter-free.
-    assert "::notice title=Pytest ${mode} suite - ${elapsed}s - Python ${{ matrix.python-version }}::" in workflow
+    assert "::notice title=Pytest scoped suite - ${elapsed}s - Python ${{ matrix.python-version }}::" in workflow
     assert "suite (${elapsed}s," not in workflow
     assert "status=${PIPESTATUS[0]}" in workflow
     # The slowest measured leg is 13.6 minutes; 15 left almost no headroom.
