@@ -78,20 +78,72 @@ jobs:
       - name: Select fail-closed verification work
         id: plan
         env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          REPOSITORY: ${{ github.repository }}
           BEFORE_SHA: ${{ github.event.before || '' }}
+          PR_NUMBER: ${{ github.event.pull_request.number || '' }}
+          PR_IS_DRAFT: ${{ github.event.pull_request.draft || false }}
         run: |
+          set -eu
+          plan_args=()
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            paths_file="$RUNNER_TEMP/pr-changed-paths.json"
+            encoded_files="$RUNNER_TEMP/pr-changed-files.b64"
+            printf '[]' > "$paths_file"
+            if gh api --paginate "repos/$REPOSITORY/pulls/$PR_NUMBER/files" \
+              --jq '.[] | @base64' > "$encoded_files"; then
+              if python - "$encoded_files" "$paths_file" <<'PY'
+          import base64
+          import json
+          import sys
+          from pathlib import Path
+
+          paths = []
+          for line in Path(sys.argv[1]).read_text(encoding="ascii").splitlines():
+              item = json.loads(base64.b64decode(line))
+              paths.append(item["filename"])
+              if item.get("previous_filename"):
+                  paths.append(item["previous_filename"])
+          Path(sys.argv[2]).write_text(json.dumps(paths), encoding="utf-8")
+          PY
+              then
+                plan_args+=(--pull-request-paths-file "$paths_file")
+              else
+                echo "::warning title=Changed-file decoding failed::Running the full PR gate because changed paths could not be trusted."
+              fi
+            else
+              echo "::warning title=Changed-file lookup failed::Running the full PR gate because changed paths could not be trusted."
+            fi
+            if [ "$PR_IS_DRAFT" = "true" ]; then
+              plan_args+=(--pull-request-is-draft)
+            fi
+          fi
           python scripts/ci_execution_plan.py \
-            --event "${{ github.event_name }}" \
-            --ref "${{ github.ref }}" \
-            --default-branch "${{ github.event.repository.default_branch }}" \
+            --event "$EVENT_NAME" \
+            --ref "$GITHUB_REF" \
+            --default-branch "$DEFAULT_BRANCH" \
             --before "$BEFORE_SHA" \
             --open-pr-count "${{ steps.open-pr.outputs.count }}" \
+            "${plan_args[@]}" \
             --github-output "$GITHUB_OUTPUT"
+      - name: Upload authoritative pull-request paths
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v7
+        with:
+          name: pr-changed-paths-${{ github.event.pull_request.number }}
+          path: ${{ runner.temp }}/pr-changed-paths.json
+          retention-days: 1
+          if-no-files-found: error
 
   source_gates:
     name: Source and release-independent gates
     needs: plan
-    if: needs.plan.result == 'success' && needs.plan.outputs.run_verification == 'true'
+    if: >-
+      needs.plan.result == 'success' &&
+      needs.plan.outputs.run_verification == 'true' &&
+      needs.plan.outputs.suite == 'full'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -142,6 +194,61 @@ jobs:
           python scripts/generate_subsystem_inventory.py
           python scripts/generate_roadmap_status.py --check
           git diff --exit-code -- studio.py docs/route-security-matrix.md docs/subsystem-dependency-inventory.md
+
+  documentation_gates:
+    name: Documentation and tracking-ledger gates
+    needs: plan
+    if: >-
+      needs.plan.result == 'success' &&
+      needs.plan.outputs.run_verification == 'true' &&
+      needs.plan.outputs.suite == 'docs'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Download authoritative pull-request paths
+        uses: actions/download-artifact@v7
+        with:
+          name: pr-changed-paths-${{ github.event.pull_request.number }}
+          path: ${{ runner.temp }}/pr-paths
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install focused documentation test dependencies
+        run: python -m pip install -e '.[dev]'
+      - name: Validate published documentation and governance records
+        run: |
+          python scripts/validate_docs.py
+          python scripts/validate_governance.py
+          python scripts/generate_roadmap_status.py --check
+      - name: Run the mapped documentation and tracking-ledger tests
+        env:
+          PR_PATHS_FILE: ${{ runner.temp }}/pr-paths/pr-changed-paths.json
+          PYTHONUNBUFFERED: "1"
+          PYTEST_ADDOPTS: "--durations=15 --durations-min=1.0"
+        run: python scripts/run_scoped_tests.py --paths-file "$PR_PATHS_FILE"
+
+  scoped_source_gates:
+    name: Scoped shared source checks
+    needs: plan
+    if: >-
+      needs.plan.result == 'success' &&
+      needs.plan.outputs.run_verification == 'true' &&
+      needs.plan.outputs.suite == 'scoped'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      - name: Validate published documentation and links
+        run: python scripts/validate_docs.py
+      - name: Validate contributor and governance records
+        run: python scripts/validate_governance.py
+      - name: Verify generated roadmap dashboard
+        run: python scripts/generate_roadmap_status.py --check
 
   python_test_shards:
     name: Python test shard (${{ matrix.python-version }}, ${{ matrix.shard }})
@@ -368,6 +475,12 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+      - name: Download authoritative pull-request paths
+        if: github.event_name == 'pull_request'
+        uses: actions/download-artifact@v7
+        with:
+          name: pr-changed-paths-${{ github.event.pull_request.number }}
+          path: ${{ runner.temp }}/pr-paths
       - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
@@ -379,8 +492,10 @@ jobs:
         run: python -m pip install -e '.[dev,supply-chain]'
       - name: Run scoped tests
         env:
+          EVENT_NAME: ${{ github.event_name }}
           SCOPE_BASE: ${{ needs.plan.outputs.scope_base }}
           SCOPE_HEAD: ${{ github.sha }}
+          PR_PATHS_FILE: ${{ runner.temp }}/pr-paths/pr-changed-paths.json
           PYTHONUNBUFFERED: "1"
           PYTEST_ADDOPTS: "--durations=15 --durations-min=1.0"
         run: |
@@ -388,7 +503,11 @@ jobs:
           set -uo pipefail
           log="${RUNNER_TEMP:-/tmp}/pytest.log"
           started=$SECONDS
-          python scripts/run_scoped_tests.py --base "$SCOPE_BASE" --head "$SCOPE_HEAD" 2>&1 | tee "$log"
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            python scripts/run_scoped_tests.py --paths-file "$PR_PATHS_FILE" 2>&1 | tee "$log"
+          else
+            python scripts/run_scoped_tests.py --base "$SCOPE_BASE" --head "$SCOPE_HEAD" 2>&1 | tee "$log"
+          fi
           status=${PIPESTATUS[0]}
           elapsed=$((SECONDS - started))
           summary=$(grep -E '[0-9]+ (passed|failed)' "$log" | tail -n 1)
@@ -400,26 +519,9 @@ jobs:
           fi
           tail -n 40 "$log"
           exit "$status"
-      - name: Build release evidence
-        if: success()
-        run: >-
-          python scripts/release_supply_chain.py build
-          --output dist/evidence --deterministic --source-commit "$GITHUB_SHA"
-      - name: Verify release evidence
-        if: success()
-        run: python scripts/release_supply_chain.py verify --output dist/evidence
-      - name: Upload release evidence
-        if: success()
-        uses: actions/upload-artifact@v7
-        with:
-          name: release-evidence-${{ matrix.python-version }}
-          path: dist/evidence
-          retention-days: 14
-          if-no-files-found: error
-
   test:
     name: ${{ github.event_name == 'push' && github.ref != format('refs/heads/{0}', github.event.repository.default_branch) && 'Branch test' || 'test' }} (${{ matrix.python-version }})
-    needs: [plan, source_gates, python_test_shards, python_identity, python_unsharded_baseline, python_scoped]
+    needs: [plan, source_gates, documentation_gates, scoped_source_gates, python_test_shards, python_identity, python_unsharded_baseline, python_scoped]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 3
@@ -435,6 +537,8 @@ jobs:
           SUITE: ${{ needs.plan.outputs.suite }}
           REASON: ${{ needs.plan.outputs.reason }}
           SOURCE_RESULT: ${{ needs.source_gates.result }}
+          DOCS_RESULT: ${{ needs.documentation_gates.result }}
+          SCOPED_SOURCE_RESULT: ${{ needs.scoped_source_gates.result }}
           SHARD_RESULT: ${{ needs.python_test_shards.result }}
           IDENTITY_RESULT: ${{ needs.python_identity.result }}
           BASELINE_RESULT: ${{ needs.python_unsharded_baseline.result }}
@@ -449,24 +553,33 @@ jobs:
             echo "$REASON"
             exit 0
           fi
-          if [ "$SOURCE_RESULT" != "success" ]; then
-            echo "Source gates did not pass: $SOURCE_RESULT"
+          if [ "$SUITE" = "docs" ]; then
+            [ "$DOCS_RESULT" = "success" ] || { echo "Documentation gates did not pass: $DOCS_RESULT"; exit 1; }
+          elif [ "$SUITE" = "scoped" ]; then
+            [ "$SCOPED_SOURCE_RESULT" = "success" ] || { echo "Scoped source gates did not pass: $SCOPED_SOURCE_RESULT"; exit 1; }
+            [ "$SCOPED_RESULT" = "success" ] || { echo "Scoped tests did not pass: $SCOPED_RESULT"; exit 1; }
+          elif [ "$SUITE" = "full" ]; then
+            [ "$SOURCE_RESULT" = "success" ] || { echo "Source gates did not pass: $SOURCE_RESULT"; exit 1; }
+            if [ "$PYTHON_MODE" = "unsharded_baseline" ]; then
+              [ "$BASELINE_RESULT" = "success" ] || { echo "Unsharded baseline did not pass: $BASELINE_RESULT"; exit 1; }
+            else
+              [ "$SHARD_RESULT" = "success" ] || { echo "Python shards did not pass: $SHARD_RESULT"; exit 1; }
+              [ "$IDENTITY_RESULT" = "success" ] || { echo "Python identity checks did not pass: $IDENTITY_RESULT"; exit 1; }
+            fi
+          else
+            echo "Unknown verification suite: $SUITE"
             exit 1
           fi
-          if [ "$SUITE" = "scoped" ]; then
-            [ "$SCOPED_RESULT" = "success" ] || { echo "Scoped tests did not pass: $SCOPED_RESULT"; exit 1; }
-          elif [ "$PYTHON_MODE" = "unsharded_baseline" ]; then
-            [ "$BASELINE_RESULT" = "success" ] || { echo "Unsharded baseline did not pass: $BASELINE_RESULT"; exit 1; }
-          else
-            [ "$SHARD_RESULT" = "success" ] || { echo "Python shards did not pass: $SHARD_RESULT"; exit 1; }
-            [ "$IDENTITY_RESULT" = "success" ] || { echo "Python identity checks did not pass: $IDENTITY_RESULT"; exit 1; }
-          fi
           echo "Every selected Python gate passed for ${{ matrix.python-version }}."
+          exit 0
 
   browser_safety_shards:
     name: Browser safety shard (${{ matrix.shard }})
     needs: plan
-    if: needs.plan.result == 'success' && needs.plan.outputs.run_verification == 'true'
+    if: >-
+      needs.plan.result == 'success' &&
+      needs.plan.outputs.run_verification == 'true' &&
+      needs.plan.outputs.suite == 'full'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -558,8 +671,8 @@ jobs:
           STUDIO_PYTHON: python
 
   browser_safety:
-    # Full events retain the required Browser safety regressions identity. The
-    # delegated feature-push placeholder is deliberately non-required.
+    # Keep the required status identity stable. Scoped and documentation gates
+    # defer browser qualification; ready implementation PRs run every shard.
     name: ${{ github.event_name == 'push' && github.ref != format('refs/heads/{0}', github.event.repository.default_branch) && 'Branch browser safety regressions' || 'Browser safety regressions' }}
     needs: [plan, browser_safety_shards]
     if: always()
@@ -570,6 +683,7 @@ jobs:
         env:
           PLAN_RESULT: ${{ needs.plan.result }}
           RUN_VERIFICATION: ${{ needs.plan.outputs.run_verification }}
+          SUITE: ${{ needs.plan.outputs.suite }}
           SHARD_RESULT: ${{ needs.browser_safety_shards.result }}
         run: |
           if [ "$PLAN_RESULT" != "success" ]; then
@@ -578,6 +692,10 @@ jobs:
           fi
           if [ "$RUN_VERIFICATION" != "true" ]; then
             echo "${{ needs.plan.outputs.reason }}"
+            exit 0
+          fi
+          if [ "$SUITE" != "full" ]; then
+            echo "Browser safety is deferred to the full verification gate."
             exit 0
           fi
           if [ "$SHARD_RESULT" != "success" ]; then
