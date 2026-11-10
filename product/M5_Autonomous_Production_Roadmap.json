@@ -692,11 +692,11 @@
         "owner": "arena/098ca4ab-m5-agent-studio",
         "branch": "arena/098ca4ab-m5-agent-studio",
         "base_sha": "b1ee43c80bbf3f4f9f2fe44cced9ce4afe3065e3",
-        "head_sha": "74b9d4bccb633a160879670fbdc1e763520d50b4",
+        "head_sha": "43072bab691fa620997425096005e4d5a9499dc2",
         "claimed_at": "2026-11-10T08:05:14Z",
-        "heartbeat_at": "2026-11-10T09:02:13Z",
-        "pr_url": null,
-        "delivery_status": "delivery_pending",
+        "heartbeat_at": "2026-11-10T09:04:06Z",
+        "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/296",
+        "delivery_status": "pr_open",
         "acceptance_evidence": [],
         "tests_executed": [],
         "blockers": [
@@ -720,6 +720,8 @@
           "prior_pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/295",
           "prior_heartbeat_at": "2026-11-10T08:06:25Z",
           "transferred_at": "2026-11-10T09:02:13Z",
+          "replacement_pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/296",
+          "prior_pr_disposition": "Draft PR #295 was closed as explicitly superseded after replacement draft PR #296 opened.",
           "reason": "The user instructed “continue” after Arena assigned the continuation session its fixed arena/098ca4ab-m5-agent-studio branch; the platform branch cannot be renamed or replaced.",
           "preserved_work": "Fast-forwarded both original claim commits from refs/pull/295/head; no implementation commit or evidence was omitted, rewritten or force-pushed."
         }
