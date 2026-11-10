@@ -520,9 +520,9 @@
         "owner": "arena/5eec0463-m5-agent-studio",
         "branch": "arena/5eec0463-m5-agent-studio",
         "base_sha": "305f3fb431dd2b983cc25ac4395b7fc919d516d5",
-        "head_sha": "2a610eaafe4ed75f2cd176c07c3e4f05052b5359",
+        "head_sha": "652c67b4d1a3eca2c808339ab83b556d7536fa24",
         "claimed_at": "2026-11-10T04:41:35Z",
-        "heartbeat_at": "2026-11-10T07:01:58Z",
+        "heartbeat_at": "2026-11-10T07:05:07Z",
         "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/292",
         "delivery_status": "pr_open",
         "acceptance_evidence": [
@@ -544,7 +544,7 @@
           "AP-005 through AP-032 remain unauthorized. This claim is exactly one AP-004 story and does not authorize later program work or production release.",
           "Current-head push and pull-request Python/browser CI are required before merge; the story remains in_progress/pr_open and no owner, independent-security, screenshot or release approval is claimed."
         ],
-        "handoff": "AP-004 implementation is locally complete on draft PR #292 and remains in progress pending the final implementation/evidence commits and current-head CI. A server-derived immutable mission envelope now reaches the shared admission boundary; task-bound actions revalidate policy generations and atomically charge leaf/root tool budgets before intent/dispatch. Actual API, inbound/outbound MCP, script, browser, media and fixed-HTTP consumers are covered; stale/revoked/exhausted/cancelled/raced work does not dispatch or partially debit. No schema migration or runtime/service activation was added; U03/U04/U06 and AP-005+ remain unchanged.",
+        "handoff": "AP-004 implementation and evidence are committed on draft PR #292 and remain in progress pending current-head push and CI. A server-derived immutable mission envelope now reaches the shared admission boundary; task-bound actions revalidate policy generations and atomically charge leaf/root tool budgets before intent/dispatch. Actual API, inbound/outbound MCP, script, browser, media and fixed-HTTP consumers are covered; stale/revoked/exhausted/cancelled/raced work does not dispatch or partially debit. No schema migration or runtime/service activation was added; U03/U04/U06 and AP-005+ remain unchanged.",
         "blast_radius": {
           "objective_and_gap": "Extend the existing admission path so every AP project action proves a server-owned mission/root authority and remaining budget. Existing grants, task epochs, profiles and durable ledgers are substantial, but root budget charging is not centralized and queued/retried/provider-switched operations do not all carry one immutable root-envelope generation.",
           "options": "Reject a second scheduler, duplicate grant store, per-consumer policy copies or trust in model-supplied budget fields. Prefer the smallest extension of ActionRequest/DurableActionBoundary and the existing durable task-budget, scoped-grant, child-delegation and policy-revision stores; route actual API, MCP, script, browser and media consumers through that one check.",
