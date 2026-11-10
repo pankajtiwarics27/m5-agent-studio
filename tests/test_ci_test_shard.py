@@ -73,6 +73,9 @@ def test_workflow_uses_job_shards_and_retains_required_aggregate_names() -> None
     assert '--run-shard "${{ matrix.shard }}"' in workflow
     assert '--verify-results "${RUNNER_TEMP}/pytest-results"' in workflow
     assert "unsharded_baseline" in workflow
+    assert "baseline_run_id" in workflow
+    assert "python scripts/verify_test_identity.py" in workflow
+    assert "Refuse a baseline from another commit" in workflow
     assert "test' }} (${{ matrix.python-version }})" in workflow
     assert "pytest-xdist" not in workflow
     assert " -k " not in workflow

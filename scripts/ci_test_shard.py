@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import subprocess
 import sys
 import time
@@ -147,6 +148,7 @@ def _result_payload(*, label: str, python_version: str, elapsed: float, exit_cod
         "schema_version": 1,
         "label": label,
         "python_version": python_version,
+        "source_sha": os.environ.get("GITHUB_SHA", "local"),
         "elapsed_seconds": round(elapsed, 3),
         "exit_code": int(exit_code),
         "node_ids": sorted(recorder.node_ids),
@@ -161,9 +163,17 @@ def _result_payload(*, label: str, python_version: str, elapsed: float, exit_cod
 def run_pytest(*, modules: Sequence[str], label: str, python_version: str, output: Path) -> int:
     import pytest
 
+    output.parent.mkdir(parents=True, exist_ok=True)
+    collect_path = output.with_suffix(".collect.txt")
+    junit_path = output.with_suffix(".xml")
+    collected = collect_node_ids(modules)
+    if not collected:
+        raise ValueError(f"{label} collected no tests")
+    collect_path.write_text("\n".join(sorted(collected)) + "\n", encoding="utf-8")
+
     recorder = ResultRecorder()
     started = time.monotonic()
-    exit_code = int(pytest.main([*PYTEST_ARGS, *modules], plugins=[recorder]))
+    exit_code = int(pytest.main([*PYTEST_ARGS, f"--junitxml={junit_path}", *modules], plugins=[recorder]))
     elapsed = time.monotonic() - started
     payload = _result_payload(
         label=label,
@@ -192,7 +202,13 @@ def collect_node_ids(modules: Sequence[str]) -> set[str]:
     return {line.strip() for line in completed.stdout.splitlines() if line.startswith("tests/") and "::" in line}
 
 
-def verify_results(*, result_dir: Path, python_version: str, output: Path | None = None) -> dict[str, Any]:
+def verify_results(
+    *,
+    result_dir: Path,
+    python_version: str,
+    output: Path | None = None,
+    source_sha: str | None = None,
+) -> dict[str, Any]:
     manifest = load_manifest()
     validate_manifest(manifest)
     paths = sorted(result_dir.glob(f"pytest-result-{python_version}-*.json"))
@@ -206,6 +222,10 @@ def verify_results(*, result_dir: Path, python_version: str, output: Path | None
     for result in results:
         if result.get("exit_code") != 0:
             raise ValueError(f"{result.get('label')} exited {result.get('exit_code')}")
+        if source_sha is not None and result.get("source_sha") != source_sha:
+            raise ValueError(
+                f"{result.get('label')} belongs to {result.get('source_sha')}, expected {source_sha}"
+            )
         for nodeid in result.get("node_ids", []):
             node_counts[nodeid] += 1
         for nodeid, item in result.get("outcomes", {}).items():
@@ -258,6 +278,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     mode.add_argument("--run-baseline", action="store_true")
     mode.add_argument("--verify-results", type=Path)
     parser.add_argument("--python-version", default=f"{sys.version_info.major}.{sys.version_info.minor}")
+    parser.add_argument("--source-sha")
     parser.add_argument("--output", type=Path)
     return parser.parse_args(argv)
 
@@ -288,7 +309,12 @@ def main(argv: Sequence[str] | None = None) -> int:
                 python_version=args.python_version,
                 output=args.output,
             )
-        verify_results(result_dir=args.verify_results, python_version=args.python_version, output=args.output)
+        verify_results(
+            result_dir=args.verify_results,
+            python_version=args.python_version,
+            output=args.output,
+            source_sha=args.source_sha,
+        )
         return 0
     except (OSError, ValueError, RuntimeError, json.JSONDecodeError) as exc:
         print(f"CI pytest shard verification failed: {exc}", file=sys.stderr)
