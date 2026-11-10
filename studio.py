@@ -30323,6 +30323,20 @@ def _parse_task_budget_spec(raw: Any) -> execution_budget.TaskBudgetSpec | None:
         return None
     if not isinstance(raw, dict):
         raise HTTPException(status_code=400, detail="budget must be a JSON object when supplied.")
+    # AP-007: bounded-stop and isolation limits exist in the durable budget contract
+    # but are not activated on any route. Nothing here measures progress, repair,
+    # memory or storage, and no isolated runtime is qualified (U06). Refusing the
+    # keys is the honest answer: ignoring a declared limit, or accepting one that is
+    # never enforced, would both overstate the protection the caller gets.
+    unavailable = sorted(key for key in execution_budget.BOUNDED_LIMIT_FIELDS if key in raw)
+    if unavailable:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Invalid task budget: {', '.join(unavailable)} cannot be set through this route. "
+                "Bounded-stop and isolation limits are not activated."
+            ),
+        )
     try:
         return execution_budget.TaskBudgetSpec.from_dict(raw)
     except (TypeError, ValueError, execution_budget.BudgetError) as exc:
@@ -30924,6 +30938,11 @@ class _AppMissionEnvelopeCoordinator:
             return profile_outcome
         except execution_budget.ExecutionCancelled as exc:
             return self._denial(str(exc), "task_cancelled")
+        except execution_budget.IsolationUnavailable as exc:
+            # AP-007: no isolation evidence is presented here because no isolated
+            # runtime is activated (U06). A task that requires isolation is refused;
+            # there is no host-execution fallback.
+            return self._denial(str(exc), "isolation_unavailable")
         except execution_budget.BudgetExceeded as exc:
             return self._denial(str(exc), "task_budget_exhausted")
         except (execution_budget.BudgetError, KeyError, ValueError) as exc:
@@ -45312,7 +45331,11 @@ class DurableActionLedger:
         *,
         now: float | None = None,
     ) -> runtime_persistence.ActionRecord:
-        """Durably finalize a completed, deterministically failed, or uncertain tool result."""
+        """Durably finalize a completed, deterministically failed, or uncertain tool result.
+
+        A result that arrives after the action was already declared ``uncertain`` is
+        fenced: the stored row is returned unchanged (see the late-result fence below).
+        """
         aid = _text(action_id, "action_id")
         out_digest = canonical_result_sha256(result)
         clean_ms = max(0, int(elapsed_ms))
@@ -45333,6 +45356,16 @@ class DurableActionLedger:
 
         def _tx(conn: sqlite3.Connection) -> runtime_persistence.ActionRecord:
             conn.row_factory = sqlite3.Row
+            current = conn.execute("SELECT * FROM runtime_actions WHERE action_id = ?", (aid,)).fetchone()
+            if current is None:
+                raise KeyError(f"Runtime action {aid!r} does not exist.")
+            if str(current["status"]) == "uncertain":
+                # AP-007 late-result fence: cancellation, a bounded stop, a takeover or
+                # crash recovery already declared this effect uncertain while the
+                # executor was still running.  Its late result must not resolve the
+                # effect in either direction; only explicit reconciliation
+                # (``resolve_uncertain_action``) may.  The row is left untouched.
+                return _sel_row_to_action(current)
             conn.execute(
                 """
                 UPDATE runtime_actions
@@ -45358,7 +45391,10 @@ class DurableActionLedger:
         *,
         now: float | None = None,
     ) -> runtime_persistence.ActionRecord:
-        """Finalize an exception raised during execution as ``uncertain`` (if ambiguous) or ``failed``."""
+        """Finalize an exception raised during execution as ``uncertain`` (if ambiguous) or ``failed``.
+
+        A late exception cannot turn an already ``uncertain`` effect into ``failed``.
+        """
         aid = _text(action_id, "action_id")
         ambiguous = is_ambiguous_exception(exc)
         final_status: LedgerActionStatus = "uncertain" if ambiguous else "failed"
@@ -45370,6 +45406,16 @@ class DurableActionLedger:
 
         def _tx(conn: sqlite3.Connection) -> runtime_persistence.ActionRecord:
             conn.row_factory = sqlite3.Row
+            current = conn.execute("SELECT * FROM runtime_actions WHERE action_id = ?", (aid,)).fetchone()
+            if current is None:
+                raise KeyError(f"Runtime action {aid!r} does not exist.")
+            if str(current["status"]) == "uncertain":
+                # AP-007 late-result fence: cancellation, a bounded stop, a takeover or
+                # crash recovery already declared this effect uncertain while the
+                # executor was still running.  Its late result must not resolve the
+                # effect in either direction; only explicit reconciliation
+                # (``resolve_uncertain_action``) may.  The row is left untouched.
+                return _sel_row_to_action(current)
             conn.execute(
                 """
                 UPDATE runtime_actions
@@ -45847,16 +45893,23 @@ class WorkerLeaseCoordinator:
 
 side_effect_ledger = sys.modules[__name__]
 
-"""Time, token, cost, tool, cancellation, and durable recovery execution budgets."""
+"""Time, token, cost, tool, cancellation, and durable recovery execution budgets.
+
+AP-007 adds optional *bounded-stop* limits to the same durable budget document:
+no-progress, repair attempts, an absolute deadline, memory and storage ceilings,
+and an isolation requirement.  A limit that is not declared is not persisted, so
+documents and budget identities written before AP-007 are byte-for-byte unchanged.
+"""
 
 
 import json
+import math
 import sqlite3
 import threading
 import time
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Sequence
 
 
 
@@ -45870,6 +45923,130 @@ class BudgetExceeded(RuntimeError):
 
 class ExecutionCancelled(RuntimeError):
     """Raised when cancellation has been requested."""
+
+
+class IsolationUnavailable(RuntimeError):
+    """Raised when a task requires runtime isolation that is absent or unqualified.
+
+    The refusal is final for that dispatch: there is no host-execution fallback.
+    """
+
+
+#: Machine-readable reasons a bounded stop can be committed (AP-007).
+BOUNDED_STOP_CODES: tuple[str, ...] = (
+    "no_progress",
+    "repair_attempts",
+    "deadline",
+    "memory",
+    "storage",
+    "measurement_unavailable",
+)
+#: Resources whose declared ceiling needs a reading before work may continue.
+MEASURED_RESOURCES: tuple[str, ...] = ("memory", "storage")
+#: Budget-spec keys introduced by AP-007.  They are declared by server code only.
+#: The HTTP boundary refuses them: no route measures progress, repair, memory or
+#: storage yet, and no isolated runtime is qualified, so accepting a limit there
+#: would promise protection that nothing enforces.
+BOUNDED_LIMIT_FIELDS: tuple[str, ...] = (
+    "max_no_progress",
+    "max_repair_attempts",
+    "deadline_at",
+    "max_memory_bytes",
+    "max_storage_bytes",
+    "isolation_required",
+)
+
+
+@dataclass(frozen=True, slots=True)
+class IsolationEvidence:
+    """Server-observed runtime isolation state for one dispatch (AP-007).
+
+    Coordination evidence, never user or model authority: server code builds it
+    from the sandbox admission decision; it is never parsed from a request body or
+    from model tool arguments.
+    """
+
+    execution_mode: str
+    admitted: bool
+    qualified: bool
+    backend_id: str = ""
+    error_code: str = ""
+    reason: str = ""
+
+    @classmethod
+    def from_admission(cls, decision: Any, *, execution_mode: str) -> IsolationEvidence:
+        """Adapt a ``sandbox_boundary.SecurityAdmissionDecision`` without importing it.
+
+        Only the literal ``True`` counts: a missing attribute, a truthy non-boolean
+        or an absent backend reads as "not admitted / not qualified".
+        """
+        backend = getattr(decision, "active_backend", None)
+        return cls(
+            execution_mode=str(execution_mode or "").strip().lower(),
+            admitted=getattr(decision, "allowed", None) is True,
+            qualified=getattr(decision, "container_qualified", None) is True,
+            backend_id=str(getattr(backend, "backend_id", "") or "")[:64],
+            error_code=str(getattr(decision, "error_code", "") or "")[:80],
+            reason=str(getattr(decision, "reason", "") or "")[:300],
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "execution_mode": self.execution_mode,
+            "admitted": self.admitted,
+            "qualified": self.qualified,
+            "backend_id": self.backend_id,
+            "error_code": self.error_code,
+        }
+
+
+def isolation_refusal(evidence: IsolationEvidence | None) -> str:
+    """Return why isolated execution must be refused, or ``""`` when it is proven.
+
+    There is no downgrade path: ``host`` and ``disabled`` modes are never isolation,
+    and missing evidence is a refusal rather than an assumption.
+    """
+    if not isinstance(evidence, IsolationEvidence):
+        return "runtime isolation is required but no isolation evidence was presented"
+    mode = str(evidence.execution_mode or "").strip().lower()
+    if mode != "sandbox":
+        return f"runtime isolation is required but the execution mode is `{mode or 'unknown'}`, not `sandbox`"
+    if evidence.admitted is not True:
+        detail = evidence.error_code or "no reason recorded"
+        return f"runtime isolation is required but sandbox admission is refused ({detail})"
+    if evidence.qualified is not True or not str(evidence.backend_id or "").strip():
+        return "runtime isolation is required but no qualified sandbox backend is active"
+    return ""
+
+
+@dataclass(frozen=True, slots=True)
+class BoundedStopVerdict:
+    """Outcome of one bounded observation against leaf and root limits (AP-007)."""
+
+    stopped: bool
+    code: str
+    reason: str
+    scope: str
+    task_id: str
+    leaf: TaskBudgetState
+    root: TaskBudgetState
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "stopped": self.stopped,
+            "code": self.code,
+            "reason": self.reason,
+            "scope": self.scope,
+            "task_id": self.task_id,
+        }
+
+
+class BoundedStopRequired(BudgetExceeded):
+    """Raised after a bounded stop has been durably committed (AP-007)."""
+
+    def __init__(self, verdict: BoundedStopVerdict) -> None:
+        super().__init__(f"{verdict.scope} task {verdict.task_id!r}: {verdict.reason}")
+        self.verdict = verdict
 
 
 @dataclass(frozen=True, slots=True)
@@ -45975,6 +46152,39 @@ def _non_neg_float(value: Any, name: str, *, strictly_positive: bool = False) ->
     return val
 
 
+def _optional_limit(raw: Any, key: str, *, min_value: int) -> int | None:
+    """Parse an optional integer ceiling; anything but a real integer fails closed."""
+    value = raw.get(key) if isinstance(raw, dict) else None
+    if value is None:
+        return None
+    return _non_neg_int(value, key, min_value=min_value)
+
+
+def _optional_deadline(value: Any) -> float | None:
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise BudgetError("deadline_at must be numeric epoch seconds.")
+    deadline = float(value)
+    if not math.isfinite(deadline) or deadline <= 0:
+        raise BudgetError("deadline_at must be a positive finite epoch timestamp.")
+    return deadline
+
+
+def _measured_markers(value: Any) -> tuple[str, ...]:
+    if value is None or value == ():
+        return ()
+    if isinstance(value, (str, bytes)) or not isinstance(value, (list, tuple)):
+        raise BudgetError("unmeasured must be a list of resource names.")
+    cleaned: list[str] = []
+    for item in value:
+        if item not in MEASURED_RESOURCES:
+            raise BudgetError(f"unmeasured resource must be one of {MEASURED_RESOURCES}.")
+        if item not in cleaned:
+            cleaned.append(str(item))
+    return tuple(sorted(cleaned))
+
+
 @dataclass(frozen=True, slots=True)
 class TaskBudgetSpec:
     """Durable root-task and crash-recovery budget bounds (M5-P1-05)."""
@@ -45984,6 +46194,15 @@ class TaskBudgetSpec:
     max_tokens: int = 500_000
     max_elapsed_s: float = 1_800.0
     max_recoveries: int = 3
+    # AP-007 bounded-stop limits.  ``None`` / ``False`` means "not declared": the key
+    # is omitted from the persisted document, which keeps every pre-AP-007 budget
+    # identity stable while making a newly declared limit an authority change.
+    max_no_progress: int | None = None
+    max_repair_attempts: int | None = None
+    deadline_at: float | None = None
+    max_memory_bytes: int | None = None
+    max_storage_bytes: int | None = None
+    isolation_required: bool = False
 
     def __post_init__(self) -> None:
         _non_neg_int(self.max_steps, "max_steps", min_value=1)
@@ -45991,25 +46210,71 @@ class TaskBudgetSpec:
         _non_neg_int(self.max_tokens, "max_tokens", min_value=0)
         _non_neg_float(self.max_elapsed_s, "max_elapsed_s", strictly_positive=True)
         _non_neg_int(self.max_recoveries, "max_recoveries", min_value=0)
+        if self.max_no_progress is not None:
+            _non_neg_int(self.max_no_progress, "max_no_progress", min_value=0)
+        if self.max_repair_attempts is not None:
+            _non_neg_int(self.max_repair_attempts, "max_repair_attempts", min_value=0)
+        _optional_deadline(self.deadline_at)
+        if self.max_memory_bytes is not None:
+            _non_neg_int(self.max_memory_bytes, "max_memory_bytes", min_value=1)
+        if self.max_storage_bytes is not None:
+            _non_neg_int(self.max_storage_bytes, "max_storage_bytes", min_value=1)
+        if not isinstance(self.isolation_required, bool):
+            raise BudgetError("isolation_required must be a boolean.")
+
+    @property
+    def declares_bounded_limits(self) -> bool:
+        return any(
+            value is not None
+            for value in (
+                self.max_no_progress,
+                self.max_repair_attempts,
+                self.deadline_at,
+                self.max_memory_bytes,
+                self.max_storage_bytes,
+            )
+        )
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        payload: dict[str, Any] = {
             "max_steps": self.max_steps,
             "max_tool_calls": self.max_tool_calls,
             "max_tokens": self.max_tokens,
             "max_elapsed_s": round(self.max_elapsed_s, 4),
             "max_recoveries": self.max_recoveries,
         }
+        if self.max_no_progress is not None:
+            payload["max_no_progress"] = self.max_no_progress
+        if self.max_repair_attempts is not None:
+            payload["max_repair_attempts"] = self.max_repair_attempts
+        if self.deadline_at is not None:
+            payload["deadline_at"] = round(self.deadline_at, 4)
+        if self.max_memory_bytes is not None:
+            payload["max_memory_bytes"] = self.max_memory_bytes
+        if self.max_storage_bytes is not None:
+            payload["max_storage_bytes"] = self.max_storage_bytes
+        if self.isolation_required:
+            payload["isolation_required"] = True
+        return payload
 
     @classmethod
     def from_dict(cls, data: dict[str, Any] | None) -> TaskBudgetSpec:
         raw = data or {}
+        isolation = raw.get("isolation_required", False)
+        if not isinstance(isolation, bool):
+            raise BudgetError("isolation_required must be a boolean.")
         return cls(
             max_steps=int(raw.get("max_steps", 25)),
             max_tool_calls=int(raw.get("max_tool_calls", 120)),
             max_tokens=int(raw.get("max_tokens", 500_000)),
             max_elapsed_s=float(raw.get("max_elapsed_s", 1_800.0)),
             max_recoveries=int(raw.get("max_recoveries", 3)),
+            max_no_progress=_optional_limit(raw, "max_no_progress", min_value=0),
+            max_repair_attempts=_optional_limit(raw, "max_repair_attempts", min_value=0),
+            deadline_at=_optional_deadline(raw.get("deadline_at")),
+            max_memory_bytes=_optional_limit(raw, "max_memory_bytes", min_value=1),
+            max_storage_bytes=_optional_limit(raw, "max_storage_bytes", min_value=1),
+            isolation_required=isolation,
         )
 
 
@@ -46027,9 +46292,15 @@ class TaskBudgetState:
     cancel_requested: bool = False
     exhausted_reason: str = ""
     verification_contract: dict[str, Any] | None = None
+    # AP-007 bounded-stop counters; persisted only when they are not at their default.
+    no_progress_count: int = 0
+    repair_attempts_used: int = 0
+    memory_bytes_peak: int = 0
+    storage_bytes_peak: int = 0
+    unmeasured: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        payload: dict[str, Any] = {
             "spec": self.spec.to_dict(),
             "steps_used": self.steps_used,
             "tool_calls_used": self.tool_calls_used,
@@ -46040,6 +46311,17 @@ class TaskBudgetState:
             "cancel_requested": self.cancel_requested,
             "exhausted_reason": self.exhausted_reason,
         }
+        if self.no_progress_count:
+            payload["no_progress_count"] = self.no_progress_count
+        if self.repair_attempts_used:
+            payload["repair_attempts_used"] = self.repair_attempts_used
+        if self.memory_bytes_peak:
+            payload["memory_bytes_peak"] = self.memory_bytes_peak
+        if self.storage_bytes_peak:
+            payload["storage_bytes_peak"] = self.storage_bytes_peak
+        if self.unmeasured:
+            payload["unmeasured"] = list(self.unmeasured)
+        return payload
 
     def to_json(self) -> str:
         payload = self.to_dict()
@@ -46088,9 +46370,60 @@ class TaskBudgetState:
             cancel_requested=bool(parsed.get("cancel_requested", False)),
             exhausted_reason=str(parsed.get("exhausted_reason", "")),
             verification_contract=vc_dict,
+            no_progress_count=_non_neg_int(parsed.get("no_progress_count", 0), "no_progress_count"),
+            repair_attempts_used=_non_neg_int(parsed.get("repair_attempts_used", 0), "repair_attempts_used"),
+            memory_bytes_peak=_non_neg_int(parsed.get("memory_bytes_peak", 0), "memory_bytes_peak"),
+            storage_bytes_peak=_non_neg_int(parsed.get("storage_bytes_peak", 0), "storage_bytes_peak"),
+            unmeasured=_measured_markers(parsed.get("unmeasured")),
         )
 
-    def violation_reason(self, *, check_recovery: bool = False) -> str:
+    @property
+    def measurement_gaps(self) -> tuple[str, ...]:
+        """Declared ceilings whose most recent measurement attempt failed."""
+        limits = {"memory": self.spec.max_memory_bytes, "storage": self.spec.max_storage_bytes}
+        return tuple(name for name in self.unmeasured if limits.get(name) is not None)
+
+    def bounded_stop(self, *, now: float | None = None) -> tuple[str, str] | None:
+        """Return ``(code, reason)`` when a declared AP-007 limit requires a stop.
+
+        The verdict is derived from persisted counters and the clock, never from a
+        caller's claim, so it is the same after a restart.  ``now`` defaults to the
+        wall clock: a caller that forgets to pass it still enforces the deadline.
+        """
+        spec = self.spec
+        if spec.max_no_progress is not None and self.no_progress_count > spec.max_no_progress:
+            return (
+                "no_progress",
+                f"no-progress limit exceeded ({self.no_progress_count}/{spec.max_no_progress} "
+                "consecutive observations without progress)",
+            )
+        if spec.max_repair_attempts is not None and self.repair_attempts_used > spec.max_repair_attempts:
+            return (
+                "repair_attempts",
+                f"repair-attempt limit exceeded ({self.repair_attempts_used}/{spec.max_repair_attempts})",
+            )
+        if spec.deadline_at is not None:
+            current = time.time() if now is None else float(now)
+            if current >= spec.deadline_at:
+                # The reason names only the persisted deadline, so it is identical on
+                # every evaluation and a stored report stays hash-stable.
+                return "deadline", f"deadline exceeded (deadline_at={spec.deadline_at:.2f})"
+        for resource, limit, peak in (
+            ("memory", spec.max_memory_bytes, self.memory_bytes_peak),
+            ("storage", spec.max_storage_bytes, self.storage_bytes_peak),
+        ):
+            if limit is None:
+                continue
+            if resource in self.unmeasured:
+                return (
+                    "measurement_unavailable",
+                    f"{resource} limit is declared but {resource} use could not be measured",
+                )
+            if peak > limit:
+                return resource, f"{resource} limit exceeded ({peak}/{limit} bytes)"
+        return None
+
+    def violation_reason(self, *, check_recovery: bool = False, now: float | None = None) -> str:
         if self.steps_used > self.spec.max_steps:
             return f"step budget exceeded ({self.steps_used}/{self.spec.max_steps})"
         if self.tool_calls_used > self.spec.max_tool_calls:
@@ -46101,6 +46434,9 @@ class TaskBudgetState:
             return f"time budget exceeded ({self.elapsed_s:.2f}s/{self.spec.max_elapsed_s:.2f}s)"
         if check_recovery and self.recoveries_used > self.spec.max_recoveries:
             return f"recovery budget exceeded ({self.recoveries_used}/{self.spec.max_recoveries})"
+        bounded = self.bounded_stop(now=now)
+        if bounded is not None:
+            return bounded[1]
         return ""
 
 
@@ -46123,6 +46459,55 @@ class DurableTaskBudgetManager:
         if not isinstance(task_id, str) or not task_id.strip() or "\x00" in task_id:
             raise BudgetError("task_id must be a non-empty string without NUL characters.")
         return task_id.strip()
+
+    @staticmethod
+    def _load_task_chain(
+        conn: sqlite3.Connection,
+        tid: str,
+        expected_session: str,
+    ) -> tuple[dict[str, sqlite3.Row], str]:
+        """Walk the durable parent chain and return ``(rows, authoritative_root_id)``."""
+        rows: dict[str, sqlite3.Row] = {}
+        cursor_id = tid
+        seen: set[str] = set()
+        while True:
+            if cursor_id in seen:
+                raise BudgetError(f"Runtime task parent cycle detected at {cursor_id!r}.")
+            seen.add(cursor_id)
+            row = conn.execute(
+                """
+                SELECT task_id, session_id, parent_task_id, current_epoch, budget_json
+                FROM runtime_tasks
+                WHERE task_id = ?
+                """,
+                (cursor_id,),
+            ).fetchone()
+            if row is None:
+                raise KeyError(f"Runtime task {cursor_id!r} does not exist.")
+            rows[cursor_id] = row
+            row_session = str(row["session_id"] or "")
+            # Older task rows predate mandatory session binding and contain
+            # an empty value.  They are bound by the typed request envelope;
+            # any non-empty durable identity remains authoritative.
+            if row_session and row_session != expected_session:
+                raise BudgetError(
+                    f"Task {cursor_id!r} belongs to session {row_session!r}, not {expected_session!r}."
+                )
+            parent_id = str(row["parent_task_id"] or "").strip()
+            if not parent_id:
+                return rows, cursor_id
+            cursor_id = parent_id
+
+    @staticmethod
+    def _parse_task_chain(rows: dict[str, sqlite3.Row]) -> dict[str, TaskBudgetState]:
+        """Parse every budget from the leaf up to the root.
+
+        Cancellation and the isolation requirement bind the whole chain, not only its
+        two ends: a child of a cancelled or isolation-bound task must not run because
+        its own document and the root's happen to be silent.  One unreadable document
+        fails the whole chain closed.
+        """
+        return {task_id: TaskBudgetState.from_json(str(row["budget_json"])) for task_id, row in rows.items()}
 
     def get_budget(
         self,
@@ -46160,17 +46545,9 @@ class DurableTaskBudgetManager:
             raw = str(row["budget_json"] or "{}").strip()
             current = TaskBudgetState.from_json(raw, default_spec=spec)
             effective_spec = spec if (override_spec and spec is not None) else current.spec
-            updated = TaskBudgetState(
+            updated = replace(
+                current,
                 spec=effective_spec,
-                steps_used=current.steps_used,
-                tool_calls_used=current.tool_calls_used,
-                tokens_used=current.tokens_used,
-                elapsed_s=current.elapsed_s,
-                recoveries_used=current.recoveries_used,
-                pause_requested=current.pause_requested,
-                cancel_requested=current.cancel_requested,
-                exhausted_reason=current.exhausted_reason,
-                verification_contract=current.verification_contract,
             )
             encoded = updated.to_json()
             if encoded != raw:
@@ -46204,17 +46581,10 @@ class DurableTaskBudgetManager:
             if row is None:
                 raise KeyError(f"Runtime task {tid!r} does not exist.")
             current = TaskBudgetState.from_json(str(row["budget_json"]))
-            updated = TaskBudgetState(
-                spec=current.spec,
-                steps_used=current.steps_used,
-                tool_calls_used=current.tool_calls_used,
-                tokens_used=current.tokens_used,
-                elapsed_s=current.elapsed_s,
-                recoveries_used=current.recoveries_used,
+            updated = replace(
+                current,
                 pause_requested=current.pause_requested if pause_requested is None else bool(pause_requested),
                 cancel_requested=current.cancel_requested if cancel_requested is None else bool(cancel_requested),
-                exhausted_reason=current.exhausted_reason,
-                verification_contract=current.verification_contract,
             )
             conn.execute(
                 "UPDATE runtime_tasks SET budget_json = ?, updated_at = ? WHERE task_id = ?",
@@ -46261,31 +46631,18 @@ class DurableTaskBudgetManager:
                     f"Stale epoch {epoch} cannot mutate budget for task {tid!r} at current_epoch={row['current_epoch']}."
                 )
             current = TaskBudgetState.from_json(str(row["budget_json"]))
-            candidate = TaskBudgetState(
-                spec=current.spec,
+            candidate = replace(
+                current,
                 steps_used=current.steps_used + steps_delta,
                 tool_calls_used=current.tool_calls_used + tool_calls_delta,
                 tokens_used=current.tokens_used + tokens_delta,
                 elapsed_s=round(current.elapsed_s + elapsed_delta_s, 6),
-                recoveries_used=current.recoveries_used,
-                pause_requested=current.pause_requested,
-                cancel_requested=current.cancel_requested,
-                exhausted_reason=current.exhausted_reason,
-                verification_contract=current.verification_contract,
             )
-            violation = candidate.violation_reason(check_recovery=False)
+            violation = candidate.violation_reason(check_recovery=False, now=ts)
             final_state = (
-                TaskBudgetState(
-                    spec=candidate.spec,
-                    steps_used=candidate.steps_used,
-                    tool_calls_used=candidate.tool_calls_used,
-                    tokens_used=candidate.tokens_used,
-                    elapsed_s=candidate.elapsed_s,
-                    recoveries_used=candidate.recoveries_used,
-                    pause_requested=candidate.pause_requested,
-                    cancel_requested=candidate.cancel_requested,
+                replace(
+                    candidate,
                     exhausted_reason=violation or candidate.exhausted_reason,
-                    verification_contract=candidate.verification_contract,
                 )
                 if violation
                 else candidate
@@ -46316,6 +46673,7 @@ class DurableTaskBudgetManager:
         session_id: str,
         epoch: int | None = None,
         now: float | None = None,
+        isolation: IsolationEvidence | None = None,
     ) -> tuple[TaskBudgetState, TaskBudgetState]:
         """Atomically validate and charge one action to its leaf and root budgets.
 
@@ -46325,6 +46683,12 @@ class DurableTaskBudgetManager:
         can never debit only one side.  Any stale epoch, identity mismatch,
         cancellation, malformed budget, or exhausted candidate rolls the whole
         transaction back and fails closed.
+
+        AP-007: when any task from the leaf up to the root declares
+        ``isolation_required``, the charge is refused with :class:`IsolationUnavailable`
+        unless ``isolation`` proves a qualified sandbox.  The default is refusal, so a
+        caller that presents nothing can never reach a host-execution path for such a
+        task.  Cancellation is checked on the same whole chain.
         """
 
         tid = self._validate_task_id(task_id)
@@ -46338,37 +46702,7 @@ class DurableTaskBudgetManager:
 
         def _tx(conn: sqlite3.Connection) -> tuple[TaskBudgetState, TaskBudgetState]:
             conn.row_factory = sqlite3.Row
-            rows: dict[str, sqlite3.Row] = {}
-            cursor_id = tid
-            seen: set[str] = set()
-            while True:
-                if cursor_id in seen:
-                    raise BudgetError(f"Runtime task parent cycle detected at {cursor_id!r}.")
-                seen.add(cursor_id)
-                row = conn.execute(
-                    """
-                    SELECT task_id, session_id, parent_task_id, current_epoch, budget_json
-                    FROM runtime_tasks
-                    WHERE task_id = ?
-                    """,
-                    (cursor_id,),
-                ).fetchone()
-                if row is None:
-                    raise KeyError(f"Runtime task {cursor_id!r} does not exist.")
-                rows[cursor_id] = row
-                row_session = str(row["session_id"] or "")
-                # Older task rows predate mandatory session binding and contain
-                # an empty value.  They are bound by the typed request envelope;
-                # any non-empty durable identity remains authoritative.
-                if row_session and row_session != expected_session:
-                    raise BudgetError(
-                        f"Task {cursor_id!r} belongs to session {row_session!r}, not {expected_session!r}."
-                    )
-                parent_id = str(row["parent_task_id"] or "").strip()
-                if not parent_id:
-                    authoritative_root = cursor_id
-                    break
-                cursor_id = parent_id
+            rows, authoritative_root = self._load_task_chain(conn, tid, expected_session)
 
             if authoritative_root != expected_root:
                 raise BudgetError(
@@ -46380,20 +46714,23 @@ class DurableTaskBudgetManager:
                     f"Stale epoch {epoch} cannot charge task {tid!r} at current_epoch={leaf_row['current_epoch']}."
                 )
 
-            leaf_current = TaskBudgetState.from_json(str(leaf_row["budget_json"]))
-            root_current = (
-                leaf_current
-                if authoritative_root == tid
-                else TaskBudgetState.from_json(str(rows[authoritative_root]["budget_json"]))
-            )
-            if leaf_current.cancel_requested or root_current.cancel_requested:
+            chain = self._parse_task_chain(rows)
+            leaf_current = chain[tid]
+            root_current = chain[authoritative_root]
+            if any(state.cancel_requested for state in chain.values()):
                 raise ExecutionCancelled("task or root-task cancellation requested.")
+            if any(state.spec.isolation_required for state in chain.values()):
+                refusal = isolation_refusal(isolation)
+                if refusal:
+                    raise IsolationUnavailable(
+                        f"{refusal}; dependent execution is blocked and the host shell is not used."
+                    )
 
             leaf_candidate = replace(
                 leaf_current,
                 tool_calls_used=leaf_current.tool_calls_used + 1,
             )
-            leaf_violation = leaf_candidate.violation_reason(check_recovery=False)
+            leaf_violation = leaf_candidate.violation_reason(check_recovery=False, now=ts)
             if leaf_violation:
                 raise BudgetExceeded(f"leaf task {tid!r}: {leaf_violation}")
 
@@ -46404,7 +46741,7 @@ class DurableTaskBudgetManager:
                     root_current,
                     tool_calls_used=root_current.tool_calls_used + 1,
                 )
-                root_violation = root_candidate.violation_reason(check_recovery=False)
+                root_violation = root_candidate.violation_reason(check_recovery=False, now=ts)
                 if root_violation:
                     raise BudgetExceeded(
                         f"root task {authoritative_root!r}: {root_violation}"
@@ -46428,6 +46765,176 @@ class DurableTaskBudgetManager:
             retry_policy=self._retry_policy,
         )
 
+    def record_bounded_observation(
+        self,
+        task_id: str,
+        *,
+        root_task_id: str,
+        session_id: str,
+        epoch: int | None = None,
+        progressed: bool | None = None,
+        repair_attempt: bool = False,
+        memory_bytes: int | None = None,
+        storage_bytes: int | None = None,
+        unmeasured: Sequence[str] = (),
+        enforce: bool = True,
+        now: float | None = None,
+    ) -> BoundedStopVerdict:
+        """Atomically apply one progress/repair/resource observation to leaf and root.
+
+        ``progressed`` resets (``True``) or extends (``False``) the consecutive
+        no-progress count; ``None`` carries no progress signal.  Memory and storage
+        readings are absolute byte counts, not deltas, and raise the recorded peak.
+        ``unmeasured`` names a resource whose declared ceiling could not be read: the
+        work stops instead of assuming headroom.  The root aggregates every leaf, so
+        repeated repair cannot be hidden by spreading it over nodes or plan versions.
+
+        These are server-observed coordination facts.  They are never taken from a
+        request body or from model tool arguments.
+
+        Fail-closed properties:
+
+        * a stale, fenced or missing worker epoch cannot record anything, so a late
+          worker can neither reset the no-progress count nor hide a ceiling breach;
+        * once a stop is required the document is not mutated again, so the stop
+          cannot be undone by a later "progress" report.  The one exception is a
+          ``measurement_unavailable`` stop: an observation that carries a real
+          reading for every unmeasured resource replaces the marker, and that
+          reading is then judged against the ceiling like any other;
+        * the stop reason is committed before :class:`BoundedStopRequired` is raised,
+          so a crash between the two leaves the stop durable.
+        """
+
+        tid = self._validate_task_id(task_id)
+        expected_root = self._validate_task_id(root_task_id)
+        if not isinstance(session_id, str) or not session_id.strip() or "\x00" in session_id:
+            raise BudgetError("session_id must be a non-empty string without NUL characters.")
+        expected_session = session_id.strip()
+        if epoch is not None:
+            _non_neg_int(epoch, "epoch", min_value=1)
+        if progressed is not None and not isinstance(progressed, bool):
+            raise BudgetError("progressed must be True, False or None.")
+        if not isinstance(repair_attempt, bool):
+            raise BudgetError("repair_attempt must be a boolean.")
+        readings: dict[str, int] = {}
+        for name, value in (("memory", memory_bytes), ("storage", storage_bytes)):
+            if value is not None:
+                readings[name] = _non_neg_int(value, f"{name}_bytes")
+        missing = _measured_markers(tuple(unmeasured))
+        overlap = sorted(set(missing) & set(readings))
+        if overlap:
+            raise BudgetError(f"{overlap[0]} cannot be both measured and unmeasured in one observation.")
+        ts = time.time() if now is None else float(now)
+
+        def _apply(state: TaskBudgetState) -> TaskBudgetState:
+            count = state.no_progress_count
+            if progressed is True:
+                count = 0
+            elif progressed is False:
+                count += 1
+            declared = {
+                "memory": state.spec.max_memory_bytes is not None,
+                "storage": state.spec.max_storage_bytes is not None,
+            }
+            markers = set(state.unmeasured) - set(readings)
+            markers.update(name for name in missing if declared[name])
+            return replace(
+                state,
+                no_progress_count=count,
+                repair_attempts_used=state.repair_attempts_used + (1 if repair_attempt else 0),
+                memory_bytes_peak=max(state.memory_bytes_peak, readings.get("memory", 0)),
+                storage_bytes_peak=max(state.storage_bytes_peak, readings.get("storage", 0)),
+                unmeasured=tuple(sorted(markers)),
+            )
+
+        def _tx(conn: sqlite3.Connection) -> BoundedStopVerdict:
+            conn.row_factory = sqlite3.Row
+            rows, authoritative_root = self._load_task_chain(conn, tid, expected_session)
+            if authoritative_root != expected_root:
+                raise BudgetError(
+                    f"Stale or mismatched root task {expected_root!r}; authoritative root is {authoritative_root!r}."
+                )
+            leaf_row = rows[tid]
+            current_epoch = int(leaf_row["current_epoch"])
+            if current_epoch > 0:
+                if epoch is None or int(epoch) != current_epoch:
+                    raise runtime_persistence.StaleEpochError(
+                        f"Stale or missing epoch {epoch} cannot record an observation for task {tid!r} "
+                        f"at current_epoch={current_epoch}."
+                    )
+                lease = conn.execute(
+                    "SELECT status FROM runtime_task_epochs WHERE task_id = ? AND epoch = ?",
+                    (tid, current_epoch),
+                ).fetchone()
+                if lease is None or str(lease["status"]) != "active":
+                    raise runtime_persistence.StaleEpochError(
+                        f"Task {tid!r} epoch {current_epoch} is "
+                        f"{str(lease['status']) if lease is not None else 'missing'}, not active; "
+                        "a fenced worker cannot record an observation."
+                    )
+            elif epoch is not None:
+                raise runtime_persistence.StaleEpochError(
+                    f"Task {tid!r} has no worker epoch; epoch {epoch} cannot record an observation."
+                )
+
+            chain = self._parse_task_chain(rows)
+            leaf_current = chain[tid]
+            same = authoritative_root == tid
+            root_current = chain[authoritative_root]
+            if any(state.cancel_requested for state in chain.values()):
+                raise ExecutionCancelled("task or root-task cancellation requested.")
+
+            # A stop that is already required is final: never mutate past it.  Only a
+            # measurement gap can be closed, and only by readings that cover it fully.
+            for scope, owner, state in (("leaf", tid, leaf_current), ("root", authoritative_root, root_current)):
+                prior = state.bounded_stop(now=ts)
+                if prior is None:
+                    continue
+                if prior[0] == "measurement_unavailable" and set(state.measurement_gaps) <= set(readings):
+                    continue
+                return BoundedStopVerdict(True, prior[0], prior[1], scope, owner, leaf_current, root_current)
+
+            leaf_next = _apply(leaf_current)
+            leaf_stop = leaf_next.bounded_stop(now=ts)
+            if leaf_stop is not None:
+                leaf_next = replace(leaf_next, exhausted_reason=leaf_stop[1])
+            if same:
+                root_next, root_stop = leaf_next, None
+            else:
+                root_next = _apply(root_current)
+                root_stop = root_next.bounded_stop(now=ts)
+                if root_stop is not None:
+                    root_next = replace(root_next, exhausted_reason=root_stop[1])
+            if leaf_stop is not None:
+                verdict = BoundedStopVerdict(True, leaf_stop[0], leaf_stop[1], "leaf", tid, leaf_next, root_next)
+            elif root_stop is not None:
+                verdict = BoundedStopVerdict(
+                    True, root_stop[0], root_stop[1], "root", authoritative_root, leaf_next, root_next
+                )
+            else:
+                verdict = BoundedStopVerdict(False, "", "", "", "", leaf_next, root_next)
+
+            conn.execute(
+                "UPDATE runtime_tasks SET budget_json = ?, updated_at = ? WHERE task_id = ?",
+                (leaf_next.to_json(), ts, tid),
+            )
+            if not same:
+                conn.execute(
+                    "UPDATE runtime_tasks SET budget_json = ?, updated_at = ? WHERE task_id = ?",
+                    (root_next.to_json(), ts, authoritative_root),
+                )
+            return verdict
+
+        verdict = runtime_persistence.run_write_transaction(
+            self._storage,
+            self._db_path,
+            _tx,
+            retry_policy=self._retry_policy,
+        )
+        if enforce and verdict.stopped:
+            raise BoundedStopRequired(verdict)
+        return verdict
+
     def consume_recovery(
         self,
         task_id: str,
@@ -46448,17 +46955,11 @@ class DurableTaskBudgetManager:
             violation = ""
             if next_recoveries > current.spec.max_recoveries:
                 violation = f"recovery budget exceeded ({next_recoveries}/{current.spec.max_recoveries})"
-            persisted = TaskBudgetState(
-                spec=current.spec,
-                steps_used=current.steps_used,
-                tool_calls_used=current.tool_calls_used,
-                tokens_used=current.tokens_used,
-                elapsed_s=current.elapsed_s,
+            persisted = replace(
+                current,
                 recoveries_used=current.recoveries_used if violation else next_recoveries,
                 pause_requested=False if not violation else current.pause_requested,
-                cancel_requested=current.cancel_requested,
                 exhausted_reason=violation or current.exhausted_reason,
-                verification_contract=current.verification_contract,
             )
             conn.execute(
                 "UPDATE runtime_tasks SET budget_json = ?, updated_at = ? WHERE task_id = ?",
@@ -46495,16 +46996,8 @@ class DurableTaskBudgetManager:
             if row is None:
                 raise KeyError(f"Runtime task {tid!r} does not exist.")
             current = TaskBudgetState.from_json(str(row["budget_json"]))
-            updated = TaskBudgetState(
-                spec=current.spec,
-                steps_used=current.steps_used,
-                tool_calls_used=current.tool_calls_used,
-                tokens_used=current.tokens_used,
-                elapsed_s=current.elapsed_s,
-                recoveries_used=current.recoveries_used,
-                pause_requested=current.pause_requested,
-                cancel_requested=current.cancel_requested,
-                exhausted_reason=current.exhausted_reason,
+            updated = replace(
+                current,
                 verification_contract=dict(contract) if contract is not None else None,
             )
             conn.execute(
@@ -50041,6 +50534,22 @@ class ProcessSupervisor:
     @property
     def store(self) -> ContainmentStore:
         return self._store
+
+    def still_running(self, processes: Sequence[tuple[int, str]]) -> tuple[tuple[int, str], ...]:
+        """Return the ``(pid, start_fingerprint)`` pairs that are still the same live process.
+
+        A caller that recorded processes an earlier containment could not end uses
+        this to re-check them with the supervisor's own probe, the same judgement the
+        barrier-hold refresh applies.  A recycled pid does not count as still running.
+        A pair recorded without a fingerprint cannot be told apart from a recycled
+        pid, so any live process with that pid keeps it listed: the doubt is reported
+        as "still running", never as "gone".
+        """
+        return tuple(
+            (int(pid), str(fingerprint))
+            for pid, fingerprint in processes
+            if is_same_live_process(int(pid), str(fingerprint), probe_fn=self._probe_fn)
+        )
 
     def new_supervision_id(self) -> str:
         return f"sup-{uuid.uuid4().hex[:16]}"
@@ -54902,6 +55411,18 @@ class MissionDependencyRejected(WorkflowTransitionRejected):
     """Raised when a mission node is not dependency-ready or its required outputs are absent."""
 
 
+class MissionHaltUnsettled(MissionGraphError):
+    """Raised when new work is planned while an earlier stopped plan is not settled.
+
+    A stopped plan is settled once every consequential action it left unresolved has
+    been reconciled and a supervised stop has verified that its owned processes ended.
+    """
+
+
+class MissionIsolationRejected(WorkflowTransitionRejected):
+    """Raised when a mission needs runtime isolation that is absent or unqualified (AP-007)."""
+
+
 class MissionBindingRejected(WorkflowTransitionRejected):
     """Raised when a captured plan/input/authority/budget identity is stale."""
 
@@ -55516,6 +56037,202 @@ class MissionResumePlan:
     next_step: int
 
 
+#: Ways a mission plan can be halted from outside its workers (AP-007).
+MISSION_HALT_KINDS: tuple[str, ...] = ("cancelled", "bounded_stop")
+_MISSION_RECOVERY_KIND = "mission_recovery"
+
+#: What the reader can do about each limitation.  A report never ends at "it failed".
+_MISSION_NEXT_ACTIONS: dict[str, str] = {
+    "mission_cancelled": (
+        "Review the retained outputs. The cancelled plan cannot be resumed; continuing needs a new plan version, "
+        "or a new task if the root task itself was cancelled."
+    ),
+    "no_progress": (
+        "Change the inputs or the approach before retrying. Continuing needs an owner-approved budget change "
+        "and a new plan version."
+    ),
+    "repair_attempts": (
+        "Stop repairing the same failure and inspect the recorded attempts. Continuing needs an owner-approved "
+        "budget change and a new plan version."
+    ),
+    "deadline": (
+        "The deadline has passed. Continuing needs a later deadline through an owner-approved budget change "
+        "and a new plan version."
+    ),
+    "memory": (
+        "The recorded peak stays on record, so retrying alone does not clear it. Continuing needs a higher "
+        "memory ceiling through an owner-approved budget change and a new plan version."
+    ),
+    "storage": (
+        "The recorded peak stays on record, so freeing space alone does not clear it. Continuing needs a higher "
+        "storage ceiling through an owner-approved budget change and a new plan version."
+    ),
+    "measurement_unavailable": (
+        "Record a real reading for the resource on the root task, or remove its ceiling through an "
+        "owner-approved budget change, then create a new plan version. Work does not continue against a "
+        "ceiling that cannot be measured."
+    ),
+    "budget_unreadable": (
+        "A budget document could not be read, so no limit can be evaluated. Replace it through an "
+        "owner-approved budget change before any work continues."
+    ),
+    "stop_record_missing": "Inspect the task transitions of this plan before continuing; its stop record is missing.",
+    "isolation_unavailable": (
+        "Qualify and enable an isolated runtime before this mission can run. It is not executed on the host."
+    ),
+    "uncertain_effects": (
+        "Verify each listed action and reconcile it as committed or not applied before relying on this work. "
+        "After a stop, no new plan is accepted for this task until every one is reconciled."
+    ),
+    "owned_work_lingering": (
+        "Some owned processes could not be verified as stopped. Inspect the host, then run the stop again "
+        "with a process supervisor. No new plan is accepted for this task until the stop is verified."
+    ),
+    "halt_required": (
+        "Halt this plan with a process supervisor. Until then its workers are not fenced and its owned "
+        "processes are not terminated."
+    ),
+    "owned_work_not_terminated": (
+        "Run the stop again with a process supervisor. Until then, do not assume that owned processes have "
+        "ended, and no new plan is accepted for this task."
+    ),
+    "tasks_incomplete": "The listed tasks are not complete, so the mission is not complete.",
+    "missing_required_outputs": (
+        "The listed tasks reported completion without their declared outputs. Do not treat them as delivered."
+    ),
+    "artifact_incomplete": (
+        "The listed outputs are retained but are not finished, checked artifacts. Do not deliver them as complete."
+    ),
+    "artifacts_not_verified": (
+        "Evaluate this report again with the artifact registry. Until then the retained outputs are unverified."
+    ),
+    "plan_superseded": "Read the report of the active plan version instead.",
+}
+
+
+@dataclass(frozen=True, slots=True)
+class MissionRecoveryTask:
+    """One mission node in a recovery report: what it reached and what it left behind."""
+
+    task_key: str
+    task_id: str
+    state: str
+    outcome: str
+    retained_outputs: tuple[dict[str, Any], ...]
+    missing_outputs: tuple[str, ...]
+    unresolved_action_ids: tuple[str, ...]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "task_key": self.task_key,
+            "task_id": self.task_id,
+            "state": self.state,
+            "outcome": self.outcome,
+            "retained_outputs": [dict(item) for item in self.retained_outputs],
+            "missing_outputs": list(self.missing_outputs),
+            "unresolved_action_ids": list(self.unresolved_action_ids),
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class MissionRecoveryReport:
+    """Truthful parent report for a mission that may have stopped early (AP-007).
+
+    ``claims_success`` is true only when the plan is live, the durable join
+    succeeded, no consequential effect is unresolved, every retained output was
+    checked as a complete artifact and no limitation remains.  Every other outcome
+    names what was retained and what the reader can do next.
+    """
+
+    mission_id: str
+    plan_version: int
+    plan_status: str
+    outcome: str
+    claims_success: bool
+    join_status: str
+    tasks: tuple[MissionRecoveryTask, ...]
+    stop: dict[str, Any] | None
+    limitations: tuple[dict[str, str], ...]
+    evaluated_at: float
+    report_hash: str
+
+    @property
+    def retained_outputs(self) -> tuple[dict[str, Any], ...]:
+        return tuple(output for task in self.tasks for output in task.retained_outputs)
+
+    @property
+    def unresolved_action_ids(self) -> tuple[str, ...]:
+        return tuple(action for task in self.tasks for action in task.unresolved_action_ids)
+
+    @property
+    def limitation_codes(self) -> tuple[str, ...]:
+        return tuple(item["code"] for item in self.limitations)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "report_kind": _MISSION_RECOVERY_KIND,
+            "mission_id": self.mission_id,
+            "plan_version": self.plan_version,
+            "plan_status": self.plan_status,
+            "outcome": self.outcome,
+            "claims_success": self.claims_success,
+            "join_status": self.join_status,
+            "tasks": [task.to_dict() for task in self.tasks],
+            "stop": dict(self.stop) if self.stop is not None else None,
+            "limitations": [dict(item) for item in self.limitations],
+            "evaluated_at": self.evaluated_at,
+            "report_hash": self.report_hash,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class _MissionHaltTicket:
+    """What the durable stop transaction hands to process containment."""
+
+    mission_id: str
+    plan_version: int
+    session_id: str
+    stop: dict[str, Any]
+    # One entry per task the plan owns (nodes and their descendants):
+    # (task_id, ((epoch, worker_id), ...)) where the epochs are the leases this stop fenced.
+    scopes: tuple[tuple[str, tuple[tuple[int, str], ...]], ...]
+    newly_halted: bool
+    needs_containment: bool
+
+
+def _mission_require_isolation(
+    root_budget: execution_budget.TaskBudgetState,
+    isolation: execution_budget.IsolationEvidence | None,
+) -> None:
+    """Refuse dispatch when the mission needs isolation that is not proven."""
+    if not root_budget.spec.isolation_required:
+        return
+    refusal = execution_budget.isolation_refusal(isolation)
+    if refusal:
+        raise MissionIsolationRejected(
+            f"{refusal}; dependent execution is blocked and the host shell is not used."
+        )
+
+
+def _mission_limitation(code: str, message: str) -> dict[str, str]:
+    return {
+        "code": code,
+        "message": message[:600],
+        "next_action": _MISSION_NEXT_ACTIONS.get(code, "Inspect this report before continuing."),
+    }
+
+
+def _mission_artifact_verdict(artifact_status: Callable[[str], Any], sha256: str) -> tuple[str, bool, str]:
+    """Ask the AP-006 artifact owner whether one retained output is a finished artifact."""
+    try:
+        verdict = artifact_status(sha256)
+    except Exception as exc:  # a checker that cannot answer is never read as "complete"
+        return "unknown", False, f"artifact check could not run ({type(exc).__name__})"
+    state = str(getattr(verdict, "state", "") or "unknown")[:40]
+    complete = getattr(verdict, "complete", None) is True and state == "complete"
+    return state, complete, str(getattr(verdict, "reason", "") or "")[:240]
+
+
 def _mission_clean_name(value: object, label: str, *, max_len: int = 128) -> str:
     if not isinstance(value, str) or not value.strip() or "\x00" in value:
         raise MissionGraphError(f"{label} must be a non-empty NUL-free string.")
@@ -55802,6 +56519,564 @@ def _mission_persist_join_locked(conn: sqlite3.Connection, report: MissionJoinRe
     )
 
 
+def _mission_latest_stop_locked(
+    conn: sqlite3.Connection,
+    mission_id: str,
+    plan_version: int,
+) -> dict[str, Any] | None:
+    """Return the newest persisted stop record, so a measured stop survives a restart."""
+    rows = conn.execute(
+        """
+        SELECT report_json FROM runtime_mission_joins
+        WHERE mission_id = ? AND plan_version = ?
+          AND report_json LIKE '%"report_kind":"mission_recovery"%'
+        ORDER BY id DESC LIMIT 5
+        """,
+        (mission_id, plan_version),
+    ).fetchall()
+    for row in rows:
+        try:
+            data = json.loads(str(row["report_json"]))
+        except (TypeError, ValueError):
+            continue
+        if (
+            isinstance(data, dict)
+            and data.get("report_kind") == _MISSION_RECOVERY_KIND
+            and isinstance(data.get("stop"), dict)
+        ):
+            return dict(data["stop"])
+    return None
+
+
+def _mission_owned_locked(conn: sqlite3.Connection, mission_id: str, plan_version: int) -> list[sqlite3.Row]:
+    """Every durable task one plan version owns: its nodes and all of their descendants.
+
+    A node may have delegated children of its own.  They are owned work too, so a
+    stop that covered only the nodes would leave those workers live.
+    """
+    rows = conn.execute(
+        """
+        WITH RECURSIVE owned(task_id, node_task_id, task_key, position) AS (
+            SELECT mt.task_id, mt.task_id, mt.task_key, mt.position
+            FROM runtime_mission_tasks AS mt
+            WHERE mt.mission_id = ? AND mt.plan_version = ?
+            UNION
+            SELECT rt.task_id, owned.node_task_id, owned.task_key, owned.position
+            FROM runtime_tasks AS rt
+            JOIN owned ON rt.parent_task_id = owned.task_id
+        )
+        SELECT owned.task_key, owned.node_task_id, rt.task_id, rt.state, rt.current_epoch,
+               rt.checkpoint_ref, rt.budget_json
+        FROM owned
+        JOIN runtime_tasks AS rt ON rt.task_id = owned.task_id
+        ORDER BY owned.position ASC, owned.task_key ASC,
+                 (rt.task_id != owned.node_task_id) ASC, rt.task_id ASC
+        """,
+        (mission_id, plan_version),
+    ).fetchall()
+    seen: set[str] = set()
+    unique: list[sqlite3.Row] = []
+    for row in rows:
+        task_id = str(row["task_id"])
+        if task_id not in seen:
+            seen.add(task_id)
+            unique.append(row)
+    return unique
+
+
+def _mission_unresolved_locked(conn: sqlite3.Connection, task_ids: Sequence[str]) -> list[str]:
+    """Consequential actions of these tasks whose effect is still unknown, oldest first."""
+    found: list[tuple[float, str]] = []
+    for task_id in task_ids:
+        for row in conn.execute(
+            """
+            SELECT action_id, created_at FROM runtime_actions
+            WHERE task_id = ? AND status IN ('in_flight', 'uncertain') AND action_class != 'read_only'
+            """,
+            (task_id,),
+        ).fetchall():
+            found.append((float(row["created_at"] or 0.0), str(row["action_id"])))
+    return [action_id for _, action_id in sorted(found)]
+
+
+def _mission_halt_scopes_locked(
+    conn: sqlite3.Connection,
+    task_ids: Sequence[str],
+) -> tuple[tuple[str, tuple[tuple[int, str], ...]], ...]:
+    """The worker leases a stop fenced, per owned task.
+
+    Only these are fenced again at the process layer.  Fencing every historical
+    epoch would flood the bounded origin table and could push out unrelated fences.
+    """
+    scopes: list[tuple[str, tuple[tuple[int, str], ...]]] = []
+    for task_id in task_ids:
+        rows = conn.execute(
+            """
+            SELECT epoch, worker_id FROM runtime_task_epochs
+            WHERE task_id = ? AND status = 'fenced'
+              AND (
+                fence_reason IN ('mission_cancelled', 'task_cancelled')
+                OR fence_reason LIKE 'mission_bounded_stop:%'
+              )
+            ORDER BY epoch ASC
+            """,
+            (task_id,),
+        ).fetchall()
+        scopes.append((task_id, tuple((int(row["epoch"]), str(row["worker_id"] or "")) for row in rows)))
+    return tuple(scopes)
+
+
+def _mission_root_stop(
+    root_budget: execution_budget.TaskBudgetState | None,
+    *,
+    now: float,
+) -> tuple[str, str] | None:
+    """A stop the root budget requires.  A budget that cannot be read is itself a stop."""
+    if root_budget is None:
+        return "budget_unreadable", "the mission root budget document is unreadable"
+    return root_budget.bounded_stop(now=now)
+
+
+def _mission_task_stops_locked(
+    conn: sqlite3.Connection,
+    mission_id: str,
+    plan_version: int,
+    *,
+    now: float,
+) -> list[tuple[str, str, str]]:
+    """Stops required by the budgets of unfinished nodes: ``(task_key, code, reason)``."""
+    rows = conn.execute(
+        """
+        SELECT mt.task_key, rt.budget_json FROM runtime_mission_tasks AS mt
+        JOIN runtime_tasks AS rt ON rt.task_id = mt.task_id
+        WHERE mt.mission_id = ? AND mt.plan_version = ? AND rt.state != 'completed'
+        ORDER BY mt.position ASC, mt.task_key ASC
+        """,
+        (mission_id, plan_version),
+    ).fetchall()
+    stops: list[tuple[str, str, str]] = []
+    for row in rows:
+        key = str(row["task_key"])
+        try:
+            node_budget = execution_budget.TaskBudgetState.from_json(str(row["budget_json"]))
+        except execution_budget.BudgetError:
+            stops.append((key, "budget_unreadable", f"the budget document of task {key} is unreadable"))
+            continue
+        found = node_budget.bounded_stop(now=now)
+        if found is not None:
+            stops.append((key, found[0], found[1]))
+    return stops
+
+
+def _mission_recovery_locked(
+    conn: sqlite3.Connection,
+    mission_id: str,
+    plan_version: int,
+    *,
+    now: float,
+    artifact_status: Callable[[str], Any] | None = None,
+    isolation: execution_budget.IsolationEvidence | None = None,
+    stop: dict[str, Any] | None = None,
+) -> MissionRecoveryReport:
+    """Build the truthful mission report from durable state only."""
+    join = _mission_join_report_locked(conn, mission_id, plan_version, now=now)
+    plan = conn.execute(
+        """
+        SELECT mp.status, rt.state AS root_state, rt.budget_json AS root_budget_json
+        FROM runtime_mission_plans AS mp
+        JOIN runtime_tasks AS rt ON rt.task_id = mp.root_task_id
+        WHERE mp.mission_id = ? AND mp.plan_version = ?
+        """,
+        (mission_id, plan_version),
+    ).fetchone()
+    assert plan is not None
+    plan_status = str(plan["status"])
+    root_budget: execution_budget.TaskBudgetState | None
+    try:
+        root_budget = execution_budget.TaskBudgetState.from_json(str(plan["root_budget_json"]))
+    except execution_budget.BudgetError:
+        root_budget = None
+    if stop is None:
+        stop = _mission_latest_stop_locked(conn, mission_id, plan_version)
+
+    owned_ids: dict[str, list[str]] = {}
+    for owned_row in _mission_owned_locked(conn, mission_id, plan_version):
+        owned_ids.setdefault(str(owned_row["node_task_id"]), []).append(str(owned_row["task_id"]))
+
+    tasks: list[MissionRecoveryTask] = []
+    unfinished_artifacts: list[str] = []
+    unresolved: list[str] = []
+    retained_count = 0
+    for item in join.tasks:
+        retained: list[dict[str, Any]] = []
+        for row in conn.execute(
+            """
+            SELECT output_key, artifact_ref, artifact_sha256, producer_epoch
+            FROM runtime_mission_outputs
+            WHERE mission_id = ? AND plan_version = ? AND task_id = ?
+            ORDER BY output_key ASC
+            """,
+            (mission_id, plan_version, item.task_id),
+        ).fetchall():
+            entry: dict[str, Any] = {
+                "task_key": item.task_key,
+                "output_key": str(row["output_key"]),
+                "artifact_ref": str(row["artifact_ref"]),
+                "artifact_sha256": str(row["artifact_sha256"]),
+                "producer_epoch": int(row["producer_epoch"]),
+                "artifact_state": "unverified",
+                "counts_as_complete": False,
+            }
+            if artifact_status is not None:
+                state, complete, detail = _mission_artifact_verdict(artifact_status, entry["artifact_sha256"])
+                entry["artifact_state"] = state
+                entry["counts_as_complete"] = complete
+                entry["artifact_reason"] = detail
+                if not complete:
+                    unfinished_artifacts.append(f"{item.task_key}:{entry['output_key']} ({state})")
+            retained.append(entry)
+        retained_count += len(retained)
+        # A node answers for the unresolved effects of its delegated children too.
+        action_ids = tuple(_mission_unresolved_locked(conn, owned_ids.get(item.task_id, [item.task_id])))
+        unresolved.extend(action_ids)
+        tasks.append(
+            MissionRecoveryTask(
+                task_key=item.task_key,
+                task_id=item.task_id,
+                state=item.state,
+                outcome=item.outcome,
+                retained_outputs=tuple(retained),
+                missing_outputs=item.missing_outputs,
+                unresolved_action_ids=action_ids,
+            )
+        )
+
+    halted = plan_status in {"cancelled", "failed"}
+    work_owed = join.status != "succeeded"
+    live = plan_status == "active"
+    root_cancelled = str(plan["root_state"]) == "cancelled" or (
+        root_budget is not None and root_budget.cancel_requested
+    )
+    # Budget-required stops and the isolation gate only matter while work is still owed.
+    root_stop = _mission_root_stop(root_budget, now=now) if (live and work_owed) else None
+    task_stops = (
+        _mission_task_stops_locked(conn, mission_id, plan_version, now=now)
+        if (live and work_owed and root_stop is None)
+        else []
+    )
+    isolation_refused = ""
+    if live and work_owed and root_budget is not None and root_budget.spec.isolation_required:
+        isolation_refused = execution_budget.isolation_refusal(isolation)
+    incomplete = any(task.outcome == "incomplete" for task in tasks)
+
+    if plan_status == "superseded":
+        outcome = "superseded"
+    elif not work_owed and not halted:
+        if unresolved or unfinished_artifacts:
+            outcome = "partial"
+        elif (retained_count and artifact_status is None) or root_budget is None:
+            outcome = "unverified"
+        else:
+            outcome = "succeeded"
+    elif plan_status == "cancelled" or (live and root_cancelled):
+        outcome = "cancelled"
+    elif plan_status == "failed" or root_stop is not None:
+        outcome = "stopped"
+    elif incomplete:
+        outcome = "blocked" if isolation_refused else "in_progress"
+    else:
+        outcome = join.status
+
+    limitations: list[dict[str, str]] = []
+    stop_kind = str((stop or {}).get("kind") or "")
+    if outcome == "cancelled":
+        detail = str((stop or {}).get("reason") or "") if stop_kind == "cancelled" else ""
+        limitations.append(
+            _mission_limitation(
+                "mission_cancelled",
+                "The mission was cancelled before it completed" + (f" ({detail})." if detail else "."),
+            )
+        )
+    elif outcome == "stopped":
+        if stop_kind == "bounded_stop" and stop is not None:
+            where = str(stop.get("scope") or "")
+            limitations.append(
+                _mission_limitation(
+                    str(stop.get("code") or "stop_record_missing"),
+                    f"The mission stopped at a declared limit: {stop.get('reason') or 'no reason recorded'}"
+                    + (f" [{where}]." if where else "."),
+                )
+            )
+        elif root_stop is not None:
+            limitations.append(
+                _mission_limitation(root_stop[0], f"The mission stopped at a declared limit: {root_stop[1]} [root].")
+            )
+        else:
+            limitations.append(
+                _mission_limitation("stop_record_missing", "The plan is marked failed but carries no stop record.")
+            )
+    by_code: dict[str, list[tuple[str, str]]] = {}
+    for key, code, reason in task_stops:
+        by_code.setdefault(code, []).append((key, reason))
+    for code, items in by_code.items():
+        keys = ", ".join(key for key, _ in items[:20])
+        limitations.append(
+            _mission_limitation(code, f"{len(items)} task(s) stopped at a declared limit ({keys}): {items[0][1]}.")
+        )
+    if root_budget is None and not any(item["code"] == "budget_unreadable" for item in limitations):
+        limitations.append(
+            _mission_limitation("budget_unreadable", "The mission root budget document is unreadable.")
+        )
+    if isolation_refused:
+        limitations.append(
+            _mission_limitation(
+                "isolation_unavailable",
+                f"{isolation_refused}; dependent execution is blocked and the host shell is not used.",
+            )
+        )
+    if unresolved:
+        limitations.append(
+            _mission_limitation(
+                "uncertain_effects",
+                f"{len(unresolved)} consequential action(s) may or may not have taken effect: "
+                f"{', '.join(unresolved[:20])}.",
+            )
+        )
+    if outcome in {"cancelled", "stopped"}:
+        owned = (stop or {}).get("owned_work")
+        if not halted:
+            # The root task or its budget refuses further work, but nobody has halted
+            # this plan: its leases are still live and nothing was terminated.
+            limitations.append(
+                _mission_limitation(
+                    "halt_required",
+                    "A stop is required, but this plan has not been halted. Its worker leases are not fenced "
+                    "and its owned processes are not terminated.",
+                )
+            )
+        elif not isinstance(owned, dict) or owned.get("termination_attempted") is not True:
+            limitations.append(
+                _mission_limitation(
+                    "owned_work_not_terminated",
+                    "Dispatch is fenced durably, but no supervised stop is recorded for this plan, "
+                    "so termination of its owned processes is not attested.",
+                )
+            )
+        elif owned.get("cleanly_stopped") is not True:
+            limitations.append(
+                _mission_limitation(
+                    "owned_work_lingering",
+                    f"{owned.get('lingering', 0)} owned process(es) were not verified as stopped "
+                    f"({owned.get('errors', 0)} containment error(s)).",
+                )
+            )
+    unfinished = [f"{task.task_key} ({task.outcome})" for task in tasks if task.outcome != "completed"]
+    if unfinished:
+        limitations.append(
+            _mission_limitation(
+                "tasks_incomplete",
+                f"{len(unfinished)} of {len(tasks)} task(s) are not complete: {', '.join(unfinished[:20])}.",
+            )
+        )
+    missing_output_keys = [task.task_key for task in tasks if task.outcome == "missing_required_outputs"]
+    if missing_output_keys:
+        limitations.append(
+            _mission_limitation(
+                "missing_required_outputs",
+                f"Declared outputs are missing for: {', '.join(missing_output_keys[:20])}.",
+            )
+        )
+    if unfinished_artifacts:
+        limitations.append(
+            _mission_limitation(
+                "artifact_incomplete",
+                f"Retained but not complete: {', '.join(unfinished_artifacts[:20])}.",
+            )
+        )
+    elif artifact_status is None and retained_count:
+        limitations.append(
+            _mission_limitation(
+                "artifacts_not_verified",
+                f"{retained_count} retained output(s) were not checked against the artifact registry.",
+            )
+        )
+    if plan_status == "superseded":
+        # The headline comes first: this report is no longer the one to act on.
+        limitations.insert(0, _mission_limitation("plan_superseded", "A newer plan version replaced this one."))
+
+    core = {
+        "report_kind": _MISSION_RECOVERY_KIND,
+        "mission_id": mission_id,
+        "plan_version": plan_version,
+        "plan_status": plan_status,
+        "outcome": outcome,
+        "join_status": join.status,
+        "tasks": [task.to_dict() for task in tasks],
+        "stop": stop,
+        "limitations": limitations,
+    }
+    report_hash = hashlib.sha256(
+        json.dumps(core, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    ).hexdigest()
+    return MissionRecoveryReport(
+        mission_id=mission_id,
+        plan_version=plan_version,
+        plan_status=plan_status,
+        outcome=outcome,
+        # Success needs a clean bill, not merely the absence of a recorded failure.
+        claims_success=outcome == "succeeded" and not limitations,
+        join_status=join.status,
+        tasks=tuple(tasks),
+        stop=dict(stop) if stop is not None else None,
+        limitations=tuple(limitations),
+        evaluated_at=now,
+        report_hash=report_hash,
+    )
+
+
+def _mission_persist_recovery_locked(conn: sqlite3.Connection, report: MissionRecoveryReport) -> None:
+    """Append the hash-addressed report beside the join snapshots it extends."""
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO runtime_mission_joins (
+            mission_id, plan_version, status, report_json, report_hash, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (
+            report.mission_id,
+            report.plan_version,
+            report.join_status,
+            json.dumps(report.to_dict(), sort_keys=True, separators=(",", ":"), ensure_ascii=False),
+            report.report_hash,
+            report.evaluated_at,
+        ),
+    )
+
+
+#: Upper bound on the unstoppable processes one stop record lists by identity.
+_MISSION_LINGERING_LISTED = 256
+
+
+def _mission_prior_lingering(stop: Mapping[str, Any]) -> tuple[list[tuple[int, str]], int]:
+    """Processes an earlier stop could not end: ``(listed identities, count it could not list)``."""
+    owned = stop.get("owned_work")
+    if not isinstance(owned, dict):
+        return [], 0
+    listed: list[tuple[int, str]] = []
+    raw = owned.get("lingering_pids")
+    for item in raw if isinstance(raw, list) else []:
+        if (
+            isinstance(item, (list, tuple))
+            and len(item) == 2
+            and isinstance(item[0], int)
+            and not isinstance(item[0], bool)
+            and isinstance(item[1], str)
+        ):
+            listed.append((item[0], item[1]))
+    count = owned.get("lingering")
+    total = count if isinstance(count, int) and not isinstance(count, bool) and count > 0 else 0
+    # Anything counted but not listed by identity can never be re-checked, so it
+    # stays counted: absence of evidence is not evidence that a process ended.
+    return listed, max(0, total - len(listed))
+
+
+def _mission_owned_work(
+    outcomes: Sequence[process_supervision.TerminationOutcome],
+    *,
+    origins_fenced: int,
+    errors: int,
+    started: float,
+    fenced: float,
+    done: float,
+    retry: bool,
+    attempted_at: float,
+    carried: Sequence[tuple[int, str]] = (),
+    carried_unlisted: int = 0,
+) -> dict[str, Any]:
+    """Summarise measured containment.  Durations are milliseconds from the stop request.
+
+    ``carried`` are processes an earlier attempt could not end and that are still
+    running now.  A stop is clean only when nothing lingers and nothing errored; an
+    attempt that merely found no registered process does not clear earlier survivors.
+    """
+    lingering: list[tuple[int, str]] = []
+    for pid, fingerprint in (*carried, *(pair for item in outcomes for pair in item.lingering_pids)):
+        if (pid, fingerprint) not in lingering:
+            lingering.append((int(pid), str(fingerprint)))
+    unlisted = max(0, int(carried_unlisted)) + max(0, len(lingering) - _MISSION_LINGERING_LISTED)
+    listed = lingering[:_MISSION_LINGERING_LISTED]
+    payload: dict[str, Any] = {
+        "termination_attempted": True,
+        "attempted_at": attempted_at,
+        "origins_fenced": origins_fenced,
+        "processes": len(outcomes),
+        "escalated": sum(1 for item in outcomes if item.escalated_kill),
+        "lingering": len(listed) + unlisted,
+        "lingering_pids": [[pid, fingerprint] for pid, fingerprint in listed],
+        "errors": errors,
+        "cleanly_stopped": errors == 0 and not listed and unlisted == 0,
+        "dispatch_fenced_ms": round(max(0.0, fenced - started) * 1000, 3),
+        "cleanup_latency_ms": round(max(0.0, done - started) * 1000, 3),
+        "slowest_process_ms": max((int(item.elapsed_ms) for item in outcomes), default=0),
+    }
+    if retry:
+        # A repeated stop measures from its own request, not from the original one.
+        payload["retry"] = True
+    return payload
+
+
+def _mission_halt_unsettled_locked(conn: sqlite3.Connection, root_task_id: str) -> str:
+    """Why no new plan may be created for this root yet, or ``""`` when nothing blocks it.
+
+    Every stopped plan of the root must be settled first.  The check is scoped to the
+    root task, so naming a new mission does not step around an unsettled stop.
+    """
+    halted = conn.execute(
+        """
+        SELECT mission_id, plan_version FROM runtime_mission_plans
+        WHERE root_task_id = ? AND status IN ('cancelled', 'failed')
+        ORDER BY mission_id ASC, plan_version ASC
+        """,
+        (root_task_id,),
+    ).fetchall()
+    for row in halted:
+        mission_id, plan_version = str(row["mission_id"]), int(row["plan_version"])
+        label = f"stopped mission plan {mission_id!r} v{plan_version}"
+        owned_ids = [str(item["task_id"]) for item in _mission_owned_locked(conn, mission_id, plan_version)]
+        unresolved = _mission_unresolved_locked(conn, owned_ids)
+        if unresolved:
+            return (
+                f"{len(unresolved)} consequential action(s) of {label} are unresolved "
+                f"({', '.join(unresolved[:5])}); reconcile them before planning new work."
+            )
+        stop = _mission_latest_stop_locked(conn, mission_id, plan_version)
+        owned = stop.get("owned_work") if stop is not None else None
+        if not isinstance(owned, dict) or owned.get("termination_attempted") is not True:
+            return (
+                f"termination of the owned work of {label} is not attested; "
+                "run the stop with a process supervisor before planning new work."
+            )
+        if owned.get("cleanly_stopped") is not True:
+            return (
+                f"owned processes of {label} were not verified as stopped; "
+                "run the stop again with a process supervisor before planning new work."
+            )
+    return ""
+
+
+def _mission_stop_marker(stop: Mapping[str, Any]) -> str:
+    """Short machine-readable reason shared by epoch fences, transitions and containment."""
+    if stop.get("kind") == "cancelled":
+        return "mission_cancelled"
+    return f"mission_bounded_stop:{stop.get('code') or 'unknown'}"[:160]
+
+
+def _mission_plan_version(value: object) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise MissionGraphError("plan_version must be an integer >= 1.")
+    return value
+
+
 class DurableTaskStateMachine:
     """Authoritative SQLite state machine for root tasks, child milestones, and checkpoints."""
 
@@ -56062,6 +57337,13 @@ class DurableTaskStateMachine:
                     f"Mission plan versions must be contiguous; expected v{expected_version}, got v{plan_version}."
                 )
 
+            # AP-007: a stopped plan is settled before new work is planned on the same
+            # root.  Otherwise a new version could repeat an effect whose outcome is
+            # still unknown, or start beside processes that were never verified as ended.
+            unsettled = _mission_halt_unsettled_locked(conn, root_id)
+            if unsettled:
+                raise MissionHaltUnsettled(f"Root task {root_id!r} cannot receive a new mission plan: {unsettled}")
+
             previous = conn.execute(
                 "SELECT plan_version FROM runtime_mission_plans WHERE mission_id = ? AND status = 'active'",
                 (mid,),
@@ -56285,7 +57567,7 @@ class DurableTaskStateMachine:
                 """,
                 (mid, int(plan_version)),
             ).fetchall()
-            return tuple(
+            readiness = tuple(
                 self._mission_readiness_locked(
                     conn,
                     mission_id=mid,
@@ -56294,6 +57576,11 @@ class DurableTaskStateMachine:
                 )
                 for row in rows
             )
+            if str(plan["status"]) != "active":
+                # AP-007: a cancelled, stopped or superseded plan dispatches nothing,
+                # so its scheduling view must not advertise claimable work.
+                return tuple(replace(item, ready=False) for item in readiness)
+            return readiness
 
         return runtime_persistence.run_read(
             self._storage,
@@ -56315,8 +57602,14 @@ class DurableTaskStateMachine:
         expected_state_version: int | None = None,
         lease_ttl_s: float = 30.0,
         now: float | None = None,
+        isolation: execution_budget.IsolationEvidence | None = None,
     ) -> MissionTaskLease:
-        """Atomically revalidate bindings/dependencies, then mint a fenced worker epoch."""
+        """Atomically revalidate bindings/dependencies, then mint a fenced worker epoch.
+
+        AP-007: a root budget that declares ``isolation_required`` refuses the claim
+        unless ``isolation`` proves a qualified sandbox.  No epoch is minted, so the
+        node never reaches ``running`` and no action can be admitted for it.
+        """
         mid = _mission_clean_name(mission_id, "mission_id")
         key = _mission_clean_name(task_key, "task_key")
         wid = _validate_identifier(worker_id, "worker_id")
@@ -56353,9 +57646,10 @@ class DurableTaskStateMachine:
                 root_budget = execution_budget.TaskBudgetState.from_json(str(plan["root_budget_json"]))
             except execution_budget.BudgetError as exc:
                 raise MissionBindingRejected(f"Mission root budget is unreadable: {exc}") from exc
-            violation = root_budget.violation_reason(check_recovery=False)
+            violation = root_budget.violation_reason(check_recovery=False, now=ts)
             if root_budget.cancel_requested or violation:
                 raise MissionBindingRejected(violation or "Mission root cancellation is active.")
+            _mission_require_isolation(root_budget, isolation)
             if expected_state_version is not None and int(node["state_version"]) != expected_state_version:
                 raise MissionBindingRejected("Mission task state_version changed before scheduling.")
             readiness = self._mission_readiness_locked(
@@ -56943,6 +58237,545 @@ class DurableTaskStateMachine:
             retry_policy=self._retry_policy,
         )
 
+    def mission_recovery_report(
+        self,
+        mission_id: str,
+        plan_version: int,
+        *,
+        artifact_status: Callable[[str], Any] | None = None,
+        isolation: execution_budget.IsolationEvidence | None = None,
+        persist: bool = True,
+        now: float | None = None,
+    ) -> MissionRecoveryReport:
+        """Report what a mission reached, what it retained and what limits it (AP-007).
+
+        ``artifact_status`` is the AP-006 lookup (``ArtifactRegistry.artifact_status``).
+        Without it every retained output is listed as ``unverified`` and success is
+        not claimed.  ``isolation`` is server-observed evidence for the isolation gate.
+        The lookup runs under a read snapshot; only the finished report is written.
+        """
+        mid = _mission_clean_name(mission_id, "mission_id")
+        version = _mission_plan_version(plan_version)
+        ts = time.time() if now is None else float(now)
+        return self._mission_report(
+            mid,
+            version,
+            ts=ts,
+            artifact_status=artifact_status,
+            isolation=isolation,
+            stop=None,
+            persist=persist,
+        )
+
+    def _mission_report(
+        self,
+        mission_id: str,
+        plan_version: int,
+        *,
+        ts: float,
+        artifact_status: Callable[[str], Any] | None,
+        isolation: execution_budget.IsolationEvidence | None,
+        stop: dict[str, Any] | None,
+        persist: bool,
+    ) -> MissionRecoveryReport:
+        def _evaluate(conn: sqlite3.Connection) -> MissionRecoveryReport:
+            conn.row_factory = sqlite3.Row
+            return _mission_recovery_locked(
+                conn,
+                mission_id,
+                plan_version,
+                now=ts,
+                artifact_status=artifact_status,
+                isolation=isolation,
+                stop=stop,
+            )
+
+        report = runtime_persistence.run_read(
+            self._storage,
+            self._db_path,
+            _evaluate,
+            retry_policy=self._retry_policy,
+        )
+        if persist:
+            runtime_persistence.run_write_transaction(
+                self._storage,
+                self._db_path,
+                lambda conn: _mission_persist_recovery_locked(conn, report),
+                retry_policy=self._retry_policy,
+            )
+        return report
+
+    def _mission_halt_begin(
+        self,
+        mission_id: str,
+        plan_version: int,
+        *,
+        kind: str,
+        authority: execution_spine.MissionAuthorityEnvelope,
+        note: str,
+        ts: float,
+    ) -> _MissionHaltTicket:
+        """Durably stop dispatch for one plan version in a single transaction."""
+
+        def _tx(conn: sqlite3.Connection) -> _MissionHaltTicket:
+            conn.row_factory = sqlite3.Row
+            plan = conn.execute(
+                """
+                SELECT mp.status, mp.root_task_id, rt.session_id AS root_session_id,
+                       rt.budget_json AS root_budget_json
+                FROM runtime_mission_plans AS mp
+                JOIN runtime_tasks AS rt ON rt.task_id = mp.root_task_id
+                WHERE mp.mission_id = ? AND mp.plan_version = ?
+                """,
+                (mission_id, plan_version),
+            ).fetchone()
+            if plan is None:
+                raise MissionGraphError(f"Mission plan {mission_id!r} v{plan_version} does not exist.")
+            root_id = str(plan["root_task_id"])
+            session_id = str(plan["root_session_id"] or "")
+            # Identity only.  Policy and budget generations are deliberately not
+            # compared: stale authority may always stop work, it may never start it.
+            if (
+                authority.session_id != session_id
+                or authority.root_task_id != root_id
+                or authority.task_id != root_id
+            ):
+                raise MissionBindingRejected("Mission stop authority does not match the root task/session.")
+            status = str(plan["status"])
+            if status not in {"active", "cancelled", "failed"}:
+                raise WorkflowTransitionRejected(
+                    f"Mission plan {mission_id!r} v{plan_version} is {status!r} and cannot be halted."
+                )
+            owned = _mission_owned_locked(conn, mission_id, plan_version)
+            owned_task_ids = [str(row["task_id"]) for row in owned]
+
+            if status != "active":
+                # Already halted: the first stop stands.  Nothing durable changes; the
+                # caller may still retry containment that was never attested as clean.
+                prior = _mission_latest_stop_locked(conn, mission_id, plan_version) or {
+                    "kind": "cancelled" if status == "cancelled" else "bounded_stop",
+                    "code": "mission_cancelled" if status == "cancelled" else "stop_record_missing",
+                    "reason": "",
+                    "requested_at": ts,
+                }
+                prior_owned = prior.get("owned_work")
+                clean = isinstance(prior_owned, dict) and prior_owned.get("cleanly_stopped") is True
+                return _MissionHaltTicket(
+                    mission_id=mission_id,
+                    plan_version=plan_version,
+                    session_id=session_id,
+                    stop=prior,
+                    scopes=_mission_halt_scopes_locked(conn, owned_task_ids),
+                    newly_halted=False,
+                    needs_containment=not clean,
+                )
+
+            try:
+                already_succeeded = (
+                    _mission_join_report_locked(conn, mission_id, plan_version, now=ts).status == "succeeded"
+                )
+            except MissionGraphError:
+                already_succeeded = False  # an unreadable output contract never blocks a stop
+            if already_succeeded:
+                raise WorkflowTransitionRejected(
+                    f"Mission plan {mission_id!r} v{plan_version} already succeeded; there is nothing to halt."
+                )
+            if kind == "bounded_stop":
+                try:
+                    root_budget: execution_budget.TaskBudgetState | None = execution_budget.TaskBudgetState.from_json(
+                        str(plan["root_budget_json"])
+                    )
+                except execution_budget.BudgetError:
+                    root_budget = None
+                root_stop = _mission_root_stop(root_budget, now=ts)
+                if root_stop is not None:
+                    code, reason, scope = root_stop[0], root_stop[1], "root"
+                else:
+                    task_stops = _mission_task_stops_locked(conn, mission_id, plan_version, now=ts)
+                    if not task_stops:
+                        # The stop is derived from durable budgets, never from a caller's claim.
+                        raise WorkflowTransitionRejected(
+                            f"No declared limit requires a bounded stop of mission plan {mission_id!r} "
+                            f"v{plan_version}; use kind='cancelled' for an operator stop."
+                        )
+                    code, reason, scope = task_stops[0][1], task_stops[0][2], f"task:{task_stops[0][0]}"
+                action_code = "bounded_stop_in_flight"
+            else:
+                code, reason, scope = "mission_cancelled", note or "operator_cancelled", ""
+                action_code = "cancelled_in_flight"
+            marker = _mission_stop_marker({"kind": kind, "code": code})
+
+            stopped_keys: list[str] = []
+            stopped_descendants = 0
+            uncertain_ids: list[str] = []
+            fenced_epochs = 0
+            for task in owned:
+                task_id = str(task["task_id"])
+                from_state = str(task["state"])
+                is_node = task_id == str(task["node_task_id"])
+                if from_state == "completed":
+                    continue  # finished work and its retained outputs are left exactly as they are
+                fenced_epochs += conn.execute(
+                    """
+                    UPDATE runtime_task_epochs
+                    SET status = 'fenced', fenced_at = ?, fence_reason = ?
+                    WHERE task_id = ? AND status = 'active'
+                    """,
+                    (ts, marker, task_id),
+                ).rowcount
+                conn.execute(
+                    """
+                    UPDATE runtime_actions
+                    SET status = 'uncertain', ok = NULL, error_code = ?, updated_at = ?
+                    WHERE task_id = ? AND status = 'in_flight' AND action_class != 'read_only'
+                    """,
+                    (action_code, ts, task_id),
+                )
+                conn.execute(
+                    """
+                    UPDATE runtime_actions
+                    SET status = 'failed', ok = 0, error_code = ?, updated_at = ?
+                    WHERE task_id = ? AND status = 'in_flight' AND action_class = 'read_only'
+                    """,
+                    (action_code, ts, task_id),
+                )
+                task_unresolved = _mission_unresolved_locked(conn, [task_id])
+                uncertain_ids.extend(task_unresolved)
+                # The budget refuses every later charge or observation on its own,
+                # independent of the epoch fence.  An unreadable budget never blocks a stop.
+                budget_json = str(task["budget_json"])
+                with contextlib.suppress(execution_budget.BudgetError):
+                    budget_json = replace(
+                        execution_budget.TaskBudgetState.from_json(budget_json),
+                        pause_requested=False,
+                        cancel_requested=True,
+                    ).to_json()
+                if from_state in {"cancelled", "failed"}:
+                    conn.execute(
+                        "UPDATE runtime_tasks SET budget_json = ?, updated_at = ? WHERE task_id = ?",
+                        (budget_json, ts, task_id),
+                    )
+                    continue
+                ckpt_ref = str(task["checkpoint_ref"] or "").strip()
+                if ckpt_ref:
+                    conn.execute(
+                        "UPDATE runtime_task_checkpoints SET status = 'interrupted', updated_at = ? "
+                        "WHERE checkpoint_id = ?",
+                        (ts, ckpt_ref),
+                    )
+                conn.execute(
+                    """
+                    UPDATE runtime_tasks
+                    SET state = 'cancelled', state_version = state_version + 1, budget_json = ?, updated_at = ?
+                    WHERE task_id = ?
+                    """,
+                    (budget_json, ts, task_id),
+                )
+                seq_row = conn.execute(
+                    "SELECT COALESCE(MAX(seq), 0) + 1 FROM runtime_task_transitions WHERE task_id = ?",
+                    (task_id,),
+                ).fetchone()
+                evidence: dict[str, Any] = {
+                    "mission_id": mission_id,
+                    "plan_version": plan_version,
+                    "mission_task_key": str(task["task_key"]),
+                    "halt_kind": kind,
+                    "stop_code": code,
+                }
+                if task_unresolved:
+                    evidence["unresolved_action_ids"] = task_unresolved
+                conn.execute(
+                    """
+                    INSERT INTO runtime_task_transitions (
+                        task_id, seq, from_state, to_state, epoch, reason, evidence_json, created_at
+                    ) VALUES (?, ?, ?, 'cancelled', ?, ?, ?, ?)
+                    """,
+                    (
+                        task_id,
+                        int(seq_row[0]) if seq_row else 1,
+                        from_state,
+                        int(task["current_epoch"]),
+                        marker,
+                        _encode_evidence_json(checkpoint_id=ckpt_ref, extra=evidence),
+                        ts,
+                    ),
+                )
+                if is_node:
+                    stopped_keys.append(str(task["task_key"]))
+                else:
+                    stopped_descendants += 1
+
+            conn.execute(
+                """
+                UPDATE runtime_mission_plans SET status = ?, updated_at = ?
+                WHERE mission_id = ? AND plan_version = ? AND status = 'active'
+                """,
+                ("cancelled" if kind == "cancelled" else "failed", ts, mission_id, plan_version),
+            )
+            stop: dict[str, Any] = {
+                "kind": kind,
+                "code": code,
+                "reason": reason,
+                "requested_at": ts,
+                "stopped_task_keys": stopped_keys,
+                "stopped_descendant_tasks": stopped_descendants,
+                "fenced_epochs": fenced_epochs,
+                "uncertain_action_ids": uncertain_ids,
+                # Recorded with the stop itself, so a crash before containment still
+                # leaves an honest "termination not attested" record.
+                "owned_work": {"termination_attempted": False},
+            }
+            if scope:
+                stop["scope"] = scope
+            if note and kind == "bounded_stop":
+                stop["note"] = note
+            # Stop first, report second: a plan whose own records cannot be read is
+            # still stopped, and the caller learns about the unreadable record afterwards.
+            with contextlib.suppress(MissionGraphError):
+                _mission_persist_recovery_locked(
+                    conn,
+                    _mission_recovery_locked(conn, mission_id, plan_version, now=ts, stop=stop),
+                )
+            return _MissionHaltTicket(
+                mission_id=mission_id,
+                plan_version=plan_version,
+                session_id=session_id,
+                stop=stop,
+                scopes=_mission_halt_scopes_locked(conn, owned_task_ids),
+                newly_halted=True,
+                needs_containment=True,
+            )
+
+        return runtime_persistence.run_write_transaction(
+            self._storage,
+            self._db_path,
+            _tx,
+            retry_policy=self._retry_policy,
+        )
+
+    def _mission_halt_fence_origins(
+        self,
+        ticket: _MissionHaltTicket,
+        supervisor: process_supervision.ProcessSupervisor | None,
+    ) -> int:
+        """Refuse later spawns from every lease this stop fenced, at the process layer.
+
+        The worker identity is fenced with its lease, as the session cancel path
+        does.  A worker pool must therefore use one identity per claim: an identity
+        shared across missions is refused everywhere once one of them is halted.
+        """
+        store = supervisor.store if supervisor is not None else self._containment_store
+        if store is None:
+            return 0
+        fenced = 0
+        for task_id, epochs in ticket.scopes:
+            for epoch, worker_id in epochs:
+                store.fence_origin(
+                    reason=_mission_stop_marker(ticket.stop),
+                    session_id=ticket.session_id,
+                    task_id=task_id,
+                    epoch=epoch,
+                    worker_id=worker_id or None,
+                )
+                fenced += 1
+        return fenced
+
+    def _mission_halt_finish(
+        self,
+        ticket: _MissionHaltTicket,
+        owned_work: dict[str, Any] | None,
+        *,
+        ts: float,
+        artifact_status: Callable[[str], Any] | None,
+    ) -> MissionRecoveryReport:
+        stop = dict(ticket.stop)
+        if owned_work is not None:
+            stop["owned_work"] = owned_work
+        return self._mission_report(
+            ticket.mission_id,
+            ticket.plan_version,
+            ts=ts,
+            artifact_status=artifact_status,
+            isolation=None,
+            stop=stop,
+            persist=True,
+        )
+
+    def halt_mission(
+        self,
+        mission_id: str,
+        plan_version: int,
+        *,
+        authority: execution_spine.MissionAuthorityEnvelope,
+        kind: str = "cancelled",
+        reason: str = "",
+        supervisor: process_supervision.ProcessSupervisor | None = None,
+        artifact_status: Callable[[str], Any] | None = None,
+        now: float | None = None,
+        clock: Callable[[], float] = time.monotonic,
+    ) -> MissionRecoveryReport:
+        """Stop one mission plan: fence dispatch, end owned work, report truthfully (AP-007).
+
+        Order matters.
+
+        1. One transaction marks the plan ``cancelled`` (operator stop) or ``failed``
+           (bounded stop).  For every unfinished task the plan owns, which means its
+           nodes and all of their delegated descendants, it fences the live worker
+           lease, turns in-flight consequential actions ``uncertain``, sets the budget
+           cancellation flag and moves the task to ``cancelled``.  Nothing can be
+           admitted for the plan afterwards.
+        2. The process layer refuses later spawns from the fenced leases.
+        3. With a ``supervisor``, every process registered for those tasks is
+           terminated.  The time from this request to the last verified exit is
+           recorded as ``cleanup_latency_ms``.
+        4. The report is stored with the measured stop record.
+
+        ``kind="bounded_stop"`` is accepted only when a durable budget requires it; the
+        code and reason come from that budget, never from the caller.  ``authority`` is
+        checked for identity only, so a stale policy generation cannot block a stop.
+        Completed tasks and their outputs are retained.  The root task is not cancelled.
+
+        A second call changes nothing durable and the first stop kind stands.  With a
+        ``supervisor`` it repeats containment when no clean stop is on record, and it
+        re-checks processes an earlier attempt could not end instead of assuming they
+        are gone.  Without a ``supervisor`` termination is recorded as not attested.
+
+        New work can be planned on the root only after the stop is settled: see
+        :class:`MissionHaltUnsettled`.
+        """
+        ticket, ts, started = self._mission_halt_prepare(
+            mission_id, plan_version, authority=authority, kind=kind, reason=reason, now=now, clock=clock
+        )
+        settled = self._mission_halt_without_supervisor(ticket, supervisor, ts=ts, artifact_status=artifact_status)
+        if settled is not None or supervisor is None:
+            assert settled is not None
+            return settled
+        origins = self._mission_halt_fence_origins(ticket, supervisor)
+        fenced = clock()
+        prior_listed, prior_unlisted = _mission_prior_lingering(ticket.stop)
+        outcomes: list[process_supervision.TerminationOutcome] = []
+        errors = 0
+        for task_id, _epochs in ticket.scopes:
+            try:
+                outcomes.extend(
+                    supervisor.contain_by_scope_sync(
+                        reason=_mission_stop_marker(ticket.stop),
+                        session_id=ticket.session_id,
+                        task_id=task_id,
+                    )
+                )
+            except Exception:
+                errors += 1  # reported as "not verified as stopped"; the durable stop stands
+        owned = _mission_owned_work(
+            outcomes,
+            origins_fenced=origins,
+            errors=errors,
+            started=started,
+            fenced=fenced,
+            done=clock(),
+            retry=not ticket.newly_halted,
+            attempted_at=ts,
+            # Survivors of an earlier attempt are re-checked, never assumed gone.
+            carried=supervisor.still_running(prior_listed),
+            carried_unlisted=prior_unlisted,
+        )
+        return self._mission_halt_finish(ticket, owned, ts=ts, artifact_status=artifact_status)
+
+    async def halt_mission_async(
+        self,
+        mission_id: str,
+        plan_version: int,
+        *,
+        authority: execution_spine.MissionAuthorityEnvelope,
+        kind: str = "cancelled",
+        reason: str = "",
+        supervisor: process_supervision.ProcessSupervisor | None = None,
+        artifact_status: Callable[[str], Any] | None = None,
+        now: float | None = None,
+        clock: Callable[[], float] = time.monotonic,
+    ) -> MissionRecoveryReport:
+        """Event-loop form of :meth:`halt_mission`; containment awaits the supervisor."""
+        ticket, ts, started = self._mission_halt_prepare(
+            mission_id, plan_version, authority=authority, kind=kind, reason=reason, now=now, clock=clock
+        )
+        settled = self._mission_halt_without_supervisor(ticket, supervisor, ts=ts, artifact_status=artifact_status)
+        if settled is not None or supervisor is None:
+            assert settled is not None
+            return settled
+        origins = self._mission_halt_fence_origins(ticket, supervisor)
+        fenced = clock()
+        prior_listed, prior_unlisted = _mission_prior_lingering(ticket.stop)
+        outcomes: list[process_supervision.TerminationOutcome] = []
+        errors = 0
+        for task_id, _epochs in ticket.scopes:
+            try:
+                outcomes.extend(
+                    await supervisor.contain_by_scope_async(
+                        reason=_mission_stop_marker(ticket.stop),
+                        session_id=ticket.session_id,
+                        task_id=task_id,
+                    )
+                )
+            except Exception:
+                errors += 1  # reported as "not verified as stopped"; the durable stop stands
+        owned = _mission_owned_work(
+            outcomes,
+            origins_fenced=origins,
+            errors=errors,
+            started=started,
+            fenced=fenced,
+            done=clock(),
+            retry=not ticket.newly_halted,
+            attempted_at=ts,
+            # Survivors of an earlier attempt are re-checked, never assumed gone.
+            carried=supervisor.still_running(prior_listed),
+            carried_unlisted=prior_unlisted,
+        )
+        return self._mission_halt_finish(ticket, owned, ts=ts, artifact_status=artifact_status)
+
+    def _mission_halt_without_supervisor(
+        self,
+        ticket: _MissionHaltTicket,
+        supervisor: process_supervision.ProcessSupervisor | None,
+        *,
+        ts: float,
+        artifact_status: Callable[[str], Any] | None,
+    ) -> MissionRecoveryReport | None:
+        """Finish a stop that runs no process containment; ``None`` means containment follows."""
+        if not ticket.needs_containment:
+            return self._mission_halt_finish(ticket, None, ts=ts, artifact_status=artifact_status)
+        if supervisor is not None:
+            return None
+        origins = self._mission_halt_fence_origins(ticket, None)
+        # A repeated unsupervised stop must not overwrite an earlier supervised record.
+        owned: dict[str, Any] | None = (
+            {"termination_attempted": False, "origins_fenced": origins} if ticket.newly_halted else None
+        )
+        return self._mission_halt_finish(ticket, owned, ts=ts, artifact_status=artifact_status)
+
+    def _mission_halt_prepare(
+        self,
+        mission_id: str,
+        plan_version: int,
+        *,
+        authority: execution_spine.MissionAuthorityEnvelope,
+        kind: str,
+        reason: str,
+        now: float | None,
+        clock: Callable[[], float],
+    ) -> tuple[_MissionHaltTicket, float, float]:
+        mid = _mission_clean_name(mission_id, "mission_id")
+        version = _mission_plan_version(plan_version)
+        if kind not in MISSION_HALT_KINDS:
+            raise WorkflowStateError(f"Unsupported mission halt kind: {kind!r}.")
+        if not isinstance(authority, execution_spine.MissionAuthorityEnvelope):
+            raise MissionBindingRejected("A server-created mission authority envelope is required to stop a mission.")
+        note = " ".join(str(reason or "").replace("\x00", " ").split())[:240]
+        ts = time.time() if now is None else float(now)
+        started = clock()
+        ticket = self._mission_halt_begin(mid, version, kind=kind, authority=authority, note=note, ts=ts)
+        return ticket, ts, started
+
     def prepare_mission_task_resume(
         self,
         mission_id: str,
@@ -56956,8 +58789,13 @@ class DurableTaskStateMachine:
         expected_state_version: int,
         lease_ttl_s: float = 30.0,
         now: float | None = None,
+        isolation: execution_budget.IsolationEvidence | None = None,
     ) -> MissionResumePlan:
-        """Atomically validate checkpoint bindings and mint the sole successor epoch."""
+        """Atomically validate checkpoint bindings and mint the sole successor epoch.
+
+        AP-007: the isolation requirement and the deadline are re-checked here, so a
+        resume cannot reach work that a fresh claim would have refused.
+        """
         mid = _mission_clean_name(mission_id, "mission_id")
         key = _mission_clean_name(task_key, "task_key")
         wid = _validate_identifier(worker_id, "worker_id")
@@ -57062,9 +58900,10 @@ class DurableTaskStateMachine:
                 root_budget = execution_budget.TaskBudgetState.from_json(str(plan["root_budget_json"]))
             except execution_budget.BudgetError as exc:
                 raise workflow_checkpoints.ResumeRejected(f"Mission root budget is unreadable: {exc}") from exc
-            violation = root_budget.violation_reason(check_recovery=False)
+            violation = root_budget.violation_reason(check_recovery=False, now=ts)
             if root_budget.cancel_requested or violation:
                 raise workflow_checkpoints.ResumeRejected(violation or "Mission cancellation is active.")
+            _mission_require_isolation(root_budget, isolation)
             active_rows = conn.execute(
                 "SELECT * FROM runtime_task_epochs WHERE task_id = ? AND status = 'active'",
                 (task_id,),
@@ -57670,17 +59509,9 @@ class DurableTaskStateMachine:
                 if ep_row is not None and str(ep_row["status"]) == "active" and float(ep_row["lease_expires_at"]) > ts:
                     has_live_lease = True
             if has_live_lease and state in {"running", "waiting_approval"}:
-                deferred_budget = execution_budget.TaskBudgetState(
-                    spec=budget.spec,
-                    steps_used=budget.steps_used,
-                    tool_calls_used=budget.tool_calls_used,
-                    tokens_used=budget.tokens_used,
-                    elapsed_s=budget.elapsed_s,
-                    recoveries_used=budget.recoveries_used,
+                deferred_budget = replace(
+                    budget,
                     pause_requested=True,
-                    cancel_requested=budget.cancel_requested,
-                    exhausted_reason=budget.exhausted_reason,
-                    verification_contract=budget.verification_contract,
                 )
                 conn.execute(
                     "UPDATE runtime_tasks SET budget_json = ?, updated_at = ? WHERE task_id = ?",
@@ -57722,17 +59553,10 @@ class DurableTaskStateMachine:
                     f"Cannot pause task {tid!r} directly while consequential actions remain unresolved."
                 )
 
-            cleared_budget = execution_budget.TaskBudgetState(
-                spec=budget.spec,
-                steps_used=budget.steps_used,
-                tool_calls_used=budget.tool_calls_used,
-                tokens_used=budget.tokens_used,
-                elapsed_s=budget.elapsed_s,
-                recoveries_used=budget.recoveries_used,
+            cleared_budget = replace(
+                budget,
                 pause_requested=False,
                 cancel_requested=False,
-                exhausted_reason=budget.exhausted_reason,
-                verification_contract=budget.verification_contract,
             )
             ckpt_ref = str(row["checkpoint_ref"] or "").strip()
             if ckpt_ref:
@@ -57854,17 +59678,10 @@ class DurableTaskStateMachine:
                 "UPDATE runtime_task_epochs SET status = 'released', heartbeat_at = ? WHERE task_id = ? AND epoch = ?",
                 (ts, tid, int(epoch)),
             )
-            cleared_budget = execution_budget.TaskBudgetState(
-                spec=budget.spec,
-                steps_used=budget.steps_used,
-                tool_calls_used=budget.tool_calls_used,
-                tokens_used=budget.tokens_used,
-                elapsed_s=budget.elapsed_s,
-                recoveries_used=budget.recoveries_used,
+            cleared_budget = replace(
+                budget,
                 pause_requested=False,
                 cancel_requested=False,
-                exhausted_reason=budget.exhausted_reason,
-                verification_contract=budget.verification_contract,
             )
             from_state = str(row["state"])
             seq_row = conn.execute(
@@ -57995,17 +59812,10 @@ class DurableTaskStateMachine:
                     "UPDATE runtime_task_checkpoints SET status = 'interrupted', updated_at = ? WHERE checkpoint_id = ?",
                     (ts, ckpt_ref),
                 )
-            cancelled_budget = execution_budget.TaskBudgetState(
-                spec=budget.spec,
-                steps_used=budget.steps_used,
-                tool_calls_used=budget.tool_calls_used,
-                tokens_used=budget.tokens_used,
-                elapsed_s=budget.elapsed_s,
-                recoveries_used=budget.recoveries_used,
+            cancelled_budget = replace(
+                budget,
                 pause_requested=False,
                 cancel_requested=True,
-                exhausted_reason=budget.exhausted_reason,
-                verification_contract=budget.verification_contract,
             )
             evidence_json = _encode_evidence_json(
                 checkpoint_id=ckpt_ref,
@@ -59395,17 +61205,10 @@ class DurableTaskStateMachine:
                         reason = "recovered_incomplete_transition"
                         recovered_tasks.append(tid)
 
-                    reconciled_budget = execution_budget.TaskBudgetState(
-                        spec=budget.spec,
-                        steps_used=budget.steps_used,
-                        tool_calls_used=budget.tool_calls_used,
-                        tokens_used=budget.tokens_used,
-                        elapsed_s=budget.elapsed_s,
-                        recoveries_used=budget.recoveries_used,
+                    reconciled_budget = replace(
+                        budget,
                         pause_requested=False,
                         cancel_requested=(target_state == "cancelled"),
-                        exhausted_reason=budget.exhausted_reason,
-                        verification_contract=budget.verification_contract,
                     )
                     seq_row = conn.execute(
                         "SELECT COALESCE(MAX(seq), 0) + 1 FROM runtime_task_transitions WHERE task_id = ?",
@@ -63689,6 +65492,23 @@ class DurableActionBoundary:
             if intent_decision is not None and self._intent_ledger is not None:
                 try:
                     final_status = self._intent_ledger.complete(intent_decision.action_id, result, elapsed)
+                    if final_status == "uncertain" and not bool(result.get("uncertain")):
+                        # AP-007 late-result fence. The durable ledger had already
+                        # declared this effect uncertain (cancellation, a bounded stop,
+                        # a takeover or recovery) and kept that verdict. The late result
+                        # must not read as success, or as a clean failure, anywhere
+                        # downstream: the audit trail and the caller see it as uncertain.
+                        result = {
+                            **result,
+                            "ok": False,
+                            "uncertain": True,
+                            "error_code": "late_result_fenced",
+                            "output": (
+                                f"Result of `{request.tool_name}` arrived after the action was fenced. "
+                                "Its effect is uncertain and must be reconciled. "
+                                + str(result.get("output") or "")
+                            ),
+                        }
                     result = {
                         **result,
                         "action_id": intent_decision.action_id,

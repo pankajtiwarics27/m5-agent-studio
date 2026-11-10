@@ -1710,3 +1710,42 @@ def test_state_write_fsyncs_the_containing_directory(
 
     assert len(fsynced) >= 2, "expected the temp file and the containing directory to be synced"
     assert modes[-1] & 0o040000, "the last fsync must target a directory (S_IFDIR)"
+
+
+def test_still_running_reports_only_the_same_live_process(tmp_path: Path) -> None:
+    """AP-007: a process an earlier containment could not end is re-checked by identity.
+
+    The pid alone is not enough: an exited process and a recycled pid both count as
+    gone, so a retried stop neither waits on a stranger nor forgets a real survivor.
+    """
+    supervisor = ps.ProcessSupervisor(ps.ContainmentStore(tmp_path / "store"))
+    proc = subprocess.Popen(
+        [sys.executable, "-c", "import time; time.sleep(30)"],
+        start_new_session=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    try:
+        probe = ps.probe_process(proc.pid)
+        assert probe is not None and probe.start_fingerprint
+        same = (proc.pid, probe.start_fingerprint)
+        recycled = (proc.pid, "fingerprint-of-an-earlier-process")
+
+        assert supervisor.still_running([]) == ()
+        assert supervisor.still_running([same, recycled]) == (same,)
+        # Without a recorded fingerprint a recycled pid cannot be ruled out, so the
+        # doubt is reported as "still running".  Reserved pids are never "ours".
+        assert supervisor.still_running([(proc.pid, ""), (0, "x"), (1, "x")]) == ((proc.pid, ""),)
+    finally:
+        proc.kill()
+        proc.wait(timeout=5)
+
+    assert supervisor.still_running([same, (proc.pid, "")]) == ()
+
+    # The supervisor's injected probe decides, so the verdict matches its other checks.
+    fake = ps.ProcessProbe(pid=4242, ppid=1, pgid=4242, uid=os.getuid(), state="D", start_fingerprint="fp", alive=True)
+    injected = ps.ProcessSupervisor(
+        ps.ContainmentStore(tmp_path / "store-injected"),
+        probe_fn=lambda pid: fake if pid == 4242 else None,
+    )
+    assert injected.still_running([(4242, "fp"), (4242, "other"), (4243, "fp")]) == ((4242, "fp"),)

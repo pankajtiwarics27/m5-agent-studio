@@ -1323,6 +1323,22 @@ class ProcessSupervisor:
     def store(self) -> ContainmentStore:
         return self._store
 
+    def still_running(self, processes: Sequence[tuple[int, str]]) -> tuple[tuple[int, str], ...]:
+        """Return the ``(pid, start_fingerprint)`` pairs that are still the same live process.
+
+        A caller that recorded processes an earlier containment could not end uses
+        this to re-check them with the supervisor's own probe, the same judgement the
+        barrier-hold refresh applies.  A recycled pid does not count as still running.
+        A pair recorded without a fingerprint cannot be told apart from a recycled
+        pid, so any live process with that pid keeps it listed: the doubt is reported
+        as "still running", never as "gone".
+        """
+        return tuple(
+            (int(pid), str(fingerprint))
+            for pid, fingerprint in processes
+            if is_same_live_process(int(pid), str(fingerprint), probe_fn=self._probe_fn)
+        )
+
     def new_supervision_id(self) -> str:
         return f"sup-{uuid.uuid4().hex[:16]}"
 

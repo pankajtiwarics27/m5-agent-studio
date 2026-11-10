@@ -12158,6 +12158,20 @@ def _parse_task_budget_spec(raw: Any) -> execution_budget.TaskBudgetSpec | None:
         return None
     if not isinstance(raw, dict):
         raise HTTPException(status_code=400, detail="budget must be a JSON object when supplied.")
+    # AP-007: bounded-stop and isolation limits exist in the durable budget contract
+    # but are not activated on any route. Nothing here measures progress, repair,
+    # memory or storage, and no isolated runtime is qualified (U06). Refusing the
+    # keys is the honest answer: ignoring a declared limit, or accepting one that is
+    # never enforced, would both overstate the protection the caller gets.
+    unavailable = sorted(key for key in execution_budget.BOUNDED_LIMIT_FIELDS if key in raw)
+    if unavailable:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Invalid task budget: {', '.join(unavailable)} cannot be set through this route. "
+                "Bounded-stop and isolation limits are not activated."
+            ),
+        )
     try:
         return execution_budget.TaskBudgetSpec.from_dict(raw)
     except (TypeError, ValueError, execution_budget.BudgetError) as exc:
@@ -12759,6 +12773,11 @@ class _AppMissionEnvelopeCoordinator:
             return profile_outcome
         except execution_budget.ExecutionCancelled as exc:
             return self._denial(str(exc), "task_cancelled")
+        except execution_budget.IsolationUnavailable as exc:
+            # AP-007: no isolation evidence is presented here because no isolated
+            # runtime is activated (U06). A task that requires isolation is refused;
+            # there is no host-execution fallback.
+            return self._denial(str(exc), "isolation_unavailable")
         except execution_budget.BudgetExceeded as exc:
             return self._denial(str(exc), "task_budget_exhausted")
         except (execution_budget.BudgetError, KeyError, ValueError) as exc:

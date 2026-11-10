@@ -42,7 +42,7 @@ Streaming intentionally moves cards inside the trajectory scroller. The gate rep
 
 ## Executed backend and isolation run
 
-**302 tests passed across 13 owning modules; 16 isolation checks passed; 0 failures.**
+**305 tests passed across 13 owning modules; 16 isolation checks passed; 0 failures.**
 
 Environment: Python `3.11.2`, `Linux-6.1.158+-x86_64-with-glibc2.36`, 2 CPUs. No external service, provider, user workspace or live container probe is used.
 
