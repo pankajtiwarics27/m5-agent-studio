@@ -26,6 +26,30 @@ Run the smallest sufficient checks during iteration, escalate with impact and ri
 - Ordinary automated tests remain offline: fakes, temporary stores and disposable loopback servers, as required by AGENTS.md. Never contact live providers/models/MCP endpoints to speed or embellish normal CI.
 - Real hardware/model/media qualification is separate, explicitly authorised work with resource and service grants. Preserve it where acceptance requires it; mock success is not physical memory-release, real-media quality or editorial acceptance.
 
+## Asynchronous landing without reducing coverage
+
+Follow [the asynchronous delivery runbook](async-delivery-pipeline.md) when a
+separate session can own landing:
+
+- The builder assembles source, tests, generated artifacts, acceptance mapping,
+  and the `in_review` transition before the final ready run. Do not add a later
+  commit merely to record a CI run URL.
+- Push the final candidate and mark it ready without first waiting for an
+  unchanged draft full run. Same-PR concurrency can supersede the earlier event;
+  one final candidate owns the merge gate.
+- Put exact run IDs and outcomes in a PR handoff comment. Put merged evidence in
+  the post-merge closeout record, where it is true and normally docs-routed.
+- A dedicated lander watches the exact head, routes failures, merges explicitly,
+  and owns post-merge verification. The builder does not continuously poll and
+  may move to other work that is independently authorised and dependency-ready.
+- One session writes a feature branch. A lander on another fixed Arena branch
+  returns failures to the builder or uses the explicit preserved-work takeover
+  protocol; it never races a fix onto the original branch.
+
+This changes who waits, not what must pass. Until tested-tree reuse is separately
+implemented, qualified, and approved, the ready PR and main gates remain
+unchanged.
+
 ## Safe acceleration
 
 - Profile before optimising: record total time, slow tests, setup/server/fixture overhead, repeat runs, flaky retries and resource contention. For a suitable pytest run, `--durations=20` can expose slow tests without creating a second execution solely for timing.

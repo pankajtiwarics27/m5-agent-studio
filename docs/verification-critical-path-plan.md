@@ -5,6 +5,22 @@ publishes the plan for the next increment. Policy for when to run which checks
 lives in [verification-efficiency.md](verification-efficiency.md) and
 [AGENTS.md](../AGENTS.md) §5; this page owns the measurement.
 
+## Current next increment (2026-11-10)
+
+The browser/Python job-level sharding and outcome-identity design described
+below has landed. The next measured bottleneck is repeated verification of the
+same final candidate across draft/ready, evidence-only, and post-merge events.
+The AP-005 sequence consumed 205.0 successful job-minutes across four green
+runs; its final PR tree and merge tree were identical.
+
+[`async-delivery-pipeline.md`](async-delivery-pipeline.md) now owns the next
+proposal: an immediate builder/lander handoff that changes no gate, followed by
+a separately reviewed same-candidate and exact-tree attestation experiment.
+This documentation branch owns the plan only and makes no `ci.yml` change. One
+CI implementation owner must be named after review; two sessions must not edit
+the workflow concurrently. Sections below remain the historical measurement
+and qualification record for the sharding work.
+
 ## 1. Banked result: duplicate verification removed (PR #288, merged as `eab31d7`)
 
 `push` and `pull_request` both ran the same commit with the same jobs. The old

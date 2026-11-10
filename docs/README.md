@@ -52,6 +52,14 @@ contain placeholder text, and every relative link must resolve.
 | [`mcp-idempotency.md`](mcp-idempotency.md) | MCP connector idempotency semantics, queryable-outcome reconciliation, and uncertain-write safe pause |
 | [`qualification-suite.md`](qualification-suite.md) | Operator-run sandbox and hardware qualification (what is measured, how to run it, how to read the record) |
 
+## Delivery and verification operations
+
+| Page | Contents |
+|---|---|
+| [`verification-efficiency.md`](verification-efficiency.md) | Risk-based local/CI selection, evidence reuse rules, and the asynchronous landing policy |
+| [`verification-critical-path-plan.md`](verification-critical-path-plan.md) | Measured CI critical path, sharding qualification, and retained experiment evidence |
+| [`async-delivery-pipeline.md`](async-delivery-pipeline.md) | Builder/lander handoff, one-final-candidate runbook, measured AP-005 duplication, and fail-closed exact-tree reuse design |
+
 ## Subsystem contracts
 
 Harness runtime: [`task-events.md`](task-events.md) (durable task events, cursors,
