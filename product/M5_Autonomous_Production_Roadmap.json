@@ -5,14 +5,14 @@
   "program": "AP",
   "revision": "1.2",
   "prepared_date": "2026-11-08",
-  "lifecycle": "registered_tracking_ap003_done_ap004_authorized",
+  "lifecycle": "registered_tracking_ap004_in_progress",
   "source_snapshot": "a67e8b291614f8afdac7c8d38ba51bcc8926d695",
   "source_repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "specification": "docs/autonomous-production-roadmap.md",
   "agent_prompt": "M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md",
   "authority": {
     "precedence": "AGENTS.md, existing security/approval rules and owning program ledgers remain binding.",
-    "scope": "AP-001, AP-002 and AP-003 are delivered. AP-004 is owner-authorized as the next separate story for offline mission-wide authority/budget enforcement and actual-consumer tests only; product runtime activation, real external services and AP-005 through AP-032 remain unauthorized.",
+    "scope": "AP-001, AP-002 and AP-003 are delivered. AP-004 is owner-authorized, dependency-ready, and claimed on its separate fixed Arena branch for offline mission-wide authority/budget enforcement and actual-consumer tests only; runtime activation, real external services and AP-005 through AP-032 remain unauthorized.",
     "registration_gate": "AP-001 records the tracking source and claim protocol; its merge did not authorize downstream work. Later AP-002/AP-003 sequential authorization and the post-AP-003 AP-004 single-story authorization are separately recorded in program_registration.authorization_history.",
     "other_ledgers": "Do not alter AS/M5/UIUX/UIV2/LC tracking without the owning protocol.",
     "approval": "Agents cannot fabricate owner, screenshot, independent security or release approval."
@@ -460,7 +460,7 @@
       "title": "Enforce a mission-wide authority and budget envelope",
       "priority": "P0",
       "optional": false,
-      "status": "not_started",
+      "status": "in_progress",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-001",
@@ -517,18 +517,30 @@
         "Push/PR state; owner/independent approvals where required"
       ],
       "tracking": {
-        "owner": null,
-        "branch": null,
-        "base_sha": null,
-        "head_sha": null,
-        "claimed_at": null,
-        "heartbeat_at": null,
+        "owner": "arena/5eec0463-m5-agent-studio",
+        "branch": "arena/5eec0463-m5-agent-studio",
+        "base_sha": "305f3fb431dd2b983cc25ac4395b7fc919d516d5",
+        "head_sha": "305f3fb431dd2b983cc25ac4395b7fc919d516d5",
+        "claimed_at": "2026-11-10T04:41:35Z",
+        "heartbeat_at": "2026-11-10T04:41:35Z",
         "pr_url": null,
-        "delivery_status": "not_pushed",
+        "delivery_status": "delivery_pending",
         "acceptance_evidence": [],
         "tests_executed": [],
-        "blockers": [],
-        "handoff": null
+        "blockers": [
+          "U03/U04/U06 remain pending. AP-004 may enforce and test local deny-by-default contracts with fictional/offline consumers, but may not activate a real provider, account, network destination, browser, media service, filesystem grant or runtime path.",
+          "AP-005 through AP-032 remain unauthorized. This claim is exactly one AP-004 story and does not authorize later program work or production release."
+        ],
+        "handoff": "AP-004 is the sole active AP claim on the fixed Arena branch. The initial audit found app._run_authorized_tool and execution_spine.DurableActionBoundary as the shared authority seam for harness/API tools, outbound MCP, inbound MCP bridge and skill scripts. Durable task budgets are currently charged in selected workflow loops rather than at that seam; child allocations and grant revisions exist but retries/provider switches and queued dispatch need a root-envelope/generation proof. Direct inspiration networking plus explicit browser/media consumer coverage still require reconciliation.",
+        "blast_radius": {
+          "objective_and_gap": "Extend the existing admission path so every AP project action proves a server-owned mission/root authority and remaining budget. Existing grants, task epochs, profiles and durable ledgers are substantial, but root budget charging is not centralized and queued/retried/provider-switched operations do not all carry one immutable root-envelope generation.",
+          "options": "Reject a second scheduler, duplicate grant store, per-consumer policy copies or trust in model-supplied budget fields. Prefer the smallest extension of ActionRequest/DurableActionBoundary and the existing durable task-budget, scoped-grant, child-delegation and policy-revision stores; route actual API, MCP, script, browser and media consumers through that one check.",
+          "anticipated_files": "execution_spine.py, execution_budget.py, scoped_grants.py, child_delegation.py and app.py are the primary source surfaces; moneyprinter_tool.py, moneyprinter_mcp.py and direct browser/media/inspiration adapters will change only if audit proves a bypass. Focused owning tests, AP ledger/docs and generated studio.py/route/subsystem artifacts will be updated as applicable. Exact files will be narrowed before behavior edits.",
+          "contracts_and_data": "Reuse runtime_tasks.budget_json, task/epoch identity and versioned grant records. Any mission-envelope metadata is server-derived and additive; no model/client authority field is trusted, no existing user artifact is rewritten, and no public API widening is planned unless an actual consumer requires a backward-compatible optional field.",
+          "authority_and_resources": "The change may only reduce or preserve authority. It must not grant egress, credentials, accounts, spending, private-data access, filesystem scope, model loading or background execution. Startup and default tests remain network-free; missing/stale envelope, generation, scope or budget denies.",
+          "compatibility_and_rollback": "No activation flag or destructive migration is planned. Existing task-budget JSON and grant records remain readable. Rollback reverts the additive central envelope enforcement/adapters and tests; durable audit/budget history and all prior program ledgers remain intact.",
+          "required_evidence": "Positive and negative actual-consumer tests for API, outbound/inbound MCP, skill scripts, browser and media dispatch; child/retry/provider scope and root-budget non-expansion; queued/stale policy-generation and revocation denials; cancellation/restart and network-free startup; existing execution spine/budget/grant/delegation/MoneyPrinter tests, scoped/full static, generated-drift, smoke and current-head CI evidence. No live external or human approval is claimed."
+        }
       },
       "implementation_prompt": "Implement AP-004: Enforce a mission-wide authority and budget envelope. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
@@ -2726,7 +2738,7 @@
     "reconciliation_evidence": "docs/autonomous-production-ap001-reconciliation.md",
     "registered_by_story": "AP-001",
     "owner_authorized_date": "2026-11-10",
-    "activation_scope": "AP-001 through AP-003 are delivered. AP-004 is owner-authorized next for one separate offline authority/budget-envelope story and actual-consumer tests; no product runtime activation or real external action.",
+    "activation_scope": "AP-001 through AP-003 are delivered. AP-004 is claimed on its separate fixed Arena branch for offline mission-wide authority/budget enforcement and actual-consumer tests only; no product runtime activation or real external action.",
     "runtime_activation_authorized": false,
     "authorized_downstream_stories": [
       "AP-002",
