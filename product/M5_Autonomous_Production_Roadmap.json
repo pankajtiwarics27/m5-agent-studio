@@ -839,7 +839,7 @@
       "title": "Extend artifact identity, provenance and selective invalidation",
       "priority": "P0",
       "optional": false,
-      "status": "in_progress",
+      "status": "in_review",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-005"
@@ -891,25 +891,42 @@
         "owner": "arena/930387b7-m5-agent-studio",
         "branch": "arena/930387b7-m5-agent-studio",
         "base_sha": "63f674fb402f0e09dc56b3d3429ddf4cfcdd834c",
-        "head_sha": null,
+        "head_sha": "81a50d6e7792c3f4eec59dc484b35f4ea8aff7af",
         "claimed_at": "2026-11-10T10:51:04Z",
-        "heartbeat_at": "2026-11-10T10:51:04Z",
-        "pr_url": null,
-        "delivery_status": "not_pushed",
+        "heartbeat_at": "2026-11-10T11:12:00Z",
+        "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/299",
+        "delivery_status": "pr_open",
         "authorization_record": {
           "authorization": "normal_story_authorization",
-          "owner_instruction": "The owner told the AP-005 closeout session “While you can start new story.” That instruction is recorded verbatim in the AP-006 entry of program_registration.authorization_history by the AP-005 closeout PR #298.",
-          "sequencing_caveat": "PR #298 (docs/ledger-only AP-005 closeout) is green and open but not merged at this claim, so this branch's base still reads AP-006 as unauthorized. This session claims AP-006 on the strength of the recorded owner instruction plus AP-005's evidenced completion (PR #296 merged as acec9aebe4f86f968c077541392a2bfc3cd71fd7, exact-merge main CI 42798276827 passed), and deliberately does not edit the lifecycle, authority or authorization_history regions that #298 owns so either merge order stays clean.",
-          "dependency_state": "AP-005 is delivered and merged; the remaining AP-005 step is bookkeeping in PR #298. AP-007 through AP-032 remain unauthorized."
+          "owner_instruction": "The owner told the AP-005 closeout session “While you can start new story.” That instruction is recorded verbatim in the AP-006 entry of program_registration.authorization_history, which landed on main with PR #298.",
+          "recorded_state_on_main": "origin/main 353afa7 (merge of PR #300) records authorized_downstream_stories AP-002…AP-006, lifecycle registered_tracking_ap005_landed_ap006_authorized, and AP-006 not_started and unclaimed.",
+          "claim_timing": "This session claimed AP-006 at 2026-11-10T10:51Z, minutes before PR #298 merged at 10:50:23Z, so the claim commit's base still read AP-006 as unauthorized; the branch was then merged onto origin/main 353afa7, where the authorization is recorded. The claim never edited the lifecycle, authority or authorization_history regions owned by #298, and that merge was clean.",
+          "dependency_state": "AP-005 is done: PR #296 merged as acec9aebe4f86f968c077541392a2bfc3cd71fd7, exact-merge main CI 42798276827 green, and closeout PRs #298/#300 landed. AP-007 through AP-032 remain unauthorized."
         },
-        "acceptance_evidence": [],
-        "tests_executed": [],
-        "blockers": [
-          "Offline, local-only extension of the existing artifact lineage store. No provider, model, browser, account, network, external service, background worker or billable action is activated.",
-          "AP-007 through AP-032, product runtime activation and real external actions remain unauthorized; this story does not resolve U01-U06 or claim owner, security, screenshot, media, signing or release approval.",
-          "The formal AP-006 authorization record lands in main only when the AP-005 closeout PR #298 merges; this story's tracking states that sequencing dependency rather than assuming it."
+        "acceptance_evidence": [
+          "AC1 — artifact bytes, input versions, producer/configuration and checks have verifiable identities: provenance entries record producer, producer version, config_sha256, named input versions and declared required checks, and identity_sha256 binds content plus those fields so a configuration or input change yields a different version identity; record_file_artifact re-hashes confined bytes instead of accepting a caller digest. Tests: test_identity_covers_the_producer_configuration_and_input_versions, test_identity_is_stable_across_input_ordering, test_the_recorded_identity_is_stored_so_a_reader_can_verify_it, test_identity_and_declared_checks_survive_a_restart, test_malformed_identities_are_refused.",
+          "AC2 — input changes invalidate affected descendants without deleting unrelated work: invalidate_for_inputs invalidates exactly the artifacts whose recorded input version moved and reuses the existing cascade for their derivatives; artifacts that never consumed the input, and artifacts already recording the new version, stay usable and are never deleted. Tests: test_an_input_version_change_invalidates_only_its_consumers, test_an_unchanged_input_version_invalidates_nothing, test_input_invalidation_cascades_to_derivatives_and_spares_siblings, test_an_empty_input_change_is_refused.",
+          "AC3 — path traversal, symlink escape, mismatched hashes and unsafe active previews are refused: confine_reference walks components with lstat and refuses parent traversal, absolute escape, symlinked files or directory components, directories and digest mismatch; check_preview refuses unknown, invalidated, untrusted, secret-without-allowance and changed content while reporting completeness. Tests: test_a_reference_inside_the_root_is_confined, test_parent_traversal_is_refused, test_an_absolute_reference_outside_the_root_is_refused, test_a_symlinked_file_is_refused, test_a_symlinked_directory_component_is_refused, test_a_mismatched_hash_is_refused, test_a_directory_is_not_an_artifact_reference, test_a_confined_preview_is_allowed_and_reports_completeness, test_an_unsafe_or_unowned_preview_is_refused, test_a_preview_of_an_invalidated_artifact_is_refused, test_a_preview_whose_bytes_changed_is_refused, test_a_confined_file_artifact_records_the_confined_identity.",
+          "AC4 — partial outputs and missing checks cannot appear accepted or complete: artifact_status reports complete only when declared checks exist and the newest outcome of each passed; require_complete raises for partial, unchecked, failed and invalidated artifacts; a check recorded after invalidation cannot resurrect an artifact; exports carry complete=False with missing checks. Tests: test_an_artifact_without_declared_checks_is_never_complete, test_missing_and_failed_checks_are_reported_by_name, test_a_pass_on_one_check_cannot_cover_a_failure_on_another, test_a_re_run_supersedes_the_outcome_but_keeps_the_history, test_checks_after_invalidation_cannot_resurrect_the_artifact, test_an_unknown_artifact_or_outcome_is_refused, test_export_marks_partial_output_and_refuses_invalidated_output.",
+          "AC5 — retention/export/delete preserve privacy and scoped reference history: export_artifact gates on confidentiality and the deny-wins verdict and appends history; delete_artifact requires confirmation and a reason, refuses pins, valid evidence and current descendants, and leaves a tombstone with identity plus scoped reference history but no content and no free-form source_ref; existing retention protection still governs collection. Tests: test_export_refuses_secret_content_until_it_is_explicitly_allowed, test_deletion_needs_confirmation_a_reason_and_no_live_dependants, test_valid_evidence_blocks_deletion, test_deletion_leaves_a_scoped_tombstone_without_content_or_source_reference, test_deleting_secret_content_needs_an_explicit_allowance, plus retention regressions test_retention_collects_only_what_nothing_depends_on, test_evidence_still_in_force_pins_its_subject, test_confidential_content_is_kept_unless_explicitly_allowed.",
+          "Migration — a populated schema v1 store keeps every record: test_a_populated_v1_store_is_upgraded_without_losing_records proves entries, evidence and pins survive, the next atomic write stamps schema 2, and v1 artifacts honestly report checks_not_declared rather than complete; test_a_newer_store_schema_is_refused_rather_than_downgraded proves fail-closed refusal. tests/test_durable_state_contract.py still asserts the shared owner-only, atomic-replace, symlink-refusal, corrupt/future-version contract for the store at schema 2."
         ],
-        "handoff": null,
+        "tests_executed": [
+          "Implementation commit 6c59131: pytest tests/test_artifact_lineage.py reported 63 passed (28 pre-existing M5-P5-02 cases plus 35 new AP-006 cases) in 0.88s.",
+          "Schema migration and neighbouring subsystems at merge head 81a50d6: pytest tests/test_artifact_lineage.py tests/test_durable_state_contract.py tests/test_trusted_transformations.py tests/test_workspace_quarantine.py tests/test_verification_evidence.py tests/test_harness_evidence.py reported 231 passed with one upstream Starlette/httpx deprecation warning in 12.53s.",
+          "tests/test_baseline.py and tests/test_uiv2_release_review.py reported 24 passed at 81a50d6 after `git fetch --unshallow`, which this clone needed: the pinned UIV2-30 evidence head af860cc8 and the baseline ancestry were absent from the shallow clone. Recorded as an environment limitation that was resolved, not as a passing check before it ran.",
+          "scripts/run_scoped_tests.py --base origin/main --head HEAD --worktree fell back to the full suite because studio.py is a high-risk path (regenerated, no app.py or static change): 5326 passed, 33 intentional environment/browser skips, 1 upstream warning, 5 failed — and all five failures were the shallow-history artefacts above (test_pinned_baseline_is_present_and_ancestral and four tests/test_uiv2_release_review.py evidence reads), which pass at the same head once history is complete. The full suite was not run a second time locally; the ready-for-review PR gate owns the authoritative full Python 3.11/3.12/3.13 and browser matrix.",
+          "Static and document gates at 81a50d6: ruff check . clean; mypy clean across the 78 configured modules including artifact_lineage.py; scripts/check_frontend_syntax.py OK; scripts/verify_baseline.py verified; scripts/validate_docs.py passed (286 files); scripts/validate_governance.py passed (7 required files); scripts/validate_adrs.py passed including the new ADR-0040; scripts/validate_security_signoff.py consistent; scripts/generate_roadmap_status.py --check fresh; scripts/check_commit_messages.py --base origin/main OK for 3 new commits.",
+          "scripts/smoke_local.py and scripts/smoke_local.py --standalone both passed at 81a50d6 (loopback startup, health, token permissions, protected API, Origin rejection, isolated DB path, injected UI auth helper).",
+          "Deferred to CI, not claimed locally: the ready-for-review full Python 3.11/3.12/3.13 matrix, browser-safety shards, and release_supply_chain.py build/verify (no packaging, workflow, dependency or frontend source changed)."
+        ],
+        "blockers": [
+          "AP-006 delivers an offline, local-only extension of the existing artifact lineage store: no endpoint, route, control, static asset, provider, model, browser, account, network egress, background worker or billable action is added or activated.",
+          "No owner, independent-security, screenshot, media, signing or release approval is claimed; ADR-0040 stays review_status not-reviewed. AP-007 through AP-032 remain unauthorized.",
+          "The ready-for-review PR gate must pass at the exact pushed head before merge, and repository-owner merge remains required; this record does not claim CI results that have not run.",
+          "AGENTS.md and the async-delivery handoff text still describe AP-006 as authorized-but-unclaimed; those point-in-time statements are owned by the landing/closeout record, as with AP-005, and were deliberately not edited here to avoid colliding with the active lander branches."
+        ],
+        "handoff": "AP-006 is in review on PR #299. Implementation commit 6c59131 adds schema v2 to artifact_lineage.py (versioned producer/configuration/input identity, declared checks with a last-outcome-wins completeness verdict, lstat-walked confined references, preview safety, input-version invalidation, scoped export and deletion tombstones) plus 35 new tests in tests/test_artifact_lineage.py, ADR-0040, and updates to docs/artifact-lineage.md and docs/storage-migrations.md; studio.py and the UIUX source-bound evidence are regenerated. No app.py, route, static asset or UI control changed, so the API surface and control inventory are unchanged. Populated v1 stores migrate additively with no reset and newer-version stores are refused. Local results at 81a50d6e7792c3f4eec59dc484b35f4ea8aff7af: 231 affected tests passed, full selector run 5326 passed with five shallow-history failures that pass after unshallowing, static/docs/ADR/governance/baseline/smoke gates green; ready-PR CI, browser safety and supply-chain verification are CI-owned and were not run locally. The branch was merged onto origin/main 353afa7 so it carries the recorded AP-006 authorization.",
         "blast_radius": {
           "objective_and_gap": "Make checked artifacts the unit of delivery: bytes, input versions, producer/configuration and declared checks must carry verifiable identities; input changes must invalidate only affected descendants; traversal, symlink escape, digest mismatch and unsafe active previews must be refused; partial outputs and missing checks must not read as accepted or complete; retention/export/delete must preserve privacy and scoped reference history. M5-P5-02 already provides content digests, deduplicated provenance, deny-wins operation verdicts, cascade invalidation, evidence freshness and retention, but has no producer/config/input identity, no required-check completeness state, no confined file/preview reference type, no input-change-driven invalidation, and no scoped export/delete that preserves reference history.",
           "options": "(a) Add a second artifact/identity module and store — rejected: competing store and control plane for the same bytes. (b) Extend the existing artifact_lineage store additively with a v1-to-v2 schema migration and typed helpers, reusing ArtifactRegistry's secure write path, operation verdicts and retention — chosen as the smallest complete slice. (c) Declare AP-006 satisfied by M5-P5-02 — rejected: docs/autonomous-production-ap001-reconciliation.md records these exact gaps.",
@@ -918,7 +935,20 @@
           "authority_and_resources": "No credentials, provider/model inference, network egress, browser worker, account, billable action, background process or new filesystem grant. File references are confined to a caller-supplied root that the caller already owns; the store keeps its owner-only permissions and symlink refusal. Tests stay offline on temporary directories.",
           "compatibility_and_rollback": "A populated v1 store is read, migrated in memory to v2 with every entry, evidence record and pin preserved, and written as v2 by the existing atomic replace path — no destructive reset. A v1 binary refuses the v2 file loudly instead of silently dropping identity fields, so rollback is either re-applying the newer module or restoring a snapshot taken before upgrade; the module never deletes data to recover.",
           "required_evidence": "Positive/negative identity tests (producer, config, inputs, checks); selective-invalidation tests proving affected descendants go invalid while unrelated artifacts keep working; traversal, symlink-escape, digest-mismatch and unsafe-preview refusals; partial-output and missing-check refusal to report complete; export/delete privacy plus preserved reference history; populated v1 store migration and stale-evidence interaction; existing lineage, durable-state-contract, trusted-transformation and quarantine regressions; static checks and generated-artifact drift."
-        }
+        },
+        "validated_against_main_sha": "353afa7",
+        "changed_files": [
+          "artifact_lineage.py",
+          "docs/adr/0040-artifact-identity-completeness-and-confined-references.md",
+          "docs/artifact-lineage.md",
+          "docs/storage-migrations.md",
+          "docs/uiux-2-0-p0-signoff.md",
+          "product/M5_2_0_UIUX_Preservation_Signoff.json",
+          "product/M5_2_0_UIUX_Source_Manifest.json",
+          "product/M5_Autonomous_Production_Roadmap.json",
+          "studio.py",
+          "tests/test_artifact_lineage.py"
+        ]
       },
       "implementation_prompt": "Implement AP-006: Extend artifact identity, provenance and selective invalidation. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
