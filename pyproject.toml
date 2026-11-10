@@ -127,6 +127,7 @@ files = [
   "workspace_quarantine.py",
   "workspace_snapshots.py",
   "workspace_paths.py",
+  "scripts/verify_test_identity.py"
 ]
 ignore_missing_imports = true
 warn_redundant_casts = true
