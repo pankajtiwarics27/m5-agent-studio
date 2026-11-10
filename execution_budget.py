@@ -6,7 +6,7 @@ import json
 import sqlite3
 import threading
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Callable
 
@@ -460,6 +460,126 @@ class DurableTaskBudgetManager:
         if enforce and violation:
             raise BudgetExceeded(violation)
         return state
+
+    def charge_hierarchical_tool_call(
+        self,
+        task_id: str,
+        *,
+        root_task_id: str,
+        session_id: str,
+        epoch: int | None = None,
+        now: float | None = None,
+    ) -> tuple[TaskBudgetState, TaskBudgetState]:
+        """Atomically validate and charge one action to its leaf and root budgets.
+
+        The durable parent chain, rather than caller input, identifies the root.
+        A root action is charged exactly once.  A child action updates leaf and
+        root in the same SQLite transaction, so a crash or concurrent admission
+        can never debit only one side.  Any stale epoch, identity mismatch,
+        cancellation, malformed budget, or exhausted candidate rolls the whole
+        transaction back and fails closed.
+        """
+
+        tid = self._validate_task_id(task_id)
+        expected_root = self._validate_task_id(root_task_id)
+        if not isinstance(session_id, str) or not session_id.strip() or "\x00" in session_id:
+            raise BudgetError("session_id must be a non-empty string without NUL characters.")
+        expected_session = session_id.strip()
+        if epoch is not None:
+            _non_neg_int(epoch, "epoch", min_value=1)
+        ts = time.time() if now is None else float(now)
+
+        def _tx(conn: sqlite3.Connection) -> tuple[TaskBudgetState, TaskBudgetState]:
+            conn.row_factory = sqlite3.Row
+            rows: dict[str, sqlite3.Row] = {}
+            cursor_id = tid
+            seen: set[str] = set()
+            while True:
+                if cursor_id in seen:
+                    raise BudgetError(f"Runtime task parent cycle detected at {cursor_id!r}.")
+                seen.add(cursor_id)
+                row = conn.execute(
+                    """
+                    SELECT task_id, session_id, parent_task_id, current_epoch, budget_json
+                    FROM runtime_tasks
+                    WHERE task_id = ?
+                    """,
+                    (cursor_id,),
+                ).fetchone()
+                if row is None:
+                    raise KeyError(f"Runtime task {cursor_id!r} does not exist.")
+                rows[cursor_id] = row
+                row_session = str(row["session_id"] or "")
+                # Older task rows predate mandatory session binding and contain
+                # an empty value.  They are bound by the typed request envelope;
+                # any non-empty durable identity remains authoritative.
+                if row_session and row_session != expected_session:
+                    raise BudgetError(
+                        f"Task {cursor_id!r} belongs to session {row_session!r}, not {expected_session!r}."
+                    )
+                parent_id = str(row["parent_task_id"] or "").strip()
+                if not parent_id:
+                    authoritative_root = cursor_id
+                    break
+                cursor_id = parent_id
+
+            if authoritative_root != expected_root:
+                raise BudgetError(
+                    f"Stale or mismatched root task {expected_root!r}; authoritative root is {authoritative_root!r}."
+                )
+            leaf_row = rows[tid]
+            if epoch is not None and int(leaf_row["current_epoch"]) != int(epoch):
+                raise runtime_persistence.StaleEpochError(
+                    f"Stale epoch {epoch} cannot charge task {tid!r} at current_epoch={leaf_row['current_epoch']}."
+                )
+
+            leaf_current = TaskBudgetState.from_json(str(leaf_row["budget_json"]))
+            root_current = (
+                leaf_current
+                if authoritative_root == tid
+                else TaskBudgetState.from_json(str(rows[authoritative_root]["budget_json"]))
+            )
+            if leaf_current.cancel_requested or root_current.cancel_requested:
+                raise ExecutionCancelled("task or root-task cancellation requested.")
+
+            leaf_candidate = replace(
+                leaf_current,
+                tool_calls_used=leaf_current.tool_calls_used + 1,
+            )
+            leaf_violation = leaf_candidate.violation_reason(check_recovery=False)
+            if leaf_violation:
+                raise BudgetExceeded(f"leaf task {tid!r}: {leaf_violation}")
+
+            if authoritative_root == tid:
+                root_candidate = leaf_candidate
+            else:
+                root_candidate = replace(
+                    root_current,
+                    tool_calls_used=root_current.tool_calls_used + 1,
+                )
+                root_violation = root_candidate.violation_reason(check_recovery=False)
+                if root_violation:
+                    raise BudgetExceeded(
+                        f"root task {authoritative_root!r}: {root_violation}"
+                    )
+
+            conn.execute(
+                "UPDATE runtime_tasks SET budget_json = ?, updated_at = ? WHERE task_id = ?",
+                (leaf_candidate.to_json(), ts, tid),
+            )
+            if authoritative_root != tid:
+                conn.execute(
+                    "UPDATE runtime_tasks SET budget_json = ?, updated_at = ? WHERE task_id = ?",
+                    (root_candidate.to_json(), ts, authoritative_root),
+                )
+            return leaf_candidate, root_candidate
+
+        return runtime_persistence.run_write_transaction(
+            self._storage,
+            self._db_path,
+            _tx,
+            retry_policy=self._retry_policy,
+        )
 
     def consume_recovery(
         self,

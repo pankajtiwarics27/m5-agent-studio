@@ -92,6 +92,10 @@ _SG_CODE_EXEC_TOOLS: frozenset[str] = frozenset(
     {"run_bash", "ctx_execute_python", "skill_execute_script"}
 )
 
+_SG_INSPIRATION_HTTP_TOOLS: frozenset[str] = frozenset(
+    {"inspiration_http_github", "inspiration_http_duckduckgo"}
+)
+
 _SG_CONTEXT_WRITE_TOOLS: frozenset[str] = frozenset(
     {"oc_save_doc", "mcp_bridge__oc_save_doc"}
 )
@@ -346,6 +350,10 @@ def resolve_tool_capabilities(
         return ("context_write",)
     if clean == "delegate_subagent":
         return ("subagent_delegation",)
+    if clean in _SG_INSPIRATION_HTTP_TOOLS:
+        # Reuse the existing external-service authority capability so one
+        # revocation closes MCP and fixed-endpoint HTTP bypasses alike.
+        return ("external_mcp",)
     if clean in _SG_COUNCIL_MUTATION_TOOLS:
         return ("council_mutation",)
     if clean.startswith("mcp__"):
@@ -370,6 +378,10 @@ def resolve_tool_resource_scopes(
     def _add(item: str) -> None:
         if item and item not in scopes:
             scopes.append(item)
+
+    if clean in _SG_INSPIRATION_HTTP_TOOLS:
+        provider = clean.removeprefix("inspiration_http_")
+        return (f"mcp:public-http:{provider}",)
 
     if clean.startswith("mcp__"):
         parts = clean.split("__", 2)

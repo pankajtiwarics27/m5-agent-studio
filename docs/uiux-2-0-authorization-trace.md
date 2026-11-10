@@ -5,7 +5,7 @@ It is the `UIUX-P0-04` artifact: for state-changing route candidates resolved by
 what can refuse them and what durable state they touch, derived from `app.py` and the route map.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4`.
-* `app.py` digest: `96c7b0cc1d06e47e…` · route map digest: `8d3b7fe0f8167388…`.
+* `app.py` digest: `1acb5ad75d621160…` · route map digest: `1183626629f1dcdd…`.
 * 50 resolved state-changing route candidates, out of 81 in `app.py`; 0 fetch site(s) have 0 unresolved URL or method edge(s) (0 method).
 * 26 reference an authority subsystem, 43 a durable-state subsystem, 3 contain a SQL write, and 23 can leave the machine.
 
@@ -34,7 +34,7 @@ never enable an action, an approval or a recovery state on a client-side guess.*
 
 ## The shared boundary
 
-Every request passes `security_boundary()` (`app.py:3899`) before any handler runs.
+Every request passes `security_boundary()` (`app.py:3901`) before any handler runs.
 It protects everything under `/api/`, `/v1/`.
 
 | Gate | Status | When it can refuse |

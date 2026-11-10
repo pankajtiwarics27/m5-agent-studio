@@ -63,6 +63,7 @@ def test_all_registered_tools_have_deterministic_action_classes_and_plan_separat
     all_tools = (
         set(studio.BUILTIN_TOOL_NAMES)
         | set(studio.MCP_BRIDGE_AUTH_TOOL_NAMES)
+        | set(studio.INSPIRATION_HTTP_TOOL_NAMES)
         | {"skill_execute_script", "mcp__demo__ping"}
     )
     for tool_name in sorted(all_tools):

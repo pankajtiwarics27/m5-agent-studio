@@ -1553,6 +1553,7 @@ async def _run_skill_script(
     epoch: int | None = None,
     worker_id: str | None = None,
     action_id: str | None = None,
+    mission_envelope: execution_spine.MissionAuthorityEnvelope | None = None,
 ) -> str:
     """Execute a repository skill script through the authoritative admission boundary.
 
@@ -1577,6 +1578,7 @@ async def _run_skill_script(
         epoch=epoch,
         worker_id=worker_id,
         action_id=action_id,
+        mission_envelope=mission_envelope,
         workspace_root=cwd,
     )
     return str(res.get("output") or "")
@@ -26251,7 +26253,7 @@ async def api_search_opencontext(q: str = "") -> JSONResponse:
 async def api_save_opencontext(request: Request) -> JSONResponse:
     body = await request.json()
     try:
-        doc = context_store.upsert_doc(STORAGE, DB_PATH, 
+        doc = context_store.upsert_doc(STORAGE, DB_PATH,
             title=body.get("title") or "",
             content=body.get("content") or "",
             folder=body.get("folder") or "decisions",
@@ -26271,7 +26273,7 @@ async def api_patch_opencontext(doc_id: str, request: Request) -> JSONResponse:
         cur = context_store.get_doc(STORAGE, DB_PATH, doc_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    doc = context_store.upsert_doc(STORAGE, DB_PATH, 
+    doc = context_store.upsert_doc(STORAGE, DB_PATH,
         title=body.get("title", cur["title"]),
         content=body.get("content", cur["content"]),
         folder=body.get("folder", cur["folder"]),
@@ -27419,6 +27421,13 @@ BLOCKED_SHELL_PATTERNS = [
 
 HARNESS_POLICIES = {"standard", "autonomous", "plan"}
 
+# Fixed-endpoint, read-only network consumers used internally by SDLC research.
+# They are intentionally absent from model tool schemas and from
+# ``BUILTIN_TOOL_NAMES``; only server code can select their endpoint/shape.
+INSPIRATION_HTTP_TOOL_NAMES = frozenset(
+    {"inspiration_http_github", "inspiration_http_duckduckgo"}
+)
+
 BUILTIN_TOOL_NAMES = frozenset(
     {
         "mcp_list_servers",
@@ -27600,6 +27609,12 @@ def authorize_tool_invocation(
         if requires_approval and not approved:
             return ToolAuthorization(False, True, "MCP tool requires explicit approval.", action_class=action_class)
         return ToolAuthorization(True, requires_approval, action_class=action_class)
+
+    if tool_name in INSPIRATION_HTTP_TOOL_NAMES:
+        # Endpoint, method and response bounds are server-fixed by the matching
+        # executor.  This admits only a read and still subjects it to profile,
+        # revocation, mission-generation and hierarchical-budget checks.
+        return ToolAuthorization(True, False, action_class=action_class)
 
     if tool_name not in BUILTIN_TOOL_NAMES:
         return ToolAuthorization(False, reason="Tool is not registered.", action_class=action_class)
@@ -29904,7 +29919,7 @@ async def _execute_harness_tool_inner(
             return {"ok": True, "output": txt, "diff": "", "elapsed_ms": round((time.perf_counter() - t0) * 1000)}
 
         if tool_name == "oc_save_doc":
-            doc = context_store.upsert_doc(STORAGE, DB_PATH, 
+            doc = context_store.upsert_doc(STORAGE, DB_PATH,
                 title=str(args.get("title") or ""),
                 content=str(args.get("content") or ""),
                 folder=str(args.get("folder") or "decisions"),
@@ -30787,6 +30802,140 @@ def _on_footprint_reconciled(
     )
 
 
+def capture_mission_authority_envelope(
+    session_id: str,
+    task_id: str,
+) -> execution_spine.MissionAuthorityEnvelope:
+    """Capture immutable server authority for a queued task-bound operation.
+
+    Callers retain this value across queueing, approval waits, retries and
+    provider handoffs.  Dispatch never trusts a client/model supplied mapping:
+    only this typed server-created value is threaded into ``ActionRequest``.
+    """
+
+    sid = str(session_id or "").strip()
+    tid = str(task_id or "").strip()
+    if not sid or not tid:
+        raise ValueError("session_id and task_id are required for mission authority.")
+    store = get_task_state_machine().store
+    task = store.get_task(tid)
+    if task is None:
+        raise KeyError(f"Runtime task {tid!r} does not exist.")
+    if task.session_id and task.session_id != sid:
+        raise PermissionError(
+            f"Task {tid!r} belongs to session {task.session_id!r}, not {sid!r}."
+        )
+    root_id = tid
+    cursor = task
+    seen: set[str] = set()
+    while cursor.parent_task_id:
+        if cursor.task_id in seen:
+            raise RuntimeError(f"Runtime task parent cycle detected at {cursor.task_id!r}.")
+        seen.add(cursor.task_id)
+        parent = store.get_task(cursor.parent_task_id)
+        if parent is None:
+            raise KeyError(f"Runtime parent task {cursor.parent_task_id!r} does not exist.")
+        if parent.session_id and parent.session_id != sid:
+            raise PermissionError("Task parent chain crosses session authority.")
+        root_id = parent.task_id
+        cursor = parent
+    session_rev, global_rev = get_scoped_grant_store().get_revisions(sid)
+    return execution_spine.MissionAuthorityEnvelope(
+        session_id=sid,
+        root_task_id=root_id,
+        task_id=tid,
+        session_policy_revision=session_rev,
+        global_policy_revision=global_rev,
+    )
+
+
+class _AppMissionEnvelopeCoordinator:
+    """Live AP-004 generation, identity and hierarchical budget admission."""
+
+    def __init__(self) -> None:
+        self._budgets = get_task_state_machine().budgets
+        self._grants = get_scoped_grant_store()
+
+    @staticmethod
+    def _denial(reason: str, error_code: str) -> execution_spine.ProfileAdmissionOutcome:
+        return execution_spine.ProfileAdmissionOutcome(
+            allowed=False,
+            reason=reason,
+            error_code=error_code,
+        )
+
+    def admit_mission_action(
+        self,
+        request: execution_spine.ActionRequest,
+        *,
+        action_class: execution_spine.ActionClass,
+        profile_outcome: execution_spine.ProfileAdmissionOutcome,
+    ) -> execution_spine.ProfileAdmissionOutcome:
+        del action_class  # Every admitted task-bound dispatch consumes one tool call.
+        if request.task_id is None:
+            # Direct Chat and other explicitly taskless read paths retain their
+            # existing policy/profile checks and do not fabricate mission tasks.
+            if request.mission_envelope is not None:
+                return self._denial(
+                    "Mission authority cannot be attached to a taskless operation.",
+                    "mission_identity_mismatch",
+                )
+            return profile_outcome
+
+        env = request.mission_envelope
+        if env is None:
+            return self._denial(
+                f"Task-bound operation `{request.tool_name}` is missing its mission authority envelope.",
+                "mission_envelope_required",
+            )
+        if env.session_id != request.session_id or env.task_id != request.task_id:
+            return self._denial(
+                "Mission authority session/task identity does not match the queued operation.",
+                "mission_identity_mismatch",
+            )
+        try:
+            current_session_rev, current_global_rev = self._grants.get_revisions(request.session_id)
+        except Exception:
+            return self._denial(
+                "Mission policy generation could not be verified.",
+                "mission_generation_unavailable",
+            )
+        if (
+            env.session_policy_revision != current_session_rev
+            or env.global_policy_revision != current_global_rev
+        ):
+            return self._denial(
+                "Queued operation was invalidated by a session or global policy generation change.",
+                "stale_policy_generation",
+            )
+        try:
+            self._budgets.charge_hierarchical_tool_call(
+                request.task_id,
+                root_task_id=env.root_task_id,
+                session_id=env.session_id,
+                epoch=request.epoch,
+            )
+        except runtime_persistence.StaleEpochError:
+            # The task snapshot can race a takeover between its read and this
+            # transaction. Leave that exact TOCTOU case to DurableActionLedger
+            # ``begin()``, whose atomic epoch fence records a replay-blocked
+            # intent. The budget transaction has rolled back, so no debit or
+            # dispatch can occur.
+            return profile_outcome
+        except execution_budget.ExecutionCancelled as exc:
+            return self._denial(str(exc), "task_cancelled")
+        except execution_budget.BudgetExceeded as exc:
+            return self._denial(str(exc), "task_budget_exhausted")
+        except (execution_budget.BudgetError, KeyError, ValueError) as exc:
+            return self._denial(str(exc), "mission_identity_mismatch")
+        except Exception:
+            return self._denial(
+                "Mission budget state could not be verified.",
+                "mission_budget_unavailable",
+            )
+        return profile_outcome
+
+
 async def _run_authorized_tool(
     tool_name: str,
     args: dict[str, Any],
@@ -30809,6 +30958,7 @@ async def _run_authorized_tool(
     step_id: str | int | None = None,
     call_index: int | None = None,
     replay_policy: str | None = None,
+    mission_envelope: execution_spine.MissionAuthorityEnvelope | None = None,
     workspace_root: Path | None = None,
     http_client: httpx.AsyncClient | None = None,
     _reconciling_probe: bool = False,
@@ -30825,6 +30975,15 @@ async def _run_authorized_tool(
     reconciliation, and scoped anti-bypass admission tokens are enforced there."""
     db_path_obj = Path(DB_PATH)
     grant_store = get_scoped_grant_store()
+    resolved_mission_envelope = mission_envelope
+    if task_id is not None and resolved_mission_envelope is None:
+        # Compatibility capture for synchronous/internal callers. Queue owners
+        # pass an earlier capture explicitly so generation changes during waits
+        # are rejected rather than silently refreshed at dispatch.
+        try:
+            resolved_mission_envelope = capture_mission_authority_envelope(session_id, task_id)
+        except Exception:
+            resolved_mission_envelope = None
     eff_approved = approved
     eff_grant_source = grant_source
     eff_grant_id = grant_id
@@ -30965,6 +31124,7 @@ async def _run_authorized_tool(
         task_context_resolver=_AppTaskContextResolver(),
         intent_ledger=_AppIntentLedger(workspace_root=workspace_root),
         profile_coordinator=profile_coord,
+        mission_envelope_coordinator=_AppMissionEnvelopeCoordinator(),
     )
     try:
         res = await boundary.admit_and_execute(
@@ -30988,6 +31148,7 @@ async def _run_authorized_tool(
                 step_id=step_id,
                 call_index=call_index,
                 replay_policy=effective_replay_policy,
+                mission_envelope=resolved_mission_envelope,
             ),
             executor,
         )
@@ -31342,6 +31503,7 @@ async def execute_mcp_tool_call(
     action_id: str | None = None,
     step_id: str | int | None = None,
     call_index: int | None = None,
+    mission_envelope: execution_spine.MissionAuthorityEnvelope | None = None,
     _reconciling_probe: bool = False,
 ) -> dict[str, Any]:
     """Policy-checked and audited MCP entry point; direct denial preserves PermissionError behavior."""
@@ -31369,6 +31531,7 @@ async def execute_mcp_tool_call(
         action_id=action_id,
         step_id=step_id,
         call_index=call_index,
+        mission_envelope=mission_envelope,
         workspace_root=cwd,
         http_client=client,
         _reconciling_probe=_reconciling_probe,
@@ -31394,6 +31557,7 @@ async def _execute_harness_tool(
     step_id: str | int | None = None,
     call_index: int | None = None,
     replay_policy: str | None = None,
+    mission_envelope: execution_spine.MissionAuthorityEnvelope | None = None,
 ) -> dict[str, Any]:
     """Central policy and audit boundary for harness and Direct Chat tool calls."""
     policy = _effective_harness_policy(sess.get("policy"), {})
@@ -31547,6 +31711,7 @@ async def _execute_harness_tool(
         step_id=step_id,
         call_index=call_index,
         replay_policy=replay_policy,
+        mission_envelope=mission_envelope,
         workspace_root=sess_root,
         http_client=client,
     )
@@ -33687,7 +33852,14 @@ async def execute_conservative_model_switch_async(
         revoked_epoch_grant_ids = tuple(g.grant_id for g in revoked_ep)
 
     grant_store.ensure_session_policy(session_id, prev_pol)
-    sess_rev_before, glob_rev_before = grant_store.get_revisions(session_id, current_policy=prev_pol)
+    switch_mission_before = capture_mission_authority_envelope(session_id, session_id)
+    if switch_mission_before.root_task_id != session_id:
+        raise routing_policy.HandoffRejectedError(
+            "handoff_mission_identity_mismatch",
+            "Provider switch is not bound to the immutable root task.",
+        )
+    sess_rev_before = switch_mission_before.session_policy_revision
+    glob_rev_before = switch_mission_before.global_policy_revision
 
     def _compute_safe_pause_state() -> str:
         has_unres = bool(
@@ -34066,6 +34238,7 @@ async def execute_conservative_model_switch_async(
         "target_local_model": (tgt_rem if tgt_kind == "omlx" else None),
         "unloaded_models": unloaded_local,
         "admission_verified": True,
+        "mission_envelope_before": switch_mission_before.to_mapping(),
     }
 
     # 8. Risk classification & selective semantic confirmation for high-risk transitions (Task 3).
@@ -34279,6 +34452,23 @@ async def execute_conservative_model_switch_async(
                     ext_obj=staged_ext,
                 )
 
+    switch_mission_after = capture_mission_authority_envelope(session_id, session_id)
+    if (
+        switch_mission_after.root_task_id != switch_mission_before.root_task_id
+        or switch_mission_after.global_policy_revision != glob_rev_before
+        or switch_mission_after.session_policy_revision != final_sess_rev
+    ):
+        raise _fail_into_safe_pause(
+            "handoff_mission_generation_drift",
+            "Mission identity or policy generation drifted during provider switch.",
+            core_obj=core,
+            ext_obj=staged_ext,
+        )
+    committed_admission_summary = {
+        **admission_summary,
+        "mission_envelope_after": switch_mission_after.to_mapping(),
+    }
+
     final_grant_snapshots = tuple(
         routing_policy.HandoffGrantSnapshot(
             grant_id=g.grant_id,
@@ -34304,7 +34494,7 @@ async def execute_conservative_model_switch_async(
         switch_attempts_used=reserved_sw.switch_attempts_used,
         max_switch_attempts=reserved_sw.max_switch_attempts,
         routing_decision=routing_summary,
-        admission_transition=admission_summary,
+        admission_transition=committed_admission_summary,
         risk_level=risk_level,
         risk_reasons=risk_reasons,
         semantic_confirmation=sem_summary,
@@ -34829,6 +35019,10 @@ async def execute_child_delegation_async(
 
     try:
         if planned_tool_calls is not None:
+            child_mission_envelope = capture_mission_authority_envelope(
+                rec.session_id,
+                rec.child_task_id,
+            )
             for idx, tc in enumerate(planned_tool_calls, start=1):
                 c_task = sm.store.get_task(rec.child_task_id)
                 c_bud = sm.budgets.get_budget(rec.child_task_id)
@@ -34849,7 +35043,6 @@ async def execute_child_delegation_async(
                 sm.budgets.record_usage(
                     rec.child_task_id,
                     steps_delta=1,
-                    tool_calls_delta=1,
                     tokens_delta=int(tc.get("estimated_tokens") or 64),
                     elapsed_delta_s=max(0.001, time.perf_counter() - t_start),
                 )
@@ -34864,6 +35057,7 @@ async def execute_child_delegation_async(
                     worker_id=rec.child_worker_id,
                     step_id=idx,
                     call_index=idx,
+                    mission_envelope=child_mission_envelope,
                 )
                 outputs.append(f"[{t_name}] {res.get('output') or ''}".strip())
                 if not res.get("ok"):
@@ -35137,11 +35331,12 @@ async def join_child_delegation_async(
                 _observed_versions().mark_observed(parent_snap_sid, rel_p, new_sha)
 
     c_bud = sm.budgets.get_budget(rec.child_task_id)
-    if c_bud.steps_used or c_bud.tool_calls_used or c_bud.tokens_used or c_bud.elapsed_s:
+    # Tool calls are charged to leaf + root atomically at central admission;
+    # joining rolls up only the remaining cumulative resources.
+    if c_bud.steps_used or c_bud.tokens_used or c_bud.elapsed_s:
         sm.budgets.record_usage(
             rec.parent_task_id,
             steps_delta=c_bud.steps_used,
-            tool_calls_delta=c_bud.tool_calls_used,
             tokens_delta=c_bud.tokens_used,
             elapsed_delta_s=c_bud.elapsed_s,
             enforce=False,
@@ -35411,7 +35606,7 @@ async def run_delegation_vs_single_agent_benchmark_async(
                                 step_id=2,
                                 call_index=1,
                             )
-                            sm.budgets.record_usage(sid, steps_delta=2, tool_calls_delta=2, tokens_delta=120)
+                            sm.budgets.record_usage(sid, steps_delta=2, tokens_delta=120)
                         else:
                             # Bounded child worker + verifier catches zero-divisor bug and commits verified fix.
                             await run_bounded_child_delegation_async(
@@ -35451,7 +35646,7 @@ async def run_delegation_vs_single_agent_benchmark_async(
                             "    return 0.0 if b == 0 else float(a) / float(b)\n",
                             encoding="utf-8",
                         )
-                        sm.budgets.record_usage(sid, steps_delta=1, tool_calls_delta=0, tokens_delta=80)
+                        sm.budgets.record_usage(sid, steps_delta=1, tokens_delta=80)
                         if strategy == "multi_agent":
                             await run_bounded_child_delegation_async(
                                 None,
@@ -35505,7 +35700,7 @@ async def run_delegation_vs_single_agent_benchmark_async(
                                 step_id=2,
                                 call_index=1,
                             )
-                            sm.budgets.record_usage(sid, steps_delta=1, tool_calls_delta=1, tokens_delta=90)
+                            sm.budgets.record_usage(sid, steps_delta=1, tokens_delta=90)
                         else:
                             await run_bounded_child_delegation_async(
                                 None,
@@ -35896,7 +36091,6 @@ async def run_lessons_ab_evaluation_async(
                         sm.budgets.record_usage(
                             sid,
                             steps_delta=2,
-                            tool_calls_delta=2,
                             tokens_delta=turn_tokens,
                         )
                     elif scenario_id == "replan_recovery_step_reduction":
@@ -35932,7 +36126,6 @@ async def run_lessons_ab_evaluation_async(
                             sm.budgets.record_usage(
                                 sid,
                                 steps_delta=2,
-                                tool_calls_delta=2,
                                 tokens_delta=turn_tokens,
                             )
                         else:
@@ -35987,7 +36180,6 @@ async def run_lessons_ab_evaluation_async(
                             sm.budgets.record_usage(
                                 sid,
                                 steps_delta=4,
-                                tool_calls_delta=4,
                                 tokens_delta=turn_tokens,
                             )
                     else:
@@ -36021,7 +36213,6 @@ async def run_lessons_ab_evaluation_async(
                             sm.budgets.record_usage(
                                 sid,
                                 steps_delta=2,
-                                tool_calls_delta=2,
                                 tokens_delta=turn_tokens,
                             )
                         else:
@@ -36074,7 +36265,6 @@ async def run_lessons_ab_evaluation_async(
                             sm.budgets.record_usage(
                                 sid,
                                 steps_delta=4,
-                                tool_calls_delta=4,
                                 tokens_delta=turn_tokens,
                             )
 
@@ -37651,6 +37841,11 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                 full_raw = "".join(content_buf)
                 full_reason = "".join(reason_buf)
                 clean_narrative, tool_calls = extract_tool_calls(full_raw)
+                queued_step_mission = (
+                    capture_mission_authority_envelope(session_id, session_id)
+                    if tool_calls
+                    else None
+                )
 
                 messages.append({"role": "assistant", "content": full_raw})
                 _save_harness_messages(session_id, messages)
@@ -37701,7 +37896,6 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
 
                 # Execute each requested tool in order with Guarded Policy + Safe-Boundary Pause/Cancel Checks
                 tool_feedback_parts: list[str] = []
-                tools_executed_in_step = 0
                 mid_tool_halt = False
                 for tc_idx, tc in enumerate(tool_calls):
                     tc_boundary = sm.check_safe_boundary(
@@ -37806,8 +38000,8 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                         grant_id=resolved_grant_id,
                         step_id=step_idx,
                         call_index=tc_idx,
+                        mission_envelope=queued_step_mission,
                     )
-                    tools_executed_in_step += 1
                     if needs_approval and not approved and reject_note:
                         res_obj["output"] += f" User rejection note: {reject_note}"
                     if needs_approval and not approved:
@@ -37850,6 +38044,16 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                         },
                     )
                     tool_feedback_parts.append(_format_untrusted_tool_response(t_name, res_obj["output"], res_obj["ok"]))
+                    if res_obj.get("error_code") == "task_budget_exhausted":
+                        halt_mode = "budget_exceeded"
+                        halt_reason = str(res_obj.get("output") or "tool budget exhausted")
+                        mid_tool_halt = True
+                        break
+                    if res_obj.get("error_code") == "stale_policy_generation":
+                        halt_mode = "paused"
+                        halt_reason = str(res_obj.get("output") or "queued authority became stale")
+                        mid_tool_halt = True
+                        break
                     if res_obj.get("error_code") == "disk_full":
                         halt_mode = "paused"
                         disk_full_pause = True
@@ -37872,7 +38076,6 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                         session_id,
                         epoch=lease_epoch,
                         steps_delta=1,
-                        tool_calls_delta=tools_executed_in_step,
                         tokens_delta=int(usage_pkt.get("completion_tokens") or 0),
                         elapsed_delta_s=max(0.0, time.perf_counter() - t_step),
                     )
@@ -38507,6 +38710,11 @@ async def api_run_gsd_fresh_wave(request: Request) -> StreamingResponse:
                                 break
                             raw_out = "".join(cbuf)
                             clean_txt, tcalls = extract_tool_calls(raw_out)
+                            queued_wave2_mission = (
+                                capture_mission_authority_envelope(session_id, session_id)
+                                if tcalls
+                                else None
+                            )
                             w2_msgs.append({"role": "assistant", "content": raw_out})
                             _update_harness_session_state(session_id, status="running", step_inc=1)
                             _append_harness_event(
@@ -38534,7 +38742,6 @@ async def api_run_gsd_fresh_wave(request: Request) -> StreamingResponse:
                                     last_completed_step = global_step
                                 break
                             feedback_blocks: list[str] = []
-                            w2_tools_run = 0
                             for tc_i, tc in enumerate(tcalls):
                                 b_tc = sm.check_safe_boundary(
                                     session_id,
@@ -38626,8 +38833,8 @@ async def api_run_gsd_fresh_wave(request: Request) -> StreamingResponse:
                                     grant_id=w2_grant_id,
                                     step_id=global_step,
                                     call_index=tc_i,
+                                    mission_envelope=queued_wave2_mission,
                                 )
-                                w2_tools_run += 1
                                 if needs_approval and not approved and reject_note:
                                     res_obj["output"] += f" User rejection note: {reject_note}"
                                 comp_out, sb_meta = sandbox_tool_output_if_large(session_id, t_name, res_obj["output"], context_mode_enabled=True)
@@ -38642,6 +38849,14 @@ async def api_run_gsd_fresh_wave(request: Request) -> StreamingResponse:
                                     {"step": global_step, "index": tc_i, "tool": t_name, "args": t_args, "ok": res_obj["ok"], "output": comp_out, "diff": res_obj.get("diff", ""), "elapsed_ms": res_obj.get("elapsed_ms", 0), "sandbox": sb_meta},
                                 )
                                 feedback_blocks.append(_format_untrusted_tool_response(t_name, comp_out, res_obj["ok"]))
+                                if res_obj.get("error_code") == "task_budget_exhausted":
+                                    halt_mode = "budget_exceeded"
+                                    halt_reason = str(comp_out or "tool budget exhausted")
+                                    break
+                                if res_obj.get("error_code") == "stale_policy_generation":
+                                    halt_mode = "paused"
+                                    halt_reason = str(comp_out or "queued authority became stale")
+                                    break
                                 if res_obj.get("safe_pause_required") or res_obj.get("uncertain"):
                                     halt_mode = "paused"
                                     halt_reason = f"uncertain_external_effect:{t_name}:{str(comp_out)[:140]}"
@@ -38653,7 +38868,6 @@ async def api_run_gsd_fresh_wave(request: Request) -> StreamingResponse:
                                     session_id,
                                     epoch=lease_epoch,
                                     steps_delta=1,
-                                    tool_calls_delta=w2_tools_run,
                                     tokens_delta=int(upkt.get("completion_tokens") or 0),
                                     elapsed_delta_s=max(0.0, time.perf_counter() - t_w2_step),
                                 )
@@ -38994,6 +39208,135 @@ def _write_sdlc_confined_text(sdlc_dir: Path, filename: str, content: str, *, ap
         raise PermissionError(f"Confined `.sdlc/{filename}` write refused: {exc}") from exc
 
 
+async def _execute_inspiration_github_inner(
+    client: httpx.AsyncClient,
+    query: str,
+) -> dict[str, Any]:
+    """Fetch and format the one fixed GitHub research endpoint under admission."""
+
+    execution_spine.require_active_admission(
+        expected_tool="inspiration_http_github",
+        expected_action_classes=frozenset({"read_only"}),
+    )
+    response = await client.get(
+        "https://api.github.com/search/repositories",
+        params={"q": query, "sort": "stars", "order": "desc", "per_page": 5},
+        headers={
+            "Accept": "application/vnd.github+json",
+            "User-Agent": "m5-agentic-studio/9.0",
+        },
+        timeout=6.0,
+    )
+    if response.status_code != 200:
+        return {
+            "ok": False,
+            "output": f"GitHub inspiration request returned HTTP {response.status_code}.",
+            "diff": "",
+            "elapsed_ms": 1,
+        }
+    payload = response.json()
+    items = (payload.get("items") or [])[:5] if isinstance(payload, dict) else []
+    if not items:
+        return {"ok": True, "output": "", "diff": "", "elapsed_ms": 1}
+    lines = ["#### Live GitHub Reference Projects & Patterns"]
+    for item in items:
+        if not isinstance(item, Mapping):
+            continue
+        topics = ", ".join(str(x) for x in (item.get("topics") or [])[:5])
+        lines.append(
+            f"- **{item.get('full_name')}** ({item.get('stargazers_count', 0)}★ • "
+            f"`{item.get('language') or 'multi'}`): {(item.get('description') or '')[:160]}"
+            + (f" [topics: {topics}]" if topics else "")
+        )
+    return {"ok": True, "output": "\n".join(lines), "diff": "", "elapsed_ms": 1}
+
+
+async def _execute_inspiration_duckduckgo_inner(
+    client: httpx.AsyncClient,
+    query: str,
+) -> dict[str, Any]:
+    """Fetch and format the one fixed DuckDuckGo research endpoint under admission."""
+
+    execution_spine.require_active_admission(
+        expected_tool="inspiration_http_duckduckgo",
+        expected_action_classes=frozenset({"read_only"}),
+    )
+    response = await client.get(
+        "https://api.duckduckgo.com/",
+        params={"q": query, "format": "json", "no_html": "1", "skip_disambig": "1"},
+        headers={"User-Agent": "m5-agentic-studio/9.0"},
+        timeout=5.0,
+    )
+    if response.status_code != 200:
+        return {
+            "ok": False,
+            "output": f"DuckDuckGo inspiration request returned HTTP {response.status_code}.",
+            "diff": "",
+            "elapsed_ms": 1,
+        }
+    payload = response.json()
+    if not isinstance(payload, dict):
+        return {"ok": True, "output": "", "diff": "", "elapsed_ms": 1}
+    abstract = str(payload.get("AbstractText") or "").strip()
+    related = [
+        str(topic.get("Text") or "")
+        for topic in (payload.get("RelatedTopics") or [])[:4]
+        if isinstance(topic, Mapping) and topic.get("Text")
+    ]
+    if not abstract and not related:
+        return {"ok": True, "output": "", "diff": "", "elapsed_ms": 1}
+    body = (f"- Summary: {abstract}\n" if abstract else "") + "\n".join(
+        f"- {text[:180]}" for text in related
+    )
+    return {
+        "ok": True,
+        "output": f"#### Web Concept Signals\n{body}",
+        "diff": "",
+        "elapsed_ms": 1,
+    }
+
+
+async def _run_inspiration_http_read(
+    client: httpx.AsyncClient,
+    tool_name: str,
+    query: str,
+    *,
+    cwd: Path,
+    policy: str,
+    session_id: str,
+    task_id: str | None,
+    epoch: int | None,
+    worker_id: str | None,
+    call_index: int,
+    mission_envelope: execution_spine.MissionAuthorityEnvelope | None,
+) -> dict[str, Any]:
+    if tool_name not in INSPIRATION_HTTP_TOOL_NAMES:  # pragma: no cover - internal caller contract
+        raise ValueError(f"Unsupported inspiration HTTP tool {tool_name!r}.")
+
+    async def _executor() -> dict[str, Any]:
+        if tool_name == "inspiration_http_github":
+            return await _execute_inspiration_github_inner(client, query)
+        return await _execute_inspiration_duckduckgo_inner(client, query)
+
+    return await _run_authorized_tool(
+        tool_name,
+        {"query": query},
+        policy,
+        approved=False,
+        session_id=session_id,
+        executor=_executor,
+        grant_source="policy",
+        task_id=task_id,
+        epoch=epoch,
+        worker_id=worker_id,
+        step_id="inspiration_search",
+        call_index=call_index,
+        mission_envelope=mission_envelope,
+        workspace_root=cwd,
+        http_client=client,
+    )
+
+
 async def _fetch_online_inspiration(
     client: httpx.AsyncClient,
     query: str,
@@ -39004,6 +39347,7 @@ async def _fetch_online_inspiration(
     task_id: str | None = None,
     epoch: int | None = None,
     worker_id: str | None = None,
+    mission_envelope: execution_spine.MissionAuthorityEnvelope | None = None,
 ) -> str:
     """
     Gather live online & design-system inspiration for Research / Feedback Brainstorming:
@@ -39014,6 +39358,9 @@ async def _fetch_online_inspiration(
     """
     q_clean = re.sub(r"\s+", " ", (query or "").strip())[:140]
     sections: list[str] = []
+    queued_mission = mission_envelope
+    if task_id is not None and queued_mission is None:
+        queued_mission = capture_mission_authority_envelope(session_id, task_id)
 
     # 1. Optional connected Search MCP servers (read-only allowlisted tools only)
     try:
@@ -39049,6 +39396,7 @@ async def _fetch_online_inspiration(
                         worker_id=worker_id,
                         step_id="inspiration_search",
                         call_index=0,
+                        mission_envelope=queued_mission,
                     )
                     if mcp_res.get("ok") and mcp_res.get("output"):
                         sections.append(f"#### Live MCP Search (`{alias}::{ro_tool}`)\n{mcp_res['output'][:1400]}")
@@ -39060,41 +39408,41 @@ async def _fetch_online_inspiration(
     try:
         gh_words = " ".join(re.findall(r"[A-Za-z0-9+#.-]+", q_clean)[:7])
         if gh_words:
-            r_gh = await client.get(
-                "https://api.github.com/search/repositories",
-                params={"q": gh_words, "sort": "stars", "order": "desc", "per_page": 5},
-                headers={"Accept": "application/vnd.github+json", "User-Agent": "m5-agentic-studio/9.0"},
-                timeout=6.0,
+            gh_res = await _run_inspiration_http_read(
+                client,
+                "inspiration_http_github",
+                gh_words,
+                cwd=cwd,
+                policy=policy,
+                session_id=session_id,
+                task_id=task_id,
+                epoch=epoch,
+                worker_id=worker_id,
+                call_index=1,
+                mission_envelope=queued_mission,
             )
-            if r_gh.status_code == 200:
-                items = (r_gh.json().get("items") or [])[:5]
-                if items:
-                    gh_lines = ["#### Live GitHub Reference Projects & Patterns"]
-                    for it in items:
-                        topics = ", ".join((it.get("topics") or [])[:5])
-                        gh_lines.append(
-                            f"- **{it.get('full_name')}** ({it.get('stargazers_count', 0)}★ • `{it.get('language') or 'multi'}`): "
-                            f"{(it.get('description') or '')[:160]}" + (f" [topics: {topics}]" if topics else "")
-                        )
-                    sections.append("\n".join(gh_lines))
+            if gh_res.get("ok") and gh_res.get("output"):
+                sections.append(str(gh_res["output"]))
     except Exception:
         pass
 
     # 3. DuckDuckGo Instant Topic Summary (lightweight JSON)
     try:
-        r_ddg = await client.get(
-            "https://api.duckduckgo.com/",
-            params={"q": q_clean, "format": "json", "no_html": "1", "skip_disambig": "1"},
-            headers={"User-Agent": "m5-agentic-studio/9.0"},
-            timeout=5.0,
+        ddg_res = await _run_inspiration_http_read(
+            client,
+            "inspiration_http_duckduckgo",
+            q_clean,
+            cwd=cwd,
+            policy=policy,
+            session_id=session_id,
+            task_id=task_id,
+            epoch=epoch,
+            worker_id=worker_id,
+            call_index=2,
+            mission_envelope=queued_mission,
         )
-        if r_ddg.status_code == 200:
-            dj = r_ddg.json()
-            abstract = (dj.get("AbstractText") or "").strip()
-            rel = [t.get("Text", "") for t in (dj.get("RelatedTopics") or [])[:4] if isinstance(t, dict) and t.get("Text")]
-            if abstract or rel:
-                ddg_txt = (f"- Summary: {abstract}\n" if abstract else "") + "\n".join(f"- {x[:180]}" for x in rel)
-                sections.append(f"#### Web Concept Signals\n{ddg_txt}")
+        if ddg_res.get("ok") and ddg_res.get("output"):
+            sections.append(str(ddg_res["output"]))
     except Exception:
         pass
 
@@ -39116,6 +39464,7 @@ async def _fetch_online_inspiration(
                     task_id=task_id,
                     epoch=epoch,
                     worker_id=worker_id,
+                    mission_envelope=queued_mission,
                 )
             ).strip()
             if ux_txt:
@@ -39419,6 +39768,11 @@ async def _run_sdlc_sprints_stream(
                         u_info = item
                 raw_out = "".join(c_buf)
                 clean_txt, t_calls = extract_tool_calls(raw_out)
+                queued_sprint_mission = (
+                    capture_mission_authority_envelope(session_id, session_id)
+                    if t_calls
+                    else None
+                )
                 _update_harness_session_state(session_id, status="running", step_inc=1)
                 _append_harness_event(session_id, "assistant/message", {"step": cur_step, "model": lead_model, "content": clean_txt, "tool_calls": t_calls, "usage": u_info})
                 yield _sse("step_parsed", {"step": cur_step, "clean_content": clean_txt, "tool_calls": t_calls, "usage": u_info})
@@ -39443,6 +39797,7 @@ async def _run_sdlc_sprints_stream(
                             grant_source="none",
                             step_id=cur_step,
                             call_index=tc_i,
+                            mission_envelope=queued_sprint_mission,
                         )
                         sb_meta: dict[str, Any] = {"sandboxed": False}
                     else:
@@ -39472,6 +39827,7 @@ async def _run_sdlc_sprints_stream(
                             approval_id=approval_id,
                             step_id=cur_step,
                             call_index=tc_i,
+                            mission_envelope=queued_sprint_mission,
                         )
                         if needs_approval and not approved and reject_note:
                             res_obj["output"] += f" User rejection note: {reject_note}"
@@ -39491,6 +39847,10 @@ async def _run_sdlc_sprints_stream(
             elif v_cmd:
                 verification_args = {"command": v_cmd, "timeout_sec": 30}
                 v_needs_approval = tool_requires_approval("run_bash", verification_args, policy)
+                queued_verification_mission = capture_mission_authority_envelope(
+                    session_id,
+                    session_id,
+                )
                 approved = False
                 v_grant_source = "policy"
                 v_approval_id: str | None = None
@@ -39515,6 +39875,7 @@ async def _run_sdlc_sprints_stream(
                     policy_denial="Verification command was not approved; story cannot pass." if (v_needs_approval and not approved) else None,
                     grant_source=v_grant_source,
                     approval_id=v_approval_id,
+                    mission_envelope=queued_verification_mission,
                 )
                 verification_ok = bool(vres.get("ok"))
                 v_out_txt = f"[ok={verification_ok}]\n{vres.get('output', '')[:1500]}"
@@ -41037,7 +41398,7 @@ async def _dispatch_mcp_stdio_tool(tname: str, args: dict[str, Any], default_age
         text = json.dumps(context_store.search_docs(STORAGE, DB_PATH, args.get("query") or ""), indent=2)
     elif tname == "oc_save_doc":
         text = json.dumps(
-            context_store.upsert_doc(STORAGE, DB_PATH, 
+            context_store.upsert_doc(STORAGE, DB_PATH,
                 title=args["title"],
                 content=args["content"],
                 folder=args.get("folder") or "decisions",
@@ -41071,6 +41432,7 @@ async def _execute_mcp_stdio_tool(
     epoch: int | None = None,
     worker_id: str | None = None,
     action_id: str | None = None,
+    mission_envelope: execution_spine.MissionAuthorityEnvelope | None = None,
 ) -> dict[str, Any]:
     return await _run_authorized_tool(
         f"mcp_bridge__{tname}",
@@ -41086,6 +41448,7 @@ async def _execute_mcp_stdio_tool(
         epoch=epoch,
         worker_id=worker_id,
         action_id=action_id,
+        mission_envelope=mission_envelope,
     )
 
 
@@ -45288,7 +45651,7 @@ import json
 import sqlite3
 import threading
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Callable
 
@@ -45741,6 +46104,126 @@ class DurableTaskBudgetManager:
         if enforce and violation:
             raise BudgetExceeded(violation)
         return state
+
+    def charge_hierarchical_tool_call(
+        self,
+        task_id: str,
+        *,
+        root_task_id: str,
+        session_id: str,
+        epoch: int | None = None,
+        now: float | None = None,
+    ) -> tuple[TaskBudgetState, TaskBudgetState]:
+        """Atomically validate and charge one action to its leaf and root budgets.
+
+        The durable parent chain, rather than caller input, identifies the root.
+        A root action is charged exactly once.  A child action updates leaf and
+        root in the same SQLite transaction, so a crash or concurrent admission
+        can never debit only one side.  Any stale epoch, identity mismatch,
+        cancellation, malformed budget, or exhausted candidate rolls the whole
+        transaction back and fails closed.
+        """
+
+        tid = self._validate_task_id(task_id)
+        expected_root = self._validate_task_id(root_task_id)
+        if not isinstance(session_id, str) or not session_id.strip() or "\x00" in session_id:
+            raise BudgetError("session_id must be a non-empty string without NUL characters.")
+        expected_session = session_id.strip()
+        if epoch is not None:
+            _non_neg_int(epoch, "epoch", min_value=1)
+        ts = time.time() if now is None else float(now)
+
+        def _tx(conn: sqlite3.Connection) -> tuple[TaskBudgetState, TaskBudgetState]:
+            conn.row_factory = sqlite3.Row
+            rows: dict[str, sqlite3.Row] = {}
+            cursor_id = tid
+            seen: set[str] = set()
+            while True:
+                if cursor_id in seen:
+                    raise BudgetError(f"Runtime task parent cycle detected at {cursor_id!r}.")
+                seen.add(cursor_id)
+                row = conn.execute(
+                    """
+                    SELECT task_id, session_id, parent_task_id, current_epoch, budget_json
+                    FROM runtime_tasks
+                    WHERE task_id = ?
+                    """,
+                    (cursor_id,),
+                ).fetchone()
+                if row is None:
+                    raise KeyError(f"Runtime task {cursor_id!r} does not exist.")
+                rows[cursor_id] = row
+                row_session = str(row["session_id"] or "")
+                # Older task rows predate mandatory session binding and contain
+                # an empty value.  They are bound by the typed request envelope;
+                # any non-empty durable identity remains authoritative.
+                if row_session and row_session != expected_session:
+                    raise BudgetError(
+                        f"Task {cursor_id!r} belongs to session {row_session!r}, not {expected_session!r}."
+                    )
+                parent_id = str(row["parent_task_id"] or "").strip()
+                if not parent_id:
+                    authoritative_root = cursor_id
+                    break
+                cursor_id = parent_id
+
+            if authoritative_root != expected_root:
+                raise BudgetError(
+                    f"Stale or mismatched root task {expected_root!r}; authoritative root is {authoritative_root!r}."
+                )
+            leaf_row = rows[tid]
+            if epoch is not None and int(leaf_row["current_epoch"]) != int(epoch):
+                raise runtime_persistence.StaleEpochError(
+                    f"Stale epoch {epoch} cannot charge task {tid!r} at current_epoch={leaf_row['current_epoch']}."
+                )
+
+            leaf_current = TaskBudgetState.from_json(str(leaf_row["budget_json"]))
+            root_current = (
+                leaf_current
+                if authoritative_root == tid
+                else TaskBudgetState.from_json(str(rows[authoritative_root]["budget_json"]))
+            )
+            if leaf_current.cancel_requested or root_current.cancel_requested:
+                raise ExecutionCancelled("task or root-task cancellation requested.")
+
+            leaf_candidate = replace(
+                leaf_current,
+                tool_calls_used=leaf_current.tool_calls_used + 1,
+            )
+            leaf_violation = leaf_candidate.violation_reason(check_recovery=False)
+            if leaf_violation:
+                raise BudgetExceeded(f"leaf task {tid!r}: {leaf_violation}")
+
+            if authoritative_root == tid:
+                root_candidate = leaf_candidate
+            else:
+                root_candidate = replace(
+                    root_current,
+                    tool_calls_used=root_current.tool_calls_used + 1,
+                )
+                root_violation = root_candidate.violation_reason(check_recovery=False)
+                if root_violation:
+                    raise BudgetExceeded(
+                        f"root task {authoritative_root!r}: {root_violation}"
+                    )
+
+            conn.execute(
+                "UPDATE runtime_tasks SET budget_json = ?, updated_at = ? WHERE task_id = ?",
+                (leaf_candidate.to_json(), ts, tid),
+            )
+            if authoritative_root != tid:
+                conn.execute(
+                    "UPDATE runtime_tasks SET budget_json = ?, updated_at = ? WHERE task_id = ?",
+                    (root_candidate.to_json(), ts, authoritative_root),
+                )
+            return leaf_candidate, root_candidate
+
+        return runtime_persistence.run_write_transaction(
+            self._storage,
+            self._db_path,
+            _tx,
+            retry_policy=self._retry_policy,
+        )
 
     def consume_recovery(
         self,
@@ -50523,6 +51006,10 @@ _SG_CODE_EXEC_TOOLS: frozenset[str] = frozenset(
     {"run_bash", "ctx_execute_python", "skill_execute_script"}
 )
 
+_SG_INSPIRATION_HTTP_TOOLS: frozenset[str] = frozenset(
+    {"inspiration_http_github", "inspiration_http_duckduckgo"}
+)
+
 _SG_CONTEXT_WRITE_TOOLS: frozenset[str] = frozenset(
     {"oc_save_doc", "mcp_bridge__oc_save_doc"}
 )
@@ -50777,6 +51264,10 @@ def resolve_tool_capabilities(
         return ("context_write",)
     if clean == "delegate_subagent":
         return ("subagent_delegation",)
+    if clean in _SG_INSPIRATION_HTTP_TOOLS:
+        # Reuse the existing external-service authority capability so one
+        # revocation closes MCP and fixed-endpoint HTTP bypasses alike.
+        return ("external_mcp",)
     if clean in _SG_COUNCIL_MUTATION_TOOLS:
         return ("council_mutation",)
     if clean.startswith("mcp__"):
@@ -50801,6 +51292,10 @@ def resolve_tool_resource_scopes(
     def _add(item: str) -> None:
         if item and item not in scopes:
             scopes.append(item)
+
+    if clean in _SG_INSPIRATION_HTTP_TOOLS:
+        provider = clean.removeprefix("inspiration_http_")
+        return (f"mcp:public-http:{provider}",)
 
     if clean.startswith("mcp__"):
         parts = clean.split("__", 2)
@@ -59669,6 +60164,8 @@ MANAGED_READ_TOOLS: frozenset[str] = frozenset(
         "mcp_bridge__oc_search",
         "mcp_bridge__oc_lint",
         "mcp_bridge__codegraph_query",
+        "inspiration_http_github",
+        "inspiration_http_duckduckgo",
     }
 )
 
@@ -59733,6 +60230,10 @@ MODEL_UNTRUSTED_AUTHORITY_KEYS: frozenset[str] = frozenset(
         "epoch",
         "current_epoch",
         "worker_id",
+        "mission_envelope",
+        "root_task_id",
+        "session_policy_revision",
+        "global_policy_revision",
         "bypass_admission",
     }
 )
@@ -59815,6 +60316,31 @@ class TaskAdmissionSnapshot:
 
 
 @dataclass(frozen=True, slots=True)
+class MissionAuthorityEnvelope:
+    """Immutable server-issued root-task and policy-generation binding.
+
+    The envelope is coordination evidence, never user/model authority.  A live
+    ``MissionEnvelopeCoordinator`` must revalidate every field against durable
+    task, grant and budget state immediately before dispatch.
+    """
+
+    session_id: str
+    root_task_id: str
+    task_id: str
+    session_policy_revision: int
+    global_policy_revision: int
+
+    def to_mapping(self) -> dict[str, Any]:
+        return {
+            "session_id": self.session_id,
+            "root_task_id": self.root_task_id,
+            "task_id": self.task_id,
+            "session_policy_revision": self.session_policy_revision,
+            "global_policy_revision": self.global_policy_revision,
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class ActionRequest:
     """One action submitted to the authoritative admission boundary."""
 
@@ -59837,6 +60363,7 @@ class ActionRequest:
     step_id: str | int | None = None
     call_index: int | None = None
     replay_policy: str | None = None
+    mission_envelope: MissionAuthorityEnvelope | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -59850,6 +60377,9 @@ class ActiveAdmissionScope:
     event_id: int
     grant_source: str
     task_id: str | None = None
+    root_task_id: str | None = None
+    session_policy_revision: int | None = None
+    global_policy_revision: int | None = None
     epoch: int | None = None
     worker_id: str | None = None
     action_id: str = ""
@@ -60007,6 +60537,20 @@ class ProfileAdmissionOutcome:
     resource_scopes: tuple[str, ...] = ()
     profile: dict[str, Any] | None = None
     handle: Any = None
+
+
+class MissionEnvelopeCoordinator(Protocol):
+    """Revalidate a captured mission envelope and atomically charge action budget."""
+
+    def admit_mission_action(
+        self,
+        request: ActionRequest,
+        *,
+        action_class: ActionClass,
+        profile_outcome: ProfileAdmissionOutcome,
+    ) -> ProfileAdmissionOutcome:
+        """Deny stale/expanded authority or reserve leaf + root action budget."""
+        ...
 
 
 class ExecutionProfileCoordinator(Protocol):
@@ -60231,6 +60775,7 @@ class DurableActionBoundary:
         intent_ledger: IntentLedger | None = None,
         boundary_injector: failure_injection.ActionBoundaryFaultInjector | None = None,
         profile_coordinator: ExecutionProfileCoordinator | None = None,
+        mission_envelope_coordinator: MissionEnvelopeCoordinator | None = None,
     ) -> None:
         self._policy = policy
         self._ledger = ledger
@@ -60239,6 +60784,7 @@ class DurableActionBoundary:
         self._intent_ledger = intent_ledger
         self._boundary_injector = boundary_injector
         self._profile_coordinator = profile_coordinator
+        self._mission_coordinator = mission_envelope_coordinator
 
     async def admit_and_execute(self, request: ActionRequest, executor: Executor) -> dict[str, Any]:
         effective = self._policy.effective_policy(request.policy)
@@ -60353,6 +60899,34 @@ class DurableActionBoundary:
             else:
                 profile_handle = profile_outcome.handle
 
+        # Mission authority is the final admission check.  It deliberately runs
+        # after unified policy/profile/grant admission (so it can validate the
+        # exact admitted scopes) and before durable intent or dispatch.  Its
+        # budget operation is atomic across the leaf task and immutable root.
+        if decision.allowed and self._mission_coordinator is not None:
+            try:
+                mission_outcome = self._mission_coordinator.admit_mission_action(
+                    request,
+                    action_class=action_class,
+                    profile_outcome=(profile_outcome or ProfileAdmissionOutcome(allowed=True)),
+                )
+            except Exception:
+                mission_outcome = ProfileAdmissionOutcome(
+                    allowed=False,
+                    reason="Mission authority admission failed; invocation denied.",
+                    error_code="mission_admission_failed",
+                )
+            if not mission_outcome.allowed:
+                profile_outcome = mission_outcome
+                decision = AdmissionDecision(
+                    False,
+                    mission_outcome.reason or "Mission authority denied invocation.",
+                    False,
+                    action_class,
+                    mission_outcome.error_code,
+                )
+
+        intent_decision: IntentBeginDecision | None = None
         try:
             if decision.allowed:
                 failure_injection.check_action_boundary(
@@ -60370,7 +60944,6 @@ class DurableActionBoundary:
             )
             started = time.perf_counter()
 
-            intent_decision: IntentBeginDecision | None = None
             if self._intent_ledger is not None:
                 try:
                     intent_decision = self._intent_ledger.begin(
@@ -60525,6 +61098,13 @@ class DurableActionBoundary:
                 event_id=event_id,
                 grant_source=str(request.grant_source or "unspecified"),
                 task_id=request.task_id,
+                root_task_id=(request.mission_envelope.root_task_id if request.mission_envelope else None),
+                session_policy_revision=(
+                    request.mission_envelope.session_policy_revision if request.mission_envelope else None
+                ),
+                global_policy_revision=(
+                    request.mission_envelope.global_policy_revision if request.mission_envelope else None
+                ),
                 epoch=request.epoch,
                 worker_id=request.worker_id,
                 action_id=(intent_decision.action_id if intent_decision is not None else ""),
@@ -69246,6 +69826,7 @@ FootprintScope = Literal[
     "bounded_workspace_read",
     "conservative_workspace",
     "external_and_workspace",
+    "external_read",
     "vault",
     "session_state",
 ]
@@ -69743,6 +70324,9 @@ _EP_EXACT_WRITE_TOOLS: frozenset[str] = frozenset({"write_file", "edit_file"})
 _EP_SUBPROCESS_TOOLS: frozenset[str] = frozenset(
     {"run_bash", "ctx_execute_python", "skill_execute_script"}
 )
+_EP_INSPIRATION_HTTP_TOOLS: frozenset[str] = frozenset(
+    {"inspiration_http_github", "inspiration_http_duckduckgo"}
+)
 _EP_COUNCIL_MUTATION_TOOLS: frozenset[str] = frozenset(
     {
         "mcp_bridge__start_council",
@@ -69759,6 +70343,7 @@ _EP_KNOWN_TOOLS: frozenset[str] = (
     | _EP_SESSION_READ_TOOLS
     | _EP_EXACT_WRITE_TOOLS
     | _EP_SUBPROCESS_TOOLS
+    | _EP_INSPIRATION_HTTP_TOOLS
     | _EP_COUNCIL_MUTATION_TOOLS
     | frozenset({"ctx_run_block", "rollback_edits", "delegate_subagent", "mcp_bridge__create_harness_worktree"})
 )
@@ -69970,6 +70555,20 @@ def resolve_capability_descriptor(
             network_capability=net_cap,
             process_capability="bounded_subprocess",
             side_effect_certainty="unknown_conservative",
+        )
+
+    if clean in _EP_INSPIRATION_HTTP_TOOLS:
+        return CapabilityDescriptor(
+            tool_name=clean,
+            action_class="read_only",
+            execution_surface="external",
+            isolation_posture="external_mcp",
+            verified_isolation=False,
+            fs_capability="none",
+            network_capability="configured_provider",
+            process_capability="none",
+            side_effect_certainty="bounded_read",
+            registered=True,
         )
 
     if clean.startswith("mcp__"):
@@ -70328,7 +70927,24 @@ def derive_execution_profile(
             ),
         )
 
-    # 7. External MCP tools: reserve both remote-server barrier and conservative workspace barrier.
+    # 7. Fixed-endpoint public HTTP reads share admission and reserve a
+    # provider-specific shared barrier without claiming workspace mutation.
+    if clean in _EP_INSPIRATION_HTTP_TOOLS:
+        provider = clean.removeprefix("inspiration_http_")
+        return ExecutionProfile(
+            descriptor=descriptor,
+            footprint=ResourceFootprint(
+                scope="external_read",
+                memory_bytes=DEFAULT_READ_FOOTPRINT_BYTES,
+                action_slots=1,
+                subprocess_slots=0,
+                mutation_slots=0,
+                barriers=(ResourceBarrier(f"http:{provider}", "shared"),),
+                conservative=False,
+            ),
+        )
+
+    # 8. External MCP tools: reserve both remote-server barrier and conservative workspace barrier.
     if clean.startswith("mcp__"):
         parts = clean.split("__", 2)
         alias = parts[1].strip() if len(parts) >= 2 and parts[1].strip() else "unknown"
