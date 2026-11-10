@@ -269,6 +269,40 @@ version**:
 Every shard publishes its collected count, its elapsed seconds and its outcome
 line in a `::notice`, and the run id is recorded next to the numbers.
 
+The comparison is not a checklist to read by eye. `scripts/verify_test_identity.py`
+takes the unsplit collection and report, plus one collection and report per
+phase, and fails on any of the six:
+
+```bash
+pytest --collect-only -q > baseline-collect.txt
+pytest -q --junitxml=baseline.xml
+pytest -q --junitxml=phase-serial.xml tests/test_chat_layout.py ...
+pytest --collect-only -q tests/test_chat_layout.py ... > phase-serial-collect.txt
+
+python scripts/verify_test_identity.py --version 3.11 \
+  --baseline-collect baseline-collect.txt --baseline-junit baseline.xml \
+  --phase serial:phase-serial-collect.txt:phase-serial.xml \
+  --phase parallel:phase-parallel-collect.txt:phase-parallel.xml
+```
+
+Exit `0` means identical, `1` means a mismatch (printed one per line, so a CI
+step can annotate them), `2` means the input could not be trusted — an
+unreadable report, an empty baseline, or a test case that maps to no collected
+node id. `--json` emits the report for retention beside the run id. It never
+runs pytest and never treats an unmapped case as a match.
+
+### 7.4 In-place writers stay serial
+
+Nine test modules edit a repository-tracked file, run a checker against it and
+restore it in a `finally` block: the eight in `scripts/ci_pytest.py`'s serial
+list, plus `tests/test_uiux_release_gate.py`, which writes a stale line into the
+first entry of the gate's `GENERATED_WITHOUT_CHECK` list and restores it. Under
+`xdist` a co-scheduled worker can read that file mid-edit, so the module belongs
+in the serial phase; the list is evidence, not a guess, and a new module using
+the same pattern must join it. Detecting the pattern is mechanical: a
+`write_text`/`write_bytes` whose target resolves under the repository root, with
+the original restored afterwards.
+
 ### 7.2 Repeated qualification, retained attempts
 
 Repeat the full qualification **only on the final candidate**: five consecutive
