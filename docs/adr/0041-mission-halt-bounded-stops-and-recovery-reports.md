@@ -56,7 +56,8 @@ consequential actions, no attested termination or no clean stop.
 
 **Late results cannot settle an uncertain action.** `DurableActionLedger.complete`
 and `record_exception` leave an `uncertain` row unchanged. The action boundary
-returns `late_result_fenced`. Only `resolve_uncertain_action` resolves it.
+returns `late_result_fenced`. Only `resolve_uncertain_action` resolves it. This
+applies to every task, not only to mission tasks.
 
 **Bounded stops live in the existing budget document.** Six optional fields
 (`max_no_progress`, `max_repair_attempts`, `deadline_at`, `max_memory_bytes`,
@@ -133,6 +134,12 @@ Rolling back to a binary older than this change is unsafe for any task that
 declares the new limits. The older reader accepts the document, ignores the new
 keys and drops them on its next write to that task. This was measured against
 the base commit's `execution_budget.py`, not assumed.
+
+Three changes are reachable in the running application: the late-result fence
+applies to every action, the budget charge reads the whole task chain, and two
+routes refuse the six new budget keys. Each only adds a refusal. Before this
+change a late result overwrote an `uncertain` verdict; a session in that race
+now pauses for reconciliation instead of continuing.
 
 No route, scheduler or production caller invokes the halt, the report or the
 observation recorder. The positive isolation path is exercised only with a test

@@ -7,14 +7,19 @@ kept and what to do next.
 This is the **offline, fail-closed subset** of AP-007. Owner decision U06
 (lifecycle and sandbox qualification and activation) is still pending, so:
 
-- no route, endpoint, UI control, scheduler loop or background worker calls any
-  of the functions described here;
+- no route, endpoint, UI control, scheduler loop or background worker calls the
+  mission stop, the recovery report or the observation recorder, and nothing in
+  the running application declares the new limits;
 - no provider, model, network destination, browser, account or runtime is
   activated;
 - nothing is executed on a qualified isolation backend, and no installed-runtime
   qualification is claimed;
-- the only processes ever terminated are local fixture subprocesses started by
-  the tests themselves.
+- the only processes terminated by this work are local fixture subprocesses
+  started by the tests themselves.
+
+Three changes are on paths the running application already uses. Each one only
+adds a refusal. They are listed under
+[Changes on live paths](#changes-on-live-paths).
 
 The design decision is recorded in
 [ADR-0041](adr/0041-mission-halt-bounded-stops-and-recovery-reports.md). The
@@ -38,6 +43,25 @@ at schema v4.
 `execution_spine.MissionAuthorityEnvelope` is unchanged. A halt needs the typed,
 server-created envelope; request JSON and model tool arguments are never parsed
 into one.
+
+## Changes on live paths
+
+Most of this work is unreachable until a caller is added. These three changes
+are reachable today:
+
+1. **Late-result fence.** Every tool call goes through `DurableActionBoundary`
+   and the action ledger. When a result arrives for an action that the ledger
+   has already marked `uncertain` (a cancel, a takeover or crash recovery got
+   there first), the result no longer settles the action. Before this change
+   the late result overwrote the `uncertain` verdict. The caller now receives
+   `late_result_fenced`, and the harness pauses as it does for any other
+   uncertain result. This applies to every task, not only to mission tasks.
+2. **Budget keys over HTTP.** Two routes refuse six key names that they used to
+   ignore. See [HTTP boundary](#http-boundary).
+3. **Budget charge.** Every tool-call charge now reads each budget from the task
+   up to the root. The application creates root tasks and direct child tasks
+   today. For those chains, with none of the new limits declared, the outcome
+   is unchanged.
 
 ## Stopping a mission
 
@@ -372,8 +396,8 @@ Other unknown keys are still ignored, as before.
 
 ## Known limits
 
-- Nothing calls these functions in production. Activation is separate,
-  owner-authorized work and depends on U06.
+- Nothing calls the mission stop, the report or the observation recorder in
+  production. Activation is separate, owner-authorized work and depends on U06.
 - The stop terminates processes registered with the supervisor under the
   plan's task ids. A process that was never registered is not found.
 - Stopping without a supervisor fences dispatch durably but attests nothing
@@ -383,6 +407,26 @@ Other unknown keys are still ignored, as before.
 - Results are author-run on a Linux host with no container runtime. They are not
   installed-runtime, owner, independent-security, screenshot, signing or release
   approval.
+
+## Relation to the U06 call-path audit
+
+The [U06 call-path audit](autonomous-production-u06-call-path-audit.md) is
+pinned to `bc406fd` and was written without this work. It takes the position
+that AP-007 refusal tests should wait until the owner resolves U06 and
+authorizes the story (its gap G-6). This work proceeded on the owner
+instructions quoted in the AP ledger, which allow a safe fail-closed subset of
+a blocked story. The owner decides which reading stands. This document does not
+settle it.
+
+| Audit gap | Effect of this work |
+|---|---|
+| G-1 mission-scoped sandbox gate | Adds an optional mission-level refusal: a budget may declare `isolation_required`. Nothing declares it. Whether missions must require isolation is still a U06 question. |
+| G-6 refusal tests | Implemented offline, together with the behaviour they test. |
+| G-2, G-3, G-4, G-5 | Not touched. |
+
+The audit page is not edited here. If this work lands, the page's statements
+about AP-007 and G-1 are out of date. Its own maintenance rule then asks its
+owner to regenerate it or mark it superseded.
 
 ## Acceptance mapping and offline evidence
 
