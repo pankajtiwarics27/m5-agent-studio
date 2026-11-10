@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import subprocess
+import sys
 from pathlib import Path
 
 from scripts.run_scoped_tests import (
@@ -59,9 +61,54 @@ def test_docs_changes_select_documentation_checks() -> None:
     plan = plan_for_paths(["docs/quickstart.md", "README.md"])
 
     assert not plan.full_suite
-    assert plan.areas == ("quality.docs-ci",)
+    assert plan.areas == ("quality.docs-ledger",)
     assert "tests/test_docs.py" in plan.tests
     assert "tests/test_governance.py" in plan.tests
+
+
+def test_authoritative_paths_file_uses_shared_selector_and_fails_closed(tmp_path: Path) -> None:
+    paths_file = tmp_path / "pr-paths.json"
+    paths_file.write_text(
+        json.dumps(["AGENTS.md", "product/M5_Autonomous_Production_Roadmap.json"]),
+        encoding="utf-8",
+    )
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/run_scoped_tests.py",
+            "--paths-file",
+            str(paths_file),
+            "--list",
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    report = json.loads(result.stdout.split("\nSelection:", 1)[0])
+    assert report["mode"] == "scoped"
+    assert report["areas"] == ["quality.docs-ledger"]
+
+    paths_file.write_text("not-json", encoding="utf-8")
+    invalid = subprocess.run(
+        [
+            sys.executable,
+            "scripts/run_scoped_tests.py",
+            "--paths-file",
+            str(paths_file),
+            "--list",
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert invalid.returncode == 0, invalid.stdout + invalid.stderr
+    invalid_report = json.loads(invalid.stdout.split("\nSelection:", 1)[0])
+    assert invalid_report["mode"] == "full"
+    assert "could not read authoritative changed paths" in invalid_report["reason"]
 
 
 def test_high_risk_and_unmapped_changes_fall_back_to_full_suite() -> None:
@@ -93,7 +140,7 @@ def test_git_name_status_parser_handles_additions_deletions_and_renames() -> Non
     assert parsed == ["static/index.html", "old.py", "new.py", "old_test.py"]
 
 
-def test_ci_keeps_full_gates_and_scopes_only_unclaimed_feature_pushes() -> None:
+def test_ci_keeps_full_gate_for_ready_prs_and_scopes_safe_paths() -> None:
     workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(
         encoding="utf-8"
     )
@@ -112,10 +159,10 @@ def test_ci_keeps_full_gates_and_scopes_only_unclaimed_feature_pushes() -> None:
 def test_ci_does_not_run_the_heavy_jobs_twice_for_one_commit() -> None:
     """A push and the pull request for it used to run the same commit twice.
 
-    The push run is the duplicate: the pull request run is the one carrying the
-    full suite, so a pushed branch that already has an open pull request must not
-    pay for the heavy jobs again. `main`, schedules, manual runs and every pull
-    request still run, and a failed lookup must fail open.
+    The push run is the duplicate: the pull request run owns the selected gate,
+    so a pushed branch that already has an open pull request must not pay for
+    heavy jobs again. `main`, schedules, manual runs and every pull request still
+    run, and a failed lookup must fail open.
     """
     workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
 
@@ -136,7 +183,7 @@ def test_ci_does_not_run_the_heavy_jobs_twice_for_one_commit() -> None:
 
 
 def test_ci_concurrency_supersedes_within_an_event_lane_only() -> None:
-    """Supersession must never trade the full pull request run for a scoped push.
+    """Supersession must never trade the selected PR gate for a push placeholder.
 
     Keying the group on `github.ref` put `refs/heads/X` and `refs/pull/N/merge`
     in unrelated groups, so the two runs never superseded each other. Keying it

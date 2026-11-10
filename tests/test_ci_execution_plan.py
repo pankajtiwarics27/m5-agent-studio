@@ -16,7 +16,14 @@ WORKFLOW = ROOT / ".github" / "workflows" / "ci.yml"
 @pytest.mark.parametrize(
     ("event", "ref", "open_prs", "run", "suite", "reason"),
     [
-        ("pull_request", "refs/pull/286/merge", -1, True, "full", "pull_request_full_gate"),
+        (
+            "pull_request",
+            "refs/pull/286/merge",
+            -1,
+            True,
+            "full",
+            "pull_request_changed_paths_unavailable_full_gate",
+        ),
         ("push", "refs/heads/main", 3, True, "full", "main_push_full_gate"),
         ("push", "refs/heads/feature/no-pr", 0, True, "scoped", "feature_push_scoped_gate"),
         (
@@ -65,6 +72,74 @@ def test_event_selection_is_fail_closed(
     assert plan.run_verification is run
     assert plan.suite == suite
     assert plan.reason == reason
+
+
+def test_documentation_and_tracking_ledger_prs_use_scoped_gate() -> None:
+    plan = plan_for_event(
+        event_name="pull_request",
+        ref="refs/pull/292/merge",
+        default_branch="main",
+        pull_request_paths=["AGENTS.md", "product/M5_Autonomous_Production_Roadmap.json"],
+        pull_request_is_draft=True,
+    )
+
+    assert plan.run_verification is True
+    assert plan.suite == "docs"
+    assert plan.reason == "pull_request_documentation_gate"
+    ready = plan_for_event(
+        event_name="pull_request",
+        ref="refs/pull/292/merge",
+        default_branch="main",
+        pull_request_paths=["AGENTS.md", "product/M5_Autonomous_Production_Roadmap.json"],
+        pull_request_is_draft=False,
+    )
+    assert ready.suite == "docs"
+    from scripts.run_scoped_tests import plan_for_paths
+
+    selection = plan_for_paths(
+        ["AGENTS.md", "product/M5_Autonomous_Production_Roadmap.json"]
+    )
+    assert selection.areas == ("quality.docs-ledger",)
+
+
+def test_draft_feature_pr_is_scoped_but_ready_pr_uses_full_gate() -> None:
+    paths = ["scoped_grants.py"]
+    draft = plan_for_event(
+        event_name="pull_request",
+        ref="refs/pull/286/merge",
+        default_branch="main",
+        pull_request_paths=paths,
+        pull_request_is_draft=True,
+    )
+    ready = plan_for_event(
+        event_name="pull_request",
+        ref="refs/pull/286/merge",
+        default_branch="main",
+        pull_request_paths=paths,
+        pull_request_is_draft=False,
+    )
+
+    assert draft.suite == "scoped"
+    assert draft.reason == "pull_request_draft_scoped_gate"
+    assert ready.suite == "full"
+    assert ready.reason == "pull_request_ready_full_gate"
+
+
+def test_uncertain_and_runtime_product_changes_fail_closed_even_in_draft() -> None:
+    for paths in (
+        ["unmapped/new-input.bin"],
+        ["product/M5_Autonomous_Production_Operating_Envelope.json"],
+        ["./product/M5_Autonomous_Production_Operating_Envelope.json"],
+    ):
+        plan = plan_for_event(
+            event_name="pull_request",
+            ref="refs/pull/286/merge",
+            default_branch="main",
+            pull_request_paths=list(paths),
+            pull_request_is_draft=True,
+        )
+        assert plan.suite == "full"
+        assert plan.reason == "pull_request_scope_uncertain_full_gate"
 
 
 def test_new_feature_branch_uses_main_as_scoped_base() -> None:
@@ -174,6 +249,22 @@ def test_workflow_preserves_required_checks_and_shards_browser_work() -> None:
     assert "github.event_name != 'schedule'" in workflow
     assert "open_pull_request_owns_required_checks" not in workflow
     assert "python scripts/ci_execution_plan.py" in workflow
+    assert "PR_IS_DRAFT: ${{ github.event.pull_request.draft || false }}" in workflow
+    assert "--pull-request-is-draft" in workflow
+    assert "pull_request_documentation_gate" in (ROOT / "scripts" / "ci_execution_plan.py").read_text(encoding="utf-8")
+    assert "needs.plan.outputs.suite == 'full'" in workflow
+    assert "needs.plan.outputs.suite == 'docs'" in workflow
+    assert "--paths-file \"$PR_PATHS_FILE\"" in workflow
+    scope_map = json.loads((ROOT / "tests" / "test_scopes.json").read_text(encoding="utf-8"))
+    assert scope_map["areas"]["quality.docs-ledger"] == [
+        "test_adr_process.py",
+        "test_autonomous_production_decisions.py",
+        "test_docs.py",
+        "test_governance.py",
+    ]
+    assert "gh api --paginate \"repos/$REPOSITORY/pulls/$PR_NUMBER/files\"" in workflow
+    assert "pr-changed-paths-${{ github.event.pull_request.number }}" in workflow
+    assert "--paths-file \"$PR_PATHS_FILE\"" in workflow
     assert "&& 'Branch test' || 'test'" in workflow
     assert 'python-version: ["3.11", "3.12", "3.13"]' in workflow
     assert "Python test shard (${{ matrix.python-version }}, ${{ matrix.shard }})" in workflow

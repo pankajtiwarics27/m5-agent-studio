@@ -522,7 +522,7 @@
         "base_sha": "305f3fb431dd2b983cc25ac4395b7fc919d516d5",
         "head_sha": "652c67b4d1a3eca2c808339ab83b556d7536fa24",
         "claimed_at": "2026-11-10T04:41:35Z",
-        "heartbeat_at": "2026-11-10T07:12:48Z",
+        "heartbeat_at": "2026-11-10T07:33:30Z",
         "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/292",
         "delivery_status": "pr_open",
         "acceptance_evidence": [
@@ -538,14 +538,15 @@
           "All modules implicated by the initial 32 failures were rerun together after history recovery, inventory registration, generated refresh, and the worker-fencing fix: 369 passed.",
           ".venv/bin/ruff check . passed; configured .venv/bin/mypy passed for 78 source files; scripts/validate_docs.py passed for 282 files; git diff --check and the 224-module CI shard manifest passed.",
           "Standalone/runtime/source-bound artifacts regenerated in owning dependency order. UIUX release gate passed 37/37 artifact checks and 7/7 phase gates with zero findings; UIV2-29 passed 21/21 browser checks, 11 captures and 302 backend tests; UIV2-30 passed 7/7 local, 2200/2200 visual and 15/15 Compare checks with zero findings.",
-          "Implementation review head 00ef3d1b8f31d459a90286163e52eb88ac6ce484: pull-request CI run 42772839612 passed the source/release-independent gate, all nine deterministic Python 3.11/3.12/3.13 shards with 5319-node identity checks, all five browser-safety shards, and the four aggregate checks; push aggregate run 42772832884 also passed."
+          "Implementation review head 00ef3d1b8f31d459a90286163e52eb88ac6ce484: pull-request CI run 42772839612 passed the source/release-independent gate, all nine deterministic Python 3.11/3.12/3.13 shards with 5319-node identity checks, all five browser-safety shards, and the four aggregate checks; push aggregate run 42772832884 also passed.",
+          "Current-main reconciliation: merged origin/main 191987dc10b205a6c993d132b1c818361583a5f3 (PR #293 risk-routed CI and refreshed UIV2 evidence; no AP runtime overlap). Combined CI-planner/scoped-selector plus mission/action/spine/handoff tests reported 69 passed with one upstream warning; Ruff, mypy (78 sources), docs/governance/roadmap, AP validators, shard map, standalone/runtime inventories, UIUX 37/37 + 7/7, and UIV2-29/30 checks passed with zero findings."
         ],
         "blockers": [
           "U03/U04/U06 remain pending. AP-004 may enforce and test local deny-by-default contracts with fictional/offline consumers, but may not activate a real provider, account, network destination, browser, media service, filesystem grant or runtime path.",
           "AP-005 through AP-032 remain unauthorized. This claim is exactly one AP-004 story and does not authorize later program work or production release.",
-          "Implementation-head pull-request CI is green. The metadata-only review-transition head must also pass current-head CI before merge; repository-owner review/merge remains required, and no owner, independent-security, screenshot or release approval is claimed."
+          "Implementation and pre-refresh review-head CI are green. The current-main reconciliation head must pass current-head CI before merge; repository-owner review/merge remains required, and no owner, independent-security, screenshot or release approval is claimed."
         ],
-        "handoff": "AP-004 is in review on PR #292. Substantive implementation 652c67b4d1a3eca2c808339ab83b556d7536fa24 and evidence head 00ef3d1b8f31d459a90286163e52eb88ac6ce484 passed local validation and the full pull-request matrix; this metadata-only review transition still requires same-head CI before merge. A server-derived immutable mission envelope reaches the shared admission boundary; task-bound actions revalidate policy generations and atomically charge leaf/root tool budgets before intent/dispatch. Actual API, inbound/outbound MCP, script, browser, media and fixed-HTTP consumers are covered; stale/revoked/exhausted/cancelled/raced work does not dispatch or partially debit. No schema migration or runtime/service activation was added; U03/U04/U06 and AP-005+ remain unchanged.",
+        "handoff": "AP-004 is in review on PR #292. Substantive implementation 652c67b4d1a3eca2c808339ab83b556d7536fa24 and pre-refresh review head c5f7a907e982281ddca1aafc23a69813b6840b4e passed local validation and the full pull-request matrix. The branch is reconciled with current main 191987dc10b205a6c993d132b1c818361583a5f3; local combined checks pass and same-head CI remains pending. A server-derived immutable mission envelope reaches the shared admission boundary; task-bound actions revalidate policy generations and atomically charge leaf/root tool budgets before intent/dispatch. Actual API, inbound/outbound MCP, script, browser, media and fixed-HTTP consumers are covered; stale/revoked/exhausted/cancelled/raced work does not dispatch or partially debit. No schema migration or runtime/service activation was added; U03/U04/U06 and AP-005+ remain unchanged.",
         "blast_radius": {
           "objective_and_gap": "Extend the existing admission path so every AP project action proves a server-owned mission/root authority and remaining budget. Existing grants, task epochs, profiles and durable ledgers are substantial, but root budget charging is not centralized and queued/retried/provider-switched operations do not all carry one immutable root-envelope generation.",
           "options": "Reject a second scheduler, duplicate grant store, per-consumer policy copies or trust in model-supplied budget fields. Prefer the smallest extension of ActionRequest/DurableActionBoundary and the existing durable task-budget, scoped-grant, child-delegation and policy-revision stores; route actual API, MCP, script, browser and media consumers through that one check.",
@@ -555,7 +556,7 @@
           "compatibility_and_rollback": "No activation flag or destructive migration is planned. Existing task-budget JSON and grant records remain readable. Rollback reverts the additive central envelope enforcement/adapters and tests; durable audit/budget history and all prior program ledgers remain intact.",
           "required_evidence": "Positive and negative actual-consumer tests for API, outbound/inbound MCP, skill scripts, browser and media dispatch; child/retry/provider scope and root-budget non-expansion; queued/stale policy-generation and revocation denials; cancellation/restart and network-free startup; existing execution spine/budget/grant/delegation/MoneyPrinter tests, scoped/full static, generated-drift, smoke and current-head CI evidence. No live external or human approval is claimed."
         },
-        "validated_against_main_sha": "305f3fb431dd2b983cc25ac4395b7fc919d516d5",
+        "validated_against_main_sha": "191987dc10b205a6c993d132b1c818361583a5f3",
         "changed_files": [
           "AGENTS.md",
           "app.py",
@@ -596,7 +597,8 @@
         ],
         "review_head_sha": "00ef3d1b8f31d459a90286163e52eb88ac6ce484",
         "review_push_ci_url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42772832884",
-        "review_pr_ci_url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42772839612"
+        "review_pr_ci_url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42772839612",
+        "reconciled_main_sha": "191987dc10b205a6c993d132b1c818361583a5f3"
       },
       "implementation_prompt": "Implement AP-004: Enforce a mission-wide authority and budget envelope. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },

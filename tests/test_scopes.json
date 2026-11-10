@@ -155,6 +155,12 @@
     "autonomous.production": [
       "test_autonomous_production_*.py"
     ],
+    "quality.docs-ledger": [
+      "test_adr_process.py",
+      "test_autonomous_production_decisions.py",
+      "test_docs.py",
+      "test_governance.py"
+    ],
     "quality.docs-ci": [
       "test_adr_process.py",
       "test_baseline.py",
@@ -433,6 +439,9 @@
       "ui.compare",
       "storage.history",
       "security.execution"
+    ],
+    "product/M5_Autonomous_Production_Roadmap.json": [
+      "quality.docs-ledger"
     ],
     "scripts/ci_execution_plan.py": [
       "quality.docs-ci"

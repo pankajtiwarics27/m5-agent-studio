@@ -2,7 +2,7 @@
 
 ## Purpose and authority
 
-Run the smallest sufficient checks during iteration, escalate with impact and risk, and retain mandatory merge/release gates. This policy applies across programs. It changes neither story ownership nor CI/security/approval requirements. Do not edit CI to remove required checks merely to accelerate a session.
+Run the smallest sufficient checks during iteration, escalate with impact and risk, and retain mandatory merge/release gates. This policy applies across programs. It changes neither story ownership nor CI/security/approval requirements. Use the approved risk-based CI routing; do not silently remove a required gate or treat a skipped gate as evidence.
 
 ## Session procedure
 
@@ -15,12 +15,12 @@ Run the smallest sufficient checks during iteration, escalate with impact and ri
 
    Check that the base is appropriate and available. Unknown, shared, high-risk or unmapped changes must retain the selector's full-suite fallback. A hand-picked subset can diagnose a failure but cannot replace that escalation.
 3. During fixes, run the failing test or smallest relevant group. Once stable, run affected component/interface and neighbouring regression checks. Add positive, negative and failure/recovery cases appropriate to the change.
-4. Before review, execute the required verification sequence in AGENTS.md and the owning program. Local scoped results are not full-suite evidence. Required full PR Python/browser checks remain mandatory; scheduled runs are additional coverage, not a substitute.
+4. Before review, execute the required verification sequence in AGENTS.md and the owning program. Local scoped results are not full-suite evidence. Draft PRs may use the mapped scoped gate; known documentation-only PRs use the focused docs/governance/ledger gate. Implementation PRs run the full Python/browser gate when marked ready for review. High-risk, unmapped, workflow, test-infrastructure and runtime product-input changes always fail closed to full. Scheduled runs are additional coverage, not a substitute for the selected PR gate.
 5. Record commands, outcomes, durations where available, selection rationale, omissions/blockers, reused evidence and remaining gates. Do not state that an unexecuted, mocked, scheduled or blocked check passed.
 
 ## Risk and test layers
 
-- Documentation-only edits: iterate with applicable docs/schema/link/governance checks; retain required final checks. A selector fallback is not permission to silently skip tests.
+- Documentation-only edits: CI validates published links, governance records and the generated roadmap dashboard, then runs `test_docs.py`, `test_adr_process.py`, `test_governance.py` and the AP decision/roadmap contract tests. The PR gate fails closed if changed paths are unavailable or include anything outside the explicit documentation/tracking allowlist; an empty selection is never a silent skip.
 - Isolated logic or rendering: affected unit/component tests plus interface and representative UI regressions.
 - Authentication, permissions, egress, persistence, shared state, streaming, cancellation, routing, model lifecycle or uncertain impact: broader integration and failure/recovery coverage; fail closed on selection uncertainty.
 - Ordinary automated tests remain offline: fakes, temporary stores and disposable loopback servers, as required by AGENTS.md. Never contact live providers/models/MCP endpoints to speed or embellish normal CI.
@@ -37,7 +37,7 @@ Run the smallest sufficient checks during iteration, escalate with impact and ri
 
 ## Improving selection and tracking results
 
-Changes to selection maps/tooling need tests for mapping, shared/high-risk changes, unknown paths and fail-closed fallback. Compare selective results with existing full PR/nightly runs to identify missed failures and strengthen the map. Preserve full gates until evidence supports a separately reviewed policy change.
+Changes to selection maps/tooling need tests for mapping, shared/high-risk changes, unknown paths and fail-closed fallback. Compare selective results with full PR/nightly runs to identify missed failures and strengthen the map. Keep the full gate mandatory for ready implementation PRs, main, scheduled/manual runs, and every uncertain/high-risk change; any further relaxation needs measured evidence and separate review.
 
 Track time to first useful failure, iteration and pre-merge time, setup versus execution cost, flake rate, selective-test misses and escaped regressions. Targets must follow measured baselines; faster runs alone are not proof of maintained quality. Profiling automation or CI changes are separate bounded implementation work, not implemented by this documentation.
 
