@@ -712,15 +712,15 @@ def _validate_roadmap(value: Mapping[str, Any]) -> None:
     stories = _sequence(value.get("stories"), "roadmap.stories")
     by_id = {_text(_object(item, "roadmap.stories[]").get("id"), "roadmap.stories[].id"): _object(item, "roadmap.stories[]") for item in stories}
     story = by_id.get("AP-003")
-    if story is None or story.get("status") not in {"in_progress", "in_review"}:
-        raise EvaluationRegistryError("AP-003 must be actively claimed while these records are delivered.")
+    if story is None or story.get("status") not in {"in_progress", "in_review", "done"}:
+        raise EvaluationRegistryError(
+            "AP-003 records require their owning story to be active or truthfully completed."
+        )
     tracking = _object(story.get("tracking"), "roadmap.AP-003.tracking")
     if tracking.get("owner") != "arena/1c8a9253-m5-agent-studio" or tracking.get("branch") != "arena/1c8a9253-m5-agent-studio":
         raise EvaluationRegistryError("AP-003 tracking must remain bound to its fixed Arena branch.")
-    for index in range(4, 33):
-        downstream = by_id.get(f"AP-{index:03d}")
-        if downstream is None or downstream.get("status") != "not_started":
-            raise EvaluationRegistryError("AP-004 through AP-032 must remain not_started and unauthorized by AP-003.")
+    if story.get("status") == "done" and tracking.get("delivery_status") != "merged":
+        raise EvaluationRegistryError("Completed AP-003 records require merged delivery evidence.")
 
 
 def load_evaluation_bundle(

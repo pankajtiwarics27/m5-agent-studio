@@ -76,12 +76,12 @@ AS source/status record rather than a fourth interchangeable claim ledger.
   Follow-up UI work needs its own owner/PR scope and must preserve generated
   source, control, route, authorization, visual and release evidence.
 - **Autonomous Production program** ([`product/M5_Autonomous_Production_Roadmap.json`](product/M5_Autonomous_Production_Roadmap.json)):
-  AP-001 and AP-002 are `done`. On 2026-11-09 the owner explicitly authorized
-  AP-002 and AP-003 **sequentially**, one story per branch/PR. AP-003 is now
-  `in_review` on its separate fixed Arena branch for offline evaluation-brief,
-  partition-policy and synthetic failure-fixture work only. AP-004…AP-032,
-  product runtime activation, real external services and unresolved U01–U06
-  owner decisions remain unauthorized.
+  AP-001, AP-002 and AP-003 are `done`. On 2026-11-10, after the preceding
+  merge and same-SHA post-merge CI were green, the owner explicitly authorized
+  AP-004 as the next **single** story on its separate fixed Arena branch/PR.
+  AP-004 is limited to offline mission-wide authority/budget enforcement and
+  actual-consumer tests while U03/U04/U06 remain pending. AP-005…AP-032,
+  product runtime activation and real external services remain unauthorized.
 
 Within the program you are working on, choose exactly one story that is both
 owner-authorized and dependency-ready, respect phase order, and take one story

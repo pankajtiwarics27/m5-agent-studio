@@ -1,6 +1,6 @@
 # AP-003 — Versioned evaluation briefs and failure fixtures
 
-**State:** in review • **Claim base:** `d48dcbe38075af8958e77c04cce2bf1e41130ca0` • **Draft PR:** [#284](https://github.com/pankajtiwarics27/m5-agent-studio/pull/284)
+**State:** done • **Claim base:** `d48dcbe38075af8958e77c04cce2bf1e41130ca0` • **Delivered PR:** [#284](https://github.com/pankajtiwarics27/m5-agent-studio/pull/284) • **Merged:** 2026-11-09T19:33:43Z
 
 ## Authority and outcome
 
@@ -9,9 +9,11 @@ optimization. Its records are offline, synthetic, versioned, and explicitly
 provisional. They activate no evaluator runner, optimizer, model, provider,
 network destination, account, path, side effect, promotion, or runtime.
 
-The owner authorized AP-002 and AP-003 sequentially. AP-001 and AP-002 are done;
-this branch claims only AP-003. AP-004 through AP-032 remain unauthorized.
-U01–U06 remain pending, including the initial specialization choice. Therefore
+The owner authorized AP-002 and AP-003 sequentially; AP-001 through AP-003 are
+now done. After AP-003 merged, the owner separately authorized AP-004 as the
+next single story. AP-004 remains unclaimed until its own branch/PR, and
+AP-005 through AP-032 remain unauthorized. U01–U06 remain pending, including
+the initial specialization choice. Therefore
 research, website, and short-video briefs below are generic fixture categories,
 not launch commitments or owner acceptance.
 
@@ -167,6 +169,28 @@ AP-003 is additive and offline. It changes no API, UI, database, generated
 policy. No feature flag or migration is required. Rollback removes the two AP
 records, parser, focused tests, this page, and AP-003 tracking changes while
 preserving AP-001/AP-002 history and all AS/M5/UIUX/UIV2/LC records.
+
+## Post-merge completion record
+
+PR #284 final head `6e02146c481fd37a618065678b4ce17da5a74107`
+passed both push CI run `42681851797` and pull-request CI run `42681862794`:
+Python 3.11, 3.12 and 3.13 plus Browser safety regressions all succeeded. The
+repository owner merged PR #284 at 2026-11-09T19:33:43Z as
+`1dbd2697fc929103bb42cb8f2c182febffc2a26f`. Post-merge main CI run
+`42684526441` passed the same four jobs on that exact merge SHA.
+
+All five acceptance criteria below retain versioned artifacts, strict offline
+validation and test evidence, so AP-003 is `done` under the repository
+completion convention. Completion activates no runner, optimizer, provider,
+network, account, path, external effect or runtime, and it claims no screenshot,
+playable-media, independent-security or release approval.
+
+On 2026-11-10 the owner instructed the agent to continue with the next story
+after the preceding merge and post-merge CI were green. AP-004 is therefore
+owner-authorized as the next separate story, limited to offline authority and
+budget enforcement plus actual-consumer tests. U03, U04 and U06 stay pending;
+real external effects and runtime activation remain denied. AP-005 through
+AP-032 remain unauthorized.
 
 ## Acceptance mapping
 
