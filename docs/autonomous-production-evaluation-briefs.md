@@ -1,6 +1,6 @@
 # AP-003 — Versioned evaluation briefs and failure fixtures
 
-**State:** done • **Claim base:** `d48dcbe38075af8958e77c04cce2bf1e41130ca0` • **Delivered PR:** [#284](https://github.com/pankajtiwarics27/m5-agent-studio/pull/284) • **Merged:** 2026-11-09T19:33:43Z
+**State:** done • **Claim base:** `d48dcbe38075af8958e77c04cce2bf1e41130ca0` • **Delivered PR:** [#284](https://github.com/pankajtiwarics27/m5-agent-studio/pull/284) • **Merged:** 2026-11-09T19:33:43Z • **Completion record:** [#291](https://github.com/pankajtiwarics27/m5-agent-studio/pull/291)
 
 ## Authority and outcome
 
