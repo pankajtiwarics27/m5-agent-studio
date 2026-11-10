@@ -689,21 +689,21 @@
         "Push/PR state; owner/independent approvals where required"
       ],
       "tracking": {
-        "owner": "arena/e0bd5906-m5-agent-studio",
-        "branch": "arena/e0bd5906-m5-agent-studio",
+        "owner": "arena/098ca4ab-m5-agent-studio",
+        "branch": "arena/098ca4ab-m5-agent-studio",
         "base_sha": "b1ee43c80bbf3f4f9f2fe44cced9ce4afe3065e3",
-        "head_sha": "e39c360e4cf6adbc3286df3d7a9475948485728f",
+        "head_sha": "74b9d4bccb633a160879670fbdc1e763520d50b4",
         "claimed_at": "2026-11-10T08:05:14Z",
-        "heartbeat_at": "2026-11-10T08:06:25Z",
-        "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/295",
-        "delivery_status": "pr_open",
+        "heartbeat_at": "2026-11-10T09:02:13Z",
+        "pr_url": null,
+        "delivery_status": "delivery_pending",
         "acceptance_evidence": [],
         "tests_executed": [],
         "blockers": [
           "AP-005 authorizes local durable mission-graph, checkpoint/resume, join and additive migration work only. It does not activate a scheduler, model, provider, account, network, filesystem grant, background runtime, external effect or destructive reset.",
           "AP-006 through AP-032 remain unauthorized. This claim is exactly one AP-005 story and does not resolve U01-U06, authorize later program work or claim owner, independent-security, screenshot, media, signing or release approval."
         ],
-        "handoff": "AP-005 is the sole active AP claim on the fixed Arena branch after AP-004 closeout PR #294 merged as b1ee43c80bbf3f4f9f2fe44cced9ce4afe3065e3 and same-SHA main CI run 42779004645 passed. The branch was fast-forwarded to that merge before this claim, so the new PR diff is AP-005-only. Initial audit found reusable runtime_tasks/epochs/transitions, durable checkpoints, completion verification, child-delegation joins and transactional migrations. The gap is a versioned persisted mission graph with dependency/cycle rules, resume bindings for current plan/input/authority/budget versions, and graph-level required-output/partial-failure joins.",
+        "handoff": "AP-005 is the sole active AP story. The user instructed continuation in a new Arena session, so the original claim commits e39c360e4cf6adbc3286df3d7a9475948485728f and 74b9d4bccb633a160879670fbdc1e763520d50b4 were preserved byte-for-byte by fast-forwarding the new fixed branch from the same base; draft PR #295 is superseded, not discarded. AP-004 closeout PR #294 merged as b1ee43c80bbf3f4f9f2fe44cced9ce4afe3065e3 and same-SHA main CI run 42779004645 passed. Initial audit found reusable runtime_tasks/epochs/transitions, durable checkpoints, completion verification, child-delegation joins and transactional migrations. The gap is a versioned persisted mission graph with dependency/cycle rules, resume bindings for current plan/input/authority/budget versions, and graph-level required-output/partial-failure joins.",
         "blast_radius": {
           "objective_and_gap": "Reuse the existing durable task/checkpoint spine for versioned project plans and task dependencies. Current runtime_tasks support root/milestone/child rows, legal state transitions, epochs, checkpoints and false-completion barriers, but there is no persisted versioned mission DAG or dependency edge/cycle validation. Resume verifies checkpoint integrity/epoch and recovery evidence but does not bind one plan/input version plus current grant/policy generation and budget identity. Child joins fence leases/actions yet do not provide a graph-level required-output contract or explicit partial/failed dependency report.",
           "options": "Do not add a second scheduler, task database or filesystem plan log. Prefer additive typed mission-plan/dependency records beside runtime_tasks, with workflow_state as the sole state transition owner, workflow_checkpoints as the resume boundary, and existing child delegation plus completion verification reused for joins. Persist normalized identities rather than trusting client/model-supplied state.",
@@ -712,6 +712,16 @@
           "authority_and_resources": "No credentials, provider/network access, model execution, accounts, billable actions, new filesystem scope or background workers. Resume and dispatch must revalidate AP-004 mission authority, live grants/revocations, budget and epoch; missing/stale versions deny. Default tests remain offline with temporary populated SQLite stores.",
           "compatibility_and_rollback": "Use an additive transactional schema migration through the existing backup/integrity/restore path. Tests must prove populated sessions, tasks, checkpoints and user data survive upgrade and migration faults roll back without a reset. A pre-upgrade binary must reject a newer schema rather than delete data; rollback/forward recovery preserves the verified snapshot and durable history.",
           "required_evidence": "Positive/negative DAG creation and dependency-cycle/illegal-transition tests; completed artifact/checkpoint restart tests; stale plan/input/grant/policy/budget/epoch resume denials; success, partial, failed and missing-required-output join reports; stale-worker completion fencing; populated-store migration and injected-failure preservation; existing workflow, checkpoint, budget, grant, delegation, recovery, task-event and migration regressions; static, generated-drift, smoke and current-head CI evidence. No live service or human approval is claimed."
+        },
+        "claim_takeover": {
+          "prior_owner": "arena/e0bd5906-m5-agent-studio",
+          "prior_branch": "arena/e0bd5906-m5-agent-studio",
+          "prior_head_sha": "74b9d4bccb633a160879670fbdc1e763520d50b4",
+          "prior_pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/295",
+          "prior_heartbeat_at": "2026-11-10T08:06:25Z",
+          "transferred_at": "2026-11-10T09:02:13Z",
+          "reason": "The user instructed “continue” after Arena assigned the continuation session its fixed arena/098ca4ab-m5-agent-studio branch; the platform branch cannot be renamed or replaced.",
+          "preserved_work": "Fast-forwarded both original claim commits from refs/pull/295/head; no implementation commit or evidence was omitted, rewritten or force-pushed."
         }
       },
       "implementation_prompt": "Implement AP-005: Compose durable mission tasks and recoverable joins. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
