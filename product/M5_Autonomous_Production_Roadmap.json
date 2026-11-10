@@ -790,7 +790,7 @@
       "title": "Extend artifact identity, provenance and selective invalidation",
       "priority": "P0",
       "optional": false,
-      "status": "not_started",
+      "status": "in_progress",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-005"
@@ -839,18 +839,37 @@
         "Push/PR state; owner/independent approvals where required"
       ],
       "tracking": {
-        "owner": null,
-        "branch": null,
-        "base_sha": null,
+        "owner": "arena/930387b7-m5-agent-studio",
+        "branch": "arena/930387b7-m5-agent-studio",
+        "base_sha": "63f674fb402f0e09dc56b3d3429ddf4cfcdd834c",
         "head_sha": null,
-        "claimed_at": null,
-        "heartbeat_at": null,
+        "claimed_at": "2026-11-10T10:51:04Z",
+        "heartbeat_at": "2026-11-10T10:51:04Z",
         "pr_url": null,
         "delivery_status": "not_pushed",
+        "authorization_record": {
+          "authorization": "normal_story_authorization",
+          "owner_instruction": "The owner told the AP-005 closeout session “While you can start new story.” That instruction is recorded verbatim in the AP-006 entry of program_registration.authorization_history by the AP-005 closeout PR #298.",
+          "sequencing_caveat": "PR #298 (docs/ledger-only AP-005 closeout) is green and open but not merged at this claim, so this branch's base still reads AP-006 as unauthorized. This session claims AP-006 on the strength of the recorded owner instruction plus AP-005's evidenced completion (PR #296 merged as acec9aebe4f86f968c077541392a2bfc3cd71fd7, exact-merge main CI 42798276827 passed), and deliberately does not edit the lifecycle, authority or authorization_history regions that #298 owns so either merge order stays clean.",
+          "dependency_state": "AP-005 is delivered and merged; the remaining AP-005 step is bookkeeping in PR #298. AP-007 through AP-032 remain unauthorized."
+        },
         "acceptance_evidence": [],
         "tests_executed": [],
-        "blockers": [],
-        "handoff": null
+        "blockers": [
+          "Offline, local-only extension of the existing artifact lineage store. No provider, model, browser, account, network, external service, background worker or billable action is activated.",
+          "AP-007 through AP-032, product runtime activation and real external actions remain unauthorized; this story does not resolve U01-U06 or claim owner, security, screenshot, media, signing or release approval.",
+          "The formal AP-006 authorization record lands in main only when the AP-005 closeout PR #298 merges; this story's tracking states that sequencing dependency rather than assuming it."
+        ],
+        "handoff": null,
+        "blast_radius": {
+          "objective_and_gap": "Make checked artifacts the unit of delivery: bytes, input versions, producer/configuration and declared checks must carry verifiable identities; input changes must invalidate only affected descendants; traversal, symlink escape, digest mismatch and unsafe active previews must be refused; partial outputs and missing checks must not read as accepted or complete; retention/export/delete must preserve privacy and scoped reference history. M5-P5-02 already provides content digests, deduplicated provenance, deny-wins operation verdicts, cascade invalidation, evidence freshness and retention, but has no producer/config/input identity, no required-check completeness state, no confined file/preview reference type, no input-change-driven invalidation, and no scoped export/delete that preserves reference history.",
+          "options": "(a) Add a second artifact/identity module and store — rejected: competing store and control plane for the same bytes. (b) Extend the existing artifact_lineage store additively with a v1-to-v2 schema migration and typed helpers, reusing ArtifactRegistry's secure write path, operation verdicts and retention — chosen as the smallest complete slice. (c) Declare AP-006 satisfied by M5-P5-02 — rejected: docs/autonomous-production-ap001-reconciliation.md records these exact gaps.",
+          "anticipated_files": "artifact_lineage.py (primary), tests/test_artifact_lineage.py (anchor) plus a new focused test module, docs/artifact-lineage.md, docs/storage-migrations.md, a new ADR, the AP tracking ledger, AGENTS.md and regenerated source-bound artifacts. app.py, routes, static/index.html and the UI inventory are untouched: no new endpoint or control, so no widening of the API surface.",
+          "contracts_and_data": "Additive artifact-lineage schema v2 in the existing artifacts/state.json sidecar: optional producer kind/version, producer configuration digest, named input digests, named required checks with outcomes, plus top-level export and deletion (tombstone) history. No new store file, no duplicated bytes, no caller-supplied authority or completion fields accepted as truth.",
+          "authority_and_resources": "No credentials, provider/model inference, network egress, browser worker, account, billable action, background process or new filesystem grant. File references are confined to a caller-supplied root that the caller already owns; the store keeps its owner-only permissions and symlink refusal. Tests stay offline on temporary directories.",
+          "compatibility_and_rollback": "A populated v1 store is read, migrated in memory to v2 with every entry, evidence record and pin preserved, and written as v2 by the existing atomic replace path — no destructive reset. A v1 binary refuses the v2 file loudly instead of silently dropping identity fields, so rollback is either re-applying the newer module or restoring a snapshot taken before upgrade; the module never deletes data to recover.",
+          "required_evidence": "Positive/negative identity tests (producer, config, inputs, checks); selective-invalidation tests proving affected descendants go invalid while unrelated artifacts keep working; traversal, symlink-escape, digest-mismatch and unsafe-preview refusals; partial-output and missing-check refusal to report complete; export/delete privacy plus preserved reference history; populated v1 store migration and stale-evidence interaction; existing lineage, durable-state-contract, trusted-transformation and quarantine regressions; static checks and generated-artifact drift."
+        }
       },
       "implementation_prompt": "Implement AP-006: Extend artifact identity, provenance and selective invalidation. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
