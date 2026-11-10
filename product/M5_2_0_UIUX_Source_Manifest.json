@@ -26,9 +26,9 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "8a8895104b4068b783542cc1e41efce4b1dc433b1aa23ec2ede31913c3ad5fd4",
-      "bytes": 4429619,
-      "lines": 86442
+      "sha256": "6deaf7dcf837fde957ffa4eca26f827656a0868e164665d2e2810f42c8eeb6ef",
+      "bytes": 4467760,
+      "lines": 87344
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",

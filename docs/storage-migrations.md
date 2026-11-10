@@ -18,7 +18,7 @@ written from a failure path where a transaction is not available:
 | Scoped grants, revocations, policy revisions | `scoped_grants.py` | `grants/state.json` |
 | MCP external effects and connector policies | `mcp_client.py` | `mcp_effects/state.json` |
 | Security incidents, configuration generations, and backend qualifications | `sandbox_boundary.py` | `security_incidents/state.json` |
-| Artifact content identity, provenance, evidence freshness, and pins | `artifact_lineage.py` | `artifacts/state.json` |
+| Artifact content identity, provenance, evidence freshness, pins, versioned identities, checks, exports and deletion tombstones | `artifact_lineage.py` | `artifacts/state.json` |
 | Portable model handoffs and per-session switch retry budgets | `routing_policy.py` | `handoffs/state.json` |
 | Bounded child delegations, disjoint write leases, and benchmark summaries | `child_delegation.py` | `delegations/state.json` |
 | Project-scoped evidence-backed lessons and A/B gate summaries | `evidence_lessons.py` | `lessons/state.json` |
@@ -37,6 +37,14 @@ clause of it against **every** store:
 - corrupt JSON and a future `schema_version` fail closed rather than starting empty or
   downgrading a newer manifest;
 - no temporary files are left behind.
+
+Sidecar stores carry their own `schema_version` inside the file. The artifact lineage store
+is at version 2 since AP-006 ([ADR-0040](adr/0040-artifact-identity-completeness-and-confined-references.md)):
+a populated version 1 document is read with every new field defaulted and is rewritten as
+version 2 by the next atomic write, with every provenance entry, evidence record and pin
+preserved. A build that predates version 2 refuses the newer file rather than dropping the
+identity fields, and a store newer than the running build supports is refused; neither case
+resets or deletes data. See [artifact lineage](artifact-lineage.md) for the field-level detail.
 
 The contract is checked per store because the implementations are hand-written
 and can drift — the directory `fsync` was missing from exactly one of them, and a
