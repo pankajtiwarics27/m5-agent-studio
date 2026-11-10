@@ -1,16 +1,16 @@
 {
   "story": "UIV2-29",
   "kind": "backend-safety-run",
-  "generated_at": "2026-11-10T06:46:03.907664+00:00",
+  "generated_at": "2026-11-10T07:30:49.992842+00:00",
   "git": {
-    "head": "7e3c6d4086ef66ab87f2b45026bcd1d1b31f0dfb",
+    "head": "c5f7a907e982281ddca1aafc23a69813b6840b4e",
     "dirty": true
   },
   "source_sha256": {
     "static/index.html": "397c3ae069fe281d8150485e1b88e73c7970de8a1ac07841c6790f7fe685da0f",
-    "app.py": "96c7b0cc1d06e47e39a2c09b9baff5875a9c78eae7235ef15cef7e530d67768e",
+    "app.py": "1acb5ad75d621160b2dd6d77d8f2457ba6e3d0a261192f0f431699707747398d",
     "task_events.py": "59ab9597bed3a497de995cf775354c5b6dff57a4009c19e232e33d0f6b8d31d7",
-    "scoped_grants.py": "b14f49e39a684f7a6c18b681ed68622b0bdbaa98ce7ba1c0dc2f37d2dfcd83ec",
+    "scoped_grants.py": "3af45959f61e939caa595066e5cede83ced72372c8e487262f9e35645e593ae0",
     "recovery_guard.py": "73fd90ed2ecd819876a7acc5f10a199b84c6439823833095ff2608acf2e44593",
     "process_supervision.py": "97ece792d62b46fa8cb00c419d0c0d0222097e3a7eb9f73ee1b8bf77ef6c99ac",
     "side_effect_ledger.py": "8e3d201df3d86ca3f92e9ee20845b342cd63a80d24be62aa0ccb5efeb7c83d25",
@@ -69,11 +69,11 @@
       "..............                                                           [100%]",
       "=============================== warnings summary ===============================",
       ".venv/lib/python3.11/site-packages/fastapi/testclient.py:1",
-      "  /tmp/m5-agent-studio-ci-evidence/.venv/lib/python3.11/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.",
+      "  /home/user/m5-agent-studio/.venv/lib/python3.11/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.",
       "    from starlette.testclient import TestClient as TestClient  # noqa",
       "",
       "-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html",
-      "302 passed, 1 warning in 75.76s (0:01:15)"
+      "302 passed, 1 warning in 77.39s (0:01:17)"
     ]
   },
   "isolation": {
@@ -99,7 +99,7 @@
       "  [PASS] no new privileges — --security-opt=no-new-privileges",
       "  [PASS] no implicit image pull — --pull=never",
       "  [PASS] resource limits — --pids-limit=128 --memory=2g --cpus=2",
-      "  [PASS] single workspace bind mount — type=bind,source=/tmp/m5-evidence-browser/tmp/m5-isolation-smoke-zxbn7sd4,target=/workspace",
+      "  [PASS] single workspace bind mount — type=bind,source=/tmp/m5-isolation-smoke-sx6yhcdg,target=/workspace",
       "",
       "== 3. Skill-code execution gates (app._run_skill_script) ==",
       "  [PASS] default-off skill-code denial — PermissionError",
@@ -155,7 +155,7 @@
       "scripts/isolation_smoke.py"
     ]
   },
-  "duration_seconds": 77.321,
+  "duration_seconds": 79.074,
   "totals": {
     "test_modules": 13,
     "tests_passed": 302,

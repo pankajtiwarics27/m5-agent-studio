@@ -81,6 +81,47 @@ def test_allowed_action_records_intent_then_completed_outcome() -> None:
     assert ledger.events[1][1] == {"event_id": 101, "status": "completed", "elapsed_ms": 5}
 
 
+def test_mission_coordinator_denial_is_durably_audited_before_dispatch() -> None:
+    policy = FakePolicy(spine.AdmissionDecision(True, "", False))
+    ledger = FakeLedger()
+    called: list[str] = []
+
+    class MissionCoordinator:
+        def admit_mission_action(self, request, *, action_class, profile_outcome):
+            called.append(f"mission:{request.task_id}:{action_class}:{profile_outcome.allowed}")
+            return spine.ProfileAdmissionOutcome(
+                allowed=False,
+                reason="captured generation is stale",
+                error_code="stale_policy_generation",
+            )
+
+    executed: list[bool] = []
+
+    async def executor() -> dict[str, Any]:
+        executed.append(True)
+        return await _ok_executor()
+
+    result = asyncio.run(
+        spine.DurableActionBoundary(
+            policy,
+            ledger,
+            mission_envelope_coordinator=MissionCoordinator(),
+        ).admit_and_execute(
+            _request(
+                task_id="task-1",
+                task_state="running",
+                mission_envelope=spine.MissionAuthorityEnvelope("s-1", "task-1", "task-1", 1, 1),
+            ),
+            executor,
+        )
+    )
+
+    assert called == ["mission:task-1:consequential:True"]
+    assert executed == []
+    assert result["error_code"] == "stale_policy_generation"
+    assert ledger.events[1][1]["status"] == "denied"
+
+
 def test_policy_denial_blocks_execution_and_records_denied() -> None:
     policy = FakePolicy(spine.AdmissionDecision(False, "not allowed", False))
     ledger = FakeLedger()

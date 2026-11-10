@@ -66,7 +66,9 @@ declared acceptance coverage),
 [`recovery-guard.md`](recovery-guard.md) (durable failure memory, stagnation and
 oscillation verdicts, retry/replan/rollback budgets, safe pause),
 [`workflow-checkpoints.md`](workflow-checkpoints.md),
-[`execution-budgets.md`](execution-budgets.md), [`side-effect-idempotency.md`](side-effect-idempotency.md),
+[`execution-budgets.md`](execution-budgets.md),
+[`mission-authority-envelope.md`](mission-authority-envelope.md) (immutable task/root generations and atomic leaf/root tool admission),
+[`side-effect-idempotency.md`](side-effect-idempotency.md),
 [`mcp-idempotency.md`](mcp-idempotency.md) (MCP idempotency binding, queryable-outcome reconciliation, uncertain-write safe pause),
 [`bounded-child-delegation.md`](bounded-child-delegation.md) (child authority/budget subsets, disjoint write leases, durable parent joins, single-agent vs delegation benchmarks).
 
@@ -113,6 +115,7 @@ Execution and policy: [`routing-consent-policy.md`](routing-consent-policy.md),
 [`model-admission.md`](model-admission.md),
 [`execution-profiles.md`](execution-profiles.md),
 [`execution-budgets.md`](execution-budgets.md),
+[`mission-authority-envelope.md`](mission-authority-envelope.md),
 [`tool-authorization.md`](tool-authorization.md),
 [`side-effect-idempotency.md`](side-effect-idempotency.md),
 [`session-device-trust.md`](session-device-trust.md),

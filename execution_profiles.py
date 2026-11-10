@@ -99,6 +99,7 @@ FootprintScope = Literal[
     "bounded_workspace_read",
     "conservative_workspace",
     "external_and_workspace",
+    "external_read",
     "vault",
     "session_state",
 ]
@@ -596,6 +597,9 @@ _EP_EXACT_WRITE_TOOLS: frozenset[str] = frozenset({"write_file", "edit_file"})
 _EP_SUBPROCESS_TOOLS: frozenset[str] = frozenset(
     {"run_bash", "ctx_execute_python", "skill_execute_script"}
 )
+_EP_INSPIRATION_HTTP_TOOLS: frozenset[str] = frozenset(
+    {"inspiration_http_github", "inspiration_http_duckduckgo"}
+)
 _EP_COUNCIL_MUTATION_TOOLS: frozenset[str] = frozenset(
     {
         "mcp_bridge__start_council",
@@ -612,6 +616,7 @@ _EP_KNOWN_TOOLS: frozenset[str] = (
     | _EP_SESSION_READ_TOOLS
     | _EP_EXACT_WRITE_TOOLS
     | _EP_SUBPROCESS_TOOLS
+    | _EP_INSPIRATION_HTTP_TOOLS
     | _EP_COUNCIL_MUTATION_TOOLS
     | frozenset({"ctx_run_block", "rollback_edits", "delegate_subagent", "mcp_bridge__create_harness_worktree"})
 )
@@ -823,6 +828,20 @@ def resolve_capability_descriptor(
             network_capability=net_cap,
             process_capability="bounded_subprocess",
             side_effect_certainty="unknown_conservative",
+        )
+
+    if clean in _EP_INSPIRATION_HTTP_TOOLS:
+        return CapabilityDescriptor(
+            tool_name=clean,
+            action_class="read_only",
+            execution_surface="external",
+            isolation_posture="external_mcp",
+            verified_isolation=False,
+            fs_capability="none",
+            network_capability="configured_provider",
+            process_capability="none",
+            side_effect_certainty="bounded_read",
+            registered=True,
         )
 
     if clean.startswith("mcp__"):
@@ -1181,7 +1200,24 @@ def derive_execution_profile(
             ),
         )
 
-    # 7. External MCP tools: reserve both remote-server barrier and conservative workspace barrier.
+    # 7. Fixed-endpoint public HTTP reads share admission and reserve a
+    # provider-specific shared barrier without claiming workspace mutation.
+    if clean in _EP_INSPIRATION_HTTP_TOOLS:
+        provider = clean.removeprefix("inspiration_http_")
+        return ExecutionProfile(
+            descriptor=descriptor,
+            footprint=ResourceFootprint(
+                scope="external_read",
+                memory_bytes=DEFAULT_READ_FOOTPRINT_BYTES,
+                action_slots=1,
+                subprocess_slots=0,
+                mutation_slots=0,
+                barriers=(ResourceBarrier(f"http:{provider}", "shared"),),
+                conservative=False,
+            ),
+        )
+
+    # 8. External MCP tools: reserve both remote-server barrier and conservative workspace barrier.
     if clean.startswith("mcp__"):
         parts = clean.split("__", 2)
         alias = parts[1].strip() if len(parts) >= 2 and parts[1].strip() else "unknown"

@@ -186,6 +186,12 @@ def test_portable_core_and_harness_extensions_persisted_and_no_kv_cache_assumpti
     assert len(core["core_sha256"]) == 64
     assert len(ext["extensions_sha256"]) == 64
     assert ext["policy"] == "standard"
+    mission_before = ext["admission_transition"]["mission_envelope_before"]
+    mission_after = ext["admission_transition"]["mission_envelope_after"]
+    assert mission_before["session_id"] == sid
+    assert mission_before["task_id"] == sid
+    assert mission_before["root_task_id"] == sid
+    assert mission_after == mission_before
 
     # Persisted `.messages.json` on disk is scrubbed of all non-portable keys.
     saved_msgs = studio._load_harness_messages(sid)

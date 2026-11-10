@@ -29,9 +29,10 @@ budget:
 - **Carved execution budgets.** `derive_child_budget_allocation` carves `max_steps`,
   `max_tool_calls`, `max_tokens`, and `max_elapsed_s` strictly inside the parent's
   remaining budget minus active sibling reservations (`child_budget_exceeds_parent`).
-  Each child step records usage against the child's `TaskBudgetState` (`enforce=True`),
-  halting immediately on overrun; consumed usage is debited into the parent's budget once
-  upon durable join.
+  Each child step records steps/tokens/elapsed usage against the child's `TaskBudgetState`
+  (`enforce=True`), halting immediately on overrun. Tool calls are admitted and charged to
+  child + immutable root atomically at the central action boundary; durable join therefore
+  rolls up only steps/tokens/elapsed once and cannot double-debit root tool usage.
 
 ## Disjoint workspace write locks and rollback
 

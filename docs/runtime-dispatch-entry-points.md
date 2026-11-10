@@ -12,60 +12,60 @@ all-path inclusion validation remain required before activation.
 
 | Owning function | Common seam / guarded wire | app.py line |
 |---|---|---:|
-| `AnthropicProviderAdapter.stream` | `_stream_cloud_anthropic` | 4601 |
-| `OpenAICompatibleProviderAdapter.stream` | `_stream_cloud_openai` | 4580 |
-| `_coordinated_gateway_chat.events` | `stream_any_model` | 5190 |
-| `_mcp_summon_model` | `_unload_omlx_model` | 22822 |
-| `_mcp_summon_model` | `stream_any_model` | 22815 |
-| `_run_sdlc_sprints_stream` | `_unload_omlx_model` | 21359 |
-| `_run_sdlc_sprints_stream` | `_unload_omlx_model` | 21389 |
-| `_run_sdlc_sprints_stream` | `stream_any_model` | 21249 |
-| `_run_sdlc_sprints_stream` | `stream_any_model` | 21384 |
-| `_stream_cloud_openai` | `guarded legacy HTTP (not coordinated authority)` | 4369 |
-| `_stream_omlx_completion` | `_unload_other_omlx_models` | 4843 |
-| `_stream_omlx_completion` | `guarded legacy HTTP (not coordinated authority)` | 4779 |
-| `_stream_omlx_completion` | `guarded legacy HTTP (not coordinated authority)` | 4845 |
-| `_unload_omlx_model` | `guarded legacy HTTP (not coordinated authority)` | 6059 |
-| `_unload_other_omlx_models` | `guarded legacy HTTP (not coordinated authority)` | 6085 |
-| `_workflow_orchestrator.stream_model` | `stream_any_model` | 5014 |
-| `_workflow_orchestrator.unload_model` | `_unload_omlx_model` | 5032 |
-| `api_chat_stream.event_gen` | `_unload_omlx_model` | 6470 |
-| `api_chat_stream.event_gen` | `stream_any_model` | 6372 |
-| `api_clear_ssd_cache` | `guarded legacy HTTP (not coordinated authority)` | 6211 |
-| `api_hall_summon.event_gen` | `_unload_omlx_model` | 5824 |
-| `api_hall_summon.event_gen` | `stream_any_model` | 5787 |
-| `api_hall_summon.event_gen` | `stream_any_model` | 5807 |
-| `api_load_model` | `guarded legacy HTTP (not coordinated authority)` | 6159 |
-| `api_run_agile_sdlc_factory.sdlc_gen` | `_unload_omlx_model` | 21539 |
-| `api_run_agile_sdlc_factory.sdlc_gen` | `stream_any_model` | 21533 |
-| `api_run_agile_sdlc_factory.sdlc_gen` | `stream_any_model` | 21558 |
-| `api_run_agile_sdlc_factory.sdlc_gen` | `stream_any_model` | 21581 |
-| `api_run_agile_sdlc_factory.sdlc_gen` | `stream_any_model` | 21605 |
-| `api_run_gsd_fresh_wave.gsd_gen` | `_unload_omlx_model` | 20564 |
-| `api_run_gsd_fresh_wave.gsd_gen` | `_unload_omlx_model` | 20611 |
-| `api_run_gsd_fresh_wave.gsd_gen` | `stream_any_model` | 20198 |
-| `api_run_gsd_fresh_wave.gsd_gen` | `stream_any_model` | 20323 |
-| `api_run_gsd_fresh_wave.gsd_gen` | `stream_any_model` | 20590 |
-| `api_run_harness_turn.event_gen` | `_unload_other_omlx_models` | 19298 |
-| `api_run_harness_turn.event_gen` | `stream_any_model` | 19455 |
-| `api_run_sdlc_feedback_loop.fb_gen` | `_unload_omlx_model` | 21840 |
-| `api_run_sdlc_feedback_loop.fb_gen` | `stream_any_model` | 21832 |
-| `api_run_sdlc_feedback_loop.fb_gen` | `stream_any_model` | 21859 |
-| `api_unload_all` | `guarded legacy HTTP (not coordinated authority)` | 6130 |
-| `api_unload_model` | `guarded legacy HTTP (not coordinated authority)` | 6186 |
-| `api_workspace_picker_suggest` | `stream_any_model` | 5614 |
-| `execute_child_delegation_async` | `_unload_omlx_model` | 16717 |
-| `execute_child_delegation_async` | `_unload_omlx_model` | 16788 |
-| `execute_child_delegation_async._stream_sub` | `stream_any_model` | 16760 |
-| `execute_conservative_model_switch_async` | `_unload_other_omlx_models` | 15889 |
-| `execute_conservative_model_switch_async` | `_unload_other_omlx_models` | 15892 |
-| `execute_conservative_model_switch_async._run_probe_stream` | `stream_any_model` | 15992 |
-| `openai_gateway_chat` | `stream_any_model` | 5362 |
-| `openai_gateway_chat.sse_gen` | `stream_any_model` | 5407 |
-| `openai_gateway_chat.sse_gen` | `stream_any_model` | 5439 |
-| `stream_any_model` | `_stream_omlx_completion` | 4995 |
-| `stream_any_model` | `_unload_other_omlx_models` | 4954 |
-| `stream_any_model` | `stream_any_model` | 4958 |
+| `AnthropicProviderAdapter.stream` | `_stream_cloud_anthropic` | 4603 |
+| `OpenAICompatibleProviderAdapter.stream` | `_stream_cloud_openai` | 4582 |
+| `_coordinated_gateway_chat.events` | `stream_any_model` | 5192 |
+| `_mcp_summon_model` | `_unload_omlx_model` | 23183 |
+| `_mcp_summon_model` | `stream_any_model` | 23176 |
+| `_run_sdlc_sprints_stream` | `_unload_omlx_model` | 21720 |
+| `_run_sdlc_sprints_stream` | `_unload_omlx_model` | 21750 |
+| `_run_sdlc_sprints_stream` | `stream_any_model` | 21598 |
+| `_run_sdlc_sprints_stream` | `stream_any_model` | 21745 |
+| `_stream_cloud_openai` | `guarded legacy HTTP (not coordinated authority)` | 4371 |
+| `_stream_omlx_completion` | `_unload_other_omlx_models` | 4845 |
+| `_stream_omlx_completion` | `guarded legacy HTTP (not coordinated authority)` | 4781 |
+| `_stream_omlx_completion` | `guarded legacy HTTP (not coordinated authority)` | 4847 |
+| `_unload_omlx_model` | `guarded legacy HTTP (not coordinated authority)` | 6061 |
+| `_unload_other_omlx_models` | `guarded legacy HTTP (not coordinated authority)` | 6087 |
+| `_workflow_orchestrator.stream_model` | `stream_any_model` | 5016 |
+| `_workflow_orchestrator.unload_model` | `_unload_omlx_model` | 5034 |
+| `api_chat_stream.event_gen` | `_unload_omlx_model` | 6472 |
+| `api_chat_stream.event_gen` | `stream_any_model` | 6374 |
+| `api_clear_ssd_cache` | `guarded legacy HTTP (not coordinated authority)` | 6213 |
+| `api_hall_summon.event_gen` | `_unload_omlx_model` | 5826 |
+| `api_hall_summon.event_gen` | `stream_any_model` | 5789 |
+| `api_hall_summon.event_gen` | `stream_any_model` | 5809 |
+| `api_load_model` | `guarded legacy HTTP (not coordinated authority)` | 6161 |
+| `api_run_agile_sdlc_factory.sdlc_gen` | `_unload_omlx_model` | 21900 |
+| `api_run_agile_sdlc_factory.sdlc_gen` | `stream_any_model` | 21894 |
+| `api_run_agile_sdlc_factory.sdlc_gen` | `stream_any_model` | 21919 |
+| `api_run_agile_sdlc_factory.sdlc_gen` | `stream_any_model` | 21942 |
+| `api_run_agile_sdlc_factory.sdlc_gen` | `stream_any_model` | 21966 |
+| `api_run_gsd_fresh_wave.gsd_gen` | `_unload_omlx_model` | 20778 |
+| `api_run_gsd_fresh_wave.gsd_gen` | `_unload_omlx_model` | 20825 |
+| `api_run_gsd_fresh_wave.gsd_gen` | `stream_any_model` | 20401 |
+| `api_run_gsd_fresh_wave.gsd_gen` | `stream_any_model` | 20526 |
+| `api_run_gsd_fresh_wave.gsd_gen` | `stream_any_model` | 20804 |
+| `api_run_harness_turn.event_gen` | `_unload_other_omlx_models` | 19488 |
+| `api_run_harness_turn.event_gen` | `stream_any_model` | 19645 |
+| `api_run_sdlc_feedback_loop.fb_gen` | `_unload_omlx_model` | 22201 |
+| `api_run_sdlc_feedback_loop.fb_gen` | `stream_any_model` | 22193 |
+| `api_run_sdlc_feedback_loop.fb_gen` | `stream_any_model` | 22220 |
+| `api_unload_all` | `guarded legacy HTTP (not coordinated authority)` | 6132 |
+| `api_unload_model` | `guarded legacy HTTP (not coordinated authority)` | 6188 |
+| `api_workspace_picker_suggest` | `stream_any_model` | 5616 |
+| `execute_child_delegation_async` | `_unload_omlx_model` | 16911 |
+| `execute_child_delegation_async` | `_unload_omlx_model` | 16982 |
+| `execute_child_delegation_async._stream_sub` | `stream_any_model` | 16954 |
+| `execute_conservative_model_switch_async` | `_unload_other_omlx_models` | 16061 |
+| `execute_conservative_model_switch_async` | `_unload_other_omlx_models` | 16064 |
+| `execute_conservative_model_switch_async._run_probe_stream` | `stream_any_model` | 16165 |
+| `openai_gateway_chat` | `stream_any_model` | 5364 |
+| `openai_gateway_chat.sse_gen` | `stream_any_model` | 5409 |
+| `openai_gateway_chat.sse_gen` | `stream_any_model` | 5441 |
+| `stream_any_model` | `_stream_omlx_completion` | 4997 |
+| `stream_any_model` | `_unload_other_omlx_models` | 4956 |
+| `stream_any_model` | `stream_any_model` | 4960 |
 
 ## Non-stream observers and unavailable paths
 

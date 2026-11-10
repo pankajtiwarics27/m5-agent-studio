@@ -5,7 +5,8 @@ operation-, resource-, and task-scoped permission grants, non-renewable finite e
 event-driven revocation, capability-specific in-flight containment, and strict exclusion
 of secrets and loader/Git-config injection variables from arbitrary subprocess
 environments. See [`ADR-0014`](adr/0014-scoped-grants-expiry-and-revocation.md),
-[`execution-profiles.md`](execution-profiles.md), and
+[`execution-profiles.md`](execution-profiles.md),
+[`mission-authority-envelope.md`](mission-authority-envelope.md), and
 [`process-supervision.md`](process-supervision.md).
 
 ## Durable Grant & Policy-Revision Store (`$HARNESS_STORE_DIR/grants/state.json`)

@@ -14,7 +14,7 @@
     "fit_source_sha": "250dc5874fc05bb8128298f7e1ae6936660133e8",
     "method": "quantize median module aggregates to 0.5 seconds, then deterministic longest-processing-time partitioning",
     "quantization_seconds": 0.5,
-    "collected_nodes": 5312,
+    "collected_nodes": 5319,
     "projected_median_aggregate_seconds": [
       644.598,
       645.516,
@@ -26,13 +26,13 @@
       645.0
     ],
     "module_counts": [
-      74,
+      75,
       75,
       74
     ],
     "node_counts": [
-      1522,
-      1883,
+      1528,
+      1884,
       1907
     ],
     "input_partition_observed": {
@@ -136,7 +136,10 @@
         640,
         611
       ]
-    }
+    },
+    "unfitted_modules": [
+      "tests/test_mission_authority_envelope.py"
+    ]
   },
   "shards": {
     "1": [
@@ -165,6 +168,7 @@
       "tests/test_macos_hardware_profiler.py",
       "tests/test_mcp_client.py",
       "tests/test_mcp_tools.py",
+      "tests/test_mission_authority_envelope.py",
       "tests/test_model_comparison.py",
       "tests/test_model_updates.py",
       "tests/test_native_transition_driver.py",

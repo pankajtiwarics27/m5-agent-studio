@@ -16,6 +16,7 @@
       "test_execution_*.py",
       "test_failure_injection.py",
       "test_harness_*.py",
+      "test_mission_authority_envelope.py",
       "test_process_supervision.py",
       "test_recovery_guard.py",
       "test_scoped_grants.py",

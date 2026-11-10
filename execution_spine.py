@@ -62,6 +62,8 @@ MANAGED_READ_TOOLS: frozenset[str] = frozenset(
         "mcp_bridge__oc_search",
         "mcp_bridge__oc_lint",
         "mcp_bridge__codegraph_query",
+        "inspiration_http_github",
+        "inspiration_http_duckduckgo",
     }
 )
 
@@ -126,6 +128,10 @@ MODEL_UNTRUSTED_AUTHORITY_KEYS: frozenset[str] = frozenset(
         "epoch",
         "current_epoch",
         "worker_id",
+        "mission_envelope",
+        "root_task_id",
+        "session_policy_revision",
+        "global_policy_revision",
         "bypass_admission",
     }
 )
@@ -208,6 +214,31 @@ class TaskAdmissionSnapshot:
 
 
 @dataclass(frozen=True, slots=True)
+class MissionAuthorityEnvelope:
+    """Immutable server-issued root-task and policy-generation binding.
+
+    The envelope is coordination evidence, never user/model authority.  A live
+    ``MissionEnvelopeCoordinator`` must revalidate every field against durable
+    task, grant and budget state immediately before dispatch.
+    """
+
+    session_id: str
+    root_task_id: str
+    task_id: str
+    session_policy_revision: int
+    global_policy_revision: int
+
+    def to_mapping(self) -> dict[str, Any]:
+        return {
+            "session_id": self.session_id,
+            "root_task_id": self.root_task_id,
+            "task_id": self.task_id,
+            "session_policy_revision": self.session_policy_revision,
+            "global_policy_revision": self.global_policy_revision,
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class ActionRequest:
     """One action submitted to the authoritative admission boundary."""
 
@@ -230,6 +261,7 @@ class ActionRequest:
     step_id: str | int | None = None
     call_index: int | None = None
     replay_policy: str | None = None
+    mission_envelope: MissionAuthorityEnvelope | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -243,6 +275,9 @@ class ActiveAdmissionScope:
     event_id: int
     grant_source: str
     task_id: str | None = None
+    root_task_id: str | None = None
+    session_policy_revision: int | None = None
+    global_policy_revision: int | None = None
     epoch: int | None = None
     worker_id: str | None = None
     action_id: str = ""
@@ -400,6 +435,20 @@ class ProfileAdmissionOutcome:
     resource_scopes: tuple[str, ...] = ()
     profile: dict[str, Any] | None = None
     handle: Any = None
+
+
+class MissionEnvelopeCoordinator(Protocol):
+    """Revalidate a captured mission envelope and atomically charge action budget."""
+
+    def admit_mission_action(
+        self,
+        request: ActionRequest,
+        *,
+        action_class: ActionClass,
+        profile_outcome: ProfileAdmissionOutcome,
+    ) -> ProfileAdmissionOutcome:
+        """Deny stale/expanded authority or reserve leaf + root action budget."""
+        ...
 
 
 class ExecutionProfileCoordinator(Protocol):
@@ -624,6 +673,7 @@ class DurableActionBoundary:
         intent_ledger: IntentLedger | None = None,
         boundary_injector: failure_injection.ActionBoundaryFaultInjector | None = None,
         profile_coordinator: ExecutionProfileCoordinator | None = None,
+        mission_envelope_coordinator: MissionEnvelopeCoordinator | None = None,
     ) -> None:
         self._policy = policy
         self._ledger = ledger
@@ -632,6 +682,7 @@ class DurableActionBoundary:
         self._intent_ledger = intent_ledger
         self._boundary_injector = boundary_injector
         self._profile_coordinator = profile_coordinator
+        self._mission_coordinator = mission_envelope_coordinator
 
     async def admit_and_execute(self, request: ActionRequest, executor: Executor) -> dict[str, Any]:
         effective = self._policy.effective_policy(request.policy)
@@ -746,6 +797,34 @@ class DurableActionBoundary:
             else:
                 profile_handle = profile_outcome.handle
 
+        # Mission authority is the final admission check.  It deliberately runs
+        # after unified policy/profile/grant admission (so it can validate the
+        # exact admitted scopes) and before durable intent or dispatch.  Its
+        # budget operation is atomic across the leaf task and immutable root.
+        if decision.allowed and self._mission_coordinator is not None:
+            try:
+                mission_outcome = self._mission_coordinator.admit_mission_action(
+                    request,
+                    action_class=action_class,
+                    profile_outcome=(profile_outcome or ProfileAdmissionOutcome(allowed=True)),
+                )
+            except Exception:
+                mission_outcome = ProfileAdmissionOutcome(
+                    allowed=False,
+                    reason="Mission authority admission failed; invocation denied.",
+                    error_code="mission_admission_failed",
+                )
+            if not mission_outcome.allowed:
+                profile_outcome = mission_outcome
+                decision = AdmissionDecision(
+                    False,
+                    mission_outcome.reason or "Mission authority denied invocation.",
+                    False,
+                    action_class,
+                    mission_outcome.error_code,
+                )
+
+        intent_decision: IntentBeginDecision | None = None
         try:
             if decision.allowed:
                 failure_injection.check_action_boundary(
@@ -763,7 +842,6 @@ class DurableActionBoundary:
             )
             started = time.perf_counter()
 
-            intent_decision: IntentBeginDecision | None = None
             if self._intent_ledger is not None:
                 try:
                     intent_decision = self._intent_ledger.begin(
@@ -918,6 +996,13 @@ class DurableActionBoundary:
                 event_id=event_id,
                 grant_source=str(request.grant_source or "unspecified"),
                 task_id=request.task_id,
+                root_task_id=(request.mission_envelope.root_task_id if request.mission_envelope else None),
+                session_policy_revision=(
+                    request.mission_envelope.session_policy_revision if request.mission_envelope else None
+                ),
+                global_policy_revision=(
+                    request.mission_envelope.global_policy_revision if request.mission_envelope else None
+                ),
                 epoch=request.epoch,
                 worker_id=request.worker_id,
                 action_id=(intent_decision.action_id if intent_decision is not None else ""),
