@@ -2,22 +2,29 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import importlib.util
 import json
+import os
 from dataclasses import replace
 from pathlib import Path
 import sqlite3
+import subprocess
 import sys
 import time
-from typing import Any, AsyncIterator
+from typing import Any, AsyncIterator, Iterator
 
 from fastapi.testclient import TestClient
 import pytest
 
+import artifact_lineage
 import execution_budget
 import execution_spine
+import process_supervision
 import runtime_persistence
+import sandbox_boundary
+import side_effect_ledger
 import studio
 import workflow_checkpoints
 import workflow_state
@@ -827,6 +834,35 @@ def test_standalone_studio_bundle_runs_durable_state_machine_in_isolation(tmp_pa
             authority=mission_authority,
         )
         assert sm2.list_mission_readiness("standalone-plan", 1)[0].ready is True
+
+        # AP-007 contracts are inlined too: a supervised stop, its report and a bounded stop.
+        halted = sm2.halt_mission(
+            "standalone-plan",
+            1,
+            authority=mission_authority,
+            reason="standalone stop",
+            supervisor=mod.ProcessSupervisor(mod.ContainmentStore(tmp_path / "standalone_containment")),
+        )
+        assert (halted.outcome, halted.plan_status, halted.claims_success) == ("cancelled", "cancelled", False)
+        assert halted.stop["owned_work"]["cleanly_stopped"] is True
+        assert halted.limitation_codes[0] == "mission_cancelled"
+        assert sm2.list_mission_readiness("standalone-plan", 1)[0].ready is False
+        assert sm2.mission_recovery_report("standalone-plan", 1).report_hash == halted.report_hash
+        assert mod.isolation_refusal(None).startswith("runtime isolation is required")
+        sm2.ensure_root_task(
+            "bounded-standalone",
+            session_id="bounded-standalone",
+            budget_spec=mod.execution_budget.TaskBudgetSpec(max_no_progress=0),
+            override_budget_spec=True,
+        )
+        with pytest.raises(mod.BoundedStopRequired) as bounded:
+            sm2.budgets.record_bounded_observation(
+                "bounded-standalone",
+                root_task_id="bounded-standalone",
+                session_id="bounded-standalone",
+                progressed=False,
+            )
+        assert bounded.value.verdict.code == "no_progress"
     finally:
         sys.path = old_sys_path
         sys.modules.pop(mod_name, None)
@@ -1320,3 +1356,1238 @@ def test_ap005_join_reports_failed_and_missing_outputs_and_blocks_parent_success
             epoch=root_epoch.epoch,
             now=45.0,
         )
+
+
+# =============================================================================
+# AP-007: cancellation, bounded stops, isolation refusal and truthful recovery
+# =============================================================================
+
+_AP007_INPUTS = {"request": "assemble the offline report", "input_version": 1}
+# A harmless idle child.  It stands in for work a mission task owns.
+_AP007_IDLE_CHILD = "import time\nwhile True:\n    time.sleep(0.05)\n"
+# Clearly fictional evidence for the positive isolation path.  No isolated runtime
+# is qualified in this repository; these tests never claim that one exists.
+_AP007_FIXTURE_ISOLATION = execution_budget.IsolationEvidence(
+    execution_mode="sandbox",
+    admitted=True,
+    qualified=True,
+    backend_id="test-fixture-backend-not-a-real-runtime",
+)
+
+
+def _ap007_machine(
+    workspace: Path,
+    root: str,
+    spec: execution_budget.TaskBudgetSpec | None = None,
+) -> workflow_state.DurableTaskStateMachine:
+    sm = workflow_state.DurableTaskStateMachine(studio.STORAGE, studio.DB_PATH)
+    sm.ensure_root_task(
+        root,
+        session_id=root,
+        workspace_dir=str(workspace),
+        budget_spec=spec or execution_budget.TaskBudgetSpec(max_steps=50),
+        override_budget_spec=True,
+    )
+    return sm
+
+
+def _ap007_plan(
+    sm: workflow_state.DurableTaskStateMachine,
+    root: str,
+    mission: str,
+    *,
+    version: int = 1,
+    keys: tuple[str, ...] = ("a", "b"),
+    deps: tuple[tuple[str, str], ...] = (),
+) -> tuple[workflow_state.MissionExecutionBinding, dict[str, runtime_persistence.TaskRecord]]:
+    """Create one plan version whose task ``key`` must deliver the output ``<key>-out``."""
+    sm.create_mission_plan(
+        root,
+        mission,
+        version,
+        tuple(workflow_state.MissionTaskSpec(key, f"Task {key}", (f"{key}-out",)) for key in keys),
+        tuple(workflow_state.MissionDependencySpec(task, needs, (f"{needs}-out",)) for task, needs in deps),
+        inputs=_AP007_INPUTS,
+        authority=_mission_authority(root),
+    )
+    binding = sm.capture_mission_binding(mission, version)
+    tasks = {item.task_key: item.task for item in sm.list_mission_readiness(mission, version)}
+    return binding, tasks
+
+
+def _ap007_claim(
+    sm: workflow_state.DurableTaskStateMachine,
+    root: str,
+    mission: str,
+    key: str,
+    task: runtime_persistence.TaskRecord,
+    binding: workflow_state.MissionExecutionBinding,
+    *,
+    version: int = 1,
+    isolation: execution_budget.IsolationEvidence | None = None,
+    now: float | None = None,
+) -> workflow_state.MissionTaskLease:
+    return sm.claim_ready_mission_task(
+        mission,
+        version,
+        key,
+        binding=binding,
+        current_inputs=_AP007_INPUTS,
+        current_authority=_mission_authority(root, task.task_id),
+        worker_id=f"worker-{key}",
+        isolation=isolation,
+        now=now,
+    )
+
+
+def _ap007_complete(
+    sm: workflow_state.DurableTaskStateMachine,
+    root: str,
+    mission: str,
+    key: str,
+    lease: workflow_state.MissionTaskLease,
+    binding: workflow_state.MissionExecutionBinding,
+    sha256: str,
+    *,
+    version: int = 1,
+) -> None:
+    sm.complete_mission_task(
+        mission,
+        version,
+        key,
+        binding=binding,
+        current_inputs=_AP007_INPUTS,
+        current_authority=_mission_authority(root, lease.task.task_id),
+        worker_id=f"worker-{key}",
+        epoch=lease.epoch.epoch,
+        expected_state_version=lease.task.state_version,
+        outputs=(workflow_state.MissionOutputRef(f"{key}-out", f"artifacts/{key}.json", sha256),),
+    )
+
+
+def _ap007_supervisor(tmp_path: Path) -> process_supervision.ProcessSupervisor:
+    return process_supervision.ProcessSupervisor(
+        process_supervision.ContainmentStore(tmp_path / "ap007_containment"),
+        grace_timeout_s=0.5,
+    )
+
+
+def _ap007_begin_action(
+    ledger: side_effect_ledger.DurableActionLedger,
+    action_id: str,
+    lease: workflow_state.MissionTaskLease,
+    *,
+    session_id: str,
+    read_only: bool = False,
+) -> None:
+    outcome = ledger.begin(
+        action_id=action_id,
+        tool_name="read_file" if read_only else "run_bash",
+        args={"path": "notes.txt"} if read_only else {"command": "publish the report"},
+        policy="autonomous",
+        action_class="read_only" if read_only else "consequential",
+        allowed=True,
+        explicit_approval=False,
+        session_id=session_id,
+        task_id=lease.task.task_id,
+        epoch=lease.epoch.epoch,
+        worker_id=lease.epoch.worker_id,
+    )
+    assert outcome.proceed is True and outcome.status == "in_flight"
+
+
+@pytest.fixture()
+def ap007_children() -> Iterator[list[subprocess.Popen[bytes]]]:
+    """Fixture subprocesses a test started; none of them outlives the test."""
+    children: list[subprocess.Popen[bytes]] = []
+    yield children
+    for child in children:
+        if child.poll() is None:
+            child.kill()
+        child.wait(timeout=5)
+
+
+def _ap007_owned_process(
+    supervisor: process_supervision.ProcessSupervisor,
+    children: list[subprocess.Popen[bytes]],
+    workspace: Path,
+    *,
+    session_id: str,
+    lease: workflow_state.MissionTaskLease,
+) -> subprocess.Popen[bytes]:
+    """Start the idle child and register it as work owned by the leased task."""
+    supervision_id = supervisor.new_supervision_id()
+    origin = {
+        "session_id": session_id,
+        "task_id": lease.task.task_id,
+        "epoch": lease.epoch.epoch,
+        "worker_id": lease.epoch.worker_id,
+    }
+    child = subprocess.Popen(
+        [sys.executable, "-c", _AP007_IDLE_CHILD],
+        start_new_session=True,
+        env=supervisor.prepare_spawn_env(os.environ, supervision_id=supervision_id, **origin),
+    )
+    children.append(child)
+    supervisor.register_process(
+        child,  # type: ignore[arg-type]  # the supervisor only reads the pid
+        supervision_id=supervision_id,
+        tool_name="run_bash",
+        workspace_root=workspace,
+        **origin,
+    )
+    return child
+
+
+def test_ap007_cancellation_stops_dispatch_and_terminates_owned_work_with_measured_latency(
+    isolated_env: Path,
+    tmp_path: Path,
+    ap007_children: list[subprocess.Popen[bytes]],
+) -> None:
+    """AC1: a stop fences every dispatch path, ends owned processes and records how long that took."""
+    root, mission = "ap007-cancel-root", "ap007-cancel"
+    sm = _ap007_machine(isolated_env, root)
+    binding, tasks = _ap007_plan(
+        sm, root, mission, keys=("done", "running", "waiting"), deps=(("waiting", "running"),)
+    )
+    done = _ap007_claim(sm, root, mission, "done", tasks["done"], binding)
+    _ap007_complete(sm, root, mission, "done", done, binding, "a" * 64)
+    running = _ap007_claim(sm, root, mission, "running", tasks["running"], binding)
+    supervisor = _ap007_supervisor(tmp_path)
+    child = _ap007_owned_process(supervisor, ap007_children, isolated_env, session_id=root, lease=running)
+    assert child.poll() is None
+    root_before = sm.store.get_task(root)
+    assert root_before is not None
+
+    report = sm.halt_mission(
+        mission, 1, authority=_mission_authority(root), reason="operator pressed stop", supervisor=supervisor
+    )
+
+    # The owned process is gone, and the stop record carries the measurement.
+    assert child.wait(timeout=5) is not None
+    assert report.stop is not None
+    owned = report.stop["owned_work"]
+    assert owned["termination_attempted"] is True
+    assert owned["cleanly_stopped"] is True
+    assert (owned["processes"], owned["lingering"], owned["errors"]) == (1, 0, 0)
+    assert owned["origins_fenced"] == 1
+    assert 0 <= owned["dispatch_fenced_ms"] <= owned["cleanup_latency_ms"]
+    assert 0 < owned["cleanup_latency_ms"] < 10_000
+    assert owned["slowest_process_ms"] <= owned["cleanup_latency_ms"] + 1
+
+    # The report says what happened and what was kept.  It does not claim success.
+    assert (report.outcome, report.plan_status, report.claims_success) == ("cancelled", "cancelled", False)
+    assert {item.task_key: item.state for item in report.tasks} == {
+        "done": "completed",
+        "running": "cancelled",
+        "waiting": "cancelled",
+    }
+    assert report.stop["kind"] == "cancelled"
+    assert report.stop["reason"] == "operator pressed stop"
+    assert report.stop["stopped_task_keys"] == ["running", "waiting"]
+    assert report.stop["fenced_epochs"] == 1
+    assert [item["artifact_ref"] for item in report.retained_outputs] == ["artifacts/done.json"]
+    assert report.limitation_codes[0] == "mission_cancelled"
+    assert all(item["next_action"] for item in report.limitations)
+
+    # Finished work is untouched, and so is the root task.
+    root_after = sm.store.get_task(root)
+    assert root_after is not None
+    assert (root_after.state, root_after.state_version) == (root_before.state, root_before.state_version)
+    finished = sm.store.get_task(done.task.task_id)
+    assert finished is not None and finished.state == "completed"
+
+    # Dispatch is stopped in every layer that could start work.
+    running_id = running.task.task_id
+    lease = sm.store.get_epoch(running_id, running.epoch.epoch)
+    assert lease is not None
+    assert (lease.status, lease.fence_reason) == ("fenced", "mission_cancelled")
+    last_transition = sm.store.list_transitions(running_id)[-1]
+    assert (last_transition.from_state, last_transition.to_state) == ("running", "cancelled")
+    assert json.loads(last_transition.evidence_json)["stop_code"] == "mission_cancelled"
+    assert [item.ready for item in sm.list_mission_readiness(mission, 1)] == [False, False, False]
+    with pytest.raises(workflow_state.MissionBindingRejected, match="not active"):
+        _ap007_claim(sm, root, mission, "waiting", tasks["waiting"], binding)
+    with pytest.raises(execution_budget.ExecutionCancelled):
+        sm.budgets.charge_hierarchical_tool_call(
+            running_id, root_task_id=root, session_id=root, epoch=running.epoch.epoch
+        )
+    with pytest.raises(execution_budget.ExecutionCancelled):
+        sm.budgets.charge_hierarchical_tool_call(tasks["waiting"].task_id, root_task_id=root, session_id=root)
+    with pytest.raises(process_supervision.StaleOriginFencedError):
+        supervisor.prepare_spawn_env(
+            os.environ,
+            supervision_id=supervisor.new_supervision_id(),
+            session_id=root,
+            task_id=running_id,
+            epoch=running.epoch.epoch,
+            worker_id=running.epoch.worker_id,
+        )
+    refused = side_effect_ledger.DurableActionLedger(studio.STORAGE, studio.DB_PATH).begin(
+        action_id="ap007-after-stop",
+        tool_name="run_bash",
+        args={"command": "publish the report"},
+        policy="autonomous",
+        action_class="consequential",
+        allowed=True,
+        explicit_approval=False,
+        session_id=root,
+        task_id=running_id,
+        epoch=running.epoch.epoch,
+        worker_id=running.epoch.worker_id,
+    )
+    assert refused.proceed is False
+    assert isinstance(refused.error, runtime_persistence.StaleEpochError)
+
+    # As after a session cancel, the ended process leaves its workspace barrier held
+    # until an operator has looked at what the interrupted work left behind.
+    holds = supervisor.store.list_barrier_holds(task_id=running_id)
+    assert len(holds) == 1
+    assert holds[0].lingering_pids == ()
+    assert supervisor.store.list_in_flight_processes() == []
+
+    # A repeated stop changes nothing.  The first stop kind stands and nothing is measured again.
+    again = sm.halt_mission(
+        mission, 1, authority=_mission_authority(root), kind="bounded_stop", supervisor=supervisor
+    )
+    assert again.report_hash == report.report_hash
+    assert again.stop == report.stop
+
+
+def test_ap007_cleanup_latency_is_measured_from_the_stop_request(isolated_env: Path, tmp_path: Path) -> None:
+    """AC1: the recorded durations come from the injected clock, in milliseconds from the request."""
+    root, mission = "ap007-clock-root", "ap007-clock"
+    sm = _ap007_machine(isolated_env, root)
+    binding, tasks = _ap007_plan(sm, root, mission, keys=("only",))
+    _ap007_claim(sm, root, mission, "only", tasks["only"], binding)
+    ticks = iter([100.0, 100.25, 101.5])  # stop requested, dispatch fenced, containment finished
+
+    report = sm.halt_mission(
+        mission,
+        1,
+        authority=_mission_authority(root),
+        supervisor=_ap007_supervisor(tmp_path),
+        now=5_000.0,
+        clock=lambda: next(ticks),
+    )
+
+    assert report.stop is not None
+    owned = report.stop["owned_work"]
+    assert owned["dispatch_fenced_ms"] == 250.0
+    assert owned["cleanup_latency_ms"] == 1500.0
+    assert owned["attempted_at"] == 5_000.0
+    assert report.stop["requested_at"] == 5_000.0
+    assert (owned["processes"], owned["cleanly_stopped"]) == (0, True)
+    assert "retry" not in owned
+
+
+def test_ap007_halt_reaches_delegated_descendants_and_their_processes(
+    isolated_env: Path, tmp_path: Path
+) -> None:
+    """AC1: a plan owns the children its tasks delegated to; the async form contains them too."""
+    root, mission = "ap007-family-root", "ap007-family"
+    sm = _ap007_machine(isolated_env, root)
+    binding, tasks = _ap007_plan(sm, root, mission, keys=("lead",))
+    lead = _ap007_claim(sm, root, mission, "lead", tasks["lead"], binding)
+    helper = sm.spawn_child_subtask(lead.task.task_id, "helper", title="Delegated helper")
+    helper_lease, _ = sm.store.acquire_worker_lease(helper.task_id, "worker-helper")
+    supervisor = _ap007_supervisor(tmp_path)
+    origin = {
+        "session_id": root,
+        "task_id": helper.task_id,
+        "epoch": helper_lease.epoch,
+        "worker_id": "worker-helper",
+    }
+
+    async def _stop_while_the_helper_runs() -> tuple[workflow_state.MissionRecoveryReport, int | None]:
+        supervision_id = supervisor.new_supervision_id()
+        child = await asyncio.create_subprocess_exec(
+            sys.executable,
+            "-c",
+            _AP007_IDLE_CHILD,
+            start_new_session=True,
+            env=supervisor.prepare_spawn_env(os.environ, supervision_id=supervision_id, **origin),
+        )
+        try:
+            supervisor.register_process(
+                child, supervision_id=supervision_id, tool_name="run_bash", workspace_root=isolated_env, **origin
+            )
+            stopped = await sm.halt_mission_async(
+                mission, 1, authority=_mission_authority(root), supervisor=supervisor
+            )
+            return stopped, await asyncio.wait_for(child.wait(), timeout=5)
+        finally:
+            if child.returncode is None:
+                child.kill()
+                await child.wait()
+
+    report, exit_code = asyncio.run(_stop_while_the_helper_runs())
+
+    assert exit_code is not None
+    assert report.stop is not None
+    assert report.stop["stopped_task_keys"] == ["lead"]
+    assert report.stop["stopped_descendant_tasks"] == 1
+    assert report.stop["fenced_epochs"] == 2
+    owned = report.stop["owned_work"]
+    assert (owned["processes"], owned["cleanly_stopped"], owned["origins_fenced"]) == (1, True, 2)
+    stopped_helper = sm.store.get_task(helper.task_id)
+    assert stopped_helper is not None and stopped_helper.state == "cancelled"
+    fenced = sm.store.get_epoch(helper.task_id, helper_lease.epoch)
+    assert fenced is not None and (fenced.status, fenced.fence_reason) == ("fenced", "mission_cancelled")
+    with pytest.raises(execution_budget.ExecutionCancelled):
+        sm.budgets.charge_hierarchical_tool_call(
+            helper.task_id, root_task_id=root, session_id=root, epoch=helper_lease.epoch
+        )
+    with pytest.raises(workflow_state.WorkflowTransitionRejected, match="cancelled parent"):
+        sm.spawn_child_subtask(lead.task.task_id, "late-helper")
+
+
+def test_ap007_late_results_are_fenced_and_unresolved_effects_stay_uncertain(isolated_env: Path) -> None:
+    """AC2: nothing a stopped worker reports afterwards is accepted, and an in-flight effect is not guessed."""
+    root, mission = "ap007-late-root", "ap007-late"
+    sm = _ap007_machine(isolated_env, root)
+    binding, tasks = _ap007_plan(sm, root, mission, keys=("publish",))
+    lease = _ap007_claim(sm, root, mission, "publish", tasks["publish"], binding)
+    ledger = side_effect_ledger.DurableActionLedger(studio.STORAGE, studio.DB_PATH)
+    _ap007_begin_action(ledger, "ap007-publish", lease, session_id=root)
+    _ap007_begin_action(ledger, "ap007-read", lease, session_id=root, read_only=True)
+
+    report = sm.halt_mission(mission, 1, authority=_mission_authority(root))
+
+    assert report.stop is not None
+    assert report.stop["uncertain_action_ids"] == ["ap007-publish"]
+    assert report.unresolved_action_ids == ("ap007-publish",)
+    assert "uncertain_effects" in report.limitation_codes
+    assert report.claims_success is False
+    publish = ledger.get_action("ap007-publish")
+    read = ledger.get_action("ap007-read")
+    assert publish is not None and read is not None
+    assert (publish.status, publish.ok, publish.error_code) == ("uncertain", None, "cancelled_in_flight")
+    # A read cannot have changed anything, so it is simply failed.
+    assert (read.status, read.error_code) == ("failed", "cancelled_in_flight")
+
+    # The worker finishes late.  None of its reports is accepted.
+    late = {
+        "binding": binding,
+        "current_inputs": _AP007_INPUTS,
+        "current_authority": _mission_authority(root, lease.task.task_id),
+        "worker_id": lease.epoch.worker_id,
+        "epoch": lease.epoch.epoch,
+        "expected_state_version": lease.task.state_version,
+    }
+    with pytest.raises(workflow_state.MissionBindingRejected, match="not active"):
+        sm.complete_mission_task(
+            mission,
+            1,
+            "publish",
+            outputs=(workflow_state.MissionOutputRef("publish-out", "artifacts/publish.json", "b" * 64),),
+            **late,
+        )
+    with pytest.raises(workflow_state.MissionBindingRejected, match="not active"):
+        sm.checkpoint_mission_task(mission, 1, "publish", step=1, payload={"progress": "late"}, **late)
+    with pytest.raises(workflow_state.MissionBindingRejected, match="not active"):
+        sm.fail_mission_task(mission, 1, "publish", reason="late failure", **late)
+    with pytest.raises(runtime_persistence.StaleEpochError, match="fenced worker"):
+        sm.budgets.record_bounded_observation(
+            lease.task.task_id, root_task_id=root, session_id=root, epoch=lease.epoch.epoch, progressed=True
+        )
+    # A late "it worked" and a late exception both leave the effect uncertain.
+    after_success = ledger.complete("ap007-publish", {"ok": True, "output": "published"}, 12)
+    assert (after_success.status, after_success.ok, after_success.error_code) == (
+        "uncertain",
+        None,
+        "cancelled_in_flight",
+    )
+    after_error = ledger.record_exception("ap007-publish", RuntimeError("connection reset"), 12)
+    assert (after_error.status, after_error.ok) == ("uncertain", None)
+    assert sm.mission_recovery_report(mission, 1).retained_outputs == ()
+
+    # Only an explicit reconciliation settles the effect.  The mission stays cancelled.
+    ledger.resolve_uncertain_action(
+        "ap007-publish", resolution="verified_not_applied", reason="the target shows no new report"
+    )
+    settled = sm.mission_recovery_report(mission, 1)
+    assert "uncertain_effects" not in settled.limitation_codes
+    assert settled.unresolved_action_ids == ()
+    assert (settled.outcome, settled.claims_success) == ("cancelled", False)
+
+
+def test_ap007_stopped_plan_must_be_settled_before_new_work_is_planned(
+    isolated_env: Path, tmp_path: Path
+) -> None:
+    """AC2: an unknown effect or an unverified stop holds every new plan on the same root task."""
+    root, mission = "ap007-gate-root", "ap007-gate"
+    sm = _ap007_machine(isolated_env, root)
+    _ap007_machine(isolated_env, "ap007-gate-other-root")
+    binding, tasks = _ap007_plan(sm, root, mission, keys=("publish",))
+    lease = _ap007_claim(sm, root, mission, "publish", tasks["publish"], binding)
+    ledger = side_effect_ledger.DurableActionLedger(studio.STORAGE, studio.DB_PATH)
+    _ap007_begin_action(ledger, "ap007-gate-publish", lease, session_id=root)
+    sm.halt_mission(mission, 1, authority=_mission_authority(root))  # no supervisor: nothing is attested
+
+    with pytest.raises(workflow_state.MissionHaltUnsettled, match="ap007-gate-publish"):
+        _ap007_plan(sm, root, mission, version=2, keys=("retry",))
+    # A new mission name on the same root does not step around the hold.
+    with pytest.raises(workflow_state.MissionHaltUnsettled, match="unresolved"):
+        _ap007_plan(sm, root, "ap007-gate-renamed", keys=("retry",))
+    # Another root task is not affected.
+    _ap007_plan(sm, "ap007-gate-other-root", "ap007-gate-elsewhere", keys=("free",))
+
+    ledger.resolve_uncertain_action(
+        "ap007-gate-publish", resolution="verified_committed", reason="the report is visible at the target"
+    )
+    with pytest.raises(workflow_state.MissionHaltUnsettled, match="not attested"):
+        _ap007_plan(sm, root, mission, version=2, keys=("retry",))
+    unattested = sm.mission_recovery_report(mission, 1)
+    assert "owned_work_not_terminated" in unattested.limitation_codes
+
+    attested = sm.halt_mission(
+        mission, 1, authority=_mission_authority(root), supervisor=_ap007_supervisor(tmp_path)
+    )
+    assert attested.stop is not None
+    assert attested.stop["owned_work"]["cleanly_stopped"] is True
+    assert attested.stop["owned_work"]["retry"] is True
+    assert "owned_work_not_terminated" not in attested.limitation_codes
+
+    _, retry_tasks = _ap007_plan(sm, root, mission, version=2, keys=("retry",))
+    assert retry_tasks["retry"].state == "pending"
+    # The stopped version keeps its own truthful record beside the new one.
+    old = sm.mission_recovery_report(mission, 1)
+    assert (old.outcome, old.plan_status) == ("cancelled", "cancelled")
+    # Asking for the stopped version again returns it unchanged instead of reviving it.
+    unchanged = sm.create_mission_plan(
+        root,
+        mission,
+        1,
+        (workflow_state.MissionTaskSpec("publish", "Task publish", ("publish-out",)),),
+        inputs=_AP007_INPUTS,
+        authority=_mission_authority(root),
+    )
+    assert unchanged.status == "cancelled"
+
+
+def test_ap007_containment_retry_never_upgrades_a_lingering_stop_without_evidence(
+    isolated_env: Path, tmp_path: Path
+) -> None:
+    """AC1/AC5: "no process found" on a retry is not proof that an earlier survivor ended."""
+    root, mission = "ap007-linger-root", "ap007-linger"
+    sm = _ap007_machine(isolated_env, root)
+    binding, tasks = _ap007_plan(sm, root, mission, keys=("stuck",))
+    lease = _ap007_claim(sm, root, mission, "stuck", tasks["stuck"], binding)
+
+    # A process that ignores every signal, modelled by a probe double with a fictional pid.
+    stuck_pid, stuck_fingerprint = 999_407, "ap007-fixture-start"
+    still_alive = {"value": True}
+
+    def _stuck_probe() -> process_supervision.ProcessProbe:
+        return process_supervision.ProcessProbe(
+            pid=stuck_pid,
+            ppid=1,
+            pgid=stuck_pid,
+            uid=os.getuid(),
+            state="D",
+            start_fingerprint=stuck_fingerprint,
+            alive=True,
+        )
+
+    def _probe(pid: int) -> process_supervision.ProcessProbe | None:
+        if pid == stuck_pid:
+            return _stuck_probe() if still_alive["value"] else None
+        return process_supervision.probe_process(pid)
+
+    store = process_supervision.ContainmentStore(tmp_path / "ap007_containment", probe_fn=_probe)
+    supervisor = process_supervision.ProcessSupervisor(
+        store,
+        probe_fn=_probe,
+        discover_fn=lambda _record: ([], [_stuck_probe()] if still_alive["value"] else []),
+        signal_fn=lambda _target, _signal, _is_group: None,
+        grace_timeout_s=0.02,
+        kill_timeout_s=0.05,
+    )
+    store.record_process_started(
+        process_supervision.SupervisedProcessRecord(
+            supervision_id="sup-a0070000000000a7",
+            pid=stuck_pid,
+            pgid=stuck_pid,
+            uid=os.getuid(),
+            start_fingerprint=stuck_fingerprint,
+            container_name=None,
+            tool_name="run_bash",
+            session_id=root,
+            task_id=lease.task.task_id,
+            epoch=lease.epoch.epoch,
+            worker_id=lease.epoch.worker_id,
+            boot_id="ap007-fixture-boot",
+            action_id="ap007-linger-action",
+            workspace_root=str(isolated_env),
+            barriers=(),
+            started_at=time.time(),
+        )
+    )
+
+    first = sm.halt_mission(mission, 1, authority=_mission_authority(root), supervisor=supervisor)
+
+    assert first.stop is not None
+    owned = first.stop["owned_work"]
+    assert (owned["processes"], owned["escalated"], owned["lingering"]) == (1, 1, 1)
+    assert owned["lingering_pids"] == [[stuck_pid, stuck_fingerprint]]
+    assert owned["cleanly_stopped"] is False
+    assert "owned_work_lingering" in first.limitation_codes
+    assert first.claims_success is False
+
+    # The supervisor no longer tracks the process, so a retry finds nothing to terminate.
+    # The survivor is re-checked by identity and still counts.
+    second = sm.halt_mission(mission, 1, authority=_mission_authority(root), supervisor=supervisor)
+    assert second.stop is not None
+    retried = second.stop["owned_work"]
+    assert (retried["processes"], retried["lingering"], retried["retry"]) == (0, 1, True)
+    assert retried["lingering_pids"] == [[stuck_pid, stuck_fingerprint]]
+    assert retried["cleanly_stopped"] is False
+    assert "owned_work_lingering" in second.limitation_codes
+    with pytest.raises(workflow_state.MissionHaltUnsettled, match="not verified as stopped"):
+        _ap007_plan(sm, root, mission, version=2, keys=("retry",))
+
+    # A stop without a supervisor cannot replace the supervised record either.
+    unsupervised = sm.halt_mission(mission, 1, authority=_mission_authority(root))
+    assert unsupervised.stop == second.stop
+
+    still_alive["value"] = False
+    third = sm.halt_mission(mission, 1, authority=_mission_authority(root), supervisor=supervisor)
+    assert third.stop is not None
+    verified = third.stop["owned_work"]
+    assert (verified["lingering"], verified["lingering_pids"], verified["cleanly_stopped"]) == (0, [], True)
+    assert "owned_work_lingering" not in third.limitation_codes
+    _ap007_plan(sm, root, mission, version=2, keys=("retry",))
+    # Once a clean stop is on record, later calls do not measure again.
+    assert sm.halt_mission(
+        mission, 1, authority=_mission_authority(root), supervisor=supervisor
+    ).report_hash == third.report_hash
+
+
+def test_ap007_lingering_count_without_identities_is_carried_forward() -> None:
+    """A survivor that cannot be re-checked stays counted; it is never assumed gone."""
+    listed, unlisted = workflow_state._mission_prior_lingering(
+        {"owned_work": {"lingering": 3, "lingering_pids": [[4242, "fp"], ["bad", "fp"], [True, "fp"]]}}
+    )
+    assert (listed, unlisted) == ([(4242, "fp")], 2)
+    assert workflow_state._mission_prior_lingering({"owned_work": {"termination_attempted": False}}) == ([], 0)
+    assert workflow_state._mission_prior_lingering({}) == ([], 0)
+
+    summary = workflow_state._mission_owned_work(
+        [],
+        origins_fenced=0,
+        errors=0,
+        started=1.0,
+        fenced=1.0,
+        done=1.0,
+        retry=True,
+        attempted_at=10.0,
+        carried=(),
+        carried_unlisted=unlisted,
+    )
+    assert (summary["processes"], summary["lingering"], summary["cleanly_stopped"]) == (0, 2, False)
+
+
+def test_ap007_containment_failure_is_reported_and_the_durable_stop_stands(
+    isolated_env: Path, tmp_path: Path
+) -> None:
+    """AC1/AC5: when containment itself fails, dispatch stays fenced and the report says so."""
+    root, mission = "ap007-error-root", "ap007-error"
+    sm = _ap007_machine(isolated_env, root)
+    binding, tasks = _ap007_plan(sm, root, mission, keys=("only",))
+    _ap007_claim(sm, root, mission, "only", tasks["only"], binding)
+
+    class _FailingSupervisor(process_supervision.ProcessSupervisor):
+        def contain_by_scope_sync(self, **_scope: Any) -> list[process_supervision.TerminationOutcome]:
+            raise OSError("containment store is unavailable")
+
+    report = sm.halt_mission(
+        mission,
+        1,
+        authority=_mission_authority(root),
+        supervisor=_FailingSupervisor(process_supervision.ContainmentStore(tmp_path / "ap007_containment")),
+    )
+
+    assert (report.outcome, report.plan_status) == ("cancelled", "cancelled")
+    assert report.stop is not None
+    owned = report.stop["owned_work"]
+    assert (owned["termination_attempted"], owned["errors"], owned["cleanly_stopped"]) == (True, 1, False)
+    assert "owned_work_lingering" in report.limitation_codes
+    with pytest.raises(workflow_state.MissionBindingRejected, match="not active"):
+        _ap007_claim(sm, root, mission, "only", tasks["only"], binding)
+    # A working supervisor can still settle the stop afterwards.
+    retried = sm.halt_mission(
+        mission, 1, authority=_mission_authority(root), supervisor=_ap007_supervisor(tmp_path)
+    )
+    assert retried.stop is not None and retried.stop["owned_work"]["cleanly_stopped"] is True
+
+
+@pytest.mark.parametrize(
+    ("code", "limits", "observations"),
+    [
+        ("no_progress", {"max_no_progress": 2}, [{"progressed": False}] * 3),
+        ("repair_attempts", {"max_repair_attempts": 1}, [{"repair_attempt": True}] * 2),
+        ("memory", {"max_memory_bytes": 1_000}, [{"memory_bytes": 1_000}, {"memory_bytes": 1_001}]),
+        ("storage", {"max_storage_bytes": 2_000}, [{"storage_bytes": 2_000}, {"storage_bytes": 2_001}]),
+        ("measurement_unavailable", {"max_memory_bytes": 1_000}, [{"unmeasured": ("memory",)}]),
+        ("measurement_unavailable", {"max_storage_bytes": 2_000}, [{"unmeasured": ("storage",)}]),
+    ],
+)
+def test_ap007_declared_limits_stop_the_mission_boundedly(
+    isolated_env: Path,
+    code: str,
+    limits: dict[str, int],
+    observations: list[dict[str, Any]],
+) -> None:
+    """AC3: each limit stops at its declared bound, durably, with a reason and a next step."""
+    root, mission = f"ap007-{code}-root", f"ap007-{code}"
+    sm = _ap007_machine(isolated_env, root, execution_budget.TaskBudgetSpec(max_steps=50, **limits))
+    binding, tasks = _ap007_plan(sm, root, mission, keys=("work", "next"))
+    lease = _ap007_claim(sm, root, mission, "work", tasks["work"], binding)
+    observe = {"root_task_id": root, "session_id": root, "epoch": lease.epoch.epoch}
+
+    # A caller cannot invent a bounded stop: the budgets have to require it.
+    with pytest.raises(workflow_state.WorkflowTransitionRejected, match="No declared limit requires"):
+        sm.halt_mission(mission, 1, authority=_mission_authority(root), kind="bounded_stop")
+
+    for within_bound in observations[:-1]:
+        assert sm.budgets.record_bounded_observation(lease.task.task_id, **observe, **within_bound).stopped is False
+    with pytest.raises(execution_budget.BoundedStopRequired) as stopped:
+        sm.budgets.record_bounded_observation(lease.task.task_id, **observe, **observations[-1])
+    assert stopped.value.verdict.code == code
+    assert stopped.value.verdict.scope == "leaf"
+
+    # The stop is durable before anyone halts the plan: work is refused on its own.
+    assert sm.budgets.get_budget(root).bounded_stop() is not None
+    with pytest.raises(execution_budget.BudgetExceeded):
+        sm.budgets.charge_hierarchical_tool_call(
+            lease.task.task_id, root_task_id=root, session_id=root, epoch=lease.epoch.epoch
+        )
+    with pytest.raises(workflow_state.MissionBindingRejected):
+        _ap007_claim(sm, root, mission, "next", tasks["next"], binding)
+    pending = sm.mission_recovery_report(mission, 1)
+    assert (pending.outcome, pending.claims_success) == ("stopped", False)
+    assert pending.limitation_codes[:2] == (code, "halt_required")
+
+    report = sm.halt_mission(
+        mission, 1, authority=_mission_authority(root), kind="bounded_stop", reason="scheduler noticed the stop"
+    )
+
+    assert (report.outcome, report.plan_status, report.claims_success) == ("stopped", "failed", False)
+    assert report.stop is not None
+    assert (report.stop["kind"], report.stop["code"], report.stop["scope"]) == ("bounded_stop", code, "root")
+    assert report.stop["note"] == "scheduler noticed the stop"
+    assert report.limitation_codes[0] == code
+    assert "halt_required" not in report.limitation_codes
+    assert all(item["message"] and item["next_action"] for item in report.limitations)
+    lease_row = sm.store.get_epoch(lease.task.task_id, lease.epoch.epoch)
+    assert lease_row is not None and lease_row.fence_reason == f"mission_bounded_stop:{code}"
+
+    # The same stop is read back by a new process.
+    restarted = workflow_state.DurableTaskStateMachine(studio.STORAGE, studio.DB_PATH)
+    after_restart = restarted.mission_recovery_report(mission, 1)
+    assert after_restart.stop == report.stop
+    assert (after_restart.outcome, after_restart.limitation_codes) == (report.outcome, report.limitation_codes)
+
+
+def test_ap007_deadline_stops_claims_dispatch_and_resume_without_any_observation(
+    isolated_env: Path,
+) -> None:
+    """AC3: the deadline is enforced from the clock alone; nobody has to report it."""
+    root, mission = "ap007-deadline-root", "ap007-deadline"
+    deadline = time.time() + 3_600
+    sm = _ap007_machine(isolated_env, root, execution_budget.TaskBudgetSpec(max_steps=50, deadline_at=deadline))
+    binding, tasks = _ap007_plan(sm, root, mission, keys=("work", "next"))
+    lease = _ap007_claim(sm, root, mission, "work", tasks["work"], binding)
+    late = deadline + 1
+
+    # Before the deadline everything proceeds.
+    sm.budgets.charge_hierarchical_tool_call(
+        lease.task.task_id, root_task_id=root, session_id=root, epoch=lease.epoch.epoch
+    )
+    assert sm.mission_recovery_report(mission, 1, persist=False).outcome == "in_progress"
+
+    with pytest.raises(execution_budget.BudgetExceeded, match="deadline exceeded"):
+        sm.budgets.charge_hierarchical_tool_call(
+            lease.task.task_id, root_task_id=root, session_id=root, epoch=lease.epoch.epoch, now=late
+        )
+    with pytest.raises(workflow_state.MissionBindingRejected, match="deadline exceeded"):
+        _ap007_claim(sm, root, mission, "next", tasks["next"], binding, now=late)
+    with pytest.raises(execution_budget.BoundedStopRequired) as stopped:
+        sm.budgets.record_bounded_observation(
+            lease.task.task_id, root_task_id=root, session_id=root, epoch=lease.epoch.epoch, progressed=True, now=late
+        )
+    assert stopped.value.verdict.code == "deadline"
+
+    report = sm.halt_mission(mission, 1, authority=_mission_authority(root), kind="bounded_stop", now=late)
+
+    assert (report.outcome, report.plan_status) == ("stopped", "failed")
+    assert report.stop is not None
+    assert (report.stop["code"], report.stop["scope"]) == ("deadline", "root")
+    # The stored reason names the deadline, not the time of evaluation, so the record is stable.
+    assert report.stop["reason"] == f"deadline exceeded (deadline_at={deadline:.2f})"
+    assert sm.mission_recovery_report(mission, 1, now=late + 500).report_hash == report.report_hash
+
+
+def test_ap007_one_task_at_its_limit_stops_the_plan_with_task_scope(isolated_env: Path) -> None:
+    """AC3: a task can reach its own bound while the mission as a whole is still progressing."""
+    root, mission = "ap007-scope-root", "ap007-scope"
+    sm = _ap007_machine(isolated_env, root, execution_budget.TaskBudgetSpec(max_steps=50, max_no_progress=2))
+    binding, tasks = _ap007_plan(sm, root, mission, keys=("stalled", "moving"))
+    stalled = _ap007_claim(sm, root, mission, "stalled", tasks["stalled"], binding)
+    moving = _ap007_claim(sm, root, mission, "moving", tasks["moving"], binding)
+
+    def _observe(lease: workflow_state.MissionTaskLease, progressed: bool) -> execution_budget.BoundedStopVerdict:
+        return sm.budgets.record_bounded_observation(
+            lease.task.task_id,
+            root_task_id=root,
+            session_id=root,
+            epoch=lease.epoch.epoch,
+            progressed=progressed,
+            enforce=False,
+        )
+
+    assert _observe(stalled, False).stopped is False
+    assert _observe(moving, True).stopped is False  # the mission as a whole made progress
+    assert _observe(stalled, False).stopped is False
+    verdict = _observe(stalled, False)
+    assert (verdict.stopped, verdict.code, verdict.scope) == (True, "no_progress", "leaf")
+    assert sm.budgets.get_budget(root).bounded_stop() is None
+
+    # A later "progress" report cannot undo the stop of that task.
+    assert _observe(stalled, True).stopped is True
+    assert sm.budgets.get_budget(stalled.task.task_id).no_progress_count == 3
+
+    live = sm.mission_recovery_report(mission, 1)
+    assert "no_progress" in live.limitation_codes and live.claims_success is False
+    report = sm.halt_mission(mission, 1, authority=_mission_authority(root), kind="bounded_stop")
+    assert report.stop is not None
+    assert (report.stop["code"], report.stop["scope"]) == ("no_progress", "task:stalled")
+    assert report.stop["stopped_task_keys"] == ["stalled", "moving"]
+    assert (report.outcome, report.plan_status) == ("stopped", "failed")
+
+
+def test_ap007_unmeasurable_ceiling_stops_until_a_real_reading_arrives(isolated_env: Path) -> None:
+    """AC3: a ceiling that cannot be measured stops the work; only a reading clears the gap."""
+    root = "ap007-gap-root"
+    sm = _ap007_machine(
+        isolated_env,
+        root,
+        execution_budget.TaskBudgetSpec(max_steps=50, max_memory_bytes=1_000, max_storage_bytes=2_000),
+    )
+    observe = {"root_task_id": root, "session_id": root, "enforce": False}
+
+    gap = sm.budgets.record_bounded_observation(root, unmeasured=("memory",), **observe)
+    assert (gap.stopped, gap.code, gap.scope) == (True, "measurement_unavailable", "leaf")
+    assert sm.budgets.get_budget(root).unmeasured == ("memory",)
+
+    # Progress, or a reading for a different resource, does not close the gap.
+    assert sm.budgets.record_bounded_observation(root, progressed=True, **observe).code == "measurement_unavailable"
+    assert sm.budgets.record_bounded_observation(root, storage_bytes=10, **observe).code == "measurement_unavailable"
+    assert sm.budgets.get_budget(root).storage_bytes_peak == 0  # a stopped budget is not mutated
+    with pytest.raises(execution_budget.BudgetExceeded, match="could not be measured"):
+        sm.budgets.charge_hierarchical_tool_call(root, root_task_id=root, session_id=root)
+
+    cleared = sm.budgets.record_bounded_observation(root, memory_bytes=400, **observe)
+    assert cleared.stopped is False
+    state = sm.budgets.get_budget(root)
+    assert (state.unmeasured, state.memory_bytes_peak) == ((), 400)
+    sm.budgets.charge_hierarchical_tool_call(root, root_task_id=root, session_id=root)
+
+    # A reading that closes the gap is still judged against the ceiling.
+    assert sm.budgets.record_bounded_observation(root, unmeasured=("memory",), **observe).stopped is True
+    breach = sm.budgets.record_bounded_observation(root, memory_bytes=5_000, **observe)
+    assert (breach.stopped, breach.code) == (True, "memory")
+    # A peak is a recorded fact: a lower reading afterwards does not clear the breach.
+    assert sm.budgets.record_bounded_observation(root, memory_bytes=1, **observe).code == "memory"
+    assert sm.budgets.get_budget(root).memory_bytes_peak == 5_000
+
+    # A marker for a ceiling that was never declared is ignored instead of stopping the work.
+    plain_root = "ap007-gap-plain-root"
+    plain = _ap007_machine(isolated_env, plain_root)
+    ignored = plain.budgets.record_bounded_observation(
+        plain_root, root_task_id=plain_root, session_id=plain_root, unmeasured=("memory", "storage")
+    )
+    assert ignored.stopped is False
+    assert plain.budgets.get_budget(plain_root).unmeasured == ()
+    with pytest.raises(execution_budget.BudgetError, match="both measured and unmeasured"):
+        sm.budgets.record_bounded_observation(root, memory_bytes=1, unmeasured=("memory",), **observe)
+
+
+def test_ap007_stale_or_fenced_workers_cannot_record_observations(isolated_env: Path) -> None:
+    """AC2/AC3: a superseded worker can neither reset a counter nor hide a breach."""
+    root, mission = "ap007-observer-root", "ap007-observer"
+    sm = _ap007_machine(isolated_env, root, execution_budget.TaskBudgetSpec(max_steps=50, max_no_progress=5))
+    binding, tasks = _ap007_plan(sm, root, mission, keys=("work", "idle"))
+    lease = _ap007_claim(sm, root, mission, "work", tasks["work"], binding)
+    task_id = lease.task.task_id
+    observe = {"root_task_id": root, "session_id": root}
+
+    sm.budgets.record_bounded_observation(task_id, epoch=lease.epoch.epoch, progressed=False, **observe)
+    with pytest.raises(runtime_persistence.StaleEpochError, match="Stale or missing epoch"):
+        sm.budgets.record_bounded_observation(task_id, progressed=True, **observe)
+    with pytest.raises(runtime_persistence.StaleEpochError, match="has no worker epoch"):
+        sm.budgets.record_bounded_observation(tasks["idle"].task_id, epoch=1, progressed=True, **observe)
+    with pytest.raises(execution_budget.BudgetError, match="mismatched root"):
+        sm.budgets.record_bounded_observation(
+            task_id, root_task_id=task_id, session_id=root, epoch=lease.epoch.epoch, progressed=True
+        )
+    with pytest.raises(execution_budget.BudgetError, match="belongs to session"):
+        sm.budgets.record_bounded_observation(
+            task_id, root_task_id=root, session_id="another-session", epoch=lease.epoch.epoch, progressed=True
+        )
+
+    successor, _ = sm.store.acquire_worker_lease(task_id, "worker-successor", force_takeover=True)
+    with pytest.raises(runtime_persistence.StaleEpochError):
+        sm.budgets.record_bounded_observation(task_id, epoch=lease.epoch.epoch, progressed=True, **observe)
+    assert sm.budgets.get_budget(task_id).no_progress_count == 1
+    sm.budgets.record_bounded_observation(task_id, epoch=successor.epoch, progressed=True, **observe)
+    assert sm.budgets.get_budget(task_id).no_progress_count == 0
+
+
+def test_ap007_cancellation_and_isolation_bind_the_whole_task_chain(isolated_env: Path) -> None:
+    """AC1/AC4: a delegated child cannot run because its own budget happens to be silent."""
+    root, mission = "ap007-chain-root", "ap007-chain"
+    sm = _ap007_machine(isolated_env, root, execution_budget.TaskBudgetSpec(max_steps=50, isolation_required=True))
+    binding, tasks = _ap007_plan(sm, root, mission, keys=("lead",))
+    lead = _ap007_claim(sm, root, mission, "lead", tasks["lead"], binding, isolation=_AP007_FIXTURE_ISOLATION)
+    helper = sm.spawn_child_subtask(lead.task.task_id, "helper")
+    charge = {"root_task_id": root, "session_id": root}
+    # The delegated child's own budget declares nothing; the requirement comes from its ancestors.
+    assert sm.budgets.get_budget(helper.task_id).spec.isolation_required is False
+    assert sm.budgets.get_budget(lead.task.task_id).spec.isolation_required is True
+
+    with pytest.raises(execution_budget.IsolationUnavailable, match="host shell is not used"):
+        sm.budgets.charge_hierarchical_tool_call(helper.task_id, **charge)
+    assert sm.budgets.get_budget(root).tool_calls_used == 0
+    sm.budgets.charge_hierarchical_tool_call(helper.task_id, isolation=_AP007_FIXTURE_ISOLATION, **charge)
+    assert sm.budgets.get_budget(root).tool_calls_used == 1
+
+    # Cancelling the task in the middle of the chain stops the child below it.
+    sm.budgets.set_control_flags(lead.task.task_id, cancel_requested=True)
+    with pytest.raises(execution_budget.ExecutionCancelled):
+        sm.budgets.charge_hierarchical_tool_call(helper.task_id, isolation=_AP007_FIXTURE_ISOLATION, **charge)
+    with pytest.raises(execution_budget.ExecutionCancelled):
+        sm.budgets.record_bounded_observation(helper.task_id, progressed=True, **charge)
+    sm.budgets.set_control_flags(lead.task.task_id, cancel_requested=False)
+
+    # One unreadable budget anywhere in the chain refuses the dispatch.
+    with sqlite3.connect(studio.DB_PATH) as conn:
+        conn.execute("UPDATE runtime_tasks SET budget_json = ? WHERE task_id = ?", ("{not json", lead.task.task_id))
+    with pytest.raises(execution_budget.BudgetError, match="malformed"):
+        sm.budgets.charge_hierarchical_tool_call(helper.task_id, isolation=_AP007_FIXTURE_ISOLATION, **charge)
+    with pytest.raises(execution_budget.BudgetError, match="malformed"):
+        sm.budgets.record_bounded_observation(helper.task_id, progressed=True, **charge)
+    assert sm.budgets.get_budget(root).tool_calls_used == 1
+
+
+def test_ap007_missing_isolation_blocks_dependent_execution_without_host_fallback(
+    isolated_env: Path, tmp_path: Path
+) -> None:
+    """AC4: with no qualified isolated runtime, nothing is claimed, dispatched or moved to the host."""
+    root, mission = "ap007-isolation-root", "ap007-isolation"
+    sm = _ap007_machine(isolated_env, root, execution_budget.TaskBudgetSpec(max_steps=50, isolation_required=True))
+    binding, tasks = _ap007_plan(sm, root, mission, keys=("work",))
+    task_id = tasks["work"].task_id
+
+    # What the real security store says today: no backend is registered or qualified.
+    incidents = sandbox_boundary.SecurityIncidentStore(tmp_path / "ap007_security")
+    observed: list[execution_budget.IsolationEvidence | None] = [None]
+    for mode in ("sandbox", "host", "disabled"):
+        decision = incidents.check_admission(
+            required_guarantees=("container_boundary",),
+            execution_surface="run_bash",
+            execution_mode=mode,
+            session_id=root,
+            workspace_root=isolated_env,
+        )
+        assert decision.container_qualified is False and decision.active_backend is None
+        observed.append(execution_budget.IsolationEvidence.from_admission(decision, execution_mode=mode))
+
+    for evidence in observed:
+        assert execution_budget.isolation_refusal(evidence)
+        with pytest.raises(workflow_state.MissionIsolationRejected, match="host shell is not used"):
+            _ap007_claim(sm, root, mission, "work", tasks["work"], binding, isolation=evidence)
+        with pytest.raises(execution_budget.IsolationUnavailable, match="host shell is not used"):
+            sm.budgets.charge_hierarchical_tool_call(task_id, root_task_id=root, session_id=root, isolation=evidence)
+
+    # Nothing started: no lease, no state change, no charge.
+    untouched = sm.store.get_task(task_id)
+    assert untouched is not None
+    assert (untouched.state, untouched.current_epoch, untouched.state_version) == ("pending", 0, 0)
+    assert sm.store.list_epochs(task_id) == []
+    assert sm.budgets.get_budget(root).tool_calls_used == 0
+    assert sm.budgets.get_budget(task_id).tool_calls_used == 0
+
+    report = sm.mission_recovery_report(mission, 1, isolation=observed[1])
+    assert (report.outcome, report.claims_success) == ("blocked", False)
+    blocked = next(item for item in report.limitations if item["code"] == "isolation_unavailable")
+    assert "host shell is not used" in blocked["message"]
+    assert "not executed on the host" in blocked["next_action"]
+    # Without evidence the report reaches the same conclusion.
+    assert sm.mission_recovery_report(mission, 1).outcome == "blocked"
+
+    # With proof (a test fixture, not a real runtime) the same task is claimable, and
+    # every dispatch has to present the proof again.
+    lease = _ap007_claim(sm, root, mission, "work", tasks["work"], binding, isolation=_AP007_FIXTURE_ISOLATION)
+    with pytest.raises(execution_budget.IsolationUnavailable):
+        sm.budgets.charge_hierarchical_tool_call(
+            task_id, root_task_id=root, session_id=root, epoch=lease.epoch.epoch
+        )
+    sm.budgets.charge_hierarchical_tool_call(
+        task_id, root_task_id=root, session_id=root, epoch=lease.epoch.epoch, isolation=_AP007_FIXTURE_ISOLATION
+    )
+    assert sm.mission_recovery_report(mission, 1, isolation=_AP007_FIXTURE_ISOLATION).outcome == "in_progress"
+
+
+def test_ap007_recovery_report_claims_success_only_for_checked_complete_artifacts(
+    isolated_env: Path, tmp_path: Path
+) -> None:
+    """AC5: finished tasks alone are not success; every retained output must be a checked artifact."""
+    root, mission = "ap007-report-root", "ap007-report"
+    sm = _ap007_machine(isolated_env, root)
+    binding, tasks = _ap007_plan(sm, root, mission, keys=("draft", "final"))
+    checked, unchecked = "c" * 64, "d" * 64
+    registry = artifact_lineage.ArtifactRegistry(tmp_path / "ap007_artifacts")
+    for sha in (checked, unchecked):
+        registry.record_artifact(
+            sha,
+            source_kind="pipeline",
+            source_ref="ap007-report",
+            trust="trusted",
+            confidentiality="internal",
+            producer="workflow:report-builder",
+            producer_version="1.0.0",
+            config_sha256="1" * 64,
+            inputs={"request.json": "v1"},
+            required_checks=("render",),
+        )
+    registry.record_check(checked, "render", outcome="passed")
+
+    draft = _ap007_claim(sm, root, mission, "draft", tasks["draft"], binding)
+    _ap007_complete(sm, root, mission, "draft", draft, binding, checked)
+    partial = sm.mission_recovery_report(mission, 1, artifact_status=registry.artifact_status)
+    assert (partial.outcome, partial.claims_success) == ("in_progress", False)
+    assert partial.limitation_codes == ("tasks_incomplete",)
+    assert [item["counts_as_complete"] for item in partial.retained_outputs] == [True]
+
+    final = _ap007_claim(sm, root, mission, "final", tasks["final"], binding)
+    _ap007_complete(sm, root, mission, "final", final, binding, unchecked)
+    assert sm.evaluate_mission_join(mission, 1).status == "succeeded"
+
+    # Every task finished, but nobody checked the artifacts: that is not success.
+    unverified = sm.mission_recovery_report(mission, 1)
+    assert (unverified.outcome, unverified.claims_success) == ("unverified", False)
+    assert unverified.limitation_codes == ("artifacts_not_verified",)
+    # One retained output has not passed its declared check.
+    incomplete = sm.mission_recovery_report(mission, 1, artifact_status=registry.artifact_status)
+    assert (incomplete.outcome, incomplete.claims_success) == ("partial", False)
+    assert incomplete.limitation_codes == ("artifact_incomplete",)
+    assert [item["artifact_state"] for item in incomplete.retained_outputs] == ["complete", "partial"]
+    assert "final:final-out" in incomplete.limitations[0]["message"]
+
+    # A checker that cannot answer is never read as "complete".
+    def _unavailable(_sha256: str) -> Any:
+        raise OSError("artifact store is unreadable")
+
+    unknown = sm.mission_recovery_report(mission, 1, artifact_status=_unavailable)
+    assert (unknown.outcome, unknown.claims_success) == ("partial", False)
+    assert {item["artifact_state"] for item in unknown.retained_outputs} == {"unknown"}
+
+    registry.record_check(unchecked, "render", outcome="passed")
+    succeeded = sm.mission_recovery_report(mission, 1, artifact_status=registry.artifact_status)
+    assert (succeeded.outcome, succeeded.claims_success, succeeded.limitations) == ("succeeded", True, ())
+    assert len(succeeded.retained_outputs) == 2
+    # A plan that already succeeded has nothing to halt.
+    with pytest.raises(workflow_state.WorkflowTransitionRejected, match="already succeeded"):
+        sm.halt_mission(mission, 1, authority=_mission_authority(root))
+    # An unresolved effect turns a finished mission back into a partial one.
+    ledger = side_effect_ledger.DurableActionLedger(studio.STORAGE, studio.DB_PATH)
+    ledger.stage_never_started(
+        "ap007-report-effect",
+        tool_name="run_bash",
+        args={"command": "notify the reviewers"},
+        policy="autonomous",
+        task_id=final.task.task_id,
+        session_id=root,
+        epoch=final.epoch.epoch,
+    )
+    with sqlite3.connect(studio.DB_PATH) as conn:
+        conn.execute("UPDATE runtime_actions SET status = 'uncertain' WHERE action_id = 'ap007-report-effect'")
+    doubtful = sm.mission_recovery_report(mission, 1, artifact_status=registry.artifact_status)
+    assert (doubtful.outcome, doubtful.claims_success) == ("partial", False)
+    assert doubtful.limitation_codes == ("uncertain_effects",)
+
+
+def test_ap007_report_names_a_required_stop_that_nobody_carried_out(isolated_env: Path) -> None:
+    """AC5: a cancelled root with a live plan is reported as not yet stopped, never as stopped."""
+    root, mission = "ap007-unhalted-root", "ap007-unhalted"
+    sm = _ap007_machine(isolated_env, root)
+    binding, tasks = _ap007_plan(sm, root, mission, keys=("work",))
+    lease = _ap007_claim(sm, root, mission, "work", tasks["work"], binding)
+
+    sm.cancel_task(root)
+
+    live = sm.mission_recovery_report(mission, 1)
+    assert (live.outcome, live.plan_status, live.claims_success) == ("cancelled", "active", False)
+    assert live.limitation_codes[:2] == ("mission_cancelled", "halt_required")
+    required = next(item for item in live.limitations if item["code"] == "halt_required")
+    assert "not fenced" in required["message"]
+    assert live.stop is None
+
+    # Stale policy generations may always stop work; only the identity has to match.
+    stale_authority = _mission_authority(root, session_revision=1, global_revision=1)
+    report = sm.halt_mission(mission, 1, authority=stale_authority)
+    assert "halt_required" not in report.limitation_codes
+    assert (report.outcome, report.plan_status) == ("cancelled", "cancelled")
+    fenced = sm.store.get_epoch(lease.task.task_id, lease.epoch.epoch)
+    assert fenced is not None and fenced.status == "fenced"
+
+
+def test_ap007_halt_rejects_unknown_plans_wrong_identity_and_finished_versions(isolated_env: Path) -> None:
+    root, mission = "ap007-reject-root", "ap007-reject"
+    sm = _ap007_machine(isolated_env, root)
+    _ap007_machine(isolated_env, "ap007-reject-stranger")
+    _, tasks = _ap007_plan(sm, root, mission, keys=("work",))
+    authority = _mission_authority(root)
+
+    with pytest.raises(workflow_state.WorkflowStateError, match="Unsupported mission halt kind"):
+        sm.halt_mission(mission, 1, authority=authority, kind="paused")
+    with pytest.raises(workflow_state.MissionGraphError, match="does not exist"):
+        sm.halt_mission("ap007-reject-missing", 1, authority=authority)
+    with pytest.raises(workflow_state.MissionBindingRejected, match="envelope is required"):
+        sm.halt_mission(mission, 1, authority={"session_id": root})  # type: ignore[arg-type]
+    for wrong in (
+        _mission_authority("ap007-reject-stranger"),
+        _mission_authority(root, tasks["work"].task_id),  # a task-scoped envelope cannot stop the mission
+        execution_spine.MissionAuthorityEnvelope("another-session", root, root, 7, 11),
+    ):
+        with pytest.raises(workflow_state.MissionBindingRejected, match="does not match"):
+            sm.halt_mission(mission, 1, authority=wrong)
+    plan = sm.get_mission_plan(mission, 1)
+    assert plan is not None and plan.status == "active"
+
+    # A superseded version was already fenced by its successor; there is nothing left to halt.
+    _ap007_plan(sm, root, mission, version=2, keys=("work",))
+    with pytest.raises(workflow_state.WorkflowTransitionRejected, match="'superseded'"):
+        sm.halt_mission(mission, 1, authority=authority)
+    superseded = sm.mission_recovery_report(mission, 1)
+    assert (superseded.outcome, superseded.claims_success) == ("superseded", False)
+    assert superseded.limitation_codes[0] == "plan_superseded"
+
+
+def test_ap007_halted_plan_is_not_revived_by_recovery_or_resume(isolated_env: Path) -> None:
+    root, mission = "ap007-revive-root", "ap007-revive"
+    sm = _ap007_machine(isolated_env, root)
+    binding, tasks = _ap007_plan(sm, root, mission, keys=("work", "next"), deps=(("next", "work"),))
+    lease = _ap007_claim(sm, root, mission, "work", tasks["work"], binding)
+    sm.halt_mission(mission, 1, authority=_mission_authority(root))
+
+    restarted = workflow_state.DurableTaskStateMachine(studio.STORAGE, studio.DB_PATH)
+    sweep = restarted.recover_incomplete_transitions()
+    assert lease.task.task_id not in sweep.recovered_task_ids
+    stopped = restarted.store.get_task(lease.task.task_id)
+    assert stopped is not None and stopped.state == "cancelled"
+    assert [item.ready for item in restarted.list_mission_readiness(mission, 1)] == [False, False]
+    with pytest.raises(workflow_state.MissionBindingRejected, match="not active"):
+        restarted.prepare_mission_task_resume(
+            mission,
+            1,
+            "work",
+            binding=binding,
+            current_inputs=_AP007_INPUTS,
+            current_authority=_mission_authority(root, lease.task.task_id),
+            worker_id="worker-resume",
+            expected_state_version=stopped.state_version,
+        )
+    plan = restarted.get_mission_plan(mission, 1)
+    assert plan is not None and plan.status == "cancelled"
+
+
+def test_ap007_control_operations_keep_bounded_counters(isolated_env: Path) -> None:
+    """Counters that decide a stop survive every other write to the same budget document."""
+    root = "ap007-counters-root"
+    spec = execution_budget.TaskBudgetSpec(
+        max_steps=50, max_no_progress=9, max_repair_attempts=9, max_memory_bytes=10_000, max_storage_bytes=10_000
+    )
+    sm = _ap007_machine(isolated_env, root, spec)
+    sm.budgets.record_bounded_observation(
+        root,
+        root_task_id=root,
+        session_id=root,
+        progressed=False,
+        repair_attempt=True,
+        memory_bytes=512,
+        storage_bytes=2_048,
+    )
+    expected = (1, 1, 512, 2_048)
+
+    def _counters() -> tuple[int, int, int, int]:
+        state = sm.budgets.get_budget(root)
+        return (
+            state.no_progress_count,
+            state.repair_attempts_used,
+            state.memory_bytes_peak,
+            state.storage_bytes_peak,
+        )
+
+    assert _counters() == expected
+    sm.budgets.set_control_flags(root, pause_requested=True)
+    sm.budgets.set_control_flags(root, pause_requested=False)
+    assert _counters() == expected
+    sm.budgets.record_usage(root, steps_delta=1, tool_calls_delta=1, tokens_delta=10, elapsed_delta_s=0.5)
+    assert _counters() == expected
+    sm.budgets.charge_hierarchical_tool_call(root, root_task_id=root, session_id=root)
+    assert _counters() == expected
+    sm.budgets.consume_recovery(root)
+    assert _counters() == expected
+    # A budget change keeps what was already measured: raising a ceiling does not erase the peak.
+    sm.ensure_root_task(
+        root,
+        session_id=root,
+        workspace_dir=str(isolated_env),
+        budget_spec=replace(spec, max_memory_bytes=20_000),
+        override_budget_spec=True,
+    )
+    assert _counters() == expected
+    restarted = workflow_state.DurableTaskStateMachine(studio.STORAGE, studio.DB_PATH)
+    assert restarted.budgets.get_budget(root).spec.max_memory_bytes == 20_000
+    assert restarted.budgets.get_budget(root).memory_bytes_peak == 512
+
+
+def test_ap007_task_budget_route_refuses_limits_that_no_route_enforces(isolated_env: Path) -> None:
+    """The HTTP boundary does not accept a protection it cannot deliver, and does not ignore it either."""
+    session_id = _create_session(isolated_env, title="AP-007 boundary")["id"]
+    values: dict[str, Any] = {
+        "max_no_progress": 3,
+        "max_repair_attempts": 2,
+        "deadline_at": time.time() + 600,
+        "max_memory_bytes": 1_000_000,
+        "max_storage_bytes": 1_000_000,
+        "isolation_required": True,
+    }
+    assert tuple(values) == execution_budget.BOUNDED_LIMIT_FIELDS
+
+    with TestClient(studio.app, base_url="http://127.0.0.1:8000") as client:
+        for route in ("/api/harness/run", "/api/harness/gsd-wave"):
+            for key, value in values.items():
+                response = client.post(
+                    route,
+                    headers=_headers(),
+                    json={"session_id": session_id, "prompt": "Summarise the notes", "budget": {key: value}},
+                )
+                assert response.status_code == 400, (route, key)
+                detail = response.json()["detail"]
+                assert key in detail and "not activated" in detail
+        # ``false`` is still a declaration of the key, so it is refused the same way.
+        declared_false = client.post(
+            "/api/harness/run",
+            headers=_headers(),
+            json={"session_id": session_id, "prompt": "Summarise the notes", "budget": {"isolation_required": False}},
+        )
+        assert declared_false.status_code == 400
+
+    # The refused requests left the task and its budget exactly as they were.
+    task = workflow_state.DurableTaskStateMachine(studio.STORAGE, studio.DB_PATH).store.get_task(session_id)
+    assert task is not None
+    assert (task.state, task.budget_json, task.current_epoch) == ("pending", "{}", 0)

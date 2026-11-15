@@ -347,3 +347,8 @@ model, network, browser, account or background worker was added or activated.
 ADR-0040 remains `review_status: not-reviewed`, and AP-007 through AP-032 remain
 unauthorized. As with AP-005, this landing record's own merge identity is recorded in
 its pull-request comment rather than in a further commit.
+
+That sentence records the state at the AP-006 landing. Afterwards the safe
+fail-closed offline subset of AP-007 was claimed on PR #303 under a scoped owner
+instruction that the AP ledger quotes. It is not a full AP-007 authorization: U06 is
+still pending, and AP-008 through AP-032 remain unauthorized.

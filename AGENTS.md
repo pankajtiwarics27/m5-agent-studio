@@ -79,10 +79,15 @@ AS source/status record rather than a fourth interchangeable claim ledger.
   AP-001 through AP-006 are `done`. AP-006 PR #299's exact head
   `accfda81c814c961390875b61cb07a078469a5d7` merged as
   `5872cc612cb1cf521cbfbe5a32ef5dbaaed40116`, and its exact-merge main CI
-  passed. No further story is authorized: AP-007…AP-032, product runtime
-  activation, destructive resets, and real external services remain
-  unauthorized, and a later story needs its own explicit owner authorization
-  plus dependency evidence and its own branch/PR before any work starts.
+  passed. AP-007 is `in_review` on PR #303 for its safe fail-closed offline
+  subset only, under a scoped owner instruction quoted in the ledger. It is
+  not fully authorized: owner decision U06 still blocks execution on a
+  qualified backend, installed-runtime qualification and any activation.
+  No further story is authorized: the remainder of AP-007, AP-008…AP-032,
+  product runtime activation, destructive resets, and real external services
+  remain unauthorized, and a later story needs its own explicit owner
+  authorization plus dependency evidence and its own branch/PR before any
+  work starts.
 
 Within the program you are working on, choose exactly one story that is both
 owner-authorized and dependency-ready, respect phase order, and take one story
