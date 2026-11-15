@@ -79,15 +79,16 @@ AS source/status record rather than a fourth interchangeable claim ledger.
   AP-001 through AP-006 are `done`. AP-006 PR #299's exact head
   `accfda81c814c961390875b61cb07a078469a5d7` merged as
   `5872cc612cb1cf521cbfbe5a32ef5dbaaed40116`, and its exact-merge main CI
-  passed. AP-007 is `in_review` on PR #303 for its safe fail-closed offline
-  subset only, under a scoped owner instruction quoted in the ledger. It is
-  not fully authorized: owner decision U06 still blocks execution on a
-  qualified backend, installed-runtime qualification and any activation.
-  No further story is authorized: the remainder of AP-007, AP-008…AP-032,
-  product runtime activation, destructive resets, and real external services
-  remain unauthorized, and a later story needs its own explicit owner
-  authorization plus dependency evidence and its own branch/PR before any
-  work starts.
+  passed. AP-007's safe fail-closed offline subset then landed through
+  PR #303 (exact head `b1b2e4d747f9916a8ffd77f1126c90f8288294c8`, merged as
+  `bf1fa6aefa24913ed7a88ceb12775b484dbc7cc5` on 2026-11-15, exact-merge main CI
+  green), after the owner decided it may land while U06 remains pending. That
+  landing is not a full AP-007 authorization and resolves nothing about U06;
+  AP-007 is recorded `blocked` on U06 for its remainder. No further story is
+  authorized: the remainder of AP-007, AP-008…AP-032, product runtime activation,
+  destructive resets, and real external services remain unauthorized, and a later
+  story needs its own explicit owner authorization plus dependency evidence and
+  its own branch/PR before any work starts.
 
 Within the program you are working on, choose exactly one story that is both
 owner-authorized and dependency-ready, respect phase order, and take one story

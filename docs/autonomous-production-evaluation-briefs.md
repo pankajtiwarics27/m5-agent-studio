@@ -16,8 +16,11 @@ are now done. AP-004 delivered through PR #292 and AP-005 through PR #296
 AP-005 passed as run 42798276827, and the AP-005 closeout PR #298 merged as
 `69092eda00d7e42de06a3ced3c054e3b7d7f2393`. AP-006 is now done as well: PR #299
 merged as `5872cc612cb1cf521cbfbe5a32ef5dbaaed40116` with a green exact-main run
-(42806442354). AP-007 is in review on PR #303 for its safe fail-closed offline
-subset only, under a scoped owner instruction; it is not fully authorized. No
+(42806442354). AP-007's safe fail-closed offline subset then landed through PR #303
+(exact head `b1b2e4d747f9916a8ffd77f1126c90f8288294c8`, merged as
+`bf1fa6aefa24913ed7a88ceb12775b484dbc7cc5` on 2026-11-15) with a green exact-main
+run (43735318772), after the owner decided it may land while U06 remains pending.
+That landing is not a full AP-007 authorization and resolves nothing about U06. No
 further story is authorized, so the remainder of AP-007 and AP-008 through AP-032
 remain unauthorized. U01–U06 remain pending, including the initial specialization
 choice. Therefore research, website, and short-video briefs below are generic

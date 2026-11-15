@@ -154,11 +154,13 @@ documents how checkpoint bindings reuse this AP-004 envelope without changing
 its final action-admission ownership. The AP-005 closeout PR #298 merged as
 `69092eda00d7e42de06a3ced3c054e3b7d7f2393` with a green exact-main run. AP-006
 then landed as PR #299, merge `5872cc612cb1cf521cbfbe5a32ef5dbaaed40116`, with
-its exact-main run green. AP-007 is in review on PR #303 for its safe fail-closed
-offline subset only ([Bounded mission execution](bounded-mission-execution.md));
+its exact-main run green. AP-007's safe fail-closed offline subset then landed as
+PR #303 (merge `bf1fa6aefa24913ed7a88ceb12775b484dbc7cc5` on 2026-11-15, exact-main
+run 43735318772 green; [Bounded mission execution](bounded-mission-execution.md));
 it reuses this envelope for identity when a mission is stopped and is not a full
-AP-007 authorization. No later story is authorized: the remainder of AP-007,
-AP-008 through AP-032 and all real external effects remain unauthorized.
+AP-007 authorization. U06 remains pending. No later story is authorized: the
+remainder of AP-007, AP-008 through AP-032 and all real external effects remain
+unauthorized.
 
 ### Acceptance mapping
 

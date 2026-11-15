@@ -17,11 +17,13 @@ main CI run 42798276827 passed. The AP-005 closeout PR #298 then merged as
 `69092eda00d7e42de06a3ced3c054e3b7d7f2393` with a green exact-main run
 (42802513165). AP-006 is now done too: PR #299 merged as
 `5872cc612cb1cf521cbfbe5a32ef5dbaaed40116` and its exact-main run 42806442354
-passed. AP-007 is in review on PR #303 for its safe fail-closed offline subset
-only: the U06 safe work listed in this register, with activation kept false. That
-is not a full AP-007 authorization and does not resolve U06. No later story is
-authorized; the remainder of AP-007 and AP-008 through AP-032 remain unauthorized.
-This remains separate from product runtime activation and real external actions.
+passed. AP-007's safe fail-closed offline subset landed through PR #303 (merged as
+`bf1fa6aefa24913ed7a88ceb12775b484dbc7cc5` on 2026-11-15, exact-merge main run
+43735318772 green): the U06 safe work listed in this register, with activation kept
+false. That landing is not a full AP-007 authorization and does not resolve U06. No
+later story is authorized; the remainder of AP-007 and AP-008 through AP-032 remain
+unauthorized. This remains separate from product runtime activation and real external
+actions.
 
 AP-002 adds an offline, versioned decision/configuration boundary. It does not
 activate a provider, runtime, lifecycle coordinator, sandbox, browser, account,
