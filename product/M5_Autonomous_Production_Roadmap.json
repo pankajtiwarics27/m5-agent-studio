@@ -1183,7 +1183,44 @@
           "This closeout is the terminal record for the AP-007 offline subset. Its own merge SHA, merge time and post-merge main run are recorded in its pull-request comment, because a commit cannot carry its own merge identity; no further AP-007 completion PR is required."
         ],
         "post_completion_authorization": "None granted. AP-007’s landing does not authorize the remainder of AP-007 or any later story: authorized_downstream_stories remains AP-002 through AP-006, product runtime activation stays false, and AP-008…AP-032, the remainder of AP-007, real external actions and all owner/independent-security/screenshot/media/signing/release approvals remain unauthorized or unclaimed. ADR-0041 remains review_status: not-reviewed.",
-        "completion_note": "The owner asked whether the offline subset completes AP-007 and has not decided that it does; this record therefore marks delivery of the subset as merged and the story as blocked on U06 for its remainder, following the builder handoff recommendation. If the owner later decides the offline subset completes the story, AP-007 can be recorded done by that explicit owner decision only."
+        "completion_note": "The owner asked whether the offline subset completes AP-007 and has not decided that it does; this record therefore marks delivery of the subset as merged and the story as blocked on U06 for its remainder, following the builder handoff recommendation. If the owner later decides the offline subset completes the story, AP-007 can be recorded done by that explicit owner decision only.",
+        "post_completion_changes": [
+          {
+            "id": "AP-007-F1",
+            "title": "Limit the late-result fence to mission-owned work",
+            "kind": "owner_authorised_scope_change_to_the_landed_subset",
+            "status": "in_progress",
+            "owner": "arena/586e7d3c-m5-agent-studio",
+            "branch": "arena/586e7d3c-m5-agent-studio",
+            "base_sha": "dc5ec572fb9ac97b13a004528637b0eca69f765a",
+            "head_sha": null,
+            "claimed_at": "2026-11-16T01:14:36Z",
+            "heartbeat_at": "2026-11-16T01:14:36Z",
+            "pr_url": null,
+            "delivery_status": "not_pushed",
+            "story_status_effect": "None. AP-007 stays blocked on U06 with blocked_by_decisions [\"U06\"], and the landed subset stays delivery_status merged. This entry carries its own claim and delivery fields so that the completion record written for PR #303 is not rewritten.",
+            "authorization_record": {
+              "authorization": "Owner instruction to the AP-007 builder session to narrow one behaviour of the landed subset. It is not an authorization of the remainder of AP-007 or of any later story, and it does not resolve U06.",
+              "owner_instructions": [
+                "“continue with option 2”",
+                "“try now” (after a first attempt could not reach GitHub from the sandbox and nothing was pushed)"
+              ],
+              "instruction_context": "After the PR #303 gate result the builder session named three options: land PR #303 as it was, narrow the late-result fence first, or hold or close. Option 2 is the narrowing. It is described here, not quoted: limit the late-result fence to mission work, for an owner who wants the action ledger to behave for the running application as before AP-007 until U06 is decided.",
+              "sequence": "PR #303 merged as bf1fa6aefa24913ed7a88ceb12775b484dbc7cc5 at 2026-11-15T16:24:38Z on the owner's landing decision that the completion record cites, with the fence applying to every task. When the builder session began acting on the narrowing instruction, PR #303 had already merged, so the narrowing is a separate pull request. The builder's earlier branch was merged and deleted; the session now works on the fixed branch arena/586e7d3c-m5-agent-studio. Until this change lands, main fences late results for every task.",
+              "scope_limit": "Only the scope of the late-result fence. The HTTP 400 for the six bounded-stop budget keys, the budget charge over the task chain, the mission stop, the bounded limits, the isolation requirement and the recovery report are not changed. No route, table, column, schema version, credential, network destination or process is added. runtime_activation_authorized stays false."
+            },
+            "blast_radius": {
+              "objective_and_gap": "side_effect_ledger.DurableActionLedger.complete and record_exception return an uncertain row untouched for every action. Every tool call uses them, so in one race (a cancel, a takeover or crash recovery marks an action uncertain while its executor still runs) the running application now pauses for reconciliation where it used to continue with the late result. The owner wants that outcome limited to mission-owned work.",
+              "options": "(a) Decide by ownership: fence only when the action's task is a task of a mission plan or a descendant of one, the same ownership halt_mission uses when it stops a plan — chosen. (b) Decide by the error code that declared the action uncertain — rejected: a mission stop by cancellation writes cancelled_in_flight, the code an ordinary task cancel writes. (c) A marker column on runtime_actions — rejected: a schema version for a fact the existing tables hold. (d) A configuration switch — rejected: a second behaviour to test and a setting with no owner.",
+              "anticipated_files": "side_effect_ledger.py (one ownership check used by both finalizers); a comment in execution_spine.py; tests/test_durable_intent_ledger.py and tests/test_durable_task_state_machine.py; a new ADR that supersedes one paragraph of ADR-0041, with pointer notes in ADR-0041; docs/bounded-mission-execution.md; the AP-007 row of docs/autonomous-production-ap001-reconciliation.md; this ledger; rebuilt studio.py and the source-bound generated artifacts. No route, endpoint, UI control or inventory entry changes.",
+              "contracts_and_data": "No table, column, store file or schema version. The check reads runtime_tasks and runtime_mission_tasks inside the existing finalize transaction, and only for a row that is already uncertain and has a task. A store that predates mission plans has no mission tables and therefore no mission-owned work. The late_result_fenced error code and its meaning are unchanged; it is returned in fewer cases.",
+              "pinned_tests": "Two AP-007 cases in tests/test_durable_intent_ledger.py assert the every-task fence on session-only actions. They keep their names and assert the fence on mission-owned actions instead; new cases pin the unchanged outcome for work that no mission owns. The state-machine case for late results of a stopped plan is not edited.",
+              "authority_and_resources": "No credential, provider or model inference, network egress, browser, account, billable action, background process or filesystem grant. Fail-closed behaviour is kept for mission-owned work. For other work the earlier, less strict behaviour returns: a late result settles an action that a cancel, a takeover or crash recovery had declared uncertain.",
+              "compatibility_and_rollback": "Rollback is a source revert, which restores the every-task fence. No data is migrated either way. An action that the every-task fence left uncertain while it was on main stays uncertain until it is reconciled; its dropped late result is not replayed.",
+              "required_evidence": "Tests for both sides of the ownership rule: plan tasks and their delegated descendants stay fenced after a mission stop and after recovery; session-only actions, plain tasks, plain child tasks, the mission's root task and a store without mission tables keep the pre-AP-007 outcome. A one-off run of the cases for unowned work against the pre-AP-007 commit. Owning-module suites, regenerated artifacts with their checks, the full suite and the exact-head CI matrix."
+            }
+          }
+        ]
       },
       "implementation_prompt": "Implement AP-007: Implement bounded execution, cancellation and truthful recovery. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
@@ -3229,6 +3266,15 @@
         "mode": "safe_fail_closed_offline_subset_of_a_blocked_story",
         "scope": "Offline refusal, cancellation, bounded-stop, uncertain-effect and truthful-report behaviour with activation kept false: the U06 safe work in product/M5_Autonomous_Production_Operating_Envelope.json. Not a full AP-007 authorization. U06 stays pending; execution on a qualified backend, installed-runtime qualification, any activation and AP-008 through AP-032 are not authorized. AP-007 is deliberately not added to authorized_downstream_stories.",
         "source": "Owner instruction to the AP-006 builder, recorded verbatim in issue #301: “No new session is required, continue with next story.” Applied through the Autonomous Relay selection order item 4: “A safe fail-closed subset of a blocked story, but only when it does not assume the unresolved decision's outcome or activate anything.” No timestamp is recorded for the instruction, so authorized_at is null."
+      },
+      {
+        "authorized_at": null,
+        "stories": [
+          "AP-007"
+        ],
+        "mode": "owner_narrowing_of_a_landed_fail_closed_subset",
+        "scope": "Limit the AP-007 late-result fence to mission-owned work, so that the action ledger answers a late result for the running application as it did before AP-007. Nothing else changes. Not an authorization of the remainder of AP-007 or of any later story. U06 stays pending; nothing is activated; AP-007 is not added to authorized_downstream_stories.",
+        "source": "Owner instruction to the AP-007 builder session: “continue with option 2”. Option 2 was that session's own proposal after the PR #303 gate result: narrow the late-result fence to mission work. The proposal is described here, not quoted. No timestamp is recorded for the instruction, so authorized_at is null. Details: stories[AP-007].tracking.post_completion_changes."
       }
     ]
   }
