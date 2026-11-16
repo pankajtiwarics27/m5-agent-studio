@@ -13,7 +13,7 @@
   },
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
   "frontend_sha256": "397c3ae069fe281d8150485e1b88e73c7970de8a1ac07841c6790f7fe685da0f",
-  "app_sha256": "4813aed2ccc5902b4cda6d61190dc5049ee3340915ff8bd4f7c385738ba4f358",
+  "app_sha256": "9224571fa0fbdd3b3c340115c163d342eef07bed512ab91ea177f8debcacd0b9",
   "caller_resolution": {
     "complete": true,
     "unresolved_call_sites": [],
