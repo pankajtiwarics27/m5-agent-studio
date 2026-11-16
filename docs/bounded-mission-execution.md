@@ -456,8 +456,10 @@ reading stands.
 
 The regenerated page describes the late-result fence for every task, as it was
 at `dc5ec57`, and names the change that limits it to mission-owned work
-([ADR-0042](adr/0042-late-result-fence-limited-to-mission-owned-work.md)). Its
-maintenance rule asks for another regeneration when that change lands.
+([ADR-0042](adr/0042-late-result-fence-limited-to-mission-owned-work.md)). That
+change has since landed (PR #307, merged as `e28cccd`). Until the page is
+regenerated, as its maintenance rule asks, its statements about the fence scope
+describe the earlier state.
 
 ## Acceptance mapping and offline evidence
 
