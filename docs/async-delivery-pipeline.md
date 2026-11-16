@@ -409,3 +409,69 @@ under an explicit in-session owner decision recorded before the merge
 
 As with AP-005 and AP-006, this landing record's own merge identity is recorded in
 its pull-request comment rather than in a further commit.
+
+## 12. AP-007-F1 landing record (late-result fence limited to mission-owned work)
+
+AP-007-F1 is a follow-up change to the landed AP-007 subset, not a story. The
+owner asked for it after PR #303 had merged: limit the late-result fence to
+mission-owned work. The builder session also landed it, on the owner's in-session
+instruction "continue and merge", which was recorded on the pull request before
+the merge.
+
+- Builder: `arena/586e7d3c-m5-agent-studio`, PR #307. `side_effect_ledger.py`
+  now fences a late result only when the action's task is a task of a mission
+  plan or a descendant of one. For every other action the late result is
+  recorded, as before AP-007. The running application creates no mission plan, so
+  the fence does not fire there.
+  [ADR-0042](adr/0042-late-result-fence-limited-to-mission-owned-work.md) records
+  the decision and its cost: outside missions a late result again overwrites an
+  `uncertain` verdict. §11 describes the fence "for every task", as PR #303
+  merged it.
+- Base change before the merge: the ready-event run
+  [`43790341153`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/43790341153)
+  had passed on the earlier head `4255d5f82831a7ef650ee41046df15ebdf3d5dbe` when
+  PR #305 merged into `main` as `afeef1694b8e33b5aad4036871ba3e4a6980e52d`. PR #305
+  changes `.github/workflows/ci.yml` and regenerates two records. The earlier run
+  covered the previous base and workflow revision, so it is recorded as
+  superseded and was not reused as the gate. `main` was merged into the branch
+  without conflict, every generator `--check` passed on the merged tree, and the
+  new head got its own run.
+- Gate: `pull_request` run
+  [`43796886611`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/43796886611)
+  passed at the exact head `bbcf0a2b8cefa3edea3bbd1d1a7e9f24c37b57c1` — plan,
+  source/release-independent gates, nine Python shards over 3.11/3.12/3.13, three
+  shard-identity checks, five browser-safety shards, browser-safety regressions
+  and the `test` aggregates.
+- Landed by `arena/586e7d3c-m5-agent-studio` at `2026-11-16T03:20:57Z` as
+  `e28cccdac003975a8717a7f28f7783f38c1aa97a` via `gh pr merge 307 --merge`, pinned
+  to that head, after re-verifying the unchanged head, the unchanged base and the
+  `MERGEABLE`/`CLEAN` state. The merge commit and the tested head have the same
+  tree. Exact-main push run
+  [`43797648148`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/43797648148)
+  passed on that merge SHA (`test` 3.11/3.12/3.13 and `Browser safety regressions`
+  all green).
+- Superseded on the earlier head: run `43790130871` started while the pull request
+  was a draft and was cancelled by same-PR concurrency when the ready event
+  arrived. Its aggregate jobs show `failure` because the shards they wait for were
+  cancelled. It is recorded as superseded and not as a code or test failure.
+- Unchanged by this landing: U06 is pending and AP-007 is recorded `blocked`, not
+  `done`; `authorized_downstream_stories` remains AP-002…AP-006 and
+  `runtime_activation_authorized` stays `false`. ADR-0042 is
+  `review_status: not-reviewed`.
+- The U06 call-path audit page
+  (`docs/autonomous-production-u06-call-path-audit.md`) is out of date on the
+  fence scope after this landing: it describes the fence for every task and says
+  that this holds until PR #307 lands. Its maintenance rule assigns the
+  regeneration to its owner, and this record does not edit the page.
+- Owner input recorded after this landing: PR #309 (merged as
+  `9d18fef823d461ca5622a20d504a2ab080dcadc7`) records the owner's answers to the
+  six U06 questions as input, not as a resolution. One answer says that the
+  AP-007 offline fail-closed subset is not accepted as the refusal foundation and
+  that rework is required. This landing record is not an acceptance of the
+  subset, and AP-007-F1 is not that rework. The answers are in the
+  [operating envelope](autonomous-production-operating-envelope.md); they
+  authorize no story. This record was merged with `main` after PR #309 and
+  reconciled against it.
+
+As with the earlier landings, this record's own merge identity is recorded in its
+pull-request comment rather than in a further commit.
