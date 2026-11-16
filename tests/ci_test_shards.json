@@ -26,7 +26,7 @@
       645.0
     ],
     "module_counts": [
-      77,
+      78,
       75,
       74
     ],
@@ -211,6 +211,7 @@
       "tests/test_uiv2_performance_safety.py",
       "tests/test_verification_evidence.py",
       "tests/test_worker_leases_and_fencing.py",
+      "tests/test_workflow_agile_sdlc_factory_cancel.py",
       "tests/test_workflow_chat_stream_cancel.py",
       "tests/test_workflow_checkpoints.py",
       "tests/test_workflow_hall_coordinated.py",
