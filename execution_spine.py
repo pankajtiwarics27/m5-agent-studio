@@ -1152,10 +1152,11 @@ class DurableActionBoundary:
                     final_status = self._intent_ledger.complete(intent_decision.action_id, result, elapsed)
                     if final_status == "uncertain" and not bool(result.get("uncertain")):
                         # AP-007 late-result fence. The durable ledger had already
-                        # declared this effect uncertain (cancellation, a bounded stop,
-                        # a takeover or recovery) and kept that verdict. The late result
-                        # must not read as success, or as a clean failure, anywhere
-                        # downstream: the audit trail and the caller see it as uncertain.
+                        # declared this effect uncertain (a mission stop, a takeover or
+                        # recovery) and kept that verdict, which it does for
+                        # mission-owned work only. The late result must not read as
+                        # success, or as a clean failure, anywhere downstream: the
+                        # audit trail and the caller see it as uncertain.
                         result = {
                             **result,
                             "ok": False,
