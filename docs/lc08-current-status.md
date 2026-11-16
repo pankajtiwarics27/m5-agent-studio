@@ -2,6 +2,25 @@
 
 ## Continuation after this snapshot
 
+The bounded [`api_run_sdlc_feedback_loop.fb_gen` audit](lc08-sdlc-feedback-loop-audit.md)
+adds one assessed owner and fixes the same delegated-source gap at the
+feedback router: the sprint-delegation loop and the two model loops
+(research/critic and delta backlog/lead) wrapped bare `async for`
+consumers; all three are now in `contextlib.aclosing`, in parity with the
+combo, sprint-runner and factory audits. The consumer-close case at the
+sprint-delegation `yield ev_chunk` is a deterministic red/green proof
+(red on the unchanged source; close now observed inside the consumer's
+`aclose()`). The two model loops contain no yields inside their loop
+bodies, so no consumer-visible red path is reachable there; those wraps
+are parity and covered by regression tests. The checked-in matrix marks
+`api_run_sdlc_feedback_loop.fb_gen` `bounded_feedback_stream_close`;
+**5 of 29 owners remain `inventory_only_in_this_audit`**. The GSD
+fresh-wave shell (`api_run_gsd_fresh_wave.gsd_gen`), the harness-turn
+shell and the child-delegation / conservative-model-switch owners remain
+inventory-only and unaudited. It does not promote any other owner and
+adds no activation, hardware qualification, release acceptance or
+LC09–11 status.
+
 The bounded [`api_run_agile_sdlc_factory.sdlc_gen` audit](lc08-agile-sdlc-factory-audit.md)
 adds one assessed owner and fixes the same delegated-source gap at the
 factory SSE shell: the Phase 5 sprint-runner loop and the four phase model
