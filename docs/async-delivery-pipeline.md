@@ -350,5 +350,61 @@ its pull-request comment rather than in a further commit.
 
 That sentence records the state at the AP-006 landing. Afterwards the safe
 fail-closed offline subset of AP-007 was claimed on PR #303 under a scoped owner
-instruction that the AP ledger quotes. It is not a full AP-007 authorization: U06 is
-still pending, and AP-008 through AP-032 remain unauthorized.
+instruction that the AP ledger quotes, and it subsequently landed (see below). It is
+not a full AP-007 authorization: U06 is still pending, and AP-008 through AP-032
+remain unauthorized.
+
+## 11. AP-007 landing record (offline fail-closed subset; U06 pending)
+
+AP-007's safe fail-closed offline subset is the third delivery landed under this
+runbook — the first one landed while its story's owner decision is still pending,
+under an explicit in-session owner decision recorded before the merge
+(2026-11-15T16:20Z): land PR #303 while U06 remains pending.
+
+- Builder: `arena/cbf9f2b0-m5-agent-studio`, PR #303. The subset implements a
+  mission-scoped stop with measured cleanup latency, a late-result fence on the
+  live action path (a result arriving after the ledger marked the action uncertain
+  no longer settles it, for every task), bounded no-progress/repair/deadline/
+  memory/storage limits committed before refusal, an isolation requirement with no
+  host fallback, and a truthful recovery report; docs/bounded-mission-execution.md
+  and ADR-0041 describe them. It is behaviour in six production modules
+  (`workflow_state.py`, `execution_budget.py`, `side_effect_ledger.py`,
+  `execution_spine.py`, `process_supervision.py`, `app.py`) plus a rebuilt
+  `studio.py` — not tests only.
+- Gate: ready-for-review `pull_request` run
+  [`43734238718`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/43734238718)
+  passed at the released exact head `b1b2e4d747f9916a8ffd77f1126c90f8288294c8` —
+  plan, source/release-independent gates, nine Python shards over 3.11/3.12/3.13,
+  three shard-identity checks, five browser-safety shards, browser-safety regressions
+  and the `test` aggregates. The same head had earlier passed the draft-era run
+  [`42834904831`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42834904831)
+  and the feature-lane push run
+  [`42834895636`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42834895636).
+  The superseded head `4f79822` produced a failing `pull_request` run `42830912254`
+  whose only failing job (`Python shard identity (3.12)`) was an artifact-service
+  download error with all shards green; it was recorded as superseded and not as a
+  code or test failure.
+- Landed by `arena/776b872b-m5-agent-studio` (owner's explicit in-session merge
+  authorization) at `2026-11-15T16:24:38Z` as
+  `bf1fa6aefa24913ed7a88ceb12775b484dbc7cc5` via `gh pr merge 303 --merge`, after
+  re-verifying the unchanged released head, `MERGEABLE`/`CLEAN` state and a CLEAN
+  merge state. Exact-main push run
+  [`43735318772`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/43735318772)
+  passed on that merge SHA (`test` 3.11/3.12/3.13 and `Browser safety regressions`
+  all green).
+- The remainder of AP-007 is undelivered and stays blocked by U06: execution on a
+  qualified isolation backend, installed-runtime qualification, any production caller
+  of the mission stop, the recovery report or the observation recorder, and any
+  activation. No route, endpoint, UI control, table or schema version was added by
+  the subset (schema stays v4). `blocked_by_decisions` remains `["U06"]` and the
+  story is recorded `blocked`, not `done`; `authorized_downstream_stories` remains
+  AP-002…AP-006 and `runtime_activation_authorized` stays `false`.
+- No takeover was needed, no commit was written to the released builder branch, and
+  the builder's own local results stay attributed to the builder while the gate and
+  main results stay attributed to CI. The U06 call-path audit page
+  (`docs/autonomous-production-u06-call-path-audit.md`) is out of date on G-1 and
+  G-6 after this landing; its own maintenance rule asks its owner to regenerate it
+  or mark it superseded, and this record does not edit it.
+
+As with AP-005 and AP-006, this landing record's own merge identity is recorded in
+its pull-request comment rather than in a further commit.
