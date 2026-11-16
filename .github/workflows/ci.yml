@@ -207,7 +207,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Download authoritative pull-request paths
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: pr-changed-paths-${{ github.event.pull_request.number }}
           path: ${{ runner.temp }}/pr-paths
@@ -336,7 +336,7 @@ jobs:
       - name: Install identical test dependencies
         run: python -m pip install -e '.[dev,supply-chain]'
       - name: Download this interpreter's shard outcomes
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           pattern: pytest-result-${{ matrix.python-version }}-*
           path: ${{ runner.temp }}/pytest-results
@@ -477,7 +477,7 @@ jobs:
           fetch-depth: 0
       - name: Download authoritative pull-request paths
         if: github.event_name == 'pull_request'
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: pr-changed-paths-${{ github.event.pull_request.number }}
           path: ${{ runner.temp }}/pr-paths
