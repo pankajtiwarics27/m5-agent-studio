@@ -475,3 +475,88 @@ the merge.
 
 As with the earlier landings, this record's own merge identity is recorded in its
 pull-request comment rather than in a further commit.
+
+## 13. AP-007-F2 landing record (proven sandbox admission for mission-owned consequential work)
+
+AP-007-F2 is a follow-up change to the landed AP-007 subset, not a story. The
+owner's U06 answer 6, recorded through PR #309, does not accept the subset as the
+refusal foundation and asks for rework. The builder session asked the owner for
+the scope. The owner selected full alignment with answers 1 to 4, for
+mission-owned work, and "Merge when the gate is green". On that second selection
+the builder session also landed the change.
+
+- Builder: `arena/0cf8f812-m5-agent-studio`, PR #312. `execution_budget.py` now
+  asks for isolation proof for every consequential action of mission-owned work,
+  whether or not a budget declares `isolation_required`, and judges the proof
+  against a recorded acceptance: runtime, runtime version, image digest, earliest
+  accepted qualification run and activated steps. No acceptance is recorded, so
+  every such action is refused with `isolation_unavailable` before it runs.
+  Browser-worker and native-lifecycle work of a mission is refused whatever its
+  action class. Work that no mission owns is unchanged, and the running
+  application creates no mission plan, so the requirement does not fire there.
+  [ADR-0043](adr/0043-proven-sandbox-admission-for-mission-owned-consequential-work.md)
+  records the decision, its cost and what is not delivered. §11 names "an
+  isolation requirement with no host fallback", as PR #303 merged it: it applied
+  only when a budget declared it, and nothing declares it.
+- First exact-head run, red and not rerun: `pull_request` run
+  [`43815203908`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/43815203908)
+  on the earlier head `b4c33ad2a4ae9cfe5a49f1d143d22c59db1e6d4c` failed in one job,
+  `Browser safety shard (performance)`, and in the aggregate that waits for it.
+  One render-time check measured a mean of 4.085 ms against a 4 ms budget. The
+  same shard had measured 1.62 ms 28 minutes earlier on
+  `a1bf088a67a503052418c182de513129014e68d5`, which differs only in the AP ledger,
+  and both walks passed six of six local runs. The failure was classified on the
+  pull request as an infrastructure failure, a slow runner, before any rerun. It
+  was then not rerun, because `main` had moved. Nothing was changed to obtain a
+  green result.
+- Base change before the merge: PR #313 merged into `main` as
+  `9a1c4d19e00192c54346085a8eff0f29fdca23f6` 30 seconds after that run had
+  started. `main` was merged into the branch. No source file conflicted. Sixteen
+  generated artifacts conflicted and were regenerated from the merged sources;
+  none was merged by hand. The new head got its own run and a reissued handoff.
+- Gate: `pull_request` run
+  [`43820299201`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/43820299201)
+  passed at the exact head `4d75b2273c21e967f490e97e88d672f2f245832d` — plan,
+  source/release-independent gates, nine Python shards over 3.11/3.12/3.13, three
+  shard-identity checks, five browser-safety shards, browser-safety regressions
+  and the `test` aggregates.
+- Landed by `arena/0cf8f812-m5-agent-studio` at `2026-11-16T07:03:53Z` as
+  `aa91fe96e72dc6fdaf21d4ceebfd66d9aec5f28d` via `gh pr merge 312 --merge`, pinned
+  to that head, after re-verifying the unchanged head, the unchanged base and the
+  `MERGEABLE`/`CLEAN` state. The merge commit and the tested head have the same
+  tree. Exact-main push run
+  [`43821138708`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/43821138708)
+  passed on that merge SHA (`test` 3.11/3.12/3.13 and `Browser safety regressions`
+  all green).
+- Superseded: run `43815203178` started on the earlier head while the pull request
+  was a draft and was cancelled by same-PR concurrency when the ready event
+  arrived. Its aggregate jobs show `failure` because the jobs they wait for did
+  not complete; no test ran. Run `43818972907` passed on the merge of `main` and
+  was superseded by the ledger commit that became the final head.
+- Unchanged by this landing: U06 is pending and AP-007 is recorded `blocked`, not
+  `done`; `authorized_downstream_stories` remains AP-002…AP-006 and
+  `runtime_activation_authorized` stays `false`. ADR-0043 is
+  `review_status: not-reviewed`.
+- Not decided: whether the rework is accepted as the refusal foundation. The
+  `done` status of AP-007-F2 records that its change merged. It is not the
+  owner's acceptance. The answers that PR #309 recorded in the
+  [operating envelope](autonomous-production-operating-envelope.md) are not
+  edited; they still say that U06 needs the AP-007 rework first.
+- The U06 call-path audit page
+  (`docs/autonomous-production-u06-call-path-audit.md`) is pinned to `972ea74`
+  and describes the isolation gate as opt-in. After this landing its statements
+  about the gate describe the earlier state. Its maintenance rule assigns the
+  regeneration to its owner, and this record does not edit the page.
+- Corrections: the ledger text that landed with PR #312 said things about the
+  session's exchange with the owner that no record supports: quoted labels for
+  options that were not selected, a second option of the merge question, a
+  sentence that no next step had been offered, and a time. The completion record
+  removes them and lists them in `record_corrections` of the ledger entry. The
+  owner's two selections were quoted correctly throughout.
+- Reconciled with `main` at `6e3b45376743c4bdf2ae2154e0b5cb658d32967f` (merge of
+  PR #314), whose post-merge run
+  [`43831402766`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/43831402766)
+  passed. PR #314 changes none of the AP-007 sources.
+
+As with the earlier landings, this record's own merge identity is recorded in its
+pull-request comment rather than in a further commit.
