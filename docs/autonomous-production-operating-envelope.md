@@ -71,6 +71,40 @@ A decision moving to `resolved` must provide a non-empty resolution and remove
 its blocker lists in the same reviewed revision; the validator rejects a partial
 or contradictory transition.
 
+### U06 owner input recorded 2026-11-16 (not a resolution)
+
+The repository owner answered the six U06 decision questions with explicit
+selections in the owner session of 2026-11-16T03:34:32Z; the answers are
+recorded at the owner's instruction by this session's agent and are
+pre-decision owner input, not a resolution:
+
+1. **Backends:** container backends only — the runtime/image pinned in the
+   M5-P3-01 evidence — count as backend-qualified for AP purposes. Native
+   lifecycle, browser worker and host/disabled execution remain refused for AP.
+2. **Evidence:** a fresh qualification run on the target host
+   (`scripts/qualify_environment.sh`) is required before U06 can be recorded as
+   satisfied; the 2026-10-31 M5-P3-01 record alone is not sufficient for AP use.
+3. **Scope:** consequential mission actions may never dispatch without sandbox
+   admission — admission-then-dispatch, never a host-execution fallback;
+   admission failure means refused (fail closed).
+4. **Activation order:** contained execution → browser worker → native lifecycle;
+   each step activates only with its own recorded evidence, and everything not
+   yet activated remains refused throughout.
+5. **Recording:** the repository owner records and signs the U06 resolution in
+   the AP ledger via this agent session, drawn from these explicit answers. No
+   ADR register entry is created or reviewed by this recording.
+6. **Refusal foundation:** the AP-007 offline fail-closed subset is **not**
+   accepted as the refusal foundation. Rework is required before activation
+   questions can even be asked; U06 is recorded as needing AP-007 rework first.
+
+None of this moves any authority: U06 remains `pending` with `resolution: null`,
+the blocker lists and blocked actions are unchanged,
+`runtime_activation_authorized` remains `false`, AP-007 remains recorded
+`blocked` on U06 (and its remainder plus AP-008…AP-032 remain unauthorized),
+and ADR-0040 and ADR-0041 remain `not-reviewed`. These answers are owner input
+to be carried in the reviewed revision that eventually resolves U06 — they
+authorize no activation, no dispatch and no story.
+
 ## Hardware and runtime inventory recipe
 
 ### Evidence separation

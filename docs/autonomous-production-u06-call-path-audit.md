@@ -16,9 +16,12 @@ after PR #306, 2026-11-16) • **Decision owned by:** repository owner (U06) •
 > settled — whether it suffices is U06); a late-result fence is on the live
 > action path for every task (§5). `bc406fd` line references in that revision are
 > preserved only in git history; this revision re-derives every checklist item at
-> `dc5ec57`. AP-007-F1 (PR #307, draft, another session) narrows the late-result
+> `dc5ec57`. AP-007-F1 (PR #307, another session) narrows the late-result
 > fence to mission-owned work; when it lands, this page must be regenerated
-> again rather than edited in place.
+> again rather than edited in place. On 2026-11-16 the owner answered the six
+> §"For the owner's U06 decision" questions in the owner session; the answers are
+> recorded as a dated subsection there (and in the operating envelope and AP
+> roadmap) without moving any authority — U06 stays `pending`.
 
 This page audits where the repository currently refuses — or fails to refuse —
 unqualified lifecycle and sandbox execution, across the producer → authority →
@@ -288,6 +291,43 @@ Questions this audit surfaces, in dependency order (no answers implied):
 5. Who records and signs the U06 resolution in the AP ledger, and where?
 6. Does the AP-007 offline subset (§5) stand as the refusal foundation, or is
    rework required before activation questions can even be asked?
+
+### Owner answers to these questions — recorded 2026-11-16
+
+The repository owner answered all six questions with explicit selections in
+the owner session of 2026-11-16T03:34:32Z, at the owner's instruction, recorded
+here verbatim by this session's agent. These are pre-decision owner input, not
+a U06 resolution:
+
+1. **Backends:** container backends only — the runtime/image pinned in the
+   M5-P3-01 evidence — count as backend-qualified for AP purposes. Native
+   lifecycle, browser worker and host/disabled execution remain refused for AP.
+2. **Evidence:** a fresh qualification run on the target host
+   (`scripts/qualify_environment.sh`) is required before U06 can be recorded as
+   satisfied; the 2026-10-31 M5-P3-01 record alone is not sufficient for AP use.
+3. **Scope:** consequential mission actions may never dispatch without sandbox
+   admission — admission-then-dispatch, never a host-execution fallback;
+   admission failure means refused (fail closed).
+4. **Activation order:** contained execution → browser worker → native
+   lifecycle; each step activates only with its own recorded evidence, and
+   everything not yet activated remains refused throughout.
+5. **Recording:** the repository owner records and signs the U06 resolution in
+   the AP ledger (`product/M5_Autonomous_Production_Roadmap.json` plus the ADR
+   register) via this agent session, drawn from these explicit answers. ADRs
+   0040/0041 remain `not-reviewed` by this recording.
+6. **Refusal foundation:** the AP-007 offline fail-closed subset (§5) is
+   **not** accepted as the refusal foundation. Rework is required before
+   activation questions can even be asked; U06 is recorded as needing AP-007
+   rework first.
+
+Authority consequences: U06 remains `pending` with `resolution: null`; the
+blocker lists and blocked actions in `product/M5_Autonomous_Production_Operating_Envelope.json`
+(and the AP roadmap) are unchanged; `runtime_activation_authorized` remains
+`false`; AP-007 remains recorded `blocked` on U06 and its remainder plus
+AP-008…AP-032 remain unauthorized; the AP-007 `blocked_by_decisions` lists are
+untouched. These answers are not a qualification, not an approval and will be
+carried into the reviewed revision that eventually resolves U06 — after a fresh
+qualification run and the AP-007 rework the owner answers call for.
 
 ## Authority boundaries and non-goals
 
