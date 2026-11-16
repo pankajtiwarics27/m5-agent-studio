@@ -1367,11 +1367,29 @@ _AP007_INPUTS = {"request": "assemble the offline report", "input_version": 1}
 _AP007_IDLE_CHILD = "import time\nwhile True:\n    time.sleep(0.05)\n"
 # Clearly fictional evidence for the positive isolation path.  No isolated runtime
 # is qualified in this repository; these tests never claim that one exists.
+_AP007_FIXTURE_DIGEST = "python@sha256:" + "ab" * 32
+_AP007_FIXTURE_NOT_BEFORE = 1_800_000_000.0
 _AP007_FIXTURE_ISOLATION = execution_budget.IsolationEvidence(
     execution_mode="sandbox",
     admitted=True,
     qualified=True,
     backend_id="test-fixture-backend-not-a-real-runtime",
+    runtime="docker",
+    runtime_version="0.0.0-test-fixture",
+    image_digest=_AP007_FIXTURE_DIGEST,
+    qualification_id="test-fixture-qualification-not-a-real-run",
+    qualified_at=_AP007_FIXTURE_NOT_BEFORE,
+)
+# AP-007-F2: an equally fictional acceptance record.  No owner decision records one
+# (U06 is pending), so no process of this build is composed with one.  A test that
+# needs the accepting path builds its machine with this fixture.
+_AP007_FIXTURE_ACCEPTANCE = execution_budget.IsolationAcceptance(
+    decision_ref="test-fixture-acceptance-not-an-owner-decision",
+    runtime="docker",
+    runtime_version="0.0.0-test-fixture",
+    image_digest=_AP007_FIXTURE_DIGEST,
+    qualified_not_before=_AP007_FIXTURE_NOT_BEFORE,
+    activated_steps=frozenset({execution_budget.CONTAINED_EXECUTION}),
 )
 
 
@@ -1379,8 +1397,10 @@ def _ap007_machine(
     workspace: Path,
     root: str,
     spec: execution_budget.TaskBudgetSpec | None = None,
+    *,
+    acceptance: execution_budget.IsolationAcceptance | None = None,
 ) -> workflow_state.DurableTaskStateMachine:
-    sm = workflow_state.DurableTaskStateMachine(studio.STORAGE, studio.DB_PATH)
+    sm = workflow_state.DurableTaskStateMachine(studio.STORAGE, studio.DB_PATH, isolation_acceptance=acceptance)
     sm.ensure_root_task(
         root,
         session_id=root,
@@ -2136,7 +2156,12 @@ def test_ap007_declared_limits_stop_the_mission_boundedly(
 ) -> None:
     """AC3: each limit stops at its declared bound, durably, with a reason and a next step."""
     root, mission = f"ap007-{code}-root", f"ap007-{code}"
-    sm = _ap007_machine(isolated_env, root, execution_budget.TaskBudgetSpec(max_steps=50, **limits))
+    sm = _ap007_machine(
+        isolated_env,
+        root,
+        execution_budget.TaskBudgetSpec(max_steps=50, **limits),
+        acceptance=_AP007_FIXTURE_ACCEPTANCE,
+    )
     binding, tasks = _ap007_plan(sm, root, mission, keys=("work", "next"))
     lease = _ap007_claim(sm, root, mission, "work", tasks["work"], binding)
     observe = {"root_task_id": root, "session_id": root, "epoch": lease.epoch.epoch}
@@ -2153,10 +2178,21 @@ def test_ap007_declared_limits_stop_the_mission_boundedly(
     assert stopped.value.verdict.scope == "leaf"
 
     # The stop is durable before anyone halts the plan: work is refused on its own.
+    # AP-007-F2: a consequential charge on a plan task needs isolation proof first, so
+    # the charge presents the fixture proof and the declared stop is what refuses it.
     assert sm.budgets.get_budget(root).bounded_stop() is not None
     with pytest.raises(execution_budget.BudgetExceeded):
         sm.budgets.charge_hierarchical_tool_call(
-            lease.task.task_id, root_task_id=root, session_id=root, epoch=lease.epoch.epoch
+            lease.task.task_id,
+            root_task_id=root,
+            session_id=root,
+            epoch=lease.epoch.epoch,
+            isolation=_AP007_FIXTURE_ISOLATION,
+        )
+    # A read-only action needs no proof and meets the same stop.
+    with pytest.raises(execution_budget.BudgetExceeded):
+        sm.budgets.charge_hierarchical_tool_call(
+            lease.task.task_id, root_task_id=root, session_id=root, epoch=lease.epoch.epoch, consequential=False
         )
     with pytest.raises(workflow_state.MissionBindingRejected):
         _ap007_claim(sm, root, mission, "next", tasks["next"], binding)
@@ -2191,20 +2227,39 @@ def test_ap007_deadline_stops_claims_dispatch_and_resume_without_any_observation
     """AC3: the deadline is enforced from the clock alone; nobody has to report it."""
     root, mission = "ap007-deadline-root", "ap007-deadline"
     deadline = time.time() + 3_600
-    sm = _ap007_machine(isolated_env, root, execution_budget.TaskBudgetSpec(max_steps=50, deadline_at=deadline))
+    sm = _ap007_machine(
+        isolated_env,
+        root,
+        execution_budget.TaskBudgetSpec(max_steps=50, deadline_at=deadline),
+        acceptance=_AP007_FIXTURE_ACCEPTANCE,
+    )
     binding, tasks = _ap007_plan(sm, root, mission, keys=("work", "next"))
     lease = _ap007_claim(sm, root, mission, "work", tasks["work"], binding)
     late = deadline + 1
+    # AP-007-F2: a consequential charge on a plan task presents the fixture proof, so
+    # that the deadline is the only thing this case can be refused for.
+    charge = {
+        "root_task_id": root,
+        "session_id": root,
+        "epoch": lease.epoch.epoch,
+        "isolation": _AP007_FIXTURE_ISOLATION,
+    }
 
     # Before the deadline everything proceeds.
-    sm.budgets.charge_hierarchical_tool_call(
-        lease.task.task_id, root_task_id=root, session_id=root, epoch=lease.epoch.epoch
-    )
+    sm.budgets.charge_hierarchical_tool_call(lease.task.task_id, **charge)
     assert sm.mission_recovery_report(mission, 1, persist=False).outcome == "in_progress"
 
     with pytest.raises(execution_budget.BudgetExceeded, match="deadline exceeded"):
+        sm.budgets.charge_hierarchical_tool_call(lease.task.task_id, now=late, **charge)
+    # A read-only action needs no proof and meets the same deadline.
+    with pytest.raises(execution_budget.BudgetExceeded, match="deadline exceeded"):
         sm.budgets.charge_hierarchical_tool_call(
-            lease.task.task_id, root_task_id=root, session_id=root, epoch=lease.epoch.epoch, now=late
+            lease.task.task_id,
+            root_task_id=root,
+            session_id=root,
+            epoch=lease.epoch.epoch,
+            consequential=False,
+            now=late,
         )
     with pytest.raises(workflow_state.MissionBindingRejected, match="deadline exceeded"):
         _ap007_claim(sm, root, mission, "next", tasks["next"], binding, now=late)
@@ -2343,7 +2398,12 @@ def test_ap007_stale_or_fenced_workers_cannot_record_observations(isolated_env: 
 def test_ap007_cancellation_and_isolation_bind_the_whole_task_chain(isolated_env: Path) -> None:
     """AC1/AC4: a delegated child cannot run because its own budget happens to be silent."""
     root, mission = "ap007-chain-root", "ap007-chain"
-    sm = _ap007_machine(isolated_env, root, execution_budget.TaskBudgetSpec(max_steps=50, isolation_required=True))
+    sm = _ap007_machine(
+        isolated_env,
+        root,
+        execution_budget.TaskBudgetSpec(max_steps=50, isolation_required=True),
+        acceptance=_AP007_FIXTURE_ACCEPTANCE,
+    )
     binding, tasks = _ap007_plan(sm, root, mission, keys=("lead",))
     lead = _ap007_claim(sm, root, mission, "lead", tasks["lead"], binding, isolation=_AP007_FIXTURE_ISOLATION)
     helper = sm.spawn_child_subtask(lead.task.task_id, "helper")
@@ -2354,6 +2414,9 @@ def test_ap007_cancellation_and_isolation_bind_the_whole_task_chain(isolated_env
 
     with pytest.raises(execution_budget.IsolationUnavailable, match="host shell is not used"):
         sm.budgets.charge_hierarchical_tool_call(helper.task_id, **charge)
+    # A declared requirement binds read-only actions too.
+    with pytest.raises(execution_budget.IsolationUnavailable, match="host shell is not used"):
+        sm.budgets.charge_hierarchical_tool_call(helper.task_id, consequential=False, **charge)
     assert sm.budgets.get_budget(root).tool_calls_used == 0
     sm.budgets.charge_hierarchical_tool_call(helper.task_id, isolation=_AP007_FIXTURE_ISOLATION, **charge)
     assert sm.budgets.get_budget(root).tool_calls_used == 1
@@ -2381,7 +2444,12 @@ def test_ap007_missing_isolation_blocks_dependent_execution_without_host_fallbac
 ) -> None:
     """AC4: with no qualified isolated runtime, nothing is claimed, dispatched or moved to the host."""
     root, mission = "ap007-isolation-root", "ap007-isolation"
-    sm = _ap007_machine(isolated_env, root, execution_budget.TaskBudgetSpec(max_steps=50, isolation_required=True))
+    sm = _ap007_machine(
+        isolated_env,
+        root,
+        execution_budget.TaskBudgetSpec(max_steps=50, isolation_required=True),
+        acceptance=_AP007_FIXTURE_ACCEPTANCE,
+    )
     binding, tasks = _ap007_plan(sm, root, mission, keys=("work",))
     task_id = tasks["work"].task_id
 
@@ -2400,7 +2468,7 @@ def test_ap007_missing_isolation_blocks_dependent_execution_without_host_fallbac
         observed.append(execution_budget.IsolationEvidence.from_admission(decision, execution_mode=mode))
 
     for evidence in observed:
-        assert execution_budget.isolation_refusal(evidence)
+        assert execution_budget.isolation_refusal(evidence, acceptance=_AP007_FIXTURE_ACCEPTANCE)
         with pytest.raises(workflow_state.MissionIsolationRejected, match="host shell is not used"):
             _ap007_claim(sm, root, mission, "work", tasks["work"], binding, isolation=evidence)
         with pytest.raises(execution_budget.IsolationUnavailable, match="host shell is not used"):
@@ -2422,8 +2490,26 @@ def test_ap007_missing_isolation_blocks_dependent_execution_without_host_fallbac
     # Without evidence the report reaches the same conclusion.
     assert sm.mission_recovery_report(mission, 1).outcome == "blocked"
 
-    # With proof (a test fixture, not a real runtime) the same task is claimable, and
-    # every dispatch has to present the proof again.
+    # AP-007-F2: proof counts only against a recorded acceptance.  A process composed
+    # without one - every process of this build - refuses the fixture proof as well.
+    unrecorded = workflow_state.DurableTaskStateMachine(studio.STORAGE, studio.DB_PATH)
+    assert unrecorded.budgets.isolation_acceptance is None
+    with pytest.raises(workflow_state.MissionIsolationRejected, match="no accepted isolation backend is recorded"):
+        _ap007_claim(unrecorded, root, mission, "work", tasks["work"], binding, isolation=_AP007_FIXTURE_ISOLATION)
+    with pytest.raises(execution_budget.IsolationUnavailable, match="no accepted isolation backend is recorded"):
+        unrecorded.budgets.charge_hierarchical_tool_call(
+            task_id, root_task_id=root, session_id=root, isolation=_AP007_FIXTURE_ISOLATION
+        )
+    unproven = unrecorded.mission_recovery_report(mission, 1, isolation=_AP007_FIXTURE_ISOLATION, persist=False)
+    assert (unproven.outcome, unproven.claims_success) == ("blocked", False)
+    assert "no accepted isolation backend is recorded" in next(
+        item["message"] for item in unproven.limitations if item["code"] == "isolation_unavailable"
+    )
+    assert sm.store.list_epochs(task_id) == []
+    assert sm.budgets.get_budget(task_id).tool_calls_used == 0
+
+    # With proof (a test fixture, not a real runtime) and a recorded acceptance (also a
+    # fixture) the same task is claimable, and every dispatch has to present the proof again.
     lease = _ap007_claim(sm, root, mission, "work", tasks["work"], binding, isolation=_AP007_FIXTURE_ISOLATION)
     with pytest.raises(execution_budget.IsolationUnavailable):
         sm.budgets.charge_hierarchical_tool_call(
@@ -2433,6 +2519,450 @@ def test_ap007_missing_isolation_blocks_dependent_execution_without_host_fallbac
         task_id, root_task_id=root, session_id=root, epoch=lease.epoch.epoch, isolation=_AP007_FIXTURE_ISOLATION
     )
     assert sm.mission_recovery_report(mission, 1, isolation=_AP007_FIXTURE_ISOLATION).outcome == "in_progress"
+
+
+def test_ap007_f2_mission_owned_consequential_work_needs_proven_admission(isolated_env: Path) -> None:
+    """U06 answer 3: a plan that declares nothing still cannot dispatch a consequential action without proof."""
+    root, mission, other = "ap007-f2-root", "ap007-f2", "ap007-f2-other"
+    sm = _ap007_machine(isolated_env, root)  # no acceptance is recorded: the state of this build
+    assert sm.budgets.isolation_acceptance is None
+    binding, tasks = _ap007_plan(sm, root, mission, keys=("lead",))
+    lead = _ap007_claim(sm, root, mission, "lead", tasks["lead"], binding)  # a claim is not a dispatch
+    helper = sm.spawn_child_subtask(lead.task.task_id, "helper", title="Delegated helper")
+    sm.store.create_task("ap007-f2-plain", session_id=other, state="running", now=time.time())
+    sm.store.create_task(
+        "ap007-f2-plain-child", parent_task_id="ap007-f2-plain", session_id=other, state="running", now=time.time()
+    )
+    for task_id in (root, lead.task.task_id, helper.task_id):
+        assert sm.budgets.get_budget(task_id).spec.isolation_required is False
+
+    in_plan = {"root_task_id": root, "session_id": root}
+    outside = {"root_task_id": "ap007-f2-plain", "session_id": other}
+    owned = {"the plan task": (lead.task.task_id, lead.epoch.epoch), "its delegated child": (helper.task_id, None)}
+
+    def _used() -> dict[str, int]:
+        ids = (root, lead.task.task_id, helper.task_id, "ap007-f2-plain", "ap007-f2-plain-child")
+        return {task_id: sm.budgets.get_budget(task_id).tool_calls_used for task_id in ids}
+
+    for task_id, epoch in owned.values():
+        # A caller that does not say what it dispatches is treated as dispatching a consequential action.
+        with pytest.raises(execution_budget.IsolationUnavailable, match="host shell is not used"):
+            sm.budgets.charge_hierarchical_tool_call(task_id, epoch=epoch, **in_plan)
+        with pytest.raises(execution_budget.IsolationUnavailable, match="no accepted isolation backend is recorded"):
+            sm.budgets.charge_hierarchical_tool_call(task_id, epoch=epoch, consequential=True, **in_plan)
+        # Fictional proof changes nothing while no acceptance is recorded.
+        with pytest.raises(execution_budget.IsolationUnavailable, match="no accepted isolation backend is recorded"):
+            sm.budgets.charge_hierarchical_tool_call(
+                task_id, epoch=epoch, isolation=_AP007_FIXTURE_ISOLATION, **in_plan
+            )
+    assert set(_used().values()) == {0}  # a refused dispatch debits nothing, on any task
+
+    # A read-only action of the same tasks is charged as before.
+    sm.budgets.charge_hierarchical_tool_call(lead.task.task_id, epoch=lead.epoch.epoch, consequential=False, **in_plan)
+    sm.budgets.charge_hierarchical_tool_call(helper.task_id, consequential=False, **in_plan)
+    # Work that no mission owns is not affected: the task the plan hangs from, a task
+    # outside every plan and that task's child.  Its step is not judged either.
+    sm.budgets.charge_hierarchical_tool_call(root, **in_plan)
+    sm.budgets.charge_hierarchical_tool_call("ap007-f2-plain", **outside)
+    sm.budgets.charge_hierarchical_tool_call("ap007-f2-plain-child", consequential=True, **outside)
+    sm.budgets.charge_hierarchical_tool_call(
+        "ap007-f2-plain-child", isolation_step=execution_budget.BROWSER_WORKER, **outside
+    )
+    assert _used() == {
+        root: 3,
+        lead.task.task_id: 1,
+        helper.task_id: 1,
+        "ap007-f2-plain": 3,
+        "ap007-f2-plain-child": 2,
+    }
+
+    # Malformed arguments refuse instead of being read as "not consequential".
+    for bad in (0, 1, None, "false", "read_only"):
+        with pytest.raises(execution_budget.BudgetError, match="consequential must be a boolean"):
+            sm.budgets.charge_hierarchical_tool_call(root, consequential=bad, **in_plan)  # type: ignore[arg-type]
+    for bad_step in ("", "host", None, 3):
+        with pytest.raises(execution_budget.BudgetError, match="isolation_step must be one of"):
+            sm.budgets.charge_hierarchical_tool_call(root, isolation_step=bad_step, **in_plan)  # type: ignore[arg-type]
+    with pytest.raises(execution_budget.BudgetError, match="isolation_acceptance must be"):
+        execution_budget.DurableTaskBudgetManager(
+            studio.STORAGE,
+            studio.DB_PATH,
+            isolation_acceptance=_AP007_FIXTURE_ACCEPTANCE.to_dict(),  # type: ignore[arg-type]
+        )
+
+    # With a recorded acceptance (a test fixture) the proof is accepted, each time it is presented.
+    accepting = workflow_state.DurableTaskStateMachine(
+        studio.STORAGE, studio.DB_PATH, isolation_acceptance=_AP007_FIXTURE_ACCEPTANCE
+    )
+    assert accepting.budgets.isolation_acceptance is _AP007_FIXTURE_ACCEPTANCE
+    with pytest.raises(execution_budget.IsolationUnavailable, match="no isolation evidence was presented"):
+        accepting.budgets.charge_hierarchical_tool_call(lead.task.task_id, epoch=lead.epoch.epoch, **in_plan)
+    refused_proofs = {
+        "predates the recorded acceptance": replace(
+            _AP007_FIXTURE_ISOLATION, qualified_at=_AP007_FIXTURE_NOT_BEFORE - 1
+        ),
+        "not the accepted runtime and image": replace(
+            _AP007_FIXTURE_ISOLATION, image_digest="python@sha256:" + "cd" * 32
+        ),
+        "names no qualification": replace(_AP007_FIXTURE_ISOLATION, qualification_id=""),
+        "not `sandbox`": replace(_AP007_FIXTURE_ISOLATION, execution_mode="host"),
+    }
+    for fragment, proof in refused_proofs.items():
+        with pytest.raises(execution_budget.IsolationUnavailable, match=fragment):
+            accepting.budgets.charge_hierarchical_tool_call(helper.task_id, isolation=proof, **in_plan)
+    before = _used()
+    accepting.budgets.charge_hierarchical_tool_call(
+        lead.task.task_id, epoch=lead.epoch.epoch, isolation=_AP007_FIXTURE_ISOLATION, **in_plan
+    )
+    accepting.budgets.charge_hierarchical_tool_call(helper.task_id, isolation=_AP007_FIXTURE_ISOLATION, **in_plan)
+    after = _used()
+    assert (after[root], after[lead.task.task_id], after[helper.task_id]) == (
+        before[root] + 2,
+        before[lead.task.task_id] + 1,
+        before[helper.task_id] + 1,
+    )
+    # The acceptance belongs to the manager that was composed with it.
+    with pytest.raises(execution_budget.IsolationUnavailable, match="no accepted isolation backend is recorded"):
+        sm.budgets.charge_hierarchical_tool_call(helper.task_id, isolation=_AP007_FIXTURE_ISOLATION, **in_plan)
+    # The plan stays claimable and reportable: nothing about it declares a requirement.
+    assert sm.mission_recovery_report(mission, 1, persist=False).outcome == "in_progress"
+
+
+def test_ap007_f2_later_steps_are_refused_for_mission_owned_work(isolated_env: Path) -> None:
+    """U06 answer 4: browser-worker and native-lifecycle work stays refused, whatever its action class."""
+    root, mission = "ap007-f2-steps-root", "ap007-f2-steps"
+    everything = replace(_AP007_FIXTURE_ACCEPTANCE, activated_steps=frozenset(execution_budget.ISOLATION_STEPS))
+    recorded = {
+        "only contained execution is recorded": (_AP007_FIXTURE_ACCEPTANCE, "step is not activated"),
+        "every step is recorded": (everything, "no evidence is defined for the"),
+        "nothing is recorded": (None, "no accepted isolation backend is recorded"),
+    }
+    sm = _ap007_machine(isolated_env, root)
+    binding, tasks = _ap007_plan(sm, root, mission, keys=("lead",))
+    lead = _ap007_claim(sm, root, mission, "lead", tasks["lead"], binding)
+    charge = {"root_task_id": root, "session_id": root, "epoch": lead.epoch.epoch}
+    later_steps = (execution_budget.BROWSER_WORKER, execution_budget.NATIVE_LIFECYCLE)
+
+    for acceptance, fragment in recorded.values():
+        machine = workflow_state.DurableTaskStateMachine(
+            studio.STORAGE, studio.DB_PATH, isolation_acceptance=acceptance
+        )
+        for step in later_steps:
+            for consequential in (True, False):
+                for proof in (None, _AP007_FIXTURE_ISOLATION, replace(_AP007_FIXTURE_ISOLATION, step=step)):
+                    with pytest.raises(execution_budget.IsolationUnavailable, match=fragment):
+                        machine.budgets.charge_hierarchical_tool_call(
+                            lead.task.task_id,
+                            isolation=proof,
+                            consequential=consequential,
+                            isolation_step=step,
+                            **charge,
+                        )
+    assert sm.budgets.get_budget(lead.task.task_id).tool_calls_used == 0
+    assert sm.budgets.get_budget(root).tool_calls_used == 0
+
+    # Contained execution is the one step that can be proven, and only with its own evidence.
+    accepting = workflow_state.DurableTaskStateMachine(studio.STORAGE, studio.DB_PATH, isolation_acceptance=everything)
+    with pytest.raises(execution_budget.IsolationUnavailable, match="proves the `browser_worker` step"):
+        accepting.budgets.charge_hierarchical_tool_call(
+            lead.task.task_id,
+            isolation=replace(_AP007_FIXTURE_ISOLATION, step=execution_budget.BROWSER_WORKER),
+            **charge,
+        )
+    accepting.budgets.charge_hierarchical_tool_call(lead.task.task_id, isolation=_AP007_FIXTURE_ISOLATION, **charge)
+    assert sm.budgets.get_budget(lead.task.task_id).tool_calls_used == 1
+
+
+def test_ap007_f2_admission_and_the_late_result_fence_share_one_ownership_rule(isolated_env: Path) -> None:
+    """The gate asks for proof for exactly the tasks whose late results the fence holds back."""
+    root, mission, other = "ap007-f2-own-root", "ap007-f2-own", "ap007-f2-own-other"
+    sm = _ap007_machine(isolated_env, root)
+    binding, tasks = _ap007_plan(sm, root, mission, keys=("lead", "idle"))
+    lead = _ap007_claim(sm, root, mission, "lead", tasks["lead"], binding)
+    helper = sm.spawn_child_subtask(lead.task.task_id, "helper", title="Delegated helper")
+    helper_lease, _ = sm.store.acquire_worker_lease(helper.task_id, "worker-helper")
+    sm.store.create_task("ap007-f2-own-plain", session_id=other, state="running", now=time.time())
+    sm.store.create_task(
+        "ap007-f2-own-child", parent_task_id="ap007-f2-own-plain", session_id=other, state="running", now=time.time()
+    )
+    ledger = side_effect_ledger.DurableActionLedger(studio.STORAGE, studio.DB_PATH)
+    # (task, session, authoritative root, epoch, worker)
+    cases: dict[str, tuple[str, str, str, int | None, str | None]] = {
+        "plan task": (lead.task.task_id, root, root, lead.epoch.epoch, lead.epoch.worker_id),
+        "unclaimed plan task": (tasks["idle"].task_id, root, root, None, None),
+        "delegated child of a plan task": (helper.task_id, root, root, helper_lease.epoch, "worker-helper"),
+        "the task the plan hangs from": (root, root, root, None, None),
+        "task outside every plan": ("ap007-f2-own-plain", other, "ap007-f2-own-plain", None, None),
+        "child of a task outside every plan": ("ap007-f2-own-child", other, "ap007-f2-own-plain", None, None),
+    }
+    gated: dict[str, bool] = {}
+    for case, (task_id, session_id, chain_root, epoch, _worker) in cases.items():
+        try:
+            sm.budgets.charge_hierarchical_tool_call(
+                task_id, root_task_id=chain_root, session_id=session_id, epoch=epoch
+            )
+        except execution_budget.IsolationUnavailable:
+            gated[case] = True
+        else:
+            gated[case] = False
+
+    fenced: dict[str, bool] = {}
+    for index, (case, (task_id, session_id, _chain_root, epoch, worker)) in enumerate(cases.items()):
+        action_id = f"ap007-f2-own-act-{index}"
+        begun = ledger.begin(
+            action_id=action_id,
+            tool_name="run_bash",
+            args={"command": f"publish {action_id}"},
+            policy="autonomous",
+            action_class="consequential",
+            allowed=True,
+            explicit_approval=False,
+            session_id=session_id,
+            task_id=task_id,
+            epoch=epoch,
+            worker_id=worker,
+        )
+        assert begun.proceed is True, case
+        declared = ledger.reconcile_missing_results(task_id=task_id, error_code="cancelled_in_flight")
+        assert [record.status for record in declared] == ["uncertain"], case
+        late = ledger.complete(action_id, {"ok": True, "output": "published"}, 5)
+        fenced[case] = late.status == "uncertain"
+
+    assert gated == fenced
+    assert gated == {
+        "plan task": True,
+        "unclaimed plan task": True,
+        "delegated child of a plan task": True,
+        "the task the plan hangs from": False,
+        "task outside every plan": False,
+        "child of a task outside every plan": False,
+    }
+
+
+def test_ap007_f2_a_store_without_mission_tables_owns_no_mission_work(tmp_path: Path) -> None:
+    """A store that predates mission plans (schema v3) is charged as before, and is not upgraded by the check."""
+    db_path = tmp_path / "schema_v3.db"
+    with sqlite3.connect(db_path) as conn:
+        runtime_persistence.apply_schema_migrations(conn, target_version=3)
+        tables = {str(row[0]) for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+    assert "runtime_tasks" in tables and "runtime_mission_tasks" not in tables
+    store = runtime_persistence.RuntimePersistenceStore(studio.STORAGE, db_path)
+    store.create_task("v3-root", session_id="sess-v3", state="running", now=time.time())
+    store.create_task("v3-child", parent_task_id="v3-root", session_id="sess-v3", state="running", now=time.time())
+    budgets = execution_budget.DurableTaskBudgetManager(studio.STORAGE, db_path)
+
+    budgets.charge_hierarchical_tool_call("v3-root", root_task_id="v3-root", session_id="sess-v3")
+    budgets.charge_hierarchical_tool_call("v3-child", root_task_id="v3-root", session_id="sess-v3", consequential=True)
+    budgets.charge_hierarchical_tool_call("v3-child", root_task_id="v3-root", session_id="sess-v3", consequential=False)
+
+    assert budgets.get_budget("v3-root").tool_calls_used == 3
+    assert budgets.get_budget("v3-child").tool_calls_used == 2
+    with sqlite3.connect(db_path) as conn:
+        still_v3 = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'runtime_mission_tasks'"
+        ).fetchone()
+    assert still_v3 is None
+
+
+def _ap007_f2_fixture_qualification_report(
+    backend: sandbox_boundary.SandboxBackendProfile, *, fingerprint: str, generated_at: float
+) -> dict[str, Any]:
+    """A qualification report written by this test.  No qualification run produced it."""
+    check_ids = (
+        "p3.runtime.cli",
+        "p3.runtime.image",
+        "p3.positive.execute",
+        "p3.adversarial.escape_matrix",
+        "p3.adversarial.credentials",
+        "p3.adversarial.memory_limit",
+        "p3.adversarial.descendants",
+        "p3.product.argv",
+        "p3.product.no_host_fallback",
+    )
+    return {
+        "schema_version": 1,
+        "generated_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(generated_at)),
+        "generated_at_epoch": generated_at,
+        "sandbox": {
+            "runtime": backend.runtime,
+            "runtime_path": backend.runtime_path,
+            "image": backend.image,
+            "image_digest": backend.image_digest,
+            "oci_runtime": backend.oci_runtime,
+            "kernel_boundary": backend.kernel_boundary,
+        },
+        "checks": [
+            {"check_id": check_id, "story": "M5-P3-01", "title": check_id, "status": "pass", "required": True}
+            for check_id in check_ids
+        ],
+        "verdicts": {
+            "M5-P3-01": {"verdict": "qualified", "checks_run": len(check_ids), "failed": [], "not_executed": []}
+        },
+        "config_fingerprint": fingerprint,
+    }
+
+
+def test_ap007_f2_evidence_is_adapted_from_the_real_sandbox_admission_types(
+    isolated_env: Path, tmp_path: Path
+) -> None:
+    """The adapter reads the security store's own decision, backend profile and qualification record.
+
+    The store is a temporary one and the backend and its report are written by this
+    test: nothing is installed, started or qualified.  The case shows which recorded
+    acceptance the adapted evidence satisfies and which it does not.
+    """
+    incidents = sandbox_boundary.SecurityIncidentStore(tmp_path / "ap007_f2_security")
+    backend = sandbox_boundary.SandboxBackendProfile(
+        backend_id="fixture-docker",
+        runtime="docker",
+        runtime_path="/usr/bin/docker",
+        image="python:3.12-slim",
+        image_digest="sha256:" + "12" * 32,
+        runtime_version="0.0.0-test-fixture",
+        oci_runtime="runc",
+        kernel_boundary="fixture_vm",
+    )
+    generation, incident = incidents.observe_configuration(backend, execution_mode="sandbox")
+    assert incident is None
+    run_at = time.time() - 3_600.0  # the fictional run happened an hour before it is recorded
+    outcome = incidents.ingest_qualification_report(
+        _ap007_f2_fixture_qualification_report(backend, fingerprint=generation.config_fingerprint, generated_at=run_at),
+        backend=backend,
+    )
+    assert outcome.ok is True and outcome.qualification is not None
+    record = outcome.qualification
+    assert record.qualified_at > run_at + 3_000 and abs(record.report_generated_at - run_at) < 1.0
+
+    def _observe(mode: str) -> execution_budget.IsolationEvidence:
+        decision = incidents.check_admission(
+            required_guarantees=("container_boundary",),
+            execution_surface="run_bash",
+            execution_mode=mode,
+            session_id="ap007-f2-real-root",
+            workspace_root=isolated_env,
+        )
+        return execution_budget.IsolationEvidence.from_admission(decision, execution_mode=mode, qualification=record)
+
+    evidence = _observe("sandbox")
+    assert (evidence.admitted, evidence.qualified, evidence.backend_id) == (True, True, "fixture-docker")
+    assert (evidence.runtime, evidence.runtime_version, evidence.image_digest) == (
+        "docker",
+        "0.0.0-test-fixture",
+        "sha256:" + "12" * 32,
+    )
+    assert evidence.qualification_id == record.qualification_id
+    # The qualification is as old as its run, not as young as its record.
+    assert abs(evidence.qualified_at - run_at) < 1.0
+    assert evidence.step == execution_budget.CONTAINED_EXECUTION
+
+    def _acceptance(**changes: Any) -> execution_budget.IsolationAcceptance:
+        fields: dict[str, Any] = {
+            "decision_ref": "test-fixture-acceptance-not-an-owner-decision",
+            "runtime": "docker",
+            "runtime_version": "0.0.0-test-fixture",
+            "image_digest": "sha256:" + "12" * 32,
+            "qualified_not_before": run_at - 60.0,
+            "activated_steps": frozenset({execution_budget.CONTAINED_EXECUTION}),
+            **changes,
+        }
+        return execution_budget.IsolationAcceptance(**fields)
+
+    matching = _acceptance()
+    assert execution_budget.isolation_refusal(evidence, acceptance=matching) == ""
+    refused = {
+        "nothing recorded": (None, "no accepted isolation backend is recorded"),
+        "another image": (_acceptance(image_digest="sha256:" + "34" * 32), "not the accepted runtime and image"),
+        "another runtime version": (_acceptance(runtime_version="0.0.1-test-fixture"), "not the accepted runtime"),
+        "another runtime": (_acceptance(runtime="podman"), "not the accepted runtime and image"),
+        # U06 answer 2: the run predates the acceptance although its record was written after it.
+        "an older run": (_acceptance(qualified_not_before=run_at + 60.0), "predates the recorded acceptance"),
+        "nothing activated": (_acceptance(activated_steps=frozenset()), "step is not activated"),
+    }
+    for case, (acceptance, fragment) in refused.items():
+        assert fragment in execution_budget.isolation_refusal(evidence, acceptance=acceptance), case
+    # Host and disabled modes are never isolation, whatever the store holds.
+    for mode in ("host", "disabled"):
+        assert "not `sandbox`" in execution_budget.isolation_refusal(_observe(mode), acceptance=matching)
+    # The store's qualification of another backend is not this backend's qualification.
+    foreign = replace(record, backend_id="other-backend")
+    decision = incidents.check_admission(
+        required_guarantees=("container_boundary",),
+        execution_surface="run_bash",
+        execution_mode="sandbox",
+        session_id="ap007-f2-real-root",
+        workspace_root=isolated_env,
+    )
+    orphan = execution_budget.IsolationEvidence.from_admission(
+        decision, execution_mode="sandbox", qualification=foreign
+    )
+    assert "names no qualification" in execution_budget.isolation_refusal(orphan, acceptance=matching)
+
+    # The same evidence at the charge of a plan task, for a manager composed with each record.
+    root, mission = "ap007-f2-real-root", "ap007-f2-real"
+    sm = _ap007_machine(isolated_env, root, acceptance=matching)
+    binding, tasks = _ap007_plan(sm, root, mission, keys=("work",))
+    lease = _ap007_claim(sm, root, mission, "work", tasks["work"], binding)
+    charge = {"root_task_id": root, "session_id": root, "epoch": lease.epoch.epoch}
+    for acceptance, fragment in refused.values():
+        other = workflow_state.DurableTaskStateMachine(studio.STORAGE, studio.DB_PATH, isolation_acceptance=acceptance)
+        with pytest.raises(execution_budget.IsolationUnavailable, match=fragment):
+            other.budgets.charge_hierarchical_tool_call(lease.task.task_id, isolation=evidence, **charge)
+    assert sm.budgets.get_budget(lease.task.task_id).tool_calls_used == 0
+    sm.budgets.charge_hierarchical_tool_call(lease.task.task_id, isolation=evidence, **charge)
+    assert sm.budgets.get_budget(lease.task.task_id).tool_calls_used == 1
+
+
+def test_ap007_f2_a_resume_needs_the_same_proof_as_a_fresh_claim(isolated_env: Path) -> None:
+    """A declared requirement is judged against the recorded acceptance on resume as well."""
+    root, mission = "ap007-f2-resume-root", "ap007-f2-resume"
+    sm = _ap007_machine(
+        isolated_env,
+        root,
+        execution_budget.TaskBudgetSpec(max_steps=50, isolation_required=True),
+        acceptance=_AP007_FIXTURE_ACCEPTANCE,
+    )
+    binding, tasks = _ap007_plan(sm, root, mission, keys=("work",))
+    lease = _ap007_claim(sm, root, mission, "work", tasks["work"], binding, isolation=_AP007_FIXTURE_ISOLATION)
+    task_id = lease.task.task_id
+    bound = {
+        "binding": binding,
+        "current_inputs": _AP007_INPUTS,
+        "current_authority": _mission_authority(root, task_id),
+    }
+    sm.checkpoint_mission_task(
+        mission,
+        1,
+        "work",
+        worker_id=lease.epoch.worker_id,
+        epoch=lease.epoch.epoch,
+        expected_state_version=lease.task.state_version,
+        step=2,
+        payload={"done": [1, 2]},
+        **bound,
+    )
+    later = time.time() + 600.0
+    assert task_id in sm.recover_incomplete_transitions(now=later).recovered_task_ids
+    paused = sm.store.get_task(task_id)
+    assert paused is not None and paused.state == "paused"
+    resume = {"worker_id": "worker-resume", "expected_state_version": paused.state_version, "now": later + 1, **bound}
+
+    unrecorded = workflow_state.DurableTaskStateMachine(studio.STORAGE, studio.DB_PATH)
+    refusals = (
+        (sm, None, "no isolation evidence was presented"),
+        (sm, replace(_AP007_FIXTURE_ISOLATION, qualified_at=_AP007_FIXTURE_NOT_BEFORE - 1), "predates"),
+        (sm, replace(_AP007_FIXTURE_ISOLATION, runtime="podman"), "not the accepted runtime and image"),
+        (unrecorded, _AP007_FIXTURE_ISOLATION, "no accepted isolation backend is recorded"),
+    )
+    for machine, proof, fragment in refusals:
+        with pytest.raises(workflow_state.MissionIsolationRejected, match=fragment):
+            machine.prepare_mission_task_resume(mission, 1, "work", isolation=proof, **resume)
+    still_paused = sm.store.get_task(task_id)
+    assert still_paused is not None
+    assert (still_paused.state, still_paused.current_epoch) == ("paused", lease.epoch.epoch)
+
+    resumed = sm.prepare_mission_task_resume(mission, 1, "work", isolation=_AP007_FIXTURE_ISOLATION, **resume)
+    assert resumed.next_step == 3
+    assert resumed.epoch.epoch == lease.epoch.epoch + 1
 
 
 def test_ap007_recovery_report_claims_success_only_for_checked_complete_artifacts(

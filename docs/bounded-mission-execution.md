@@ -24,7 +24,10 @@ They are listed under [Changes on live paths](#changes-on-live-paths).
 The design decision is recorded in
 [ADR-0041](adr/0041-mission-halt-bounded-stops-and-recovery-reports.md).
 [ADR-0042](adr/0042-late-result-fence-limited-to-mission-owned-work.md) limits
-the late-result fence to mission-owned work. The
+the late-result fence to mission-owned work.
+[ADR-0043](adr/0043-proven-sandbox-admission-for-mission-owned-consequential-work.md)
+makes isolation proof mandatory for consequential actions of mission-owned work
+and judges it against a recorded acceptance. The
 mission plans this builds on are described in
 [Durable mission graphs](durable-mission-graphs.md).
 
@@ -36,7 +39,8 @@ at schema v4.
 | Capability | Owner | What changed |
 |---|---|---|
 | Mission stop and recovery report | `workflow_state.DurableTaskStateMachine` | `halt_mission`, `halt_mission_async`, `mission_recovery_report`; a gate in `create_mission_plan`; isolation and deadline checks in `claim_ready_mission_task` and `prepare_mission_task_resume` |
-| Bounded limits and observations | `execution_budget` | six optional limit fields, their counters, `record_bounded_observation`, `IsolationEvidence` |
+| Bounded limits and observations | `execution_budget` | six optional limit fields, their counters, `record_bounded_observation` |
+| Isolation gate | `execution_budget`, held by `DurableTaskBudgetManager` | `IsolationEvidence`, `IsolationAcceptance`, the three activation steps, `isolation_refusal`; the charge asks for proof for consequential actions of mission-owned work |
 | Late-result fence | `side_effect_ledger.DurableActionLedger`, `execution_spine.DurableActionBoundary` | `complete` and `record_exception` leave an `uncertain` mission-owned action unchanged; the boundary then reports `late_result_fenced` |
 | Process termination | `process_supervision.ProcessSupervisor` | reused as is; one read-only helper, `still_running` |
 | Stop records | `runtime_mission_joins` (existing table) | holds `mission_recovery` reports beside the AP-005 join snapshots |
@@ -74,6 +78,14 @@ application does today.
    up to the root. The application creates root tasks and direct child tasks
    today. For those chains, with none of the new limits declared, the outcome
    is unchanged.
+
+   Since [ADR-0043](adr/0043-proven-sandbox-admission-for-mission-owned-consequential-work.md)
+   the charge of a consequential action also looks up whether a task of the
+   chain belongs to a mission plan, and the application's mission envelope
+   coordinator tells the charge whether the action is consequential. When a
+   mission owns the task, the action is refused with `isolation_unavailable`.
+   Nothing in the running application creates a mission plan, so this refusal
+   does not occur there. See [Isolation](#isolation).
 
 ## Stopping a mission
 
@@ -300,7 +312,12 @@ Every dispatch charge walks from the task to the root:
 - an unreadable budget anywhere in the chain refuses the dispatch (`BudgetError`);
 - `cancel_requested` anywhere raises `ExecutionCancelled`;
 - `isolation_required` anywhere needs isolation proof, otherwise
-  `IsolationUnavailable`.
+  `IsolationUnavailable`;
+- a task of a mission plan anywhere in the chain needs isolation proof for a
+  consequential action, otherwise `IsolationUnavailable`
+  (see [Isolation](#isolation)).
+
+Cancellation is checked first, then isolation, then the limits.
 
 ### One task at its limit
 
@@ -312,25 +329,94 @@ the stop.
 
 ## Isolation
 
-A budget can declare `isolation_required`. Proof is an `IsolationEvidence` value
-built by server code from the sandbox admission decision. It counts only when
-all of these hold: execution mode is `sandbox`, admission is literally `True`,
-the backend is literally qualified, and a backend id is present.
+[ADR-0043](adr/0043-proven-sandbox-admission-for-mission-owned-consequential-work.md)
+records this section's rules. They follow the owner's U06 answers 1 to 4, which
+are owner input and not a resolution of U06.
+
+**In this build every consequential action of mission-owned work is refused.**
+No acceptance is recorded and no production caller presents proof. The accepting
+path runs only in tests, with a fictional acceptance record and fictional
+evidence, because no qualified runtime exists on the authoring host.
+
+### When proof is needed
+
+| Work | Action | Proof needed |
+|---|---|---|
+| Mission-owned | consequential (`managed_edit`, `consequential`, `external`) | yes |
+| Mission-owned | read-only | no, unless a budget in the chain declares `isolation_required` |
+| Mission-owned | any action of the browser-worker or native-lifecycle step | yes, and it is always refused (see [Steps](#steps)) |
+| Any task whose chain declares `isolation_required` | any | yes |
+| Work that no mission owns, nothing declared | any | no; this gate does not judge it |
+
+Work is mission-owned when the action's task is a task of a mission plan, or a
+descendant of one. This is the rule the mission stop and the late-result fence
+use. The task a plan hangs from is not a task of the plan. A store without
+mission tables owns no mission work.
+
+The check sits in the budget charge, `charge_hierarchical_tool_call`, which is
+the last admission step before durable intent and dispatch. The charge takes
+`consequential` and `isolation_step`. Both default to the refusing side: a
+caller that does not say what it dispatches is treated as dispatching a
+consequential action of the contained-execution step.
+
+- Every dispatch charge that needs proof and does not get it raises
+  `IsolationUnavailable`. The app tool boundary maps it to
+  `error_code: "isolation_unavailable"`. No tool call is debited and nothing is
+  executed.
+- `claim_ready_mission_task` and `prepare_mission_task_resume` check the root
+  budget's declared `isolation_required`. On refusal they raise
+  `MissionIsolationRejected`; no worker lease is created. A claim is not a
+  dispatch, so a plan that declares nothing can be claimed without proof.
+- There is no downgrade. `host` and `disabled` modes are never isolation.
+
+### What counts as proof
+
+Proof has two parts. Both are server-side values; neither is ever parsed from a
+request body or from model output.
+
+**The acceptance record**, `IsolationAcceptance`, says what a recorded owner
+decision accepts. `DurableTaskBudgetManager` and `DurableTaskStateMachine` take
+it when they are constructed (`isolation_acceptance`). The default is none, and
+without one nothing is accepted.
+
+| Field | Meaning |
+|---|---|
+| `decision_ref` | the recorded decision the acceptance comes from |
+| `runtime`, `runtime_version`, `image_digest` | the one container backend that is accepted; the digest must be a full `sha256` digest |
+| `qualified_not_before` | the earliest qualification run that is accepted |
+| `activated_steps` | the steps the decision covers, as a prefix of the activation order |
+
+**The evidence**, `IsolationEvidence`, is what the server observed for one
+dispatch. `IsolationEvidence.from_admission` builds it from the sandbox
+admission decision and the active backend's qualification record. It is
+accepted only when all of these hold:
+
+- the acceptance activates the step of the dispatch, and the evidence proves
+  that step;
+- execution mode is `sandbox`, admission is literally `True`, the backend is
+  literally qualified, and a backend id is present;
+- runtime, runtime version and image digest equal the accepted ones. The
+  comparison is exact; only the runtime name is case-insensitive;
+- the evidence names a qualification, and the qualification run is not older
+  than `qualified_not_before`.
 
 `SecurityIncidentStore.check_admission` returns `allowed=True` with no backend
 when none exists, so `allowed` alone is never accepted as proof.
 
-- `claim_ready_mission_task` and `prepare_mission_task_resume` check the root
-  budget. On refusal they raise `MissionIsolationRejected`; no worker lease is
-  created.
-- Every dispatch charge checks the whole chain and raises `IsolationUnavailable`.
-  The app tool boundary maps it to `error_code: "isolation_unavailable"`. No tool
-  call is debited and nothing is executed.
-- There is no downgrade. `host` and `disabled` modes are never isolation.
+A qualification is as old as the run that produced it. The adapter uses the
+earlier of the time the qualification record was written and the time its report
+was generated. Recording an old report again does not make it fresh.
 
-**No production caller presents isolation proof.** In this build a mission that
-requires isolation is always refused. The accepting path is exercised only with
-a test fixture, because no qualified runtime exists on the authoring host.
+### Steps
+
+The activation order is `contained_execution`, `browser_worker`,
+`native_lifecycle`. An acceptance can record only a prefix of it.
+
+Contained execution is the only step this build defines evidence for. A sandbox
+admission proves contained execution and nothing else. Work of the two later
+steps is refused for mission-owned work, whatever its action class and even when
+an acceptance names the step. No tool in this build belongs to either later
+step.
 
 ## Recovery report
 
@@ -428,6 +514,18 @@ Other unknown keys are still ignored, as before.
   takeover or crash recovery, as it did before AP-007. Extending the fence to
   all work changes what the running application does and needs an owner
   decision.
+- Nothing records an isolation acceptance, builds isolation evidence or presents
+  it in production. A mission therefore cannot dispatch a consequential action
+  in this build.
+- The recovery report does not say that consequential actions of a plan are
+  refused for lack of isolation. The refusal is reported where it happens, at
+  the tool boundary. A plan whose budget declares `isolation_required` is
+  reported `blocked`, as before.
+- The isolation gate does not judge work that no mission owns, whatever step it
+  names.
+- The sandbox layer gives a qualification report that carries no generation time
+  the time of ingestion. The gate cannot tell such a report from a fresh one.
+- The target host is not part of the isolation evidence.
 - Results are author-run on a Linux host with no container runtime. They are not
   installed-runtime, owner, independent-security, screenshot, signing or release
   approval.
@@ -444,7 +542,7 @@ settle it.
 
 | Audit gap | Effect of this work |
 |---|---|
-| G-1 mission-scoped sandbox gate | Adds an optional mission-level refusal: a budget may declare `isolation_required`. Nothing declares it. Whether missions must require isolation is still a U06 question. |
+| G-1 mission-scoped sandbox gate | PR #303 added an optional mission-level refusal: a budget may declare `isolation_required`, and nothing declares it. ADR-0043 makes proof mandatory for consequential actions of mission-owned work and judges it against a recorded acceptance. Whether that is sufficient as the mission-scoped gate is still the owner's U06 decision. |
 | G-6 refusal tests | Implemented offline, together with the behaviour they test. |
 | G-2, G-3, G-4, G-5 | Not touched. |
 
@@ -454,6 +552,11 @@ G-6 statements were out of date; the audit has since been regenerated at
 gap table and fence statements reflect the landed AP-007-F1 change. The owner
 still decides which reading stands.
 
+That revision of the audit describes the isolation gate as opt-in. With
+ADR-0043 its statements about the gate describe the earlier state until the
+page is regenerated, as its maintenance rule asks. This work does not edit the
+page.
+
 ## Acceptance mapping and offline evidence
 
 | AP-007 acceptance criterion | Evidence |
@@ -461,7 +564,7 @@ still decides which reading stands.
 | Cancellation stops dispatch and terminates owned work with measured cleanup latency | `halt_mission`; `tests/test_durable_task_state_machine.py` cases for cancellation, latency measured from the stop request, delegated descendants, containment retry and containment failure |
 | Late outputs are fenced; unresolved external effects remain uncertain and require reconciliation | ledger and boundary fence for mission-owned work; `tests/test_durable_intent_ledger.py` (two cases for mission-owned work, three for the unchanged behaviour outside missions); state-machine cases for late results, the scope of the fence, recovery and the planning gate |
 | No-progress, repeated repair, deadline and memory/storage exhaustion stop boundedly | `execution_budget` limits; `tests/test_execution_budget.py`; state-machine cases for declared limits, the deadline, task scope, the measurement gap and stale workers |
-| Runtime isolation absence blocks dependent execution rather than switching to host shell | isolation gate; state-machine and budget cases; `tests/test_mission_authority_envelope.py` at the real tool boundary |
+| Runtime isolation absence blocks dependent execution rather than switching to host shell | isolation gate; state-machine and budget cases, including the cases for mission-owned work, the recorded acceptance, the steps and the security store's own types; `tests/test_mission_authority_envelope.py` at the real tool boundary, for a declared requirement and for mission-owned work |
 | User receives retained partial artifacts and an actionable limitation instead of false success | `mission_recovery_report`; state-machine cases for checked artifacts, an uncarried stop and halted plans |
 
 The tests use temporary local SQLite stores and local fixture subprocesses. They

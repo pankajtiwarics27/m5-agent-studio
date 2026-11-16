@@ -78,6 +78,12 @@ proof of an admitted, qualified sandbox backend. There is no host fallback and
 no downgrade. No production caller presents such proof, so in this build a
 mission that requires isolation is always refused.
 
+> Superseded for mission-owned work by
+> [ADR-0043](0043-proven-sandbox-admission-for-mission-owned-consequential-work.md):
+> proof is mandatory there for consequential actions, whether or not a budget
+> declares the requirement, and it is judged against a recorded acceptance. The
+> paragraph above is kept as the decision that PR #303 merged with.
+
 **One truthful report.** `mission_recovery_report` states the outcome, the
 retained outputs per task, the unresolved actions and one next action for every
 limitation. It claims success only when the join succeeded, nothing is
@@ -152,7 +158,8 @@ now pauses for reconciliation instead of continuing.
 
 No route, scheduler or production caller invokes the halt, the report or the
 observation recorder. The positive isolation path is exercised only with a test
-fixture, because no qualified runtime exists on the authoring host. The
+fixture, because no qualified runtime exists on the authoring host. (Since
+ADR-0043 that path also needs a recorded acceptance, which only tests supply.) The
 implementation and its offline tests are author-run evidence only and are not
 owner, independent-security, screenshot, signing, release or installed-runtime
 approval.
@@ -162,7 +169,10 @@ approval.
 Not reviewed. Accepted as the implemented AP-007 offline fail-closed subset,
 without independent review. One decision of this record, the scope of the
 late-result fence, is superseded by
-[ADR-0042](0042-late-result-fence-limited-to-mission-owned-work.md); the rest
-stands. U06 remains pending. Any activation, any execution
+[ADR-0042](0042-late-result-fence-limited-to-mission-owned-work.md). A second
+one, the isolation requirement a budget can declare, is superseded for
+mission-owned work by
+[ADR-0043](0043-proven-sandbox-admission-for-mission-owned-consequential-work.md).
+The rest stands. U06 remains pending. Any activation, any execution
 on a qualified backend, any installed-runtime qualification and any change to
 the authority boundary require separate review and owner authorization.
