@@ -424,9 +424,11 @@ settle it.
 | G-6 refusal tests | Implemented offline, together with the behaviour they test. |
 | G-2, G-3, G-4, G-5 | Not touched. |
 
-The audit page is not edited here. If this work lands, the page's statements
-about AP-007 and G-1 are out of date. Its own maintenance rule then asks its
-owner to regenerate it or mark it superseded.
+The audit page was not edited by that work. After it landed, the page's G-1 and
+G-6 statements were out of date; the audit has since been regenerated at
+`dc5ec57` (see the audit page's revision history), so its U06-decision questions
+and gap table now reflect the landed subset. The owner still decides which
+reading stands.
 
 ## Acceptance mapping and offline evidence
 
