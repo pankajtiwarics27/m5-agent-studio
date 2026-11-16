@@ -26,7 +26,7 @@
       645.0
     ],
     "module_counts": [
-      75,
+      76,
       75,
       74
     ],
@@ -215,6 +215,7 @@
       "tests/test_workflow_checkpoints.py",
       "tests/test_workflow_hall_coordinated.py",
       "tests/test_workflow_orchestration.py",
+      "tests/test_workflow_stream_any_model_cancel.py",
       "tests/test_workflow_unload_legacy.py",
       "tests/test_workflow_unload_other_models.py",
       "tests/test_workflow_unload_route.py"

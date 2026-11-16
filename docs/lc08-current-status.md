@@ -2,6 +2,22 @@
 
 ## Continuation after this snapshot
 
+The bounded [`stream_any_model` audit](lc08-stream-any-model-audit.md) adds one
+assessed owner and closes the remaining un-owned delegated-source gap in that
+dispatcher: the combo-fallback arm recursed into `stream_any_model(...)`
+under a bare `async for`, so closing the outer iterator left the delegated
+model source (and the local oMLX path's heavy-model lease beneath it) until
+interpreter-shutdown finalization; an error after content abandoned the source
+the same way. The delegated call is now wrapped in `contextlib.aclosing`, in
+parity with the coordinated, cloud-provider and local arms. Its four offline
+tests exercise the real dispatcher against in-memory combo fixtures. The
+checked-in matrix now marks `stream_any_model` `bounded_combo_stream_close`;
+**8 of 29 owners remain `inventory_only_in_this_audit`**. It does not promote
+any other owner, does not qualify native/cloud/real execution, and adds no
+runtime activation, hardware qualification, release acceptance or LC09–11
+status. Widening this to all-combo or all-workflow cancellation coverage is
+separate work.
+
 The first bounded G1 follow-up is now documented in the
 [Council/Debate adapter audit](lc08-workflow-adapter-audit.md): a checked-in
 29-owner coverage matrix, two audited shared-adapter owners, coordinated
