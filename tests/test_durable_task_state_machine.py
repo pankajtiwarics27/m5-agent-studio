@@ -1812,6 +1812,101 @@ def test_ap007_late_results_are_fenced_and_unresolved_effects_stay_uncertain(iso
     assert (settled.outcome, settled.claims_success) == ("cancelled", False)
 
 
+def test_ap007_late_result_fence_covers_owned_work_and_nothing_else(isolated_env: Path) -> None:
+    """AC2 scope: the fence follows mission ownership - a plan's tasks and their descendants - and stops there."""
+    root, mission, other = "ap007-scope-root", "ap007-scope", "ap007-scope-other"
+    sm = _ap007_machine(isolated_env, root)
+    binding, tasks = _ap007_plan(sm, root, mission, keys=("lead",))
+    lead = _ap007_claim(sm, root, mission, "lead", tasks["lead"], binding)
+    helper = sm.spawn_child_subtask(lead.task.task_id, "helper", title="Delegated helper")
+    helper_lease, _ = sm.store.acquire_worker_lease(helper.task_id, "worker-helper")
+    sm.store.create_task("ap007-scope-plain", session_id=other, state="running", now=time.time())
+    root_task = sm.store.get_task(root)
+    assert root_task is not None and root_task.current_epoch == 0  # the root holds no worker lease here
+    ledger = side_effect_ledger.DurableActionLedger(studio.STORAGE, studio.DB_PATH)
+
+    def _begin(
+        action_id: str,
+        session_id: str,
+        task_id: str | None = None,
+        epoch: int | None = None,
+        worker_id: str | None = None,
+    ) -> None:
+        outcome = ledger.begin(
+            action_id=action_id,
+            tool_name="run_bash",
+            args={"command": f"publish {action_id}"},
+            policy="autonomous",
+            action_class="consequential",
+            allowed=True,
+            explicit_approval=False,
+            session_id=session_id,
+            task_id=task_id,
+            epoch=epoch,
+            worker_id=worker_id,
+        )
+        assert outcome.proceed is True and outcome.status == "in_flight"
+
+    owned = ("ap007-scope-lead", "ap007-scope-helper")
+    not_owned = ("ap007-scope-root-own", "ap007-scope-plain", "ap007-scope-session")
+    _begin("ap007-scope-lead", root, lead.task.task_id, lead.epoch.epoch, lead.epoch.worker_id)
+    _begin("ap007-scope-helper", root, helper.task_id, helper_lease.epoch, "worker-helper")
+    _begin("ap007-scope-root-own", root, root)  # the root task itself is not a task of the plan
+    _begin("ap007-scope-plain", other, "ap007-scope-plain")  # a task outside every plan
+    _begin("ap007-scope-session", other)  # a session without a durable task
+
+    report = sm.halt_mission(mission, 1, authority=_mission_authority(root))
+
+    # The stop declares exactly the owned in-flight effects uncertain ...
+    assert report.stop is not None
+    assert sorted(report.stop["uncertain_action_ids"]) == sorted(owned)
+    # ... and everything else is declared uncertain by the ordinary paths.
+    for session_id in (root, other):
+        ledger.reconcile_missing_results(session_id=session_id, error_code="cancelled_in_flight")
+    for action_id in owned + not_owned:
+        declared = ledger.get_action(action_id)
+        assert declared is not None
+        assert (declared.status, declared.error_code) == ("uncertain", "cancelled_in_flight"), action_id
+
+    # Owned work: neither a late "it worked" nor a late exception settles the effect.
+    for action_id in owned:
+        late = ledger.complete(action_id, {"ok": True, "output": "published"}, 12)
+        assert (late.status, late.ok, late.error_code) == ("uncertain", None, "cancelled_in_flight"), action_id
+        late_error = ledger.record_exception(action_id, RuntimeError("connection reset"), 12)
+        assert (late_error.status, late_error.ok, late_error.error_code) == (
+            "uncertain",
+            None,
+            "cancelled_in_flight",
+        ), action_id
+    # Everything else keeps the behaviour it had before AP-007: the late result is recorded.
+    for action_id in not_owned:
+        late = ledger.complete(action_id, {"ok": True, "output": "published"}, 12)
+        assert (late.status, late.ok, late.error_code) == ("committed", True, ""), action_id
+    assert sorted(sm.mission_recovery_report(mission, 1).unresolved_action_ids) == sorted(owned)
+
+
+def test_ap007_late_result_after_mission_recovery_stays_uncertain(isolated_env: Path) -> None:
+    """AC2: recovery after an expired lease declares a mission effect uncertain; the old worker cannot settle it."""
+    root, mission = "ap007-zombie-root", "ap007-zombie"
+    sm = _ap007_machine(isolated_env, root)
+    binding, tasks = _ap007_plan(sm, root, mission, keys=("publish",))
+    lease = _ap007_claim(sm, root, mission, "publish", tasks["publish"], binding)
+    ledger = side_effect_ledger.DurableActionLedger(studio.STORAGE, studio.DB_PATH)
+    _ap007_begin_action(ledger, "ap007-zombie-publish", lease, session_id=root)
+
+    # The lease runs out without a report.  Recovery cannot know what the action did, so it blocks the task.
+    recovered = sm.recover_incomplete_transitions(now=time.time() + 600.0)
+
+    assert lease.task.task_id in recovered.blocked_task_ids
+    orphaned = ledger.get_action("ap007-zombie-publish")
+    assert orphaned is not None
+    assert (orphaned.status, orphaned.error_code) == ("uncertain", "orphaned_mission_action_on_recovery")
+    # The old worker was still running and now reports success.  It is not believed.
+    late = ledger.complete("ap007-zombie-publish", {"ok": True, "output": "published"}, 9)
+    assert (late.status, late.ok, late.error_code) == ("uncertain", None, "orphaned_mission_action_on_recovery")
+    assert sm.mission_recovery_report(mission, 1).unresolved_action_ids == ("ap007-zombie-publish",)
+
+
 def test_ap007_stopped_plan_must_be_settled_before_new_work_is_planned(
     isolated_env: Path, tmp_path: Path
 ) -> None:

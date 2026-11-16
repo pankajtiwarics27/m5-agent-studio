@@ -31,10 +31,12 @@ import pytest
 from fastapi.testclient import TestClient
 
 import app as studio
+import execution_budget
 import execution_spine as spine
 import mcp_client
 import runtime_persistence as rp
 import side_effect_ledger as sel
+import workflow_state
 
 
 @pytest.fixture()
@@ -938,29 +940,114 @@ def test_standalone_studio_artifact_inlines_side_effect_ledger_outside_repo(tmp_
 
 
 # ---------------------------------------------------------------------------
-# AP-007: a result that arrives after its action was fenced
+# AP-007: a result that arrives after its action was declared uncertain
+#
+# The late-result fence covers mission-owned work only.  Work that no mission
+# owns keeps the behaviour it had before AP-007: the late result is recorded.
 # ---------------------------------------------------------------------------
+
+_AP007_INPUTS = {"request": "publish the offline report", "input_version": 1}
+
+
+def _ap007_envelope(root: str, task_id: str | None = None) -> spine.MissionAuthorityEnvelope:
+    return spine.MissionAuthorityEnvelope(
+        session_id=root,
+        root_task_id=root,
+        task_id=task_id or root,
+        session_policy_revision=7,
+        global_policy_revision=11,
+    )
+
+
+def _ap007_claimed_mission_task(
+    workspace: Path, root: str, mission: str
+) -> tuple[workflow_state.DurableTaskStateMachine, workflow_state.MissionTaskLease]:
+    """One mission plan under ``root`` whose only task, ``publish``, is claimed by a worker."""
+    sm = workflow_state.DurableTaskStateMachine(studio.STORAGE, studio.DB_PATH)
+    sm.ensure_root_task(
+        root,
+        session_id=root,
+        workspace_dir=str(workspace),
+        budget_spec=execution_budget.TaskBudgetSpec(max_steps=50),
+        override_budget_spec=True,
+    )
+    sm.create_mission_plan(
+        root,
+        mission,
+        1,
+        (workflow_state.MissionTaskSpec("publish", "Publish the report", ("publish-out",)),),
+        (),
+        inputs=_AP007_INPUTS,
+        authority=_ap007_envelope(root),
+    )
+    binding = sm.capture_mission_binding(mission, 1)
+    task = {item.task_key: item.task for item in sm.list_mission_readiness(mission, 1)}["publish"]
+    lease = sm.claim_ready_mission_task(
+        mission,
+        1,
+        "publish",
+        binding=binding,
+        current_inputs=_AP007_INPUTS,
+        current_authority=_ap007_envelope(root, task.task_id),
+        worker_id="worker-publish",
+    )
+    return sm, lease
+
+
+def _ap007_begin(
+    ledger: sel.DurableActionLedger,
+    action_id: str,
+    *,
+    session_id: str,
+    task_id: str | None = None,
+    epoch: int | None = None,
+    worker_id: str | None = None,
+) -> None:
+    begun = ledger.begin(
+        action_id=action_id,
+        tool_name="run_bash",
+        args={"command": f"python3 deploy.py --target {action_id}"},
+        policy="autonomous",
+        action_class="consequential",
+        allowed=True,
+        explicit_approval=False,
+        session_id=session_id,
+        task_id=task_id,
+        epoch=epoch,
+        worker_id=worker_id,
+    )
+    assert begun.proceed is True and begun.status == "in_flight"
+
+
+def _ap007_app_boundary(workspace: Path) -> spine.DurableActionBoundary:
+    return spine.DurableActionBoundary(
+        studio._AppToolPolicy(),
+        studio._AppActionLedger(),
+        task_context_resolver=studio._AppTaskContextResolver(),
+        intent_ledger=studio._AppIntentLedger(workspace_root=workspace),
+    )
 
 
 def test_ap007_late_result_cannot_settle_an_action_already_declared_uncertain(isolated_env: Path) -> None:
-    """Once an in-flight effect is declared uncertain, only reconciliation settles it."""
+    """Once an in-flight effect of mission work is declared uncertain, only reconciliation settles it."""
+    root, mission = "ap007-late-ledger-root", "ap007-late-ledger"
+    sm, lease = _ap007_claimed_mission_task(isolated_env, root, mission)
     ledger = studio.get_durable_action_ledger(isolated_env)
-    for action_id in ("act-late-ok", "act-late-false", "act-late-raise", "act-late-timeout"):
-        begun = ledger.begin(
-            action_id=action_id,
-            tool_name="run_bash",
-            args={"command": f"python3 deploy.py --target {action_id}"},
-            policy="autonomous",
-            action_class="consequential",
-            allowed=True,
-            explicit_approval=False,
-            session_id="sess-late",
+    late_ids = ("act-late-ok", "act-late-false", "act-late-raise", "act-late-timeout")
+    for action_id in late_ids:
+        _ap007_begin(
+            ledger,
+            action_id,
+            session_id=root,
+            task_id=lease.task.task_id,
+            epoch=lease.epoch.epoch,
+            worker_id=lease.epoch.worker_id,
         )
-        assert begun.proceed is True and begun.status == "in_flight"
 
-    # A stop, a takeover or crash recovery declares the outcome unknown while the tool still runs.
-    fenced = ledger.reconcile_missing_results(session_id="sess-late", error_code="cancelled_in_flight")
-    assert {record.status for record in fenced} == {"uncertain"}
+    # The mission is stopped while the tools still run: their outcome is declared unknown.
+    report = sm.halt_mission(mission, 1, authority=_ap007_envelope(root))
+    assert report.stop is not None
+    assert sorted(report.stop["uncertain_action_ids"]) == sorted(late_ids)
 
     late_success = ledger.complete("act-late-ok", {"ok": True, "output": "deployed"}, 40)
     late_failure = ledger.complete("act-late-false", {"ok": False, "error_code": "exit_1", "output": "boom"}, 40)
@@ -983,36 +1070,21 @@ def test_ap007_late_result_cannot_settle_an_action_already_declared_uncertain(is
     )
     assert committed.status == "committed" and committed.ok is True
     assert not_applied.status != "uncertain"
-    # A result for an action that was never fenced is recorded as before.
-    plain = ledger.begin(
-        action_id="act-on-time",
-        tool_name="run_bash",
-        args={"command": "python3 build.py"},
-        policy="autonomous",
-        action_class="consequential",
-        allowed=True,
-        explicit_approval=False,
-        session_id="sess-on-time",
-    )
-    assert plain.proceed is True
-    assert ledger.complete("act-on-time", {"ok": True, "output": "built"}, 7).status == "committed"
     with pytest.raises(KeyError):
         ledger.complete("act-never-begun", {"ok": True}, 1)
 
 
 def test_ap007_boundary_reports_a_fenced_late_result_as_uncertain_not_success(isolated_env: Path) -> None:
-    """The caller and the audit trail see the same verdict as the durable ledger."""
+    """For stopped mission work, the caller and the audit trail see the same verdict as the durable ledger."""
+    root, mission = "ap007-late-boundary-root", "ap007-late-boundary"
+    sm, lease = _ap007_claimed_mission_task(isolated_env, root, mission)
     ledger = studio.get_durable_action_ledger(isolated_env)
-    boundary = spine.DurableActionBoundary(
-        studio._AppToolPolicy(),
-        studio._AppActionLedger(),
-        task_context_resolver=studio._AppTaskContextResolver(),
-        intent_ledger=studio._AppIntentLedger(workspace_root=isolated_env),
-    )
+    boundary = _ap007_app_boundary(isolated_env)
 
     async def _finishes_after_the_stop() -> dict[str, Any]:
-        fenced = ledger.reconcile_missing_results(session_id="sess-late-boundary", error_code="cancelled_in_flight")
-        assert [record.action_id for record in fenced] == ["act-late-boundary"]
+        report = sm.halt_mission(mission, 1, authority=_ap007_envelope(root))
+        assert report.stop is not None
+        assert report.stop["uncertain_action_ids"] == ["act-late-boundary"]
         (isolated_env / "late.txt").write_text("written anyway\n", encoding="utf-8")
         return {"ok": True, "output": "wrote late.txt", "diff": "", "elapsed_ms": 3}
 
@@ -1023,8 +1095,12 @@ def test_ap007_boundary_reports_a_fenced_late_result_as_uncertain_not_success(is
                 args={"path": "late.txt", "content": "written anyway\n"},
                 policy="standard",
                 approved=False,
-                session_id="sess-late-boundary",
+                session_id=root,
+                task_id=lease.task.task_id,
+                epoch=lease.epoch.epoch,
+                worker_id=lease.epoch.worker_id,
                 action_id="act-late-boundary",
+                mission_envelope=studio.capture_mission_authority_envelope(root, lease.task.task_id),
             ),
             _finishes_after_the_stop,
         )
@@ -1041,3 +1117,117 @@ def test_ap007_boundary_reports_a_fenced_late_result_as_uncertain_not_success(is
     with sqlite3.connect(studio.DB_PATH) as conn:
         audit = conn.execute("SELECT status, ok FROM tool_audit_events ORDER BY id DESC LIMIT 1").fetchone()
     assert tuple(audit) == ("uncertain", 0)
+
+
+def test_ap007_late_result_for_work_no_mission_owns_is_recorded_as_before(isolated_env: Path) -> None:
+    """Outside a mission the ledger keeps its pre-AP-007 behaviour: a late result settles the action."""
+    ledger = studio.get_durable_action_ledger(isolated_env)
+    store = rp.RuntimePersistenceStore(studio.STORAGE, studio.DB_PATH)
+    store.create_task("plain-task", session_id="sess-plain", state="running", now=time.time())
+    store.create_task(
+        "plain-child", parent_task_id="plain-task", session_id="sess-plain", state="running", now=time.time()
+    )
+    # A session without a durable task, a plain task and a plain child task.
+    owners: dict[str, dict[str, str]] = {
+        "session": {"session_id": "sess-late"},
+        "task": {"session_id": "sess-plain", "task_id": "plain-task"},
+        "child": {"session_id": "sess-plain", "task_id": "plain-child"},
+    }
+    for label, owner in owners.items():
+        for kind in ("ok", "false", "raise", "timeout"):
+            _ap007_begin(ledger, f"act-{label}-{kind}", **owner)
+    # A cancel, a takeover or crash recovery declares the outcomes unknown while the tools still run.
+    for session_id in ("sess-late", "sess-plain"):
+        declared = ledger.reconcile_missing_results(session_id=session_id, error_code="cancelled_in_flight")
+        assert {record.status for record in declared} == {"uncertain"}
+    with sqlite3.connect(studio.DB_PATH) as conn:
+        uncertain = conn.execute("SELECT COUNT(*) FROM runtime_actions WHERE status = 'uncertain'").fetchone()[0]
+    assert uncertain == 12
+
+    for label in owners:
+        late_success = ledger.complete(f"act-{label}-ok", {"ok": True, "output": "deployed"}, 40)
+        late_failure = ledger.complete(
+            f"act-{label}-false", {"ok": False, "error_code": "exit_1", "output": "boom"}, 40
+        )
+        late_exception = ledger.record_exception(f"act-{label}-raise", RuntimeError("connection reset"), 40)
+        late_timeout = ledger.record_exception(f"act-{label}-timeout", TimeoutError("no answer"), 40)
+        assert (late_success.status, late_success.ok, late_success.error_code) == ("committed", True, ""), label
+        assert (late_failure.status, late_failure.ok, late_failure.error_code) == ("failed", False, "exit_1"), label
+        assert (late_exception.status, late_exception.ok, late_exception.error_code) == (
+            "failed",
+            False,
+            "RuntimeError",
+        ), label
+        # A timeout is ambiguous by itself, so the executor's own verdict is recorded: uncertain, for its reason.
+        assert (late_timeout.status, late_timeout.ok, late_timeout.error_code) == (
+            "uncertain",
+            None,
+            "TimeoutError",
+        ), label
+        stored = _read_action_direct(studio.DB_PATH, f"act-{label}-ok")
+        assert stored is not None and stored["output_sha256"]  # the late result is stored
+
+
+def test_ap007_late_result_is_recorded_on_a_store_without_mission_tables(tmp_path: Path) -> None:
+    """A store that predates mission plans (schema v3) owns no mission work: nothing is fenced, nothing breaks."""
+    db_path = tmp_path / "schema_v3.db"
+    with sqlite3.connect(db_path) as conn:
+        rp.apply_schema_migrations(conn, target_version=3)
+        tables = {str(row[0]) for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+    assert "runtime_actions" in tables and "runtime_mission_tasks" not in tables
+    rp.RuntimePersistenceStore(studio.STORAGE, db_path).create_task(
+        "v3-task", session_id="sess-v3", state="running", now=time.time()
+    )
+    ledger = sel.DurableActionLedger(studio.STORAGE, db_path)
+    _ap007_begin(ledger, "act-v3-ok", session_id="sess-v3", task_id="v3-task")
+    _ap007_begin(ledger, "act-v3-raise", session_id="sess-v3", task_id="v3-task")
+    declared = ledger.reconcile_missing_results(task_id="v3-task", error_code="cancelled_in_flight")
+    assert {record.status for record in declared} == {"uncertain"} and len(declared) == 2
+
+    late_success = ledger.complete("act-v3-ok", {"ok": True, "output": "deployed"}, 7)
+    late_exception = ledger.record_exception("act-v3-raise", RuntimeError("connection reset"), 7)
+
+    assert (late_success.status, late_success.ok, late_success.error_code) == ("committed", True, "")
+    assert (late_exception.status, late_exception.ok, late_exception.error_code) == ("failed", False, "RuntimeError")
+    with sqlite3.connect(db_path) as conn:
+        still_v3 = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'runtime_mission_tasks'"
+        ).fetchone()
+    assert still_v3 is None  # the store was not upgraded behind the test's back
+
+
+def test_ap007_boundary_passes_a_late_result_through_for_work_no_mission_owns(isolated_env: Path) -> None:
+    """Outside a mission the action boundary reports the late result, as it did before AP-007."""
+    ledger = studio.get_durable_action_ledger(isolated_env)
+    boundary = _ap007_app_boundary(isolated_env)
+
+    async def _finishes_after_a_session_cancel() -> dict[str, Any]:
+        declared = ledger.reconcile_missing_results(session_id="sess-late-boundary", error_code="cancelled_in_flight")
+        assert [record.action_id for record in declared] == ["act-late-boundary"]
+        (isolated_env / "late.txt").write_text("written anyway\n", encoding="utf-8")
+        return {"ok": True, "output": "wrote late.txt", "diff": "", "elapsed_ms": 3}
+
+    result = asyncio.run(
+        boundary.admit_and_execute(
+            spine.ActionRequest(
+                tool_name="write_file",
+                args={"path": "late.txt", "content": "written anyway\n"},
+                policy="standard",
+                approved=False,
+                session_id="sess-late-boundary",
+                action_id="act-late-boundary",
+            ),
+            _finishes_after_a_session_cancel,
+        )
+    )
+
+    assert result["ok"] is True
+    assert not result.get("uncertain")
+    assert result.get("error_code") != "late_result_fenced"
+    assert result["ledger_status"] == "committed"
+    record = ledger.get_action("act-late-boundary")
+    assert record is not None
+    assert (record.status, record.ok, record.error_code) == ("committed", True, "")
+    with sqlite3.connect(studio.DB_PATH) as conn:
+        audit = conn.execute("SELECT status, ok FROM tool_audit_events ORDER BY id DESC LIMIT 1").fetchone()
+    assert tuple(audit) == ("completed", 1)

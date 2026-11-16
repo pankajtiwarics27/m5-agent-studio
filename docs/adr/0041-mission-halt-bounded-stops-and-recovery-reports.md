@@ -59,6 +59,11 @@ and `record_exception` leave an `uncertain` row unchanged. The action boundary
 returns `late_result_fenced`. Only `resolve_uncertain_action` resolves it. This
 applies to every task, not only to mission tasks.
 
+> Scope superseded by
+> [ADR-0042](0042-late-result-fence-limited-to-mission-owned-work.md): the fence
+> now applies to mission-owned work only. The paragraph above is kept as the
+> decision that PR #303 merged with.
+
 **Bounded stops live in the existing budget document.** Six optional fields
 (`max_no_progress`, `max_repair_attempts`, `deadline_at`, `max_memory_bytes`,
 `max_storage_bytes`, `isolation_required`) and their counters are written only
@@ -141,6 +146,10 @@ routes refuse the six new budget keys. Each only adds a refusal. Before this
 change a late result overwrote an `uncertain` verdict; a session in that race
 now pauses for reconciliation instead of continuing.
 
+> ADR-0042 limits the late-result fence to mission-owned work. Nothing in the
+> running application creates a mission plan, so the first of these three
+> changes no longer alters what that application does.
+
 No route, scheduler or production caller invokes the halt, the report or the
 observation recorder. The positive isolation path is exercised only with a test
 fixture, because no qualified runtime exists on the authoring host. The
@@ -151,6 +160,9 @@ approval.
 ## Review Status
 
 Not reviewed. Accepted as the implemented AP-007 offline fail-closed subset,
-without independent review. U06 remains pending. Any activation, any execution
+without independent review. One decision of this record, the scope of the
+late-result fence, is superseded by
+[ADR-0042](0042-late-result-fence-limited-to-mission-owned-work.md); the rest
+stands. U06 remains pending. Any activation, any execution
 on a qualified backend, any installed-runtime qualification and any change to
 the authority boundary require separate review and owner authorization.

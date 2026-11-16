@@ -44624,6 +44624,48 @@ def is_ambiguous_exception(exc: BaseException) -> bool:
     return False
 
 
+def _late_result_is_fenced(conn: sqlite3.Connection, current: sqlite3.Row) -> bool:
+    """AP-007 late-result fence: True when a late result must not settle ``current``.
+
+    The fence holds for mission-owned work only.  A mission stop, a takeover or
+    recovery declared the effect ``uncertain`` while the executor was still running,
+    so its late result must not resolve the effect in either direction; only explicit
+    reconciliation (``resolve_uncertain_action``) may.
+
+    "Mission-owned" is the rule the mission stop applies: the action's task is a task
+    of a mission plan, or a descendant of one.  Every other action keeps the behaviour
+    it had before AP-007 and its late result is recorded.  A store without mission
+    tables owns no mission work.
+    """
+    if str(current["status"]) != "uncertain":
+        return False
+    task_id = current["task_id"]
+    if task_id is None or not str(task_id):
+        return False
+    mission_tables = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'runtime_mission_tasks'"
+    ).fetchone()
+    if mission_tables is None:
+        return False
+    owned = conn.execute(
+        """
+        WITH RECURSIVE lineage(task_id, parent_task_id) AS (
+            SELECT task_id, parent_task_id FROM runtime_tasks WHERE task_id = ?
+            UNION
+            SELECT rt.task_id, rt.parent_task_id
+            FROM runtime_tasks AS rt
+            JOIN lineage ON rt.task_id = lineage.parent_task_id
+        )
+        SELECT 1
+        FROM lineage
+        JOIN runtime_mission_tasks AS mt ON mt.task_id = lineage.task_id
+        LIMIT 1
+        """,
+        (str(task_id),),
+    ).fetchone()
+    return owned is not None
+
+
 class ActionReconciler(Protocol):
     """Callback probing target state for ``reconcilable`` uncertain actions before replay."""
 
@@ -45333,8 +45375,9 @@ class DurableActionLedger:
     ) -> runtime_persistence.ActionRecord:
         """Durably finalize a completed, deterministically failed, or uncertain tool result.
 
-        A result that arrives after the action was already declared ``uncertain`` is
-        fenced: the stored row is returned unchanged (see the late-result fence below).
+        For mission-owned work, a result that arrives after the action was already
+        declared ``uncertain`` is fenced: the stored row is returned unchanged (see
+        ``_late_result_is_fenced``).  For any other action the late result is recorded.
         """
         aid = _text(action_id, "action_id")
         out_digest = canonical_result_sha256(result)
@@ -45359,12 +45402,8 @@ class DurableActionLedger:
             current = conn.execute("SELECT * FROM runtime_actions WHERE action_id = ?", (aid,)).fetchone()
             if current is None:
                 raise KeyError(f"Runtime action {aid!r} does not exist.")
-            if str(current["status"]) == "uncertain":
-                # AP-007 late-result fence: cancellation, a bounded stop, a takeover or
-                # crash recovery already declared this effect uncertain while the
-                # executor was still running.  Its late result must not resolve the
-                # effect in either direction; only explicit reconciliation
-                # (``resolve_uncertain_action``) may.  The row is left untouched.
+            if _late_result_is_fenced(conn, current):
+                # Mission-owned work only: the row is left untouched.
                 return _sel_row_to_action(current)
             conn.execute(
                 """
@@ -45393,7 +45432,8 @@ class DurableActionLedger:
     ) -> runtime_persistence.ActionRecord:
         """Finalize an exception raised during execution as ``uncertain`` (if ambiguous) or ``failed``.
 
-        A late exception cannot turn an already ``uncertain`` effect into ``failed``.
+        For mission-owned work, a late exception cannot turn an already ``uncertain``
+        effect into ``failed`` (see ``_late_result_is_fenced``).
         """
         aid = _text(action_id, "action_id")
         ambiguous = is_ambiguous_exception(exc)
@@ -45409,12 +45449,8 @@ class DurableActionLedger:
             current = conn.execute("SELECT * FROM runtime_actions WHERE action_id = ?", (aid,)).fetchone()
             if current is None:
                 raise KeyError(f"Runtime action {aid!r} does not exist.")
-            if str(current["status"]) == "uncertain":
-                # AP-007 late-result fence: cancellation, a bounded stop, a takeover or
-                # crash recovery already declared this effect uncertain while the
-                # executor was still running.  Its late result must not resolve the
-                # effect in either direction; only explicit reconciliation
-                # (``resolve_uncertain_action``) may.  The row is left untouched.
+            if _late_result_is_fenced(conn, current):
+                # Mission-owned work only: the row is left untouched.
                 return _sel_row_to_action(current)
             conn.execute(
                 """
@@ -65494,10 +65530,11 @@ class DurableActionBoundary:
                     final_status = self._intent_ledger.complete(intent_decision.action_id, result, elapsed)
                     if final_status == "uncertain" and not bool(result.get("uncertain")):
                         # AP-007 late-result fence. The durable ledger had already
-                        # declared this effect uncertain (cancellation, a bounded stop,
-                        # a takeover or recovery) and kept that verdict. The late result
-                        # must not read as success, or as a clean failure, anywhere
-                        # downstream: the audit trail and the caller see it as uncertain.
+                        # declared this effect uncertain (a mission stop, a takeover or
+                        # recovery) and kept that verdict, which it does for
+                        # mission-owned work only. The late result must not read as
+                        # success, or as a clean failure, anywhere downstream: the
+                        # audit trail and the caller see it as uncertain.
                         result = {
                             **result,
                             "ok": False,
