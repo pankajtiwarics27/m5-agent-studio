@@ -39782,12 +39782,15 @@ async def _run_sdlc_sprints_stream(
                 yield _sse("step_start", {"step": cur_step, "max_steps": max_steps_per_story, "model": lead_model})
                 c_buf: list[str] = []
                 u_info: dict[str, Any] = {}
-                async for item in stream_any_model(client, lead_model, worker_msgs, temperature=0.0, max_tokens=4096, reasoning_mode="off"):
-                    if item["type"] == "content":
-                        c_buf.append(item["text"])
-                        yield _sse("step_content", {"step": cur_step, "text": item["text"]})
-                    elif item["type"] == "usage":
-                        u_info = item
+                async with contextlib.aclosing(
+                    stream_any_model(client, lead_model, worker_msgs, temperature=0.0, max_tokens=4096, reasoning_mode="off")
+                ) as worker_source:
+                    async for item in worker_source:
+                        if item["type"] == "content":
+                            c_buf.append(item["text"])
+                            yield _sse("step_content", {"step": cur_step, "text": item["text"]})
+                        elif item["type"] == "usage":
+                            u_info = item
                 raw_out = "".join(c_buf)
                 clean_txt, t_calls = extract_tool_calls(raw_out)
                 queued_sprint_mission = (
@@ -39929,9 +39932,12 @@ async def _run_sdlc_sprints_stream(
                 },
             ]
             qa_buf: list[str] = []
-            async for item in stream_any_model(client, critic_model, qa_msgs, temperature=0.0, max_tokens=900, reasoning_mode="off"):
-                if item["type"] == "content":
-                    qa_buf.append(item["text"])
+            async with contextlib.aclosing(
+                stream_any_model(client, critic_model, qa_msgs, temperature=0.0, max_tokens=900, reasoning_mode="off")
+            ) as qa_source:
+                async for item in qa_source:
+                    if item["type"] == "content":
+                        qa_buf.append(item["text"])
             qa_text = "".join(qa_buf).strip()
             if is_local_omlx_model(lead_model) and is_local_omlx_model(critic_model) and lead_model != critic_model:
                 await _unload_omlx_model(client, parse_model_route(critic_model)[2])

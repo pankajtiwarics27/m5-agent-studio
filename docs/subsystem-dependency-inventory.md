@@ -44,8 +44,8 @@
 | `POST` | `/api/harness/lessons/promote` | [`api_promote_harness_lesson`](../app.py#L18451) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
 | `POST` | `/api/harness/lessons/retrieve` | [`api_retrieve_harness_lessons`](../app.py#L18512) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
 | `POST` | `/api/harness/lessons/{lesson_id}/invalidate` | [`api_invalidate_harness_lesson`](../app.py#L18545) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `GET` | `/api/harness/release-gate` | [`api_get_security_release_gate`](../app.py#L23159) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
-| `POST` | `/api/harness/release-gate/evaluate` | [`api_evaluate_security_release_gate`](../app.py#L23166) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `GET` | `/api/harness/release-gate` | [`api_get_security_release_gate`](../app.py#L23165) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
+| `POST` | `/api/harness/release-gate/evaluate` | [`api_evaluate_security_release_gate`](../app.py#L23172) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
 | `GET` | `/api/harness/routing-experiments` | [`api_get_routing_experiments`](../app.py#L18940) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
 | `POST` | `/api/harness/routing-experiments/calibrate` | [`api_record_routing_calibration_profile`](../app.py#L19010) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
 | `POST` | `/api/harness/routing-experiments/config` | [`api_update_routing_experiments_config`](../app.py#L18967) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
@@ -53,8 +53,8 @@
 | `POST` | `/api/harness/routing-experiments/evaluate` | [`api_evaluate_session_routing_decision`](../app.py#L19098) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
 | `POST` | `/api/harness/routing-experiments/evaluate-ab` | [`api_evaluate_routing_experiments_ab`](../app.py#L19222) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
 | `POST` | `/api/harness/run` | [`api_run_harness_turn`](../app.py#L19328) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; workflow policy and centralized tool authorization/approval apply to tool execution. |
-| `POST` | `/api/harness/sdlc/feedback` | [`api_run_sdlc_feedback_loop`](../app.py#L22122) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; workflow policy and centralized tool authorization/approval apply to tool execution. |
-| `POST` | `/api/harness/sdlc/run` | [`api_run_agile_sdlc_factory`](../app.py#L21803) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; workflow policy and centralized tool authorization/approval apply to tool execution. |
+| `POST` | `/api/harness/sdlc/feedback` | [`api_run_sdlc_feedback_loop`](../app.py#L22128) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; workflow policy and centralized tool authorization/approval apply to tool execution. |
+| `POST` | `/api/harness/sdlc/run` | [`api_run_agile_sdlc_factory`](../app.py#L21809) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; workflow policy and centralized tool authorization/approval apply to tool execution. |
 | `GET` | `/api/harness/sessions` | [`api_list_harness_sessions`](../app.py#L13895) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
 | `POST` | `/api/harness/sessions` | [`api_create_harness_session`](../app.py#L13910) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
 | `DELETE` | `/api/harness/sessions/{session_id}` | [`api_delete_harness_session`](../app.py#L14026) | Harness, GSD, and SDLC workflows | Shared API bearer/host/Origin boundary; no user/tenant role check is implemented. |
@@ -150,7 +150,7 @@
 | Approval request lifecycle | [`app.py:L9030`](../app.py#L9030) | Creates an in-process pending approval entry and records its request event. |
 | Approval resolution API | [`app.py:L14137`](../app.py#L14137) | Authenticated operator resolves a pending approval by ID; there is no separate identity/role model. |
 | MCP tool execution | [`app.py:L13343`](../app.py#L13343) | Uses central policy and audit; requires an enabled server and enabled-tool allowlist entry, with explicit approval per server/workflow policy; stdio launch is separately opt-in. |
-| Inbound MCP bridge execution | [`app.py:L23277`](../app.py#L23277) | Routes each bundled stdio `tools/call` through the central registry, one-call authorization, and privacy-preserving audit. |
+| Inbound MCP bridge execution | [`app.py:L23283`](../app.py#L23283) | Routes each bundled stdio `tools/call` through the central registry, one-call authorization, and privacy-preserving audit. |
 | MCP approval requirement | [`app.py:L7667`](../app.py#L7667) | Applies the configured MCP approval policy; the central execution boundary enforces it for harness, direct, automated, and inbound bridge calls. |
 | MCP playground route | [`app.py:L7945`](../app.py#L7945) | Authenticated explicit playground action is treated as one-call user approval, then centrally authorized and audited against server/tool allowlists. |
 
