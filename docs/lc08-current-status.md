@@ -2,6 +2,22 @@
 
 ## Continuation after this snapshot
 
+The bounded [`_run_sdlc_sprints_stream` audit](lc08-sdlc-sprints-stream-audit.md)
+adds one assessed owner and fixes the same delegated-source gap at the sprint
+level: the worker loop and the independent-QA loop wrapped bare
+`async for` consumers of the recursive dispatcher; both are now in
+`contextlib.aclosing`, in parity with the combo audit. The consumer-close
+case at the worker `step_content` yield is a deterministic red/green proof
+(red on the unchanged source; close now observed inside the consumer's
+`aclose()`). The QA slot has no yields, so no consumer-visible red path is
+reachable; its wrap is parity and covered by producer-side regression tests.
+The checked-in matrix marks `_run_sdlc_sprints_stream`
+`bounded_sprints_stream_close`; **7 of 29 owners remain
+`inventory_only_in_this_audit`**. The SSE shells that consume this runner
+(`sdlc_gen`, `fb_gen`) remain inventory-only and unaudited. It does not
+promote any other owner and adds no activation, hardware qualification,
+release acceptance or LC09–11 status.
+
 The bounded [`stream_any_model` audit](lc08-stream-any-model-audit.md) adds one
 assessed owner and closes the remaining un-owned delegated-source gap in that
 dispatcher: the combo-fallback arm recursed into `stream_any_model(...)`
