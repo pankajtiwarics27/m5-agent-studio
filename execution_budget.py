@@ -4,12 +4,18 @@ AP-007 adds optional *bounded-stop* limits to the same durable budget document:
 no-progress, repair attempts, an absolute deadline, memory and storage ceilings,
 and an isolation requirement.  A limit that is not declared is not persisted, so
 documents and budget identities written before AP-007 are byte-for-byte unchanged.
+
+AP-007-F2 makes isolation proof mandatory for consequential actions of
+mission-owned work, whether or not a budget declares the requirement, and judges
+the proof against a recorded :class:`IsolationAcceptance`.  No acceptance is
+recorded in this build, so every such dispatch is refused.
 """
 
 from __future__ import annotations
 
 import json
 import math
+import re
 import sqlite3
 import threading
 import time
@@ -64,6 +70,100 @@ BOUNDED_LIMIT_FIELDS: tuple[str, ...] = (
 )
 
 
+#: Activation steps of isolated execution, in the order they are activated
+#: (AP-007-F2).  A step is usable only when a recorded :class:`IsolationAcceptance`
+#: names it; every step that is not named stays refused.
+CONTAINED_EXECUTION = "contained_execution"
+BROWSER_WORKER = "browser_worker"
+NATIVE_LIFECYCLE = "native_lifecycle"
+ISOLATION_STEPS: tuple[str, ...] = (CONTAINED_EXECUTION, BROWSER_WORKER, NATIVE_LIFECYCLE)
+
+_ACCEPTANCE_RUNTIME_RE = re.compile(r"[a-z0-9][a-z0-9._-]{0,63}")
+#: A full content digest, optionally prefixed with the repository it was pulled from.
+#: A shortened id is not a pin.
+_ACCEPTANCE_DIGEST_RE = re.compile(r"(?:[A-Za-z0-9][A-Za-z0-9._/:-]{0,199}@)?sha256:[0-9a-f]{64}")
+
+
+def _acceptance_text(value: Any, name: str, *, max_len: int) -> str:
+    if not isinstance(value, str):
+        raise BudgetError(f"{name} must be a string.")
+    cleaned = value.strip()
+    if not cleaned or len(cleaned) > max_len or any(ord(char) < 32 or ord(char) == 127 for char in cleaned):
+        raise BudgetError(f"{name} must be 1 to {max_len} printable characters.")
+    return cleaned
+
+
+def _positive_finite_time(value: Any) -> float:
+    """Return ``value`` as epoch seconds, or ``0.0`` when it is not a usable time."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return 0.0
+    stamp = float(value)
+    return stamp if math.isfinite(stamp) and stamp > 0 else 0.0
+
+
+@dataclass(frozen=True, slots=True)
+class IsolationAcceptance:
+    """What a recorded owner decision accepts as runtime isolation (AP-007-F2).
+
+    Server composition hands one to :class:`DurableTaskBudgetManager`.  It is never
+    parsed from a request body, from model tool arguments or from a planning
+    document.  While no decision is recorded there is none, and every dispatch that
+    needs isolation is refused.
+
+    The record pins one container backend (runtime, runtime version and image
+    digest), the earliest qualification time it accepts, and the activation steps it
+    covers.  Steps are activated in the order of :data:`ISOLATION_STEPS`: a later
+    step cannot be recorded without the earlier ones.
+    """
+
+    decision_ref: str
+    runtime: str
+    runtime_version: str
+    image_digest: str
+    qualified_not_before: float
+    activated_steps: frozenset[str] = frozenset()
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "decision_ref", _acceptance_text(self.decision_ref, "decision_ref", max_len=200))
+        runtime = _acceptance_text(self.runtime, "runtime", max_len=64).lower()
+        if not _ACCEPTANCE_RUNTIME_RE.fullmatch(runtime):
+            raise BudgetError("runtime must be a container runtime name such as `docker`.")
+        object.__setattr__(self, "runtime", runtime)
+        object.__setattr__(
+            self, "runtime_version", _acceptance_text(self.runtime_version, "runtime_version", max_len=80)
+        )
+        digest = _acceptance_text(self.image_digest, "image_digest", max_len=300)
+        if not _ACCEPTANCE_DIGEST_RE.fullmatch(digest):
+            raise BudgetError("image_digest must be a full sha256 content digest.")
+        object.__setattr__(self, "image_digest", digest)
+        not_before = _positive_finite_time(self.qualified_not_before)
+        if not not_before:
+            raise BudgetError("qualified_not_before must be a positive finite epoch timestamp.")
+        object.__setattr__(self, "qualified_not_before", not_before)
+        steps = self.activated_steps
+        if isinstance(steps, (str, bytes)) or not isinstance(steps, (frozenset, set, tuple, list)):
+            raise BudgetError("activated_steps must be a collection of step names.")
+        if any(not isinstance(step, str) or step not in ISOLATION_STEPS for step in steps):
+            raise BudgetError(f"activated_steps must name steps from {ISOLATION_STEPS}.")
+        activated = frozenset(steps)
+        if activated != frozenset(ISOLATION_STEPS[: len(activated)]):
+            raise BudgetError(
+                f"activated_steps must follow the activation order {ISOLATION_STEPS}: "
+                "a later step cannot be recorded without the earlier ones."
+            )
+        object.__setattr__(self, "activated_steps", activated)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "decision_ref": self.decision_ref,
+            "runtime": self.runtime,
+            "runtime_version": self.runtime_version,
+            "image_digest": self.image_digest,
+            "qualified_not_before": self.qualified_not_before,
+            "activated_steps": [step for step in ISOLATION_STEPS if step in self.activated_steps],
+        }
+
+
 @dataclass(frozen=True, slots=True)
 class IsolationEvidence:
     """Server-observed runtime isolation state for one dispatch (AP-007).
@@ -71,6 +171,11 @@ class IsolationEvidence:
     Coordination evidence, never user or model authority: server code builds it
     from the sandbox admission decision; it is never parsed from a request body or
     from model tool arguments.
+
+    AP-007-F2: the evidence also names the backend's runtime, runtime version and
+    image digest, the qualification it rests on with the time of the qualification
+    run, and the one activation step it proves.  They are compared with the recorded
+    :class:`IsolationAcceptance`.
     """
 
     execution_mode: str
@@ -79,22 +184,61 @@ class IsolationEvidence:
     backend_id: str = ""
     error_code: str = ""
     reason: str = ""
+    runtime: str = ""
+    runtime_version: str = ""
+    image_digest: str = ""
+    qualification_id: str = ""
+    qualified_at: float = 0.0
+    step: str = CONTAINED_EXECUTION
 
     @classmethod
-    def from_admission(cls, decision: Any, *, execution_mode: str) -> IsolationEvidence:
+    def from_admission(
+        cls,
+        decision: Any,
+        *,
+        execution_mode: str,
+        qualification: Any = None,
+    ) -> IsolationEvidence:
         """Adapt a ``sandbox_boundary.SecurityAdmissionDecision`` without importing it.
 
         Only the literal ``True`` counts: a missing attribute, a truthy non-boolean
         or an absent backend reads as "not admitted / not qualified".
+
+        ``qualification`` is the active backend's ``BackendQualificationRecord``.  It
+        is used only when it names that backend and its verdict is ``qualified``;
+        otherwise the evidence carries no qualification and cannot be accepted.  A
+        qualification is as old as the run that produced it: ``qualified_at`` is the
+        earlier of the time the record was written and the time its report was
+        generated, so recording an old report again does not make it fresh.  A record
+        without both times carries no qualification time.  A sandbox admission proves
+        the contained-execution step and no other.
         """
         backend = getattr(decision, "active_backend", None)
+        backend_id = str(getattr(backend, "backend_id", "") or "")[:64]
+        qualification_id = ""
+        qualified_at = 0.0
+        if (
+            backend_id
+            and getattr(qualification, "verdict", None) == "qualified"
+            and str(getattr(qualification, "backend_id", "") or "") == backend_id
+        ):
+            qualification_id = str(getattr(qualification, "qualification_id", "") or "").strip()[:120]
+            recorded_at = _positive_finite_time(getattr(qualification, "qualified_at", None))
+            run_at = _positive_finite_time(getattr(qualification, "report_generated_at", None))
+            qualified_at = min(recorded_at, run_at) if recorded_at and run_at else 0.0
         return cls(
             execution_mode=str(execution_mode or "").strip().lower(),
             admitted=getattr(decision, "allowed", None) is True,
             qualified=getattr(decision, "container_qualified", None) is True,
-            backend_id=str(getattr(backend, "backend_id", "") or "")[:64],
+            backend_id=backend_id,
             error_code=str(getattr(decision, "error_code", "") or "")[:80],
             reason=str(getattr(decision, "reason", "") or "")[:300],
+            runtime=str(getattr(backend, "runtime", "") or "").strip().lower()[:64],
+            runtime_version=str(getattr(backend, "runtime_version", "") or "").strip()[:80],
+            image_digest=str(getattr(backend, "image_digest", "") or "").strip()[:300],
+            qualification_id=qualification_id,
+            qualified_at=qualified_at,
+            step=CONTAINED_EXECUTION,
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -104,17 +248,47 @@ class IsolationEvidence:
             "qualified": self.qualified,
             "backend_id": self.backend_id,
             "error_code": self.error_code,
+            "runtime": self.runtime,
+            "runtime_version": self.runtime_version,
+            "image_digest": self.image_digest,
+            "qualification_id": self.qualification_id,
+            "qualified_at": self.qualified_at,
+            "step": self.step,
         }
 
 
-def isolation_refusal(evidence: IsolationEvidence | None) -> str:
+def isolation_refusal(
+    evidence: IsolationEvidence | None,
+    *,
+    acceptance: IsolationAcceptance | None = None,
+    step: str = CONTAINED_EXECUTION,
+) -> str:
     """Return why isolated execution must be refused, or ``""`` when it is proven.
 
     There is no downgrade path: ``host`` and ``disabled`` modes are never isolation,
     and missing evidence is a refusal rather than an assumption.
+
+    AP-007-F2: proof is judged against a recorded ``acceptance``.  Without one
+    nothing is accepted.  ``step`` is the activation step the dispatch belongs to; it
+    must be activated by the acceptance, and the evidence must prove that step.  The
+    backend must be the pinned container runtime, runtime version and image, and its
+    qualification must not predate the acceptance.  Contained execution is the only
+    step this build defines evidence for, so the later steps are always refused.
     """
+    wanted = step if isinstance(step, str) else ""
+    if wanted not in ISOLATION_STEPS:
+        return "runtime isolation is required but the dispatch names no known activation step"
+    if not isinstance(acceptance, IsolationAcceptance):
+        return "runtime isolation is required but no accepted isolation backend is recorded"
+    if wanted not in acceptance.activated_steps:
+        return f"runtime isolation is required but the `{wanted}` step is not activated by the recorded acceptance"
+    if wanted != CONTAINED_EXECUTION:
+        return f"runtime isolation is required but no evidence is defined for the `{wanted}` step"
     if not isinstance(evidence, IsolationEvidence):
         return "runtime isolation is required but no isolation evidence was presented"
+    if evidence.step != wanted:
+        proven = evidence.step if isinstance(evidence.step, str) and evidence.step in ISOLATION_STEPS else "unknown"
+        return f"runtime isolation is required but the evidence proves the `{proven}` step, not `{wanted}`"
     mode = str(evidence.execution_mode or "").strip().lower()
     if mode != "sandbox":
         return f"runtime isolation is required but the execution mode is `{mode or 'unknown'}`, not `sandbox`"
@@ -123,6 +297,17 @@ def isolation_refusal(evidence: IsolationEvidence | None) -> str:
         return f"runtime isolation is required but sandbox admission is refused ({detail})"
     if evidence.qualified is not True or not str(evidence.backend_id or "").strip():
         return "runtime isolation is required but no qualified sandbox backend is active"
+    observed = (
+        str(evidence.runtime or "").strip().lower(),
+        str(evidence.runtime_version or "").strip(),
+        str(evidence.image_digest or "").strip(),
+    )
+    if observed != (acceptance.runtime, acceptance.runtime_version, acceptance.image_digest):
+        return "runtime isolation is required but the active backend is not the accepted runtime and image"
+    if not str(evidence.qualification_id or "").strip():
+        return "runtime isolation is required but the active backend names no qualification"
+    if _positive_finite_time(evidence.qualified_at) < acceptance.qualified_not_before:
+        return "runtime isolation is required but the backend qualification predates the recorded acceptance"
     return ""
 
 
@@ -547,8 +732,39 @@ class TaskBudgetState:
         return ""
 
 
+def _mission_owns_chain(conn: sqlite3.Connection, task_ids: Sequence[str]) -> bool:
+    """True when a task of the leaf-to-root chain is a task of a mission plan (AP-007-F2).
+
+    This is the ownership rule of the mission stop and of the late-result fence: the
+    task is a task of a mission plan, or a descendant of one.  The task a plan hangs
+    from is not a task of the plan.  A store without mission tables owns no mission
+    work.
+    """
+    if not task_ids:
+        return False
+    mission_tables = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'runtime_mission_tasks'"
+    ).fetchone()
+    if mission_tables is None:
+        return False
+    for task_id in task_ids:
+        owned = conn.execute(
+            "SELECT 1 FROM runtime_mission_tasks WHERE task_id = ? LIMIT 1",
+            (task_id,),
+        ).fetchone()
+        if owned is not None:
+            return True
+    return False
+
+
 class DurableTaskBudgetManager:
-    """SQLite-backed task and recovery budget enforcement over ``runtime_tasks.budget_json``."""
+    """SQLite-backed task and recovery budget enforcement over ``runtime_tasks.budget_json``.
+
+    ``isolation_acceptance`` is the recorded acceptance that isolation proof is judged
+    against (AP-007-F2).  It is fixed when the server composes the manager and is not
+    supplied per dispatch.  The default is none, which refuses every dispatch that
+    needs isolation.
+    """
 
     def __init__(
         self,
@@ -556,10 +772,19 @@ class DurableTaskBudgetManager:
         db_path: Path,
         *,
         retry_policy: runtime_persistence.BusyRetryPolicy = runtime_persistence.DEFAULT_BUSY_RETRY_POLICY,
+        isolation_acceptance: IsolationAcceptance | None = None,
     ) -> None:
+        if isolation_acceptance is not None and not isinstance(isolation_acceptance, IsolationAcceptance):
+            raise BudgetError("isolation_acceptance must be an IsolationAcceptance or None.")
         self._storage = storage
         self._db_path = db_path
         self._retry_policy = retry_policy
+        self._isolation_acceptance = isolation_acceptance
+
+    @property
+    def isolation_acceptance(self) -> IsolationAcceptance | None:
+        """The recorded acceptance this manager judges isolation proof against, if any."""
+        return self._isolation_acceptance
 
     @staticmethod
     def _validate_task_id(task_id: str) -> str:
@@ -781,6 +1006,8 @@ class DurableTaskBudgetManager:
         epoch: int | None = None,
         now: float | None = None,
         isolation: IsolationEvidence | None = None,
+        consequential: bool = True,
+        isolation_step: str = CONTAINED_EXECUTION,
     ) -> tuple[TaskBudgetState, TaskBudgetState]:
         """Atomically validate and charge one action to its leaf and root budgets.
 
@@ -796,6 +1023,15 @@ class DurableTaskBudgetManager:
         unless ``isolation`` proves a qualified sandbox.  The default is refusal, so a
         caller that presents nothing can never reach a host-execution path for such a
         task.  Cancellation is checked on the same whole chain.
+
+        AP-007-F2: for mission-owned work the proof is mandatory, whether or not a
+        budget declares the requirement.  A charge needs proof when the chain contains
+        a task of a mission plan and the action is ``consequential``, or belongs to an
+        ``isolation_step`` other than contained execution.  Both arguments default to
+        the refusing side: a caller that does not say what it dispatches is treated as
+        dispatching a consequential action.  Proof is judged against the manager's
+        recorded acceptance (see :func:`isolation_refusal`).  A charge for work that no
+        mission owns is not affected.
         """
 
         tid = self._validate_task_id(task_id)
@@ -805,7 +1041,12 @@ class DurableTaskBudgetManager:
         expected_session = session_id.strip()
         if epoch is not None:
             _non_neg_int(epoch, "epoch", min_value=1)
+        if not isinstance(consequential, bool):
+            raise BudgetError("consequential must be a boolean.")
+        if not isinstance(isolation_step, str) or isolation_step not in ISOLATION_STEPS:
+            raise BudgetError(f"isolation_step must be one of {ISOLATION_STEPS}.")
         ts = time.time() if now is None else float(now)
+        acceptance = self._isolation_acceptance
 
         def _tx(conn: sqlite3.Connection) -> tuple[TaskBudgetState, TaskBudgetState]:
             conn.row_factory = sqlite3.Row
@@ -826,8 +1067,11 @@ class DurableTaskBudgetManager:
             root_current = chain[authoritative_root]
             if any(state.cancel_requested for state in chain.values()):
                 raise ExecutionCancelled("task or root-task cancellation requested.")
-            if any(state.spec.isolation_required for state in chain.values()):
-                refusal = isolation_refusal(isolation)
+            needs_proof = any(state.spec.isolation_required for state in chain.values())
+            if not needs_proof and (consequential or isolation_step != CONTAINED_EXECUTION):
+                needs_proof = _mission_owns_chain(conn, tuple(rows))
+            if needs_proof:
+                refusal = isolation_refusal(isolation, acceptance=acceptance, step=isolation_step)
                 if refusal:
                     raise IsolationUnavailable(
                         f"{refusal}; dependent execution is blocked and the host shell is not used."

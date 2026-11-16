@@ -863,11 +863,16 @@ class _MissionHaltTicket:
 def _mission_require_isolation(
     root_budget: execution_budget.TaskBudgetState,
     isolation: execution_budget.IsolationEvidence | None,
+    acceptance: execution_budget.IsolationAcceptance | None,
 ) -> None:
-    """Refuse dispatch when the mission needs isolation that is not proven."""
+    """Refuse dispatch when the mission needs isolation that is not proven.
+
+    AP-007-F2: proof is judged against the recorded ``acceptance``; without one
+    nothing is accepted.
+    """
     if not root_budget.spec.isolation_required:
         return
-    refusal = execution_budget.isolation_refusal(isolation)
+    refusal = execution_budget.isolation_refusal(isolation, acceptance=acceptance)
     if refusal:
         raise MissionIsolationRejected(
             f"{refusal}; dependent execution is blocked and the host shell is not used."
@@ -1336,6 +1341,7 @@ def _mission_recovery_locked(
     now: float,
     artifact_status: Callable[[str], Any] | None = None,
     isolation: execution_budget.IsolationEvidence | None = None,
+    acceptance: execution_budget.IsolationAcceptance | None = None,
     stop: dict[str, Any] | None = None,
 ) -> MissionRecoveryReport:
     """Build the truthful mission report from durable state only."""
@@ -1426,7 +1432,7 @@ def _mission_recovery_locked(
     )
     isolation_refused = ""
     if live and work_owed and root_budget is not None and root_budget.spec.isolation_required:
-        isolation_refused = execution_budget.isolation_refusal(isolation)
+        isolation_refused = execution_budget.isolation_refusal(isolation, acceptance=acceptance)
     incomplete = any(task.outcome == "incomplete" for task in tasks)
 
     if plan_status == "superseded":
@@ -1748,13 +1754,22 @@ class DurableTaskStateMachine:
         retry_policy: runtime_persistence.BusyRetryPolicy = runtime_persistence.DEFAULT_BUSY_RETRY_POLICY,
         recovery_memory: recovery_guard.RecoveryGuard | None = None,
         containment_store: process_supervision.ContainmentStore | None = None,
+        isolation_acceptance: execution_budget.IsolationAcceptance | None = None,
     ) -> None:
         self._storage = storage
         self._db_path = db_path
         self._retry_policy = retry_policy
         self._containment_store = containment_store
         self.store = runtime_persistence.RuntimePersistenceStore(storage, db_path, retry_policy=retry_policy)
-        self.budgets = execution_budget.DurableTaskBudgetManager(storage, db_path, retry_policy=retry_policy)
+        # AP-007-F2: the recorded acceptance that isolation proof is judged against.
+        # None, the default, refuses every dispatch that needs isolation.
+        self.budgets = execution_budget.DurableTaskBudgetManager(
+            storage,
+            db_path,
+            retry_policy=retry_policy,
+            isolation_acceptance=isolation_acceptance,
+        )
+        self._isolation_acceptance = self.budgets.isolation_acceptance
         self.checkpoints = workflow_checkpoints.DurableTaskCheckpointStore(
             storage,
             db_path,
@@ -2269,6 +2284,10 @@ class DurableTaskStateMachine:
         AP-007: a root budget that declares ``isolation_required`` refuses the claim
         unless ``isolation`` proves a qualified sandbox.  No epoch is minted, so the
         node never reaches ``running`` and no action can be admitted for it.
+
+        AP-007-F2: the proof is judged against the recorded acceptance.  A claim is
+        not a dispatch: for a plan that declares nothing, the proof is demanded when
+        a consequential action is charged, not here.
         """
         mid = _mission_clean_name(mission_id, "mission_id")
         key = _mission_clean_name(task_key, "task_key")
@@ -2309,7 +2328,7 @@ class DurableTaskStateMachine:
             violation = root_budget.violation_reason(check_recovery=False, now=ts)
             if root_budget.cancel_requested or violation:
                 raise MissionBindingRejected(violation or "Mission root cancellation is active.")
-            _mission_require_isolation(root_budget, isolation)
+            _mission_require_isolation(root_budget, isolation, self._isolation_acceptance)
             if expected_state_version is not None and int(node["state_version"]) != expected_state_version:
                 raise MissionBindingRejected("Mission task state_version changed before scheduling.")
             readiness = self._mission_readiness_locked(
@@ -2947,6 +2966,7 @@ class DurableTaskStateMachine:
                 now=ts,
                 artifact_status=artifact_status,
                 isolation=isolation,
+                acceptance=self._isolation_acceptance,
                 stop=stop,
             )
 
@@ -3563,7 +3583,7 @@ class DurableTaskStateMachine:
             violation = root_budget.violation_reason(check_recovery=False, now=ts)
             if root_budget.cancel_requested or violation:
                 raise workflow_checkpoints.ResumeRejected(violation or "Mission cancellation is active.")
-            _mission_require_isolation(root_budget, isolation)
+            _mission_require_isolation(root_budget, isolation, self._isolation_acceptance)
             active_rows = conn.execute(
                 "SELECT * FROM runtime_task_epochs WHERE task_id = ? AND status = 'active'",
                 (task_id,),

@@ -12,11 +12,16 @@ import pytest
 import execution_budget
 import runtime_persistence
 from execution_budget import (
+    BROWSER_WORKER,
+    CONTAINED_EXECUTION,
+    ISOLATION_STEPS,
+    NATIVE_LIFECYCLE,
     BudgetError,
     BudgetExceeded,
     BudgetLimits,
     ExecutionBudget,
     ExecutionCancelled,
+    IsolationAcceptance,
     IsolationEvidence,
     TaskBudgetSpec,
     TaskBudgetState,
@@ -24,6 +29,30 @@ from execution_budget import (
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+
+# AP-007-F2.  Clearly fictional values: no isolated runtime is qualified in this
+# repository and no acceptance is recorded outside tests.
+_F2_DIGEST = "python@sha256:" + "ab" * 32
+_F2_NOT_BEFORE = 1_800_000_000.0
+_F2_ACCEPTANCE = IsolationAcceptance(
+    decision_ref="test-fixture-acceptance-not-an-owner-decision",
+    runtime="docker",
+    runtime_version="0.0.0-test-fixture",
+    image_digest=_F2_DIGEST,
+    qualified_not_before=_F2_NOT_BEFORE,
+    activated_steps=frozenset({CONTAINED_EXECUTION}),
+)
+_F2_PROVEN = IsolationEvidence(
+    execution_mode="sandbox",
+    admitted=True,
+    qualified=True,
+    backend_id="fixture-backend",
+    runtime="docker",
+    runtime_version="0.0.0-test-fixture",
+    image_digest=_F2_DIGEST,
+    qualification_id="fixture-qualification",
+    qualified_at=_F2_NOT_BEFORE,
+)
 
 
 def test_token_cost_tool_and_retry_budgets_are_enforced() -> None:
@@ -227,25 +256,56 @@ def test_ap007_bounded_stop_boundaries_are_exact() -> None:
     assert undeclared.bounded_stop(now=1.0) is None
 
 
+def _f2_refusal(evidence: Any) -> str:
+    """Judge ``evidence`` against the fixture acceptance, for the contained-execution step."""
+    return isolation_refusal(evidence, acceptance=_F2_ACCEPTANCE)
+
+
+def _f2_admission(**backend: Any) -> SimpleNamespace:
+    """A stand-in for an allowed, qualified sandbox admission decision on the pinned backend."""
+    fields = {
+        "backend_id": "fixture-backend",
+        "runtime": "docker",
+        "runtime_version": "0.0.0-test-fixture",
+        "image_digest": _F2_DIGEST,
+        **backend,
+    }
+    return SimpleNamespace(allowed=True, container_qualified=True, active_backend=SimpleNamespace(**fields))
+
+
+def _f2_qualification(**fields: Any) -> SimpleNamespace:
+    """A stand-in for a ``BackendQualificationRecord``: when it was recorded and when its run happened."""
+    record = {
+        "qualification_id": "fixture-qualification",
+        "backend_id": "fixture-backend",
+        "verdict": "qualified",
+        "qualified_at": _F2_NOT_BEFORE,
+        "report_generated_at": _F2_NOT_BEFORE,
+        **fields,
+    }
+    return SimpleNamespace(**record)
+
+
 def test_ap007_isolation_needs_literal_proof_and_has_no_host_fallback() -> None:
-    proven = IsolationEvidence(execution_mode="sandbox", admitted=True, qualified=True, backend_id="fixture-backend")
-    assert isolation_refusal(proven) == ""
+    proven = _F2_PROVEN
+    assert _f2_refusal(proven) == ""
 
     refusals = {
-        "nothing presented": isolation_refusal(None),
-        "a mapping instead of evidence": isolation_refusal({"qualified": True}),  # type: ignore[arg-type]
-        "host mode": isolation_refusal(dataclasses.replace(proven, execution_mode="host")),
-        "disabled mode": isolation_refusal(dataclasses.replace(proven, execution_mode="disabled")),
-        "no mode": isolation_refusal(dataclasses.replace(proven, execution_mode="")),
-        "admission refused": isolation_refusal(dataclasses.replace(proven, admitted=False, error_code="incident")),
-        "not qualified": isolation_refusal(dataclasses.replace(proven, qualified=False)),
-        "no backend named": isolation_refusal(dataclasses.replace(proven, backend_id="  ")),
-        "truthy but not True": isolation_refusal(
+        "nothing presented": _f2_refusal(None),
+        "a mapping instead of evidence": _f2_refusal({"qualified": True}),
+        "host mode": _f2_refusal(dataclasses.replace(proven, execution_mode="host")),
+        "disabled mode": _f2_refusal(dataclasses.replace(proven, execution_mode="disabled")),
+        "no mode": _f2_refusal(dataclasses.replace(proven, execution_mode="")),
+        "admission refused": _f2_refusal(dataclasses.replace(proven, admitted=False, error_code="incident")),
+        "not qualified": _f2_refusal(dataclasses.replace(proven, qualified=False)),
+        "no backend named": _f2_refusal(dataclasses.replace(proven, backend_id="  ")),
+        "truthy but not True": _f2_refusal(
             dataclasses.replace(proven, admitted=1, qualified="yes")  # type: ignore[arg-type]
         ),
     }
     for case, refusal in refusals.items():
         assert refusal.startswith("runtime isolation is required"), case
+    assert "no isolation evidence was presented" in refusals["nothing presented"]
     assert "`host`" in refusals["host mode"]
     assert "incident" in refusals["admission refused"]
 
@@ -258,17 +318,280 @@ def test_ap007_isolation_needs_literal_proof_and_has_no_host_fallback() -> None:
         False,
         "",
     )
-    assert isolation_refusal(adapted)
+    assert _f2_refusal(adapted)
     truthy = SimpleNamespace(allowed=1, container_qualified="yes", active_backend=SimpleNamespace(backend_id="b1"))
-    assert isolation_refusal(IsolationEvidence.from_admission(truthy, execution_mode="sandbox"))
-    assert isolation_refusal(IsolationEvidence.from_admission(object(), execution_mode="sandbox"))
-    qualified = SimpleNamespace(
-        allowed=True, container_qualified=True, active_backend=SimpleNamespace(backend_id="fixture-backend")
-    )
-    assert isolation_refusal(IsolationEvidence.from_admission(qualified, execution_mode="sandbox")) == ""
-    assert isolation_refusal(IsolationEvidence.from_admission(qualified, execution_mode="host"))
+    assert _f2_refusal(IsolationEvidence.from_admission(truthy, execution_mode="sandbox"))
+    assert _f2_refusal(IsolationEvidence.from_admission(object(), execution_mode="sandbox"))
+    qualified = _f2_admission()
+    record = _f2_qualification()
+    proven_by_admission = IsolationEvidence.from_admission(qualified, execution_mode="sandbox", qualification=record)
+    assert _f2_refusal(proven_by_admission) == ""
+    assert _f2_refusal(IsolationEvidence.from_admission(qualified, execution_mode="host", qualification=record))
+    # AP-007-F2: an allowed, qualified admission is not enough without its qualification record.
+    without_record = IsolationEvidence.from_admission(qualified, execution_mode="sandbox")
+    assert "names no qualification" in _f2_refusal(without_record)
     # The evidence record names no secret and no reason text when it is serialised.
-    assert set(adapted.to_dict()) == {"execution_mode", "admitted", "qualified", "backend_id", "error_code"}
+    assert set(adapted.to_dict()) == {
+        "execution_mode",
+        "admitted",
+        "qualified",
+        "backend_id",
+        "error_code",
+        "runtime",
+        "runtime_version",
+        "image_digest",
+        "qualification_id",
+        "qualified_at",
+        "step",
+    }
+
+
+def test_ap007_f2_nothing_is_accepted_without_a_recorded_acceptance() -> None:
+    """Proof alone is never enough: what is accepted has to be recorded first."""
+    for refusal in (isolation_refusal(_F2_PROVEN), isolation_refusal(_F2_PROVEN, acceptance=None)):
+        assert refusal == "runtime isolation is required but no accepted isolation backend is recorded"
+    # A look-alike is not an acceptance record.
+    look_alikes: tuple[Any, ...] = (
+        _F2_ACCEPTANCE.to_dict(),
+        SimpleNamespace(**_F2_ACCEPTANCE.to_dict()),
+        {"runtime": "docker"},
+        True,
+        "accepted",
+    )
+    for look_alike in look_alikes:
+        assert "no accepted isolation backend is recorded" in isolation_refusal(_F2_PROVEN, acceptance=look_alike)
+    # The record itself is what the proof is judged against.
+    assert isolation_refusal(_F2_PROVEN, acceptance=_F2_ACCEPTANCE) == ""
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "fragment"),
+    [
+        ("runtime", "podman", "not the accepted runtime and image"),
+        ("runtime", "", "not the accepted runtime and image"),
+        ("runtime_version", "0.0.1-test-fixture", "not the accepted runtime and image"),
+        ("runtime_version", "", "not the accepted runtime and image"),
+        ("image_digest", "python@sha256:" + "cd" * 32, "not the accepted runtime and image"),
+        # The same content named without its repository is a different string: no guessing.
+        ("image_digest", "sha256:" + "ab" * 32, "not the accepted runtime and image"),
+        ("image_digest", "python@sha256:" + "ab" * 6, "not the accepted runtime and image"),
+        ("image_digest", "", "not the accepted runtime and image"),
+        ("qualification_id", "", "names no qualification"),
+        ("qualification_id", "   ", "names no qualification"),
+        ("qualified_at", _F2_NOT_BEFORE - 0.001, "predates the recorded acceptance"),
+        ("qualified_at", 0.0, "predates the recorded acceptance"),
+        ("qualified_at", -1.0, "predates the recorded acceptance"),
+        ("qualified_at", float("nan"), "predates the recorded acceptance"),
+        ("qualified_at", float("inf"), "predates the recorded acceptance"),
+        ("qualified_at", True, "predates the recorded acceptance"),
+        ("qualified_at", str(_F2_NOT_BEFORE + 10), "predates the recorded acceptance"),
+        ("qualified_at", None, "predates the recorded acceptance"),
+        ("step", BROWSER_WORKER, "proves the `browser_worker` step, not `contained_execution`"),
+        ("step", NATIVE_LIFECYCLE, "proves the `native_lifecycle` step, not `contained_execution`"),
+        ("step", "", "proves the `unknown` step"),
+        ("step", None, "proves the `unknown` step"),
+    ],
+)
+def test_ap007_f2_proof_must_match_the_recorded_pin_and_a_fresh_qualification(
+    field: str, value: Any, fragment: str
+) -> None:
+    """Answers 1 and 2: the pinned container runtime and image, and a qualification that is not older."""
+    assert _f2_refusal(_F2_PROVEN) == ""
+    refusal = _f2_refusal(dataclasses.replace(_F2_PROVEN, **{field: value}))
+    assert refusal.startswith("runtime isolation is required")
+    assert fragment in refusal
+
+
+def test_ap007_f2_the_freshness_boundary_and_the_pin_comparison_are_exact() -> None:
+    # A qualification taken exactly at the recorded time, or later, is fresh.
+    assert _f2_refusal(dataclasses.replace(_F2_PROVEN, qualified_at=_F2_NOT_BEFORE)) == ""
+    assert _f2_refusal(dataclasses.replace(_F2_PROVEN, qualified_at=_F2_NOT_BEFORE + 86_400)) == ""
+    assert _f2_refusal(dataclasses.replace(_F2_PROVEN, qualified_at=int(_F2_NOT_BEFORE) + 1)) == ""
+    # Only the runtime name is case-insensitive; surrounding whitespace is not a difference.
+    padded = dataclasses.replace(_F2_PROVEN, runtime=" Docker ", runtime_version=" 0.0.0-test-fixture ")
+    assert _f2_refusal(padded) == ""
+    assert _f2_refusal(dataclasses.replace(_F2_PROVEN, runtime_version="0.0.0-TEST-FIXTURE"))
+    assert _f2_refusal(dataclasses.replace(_F2_PROVEN, image_digest=_F2_DIGEST.upper()))
+    # Moving the recorded time forward turns the same proof stale.
+    later = dataclasses.replace(_F2_ACCEPTANCE, qualified_not_before=_F2_NOT_BEFORE + 1)
+    assert "predates the recorded acceptance" in isolation_refusal(_F2_PROVEN, acceptance=later)
+
+
+def test_ap007_f2_each_step_is_refused_until_it_is_recorded_and_has_evidence() -> None:
+    """Answer 4: contained execution, then the browser worker, then the native lifecycle."""
+    assert ISOLATION_STEPS == (CONTAINED_EXECUTION, BROWSER_WORKER, NATIVE_LIFECYCLE)
+
+    nothing_activated = dataclasses.replace(_F2_ACCEPTANCE, activated_steps=frozenset())
+    assert "`contained_execution` step is not activated" in isolation_refusal(_F2_PROVEN, acceptance=nothing_activated)
+
+    # With contained execution recorded, the later steps are still refused.
+    for step in (BROWSER_WORKER, NATIVE_LIFECYCLE):
+        for evidence in (_F2_PROVEN, dataclasses.replace(_F2_PROVEN, step=step), None):
+            refusal = isolation_refusal(evidence, acceptance=_F2_ACCEPTANCE, step=step)
+            assert f"`{step}` step is not activated" in refusal
+
+    # Recording a later step does not let contained-execution proof stand in for it,
+    # and this build defines no evidence for the later steps at all.
+    everything = dataclasses.replace(_F2_ACCEPTANCE, activated_steps=frozenset(ISOLATION_STEPS))
+    assert isolation_refusal(_F2_PROVEN, acceptance=everything) == ""
+    for step in (BROWSER_WORKER, NATIVE_LIFECYCLE):
+        for evidence in (_F2_PROVEN, dataclasses.replace(_F2_PROVEN, step=step), None):
+            refusal = isolation_refusal(evidence, acceptance=everything, step=step)
+            assert refusal == f"runtime isolation is required but no evidence is defined for the `{step}` step"
+
+    # A dispatch that names no known step is refused before anything else is read.
+    unknown_steps: tuple[Any, ...] = ("", "host", "sandbox", "CONTAINED_EXECUTION", None, 1, True)
+    for unknown in unknown_steps:
+        assert "names no known activation step" in isolation_refusal(_F2_PROVEN, acceptance=everything, step=unknown)
+        assert "names no known activation step" in isolation_refusal(_F2_PROVEN, step=unknown)
+
+
+@pytest.mark.parametrize(
+    ("field", "bad"),
+    [
+        ("decision_ref", ""),
+        ("decision_ref", "   "),
+        ("decision_ref", None),
+        ("decision_ref", 7),
+        ("decision_ref", "x" * 201),
+        ("decision_ref", "two\nlines"),
+        ("runtime", ""),
+        ("runtime", "docker desktop"),
+        ("runtime", "../docker"),
+        ("runtime", None),
+        ("runtime_version", ""),
+        ("runtime_version", None),
+        ("runtime_version", 29),
+        ("image_digest", ""),
+        ("image_digest", None),
+        ("image_digest", "python:3.12-slim"),
+        ("image_digest", "sha256:aa943ce41142"),
+        ("image_digest", "python@sha256:" + "AB" * 32),
+        ("image_digest", "python@md5:" + "ab" * 32),
+        ("qualified_not_before", 0),
+        ("qualified_not_before", -1.0),
+        ("qualified_not_before", float("nan")),
+        ("qualified_not_before", float("inf")),
+        ("qualified_not_before", True),
+        ("qualified_not_before", "1800000000"),
+        ("qualified_not_before", None),
+        ("activated_steps", frozenset({BROWSER_WORKER})),
+        ("activated_steps", frozenset({NATIVE_LIFECYCLE})),
+        ("activated_steps", frozenset({CONTAINED_EXECUTION, NATIVE_LIFECYCLE})),
+        ("activated_steps", frozenset({BROWSER_WORKER, NATIVE_LIFECYCLE})),
+        ("activated_steps", frozenset({"host"})),
+        ("activated_steps", frozenset({CONTAINED_EXECUTION, "host"})),
+        ("activated_steps", CONTAINED_EXECUTION),
+        ("activated_steps", None),
+        ("activated_steps", [1]),
+        ("activated_steps", {CONTAINED_EXECUTION: True}),
+    ],
+)
+def test_ap007_f2_a_malformed_acceptance_record_cannot_be_built(field: str, bad: Any) -> None:
+    with pytest.raises(BudgetError):
+        dataclasses.replace(_F2_ACCEPTANCE, **{field: bad})
+
+
+def test_ap007_f2_an_acceptance_record_is_normalised_and_keeps_the_activation_order() -> None:
+    record = IsolationAcceptance(
+        decision_ref="  fixture-ref  ",
+        runtime="Docker",
+        runtime_version=" 0.0.0-test-fixture ",
+        image_digest="sha256:" + "ab" * 32,
+        qualified_not_before=1_800_000_000,
+        activated_steps=[BROWSER_WORKER, CONTAINED_EXECUTION],  # type: ignore[arg-type]
+    )
+    assert (record.decision_ref, record.runtime, record.runtime_version) == (
+        "fixture-ref",
+        "docker",
+        "0.0.0-test-fixture",
+    )
+    assert record.activated_steps == frozenset({CONTAINED_EXECUTION, BROWSER_WORKER})
+    assert isinstance(record.qualified_not_before, float)
+    assert record.to_dict() == {
+        "decision_ref": "fixture-ref",
+        "runtime": "docker",
+        "runtime_version": "0.0.0-test-fixture",
+        "image_digest": "sha256:" + "ab" * 32,
+        "qualified_not_before": 1_800_000_000.0,
+        "activated_steps": [CONTAINED_EXECUTION, BROWSER_WORKER],
+    }
+    # Each prefix of the order is a valid record; nothing recorded is one of them.
+    for count in range(len(ISOLATION_STEPS) + 1):
+        steps = frozenset(ISOLATION_STEPS[:count])
+        assert dataclasses.replace(_F2_ACCEPTANCE, activated_steps=steps).activated_steps == steps
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        record.runtime = "podman"  # type: ignore[misc]
+
+
+def test_ap007_f2_evidence_takes_a_qualification_only_for_the_active_backend() -> None:
+    """A sandbox admission is adapted with the backend it names and the qualification of that backend."""
+    decision = _f2_admission(runtime="Docker", runtime_version=" 0.0.0-test-fixture ")
+    adapted = IsolationEvidence.from_admission(
+        decision,
+        execution_mode="sandbox",
+        qualification=_f2_qualification(qualified_at=_F2_NOT_BEFORE + 900, report_generated_at=_F2_NOT_BEFORE + 0.5),
+    )
+    assert (adapted.runtime, adapted.runtime_version, adapted.image_digest) == (
+        "docker",
+        "0.0.0-test-fixture",
+        _F2_DIGEST,
+    )
+    assert (adapted.qualification_id, adapted.qualified_at, adapted.step) == (
+        "fixture-qualification",
+        _F2_NOT_BEFORE + 0.5,
+        CONTAINED_EXECUTION,
+    )
+    assert _f2_refusal(adapted) == ""
+
+    unusable: dict[str, Any] = {
+        "no record": None,
+        "another backend's record": _f2_qualification(backend_id="other-backend"),
+        "a record that names no backend": _f2_qualification(backend_id=""),
+        "a failed verdict": _f2_qualification(verdict="failed"),
+        "a truthy verdict": _f2_qualification(verdict=True),
+        "no qualification id": _f2_qualification(qualification_id=""),
+        "no record time": _f2_qualification(qualified_at=None),
+        "no run time": _f2_qualification(report_generated_at=None),
+        "a run time of zero": _f2_qualification(report_generated_at=0.0),
+        "a time that is not a number": _f2_qualification(qualified_at=float("nan")),
+        "a run time that is not a number": _f2_qualification(report_generated_at=float("inf")),
+        "a boolean time": _f2_qualification(qualified_at=True),
+        "an older qualification": _f2_qualification(
+            qualified_at=_F2_NOT_BEFORE - 1, report_generated_at=_F2_NOT_BEFORE - 1
+        ),
+        # Answer 2: an old run recorded again today is still an old run.
+        "an old run recorded later": _f2_qualification(
+            qualified_at=_F2_NOT_BEFORE + 86_400, report_generated_at=_F2_NOT_BEFORE - 86_400
+        ),
+        # A record written before the run it claims to rest on is judged by the earlier time.
+        "a record older than its run": _f2_qualification(
+            qualified_at=_F2_NOT_BEFORE - 5, report_generated_at=_F2_NOT_BEFORE + 5
+        ),
+        "an unrelated object": object(),
+    }
+    for case, record in unusable.items():
+        evidence = IsolationEvidence.from_admission(decision, execution_mode="sandbox", qualification=record)
+        assert _f2_refusal(evidence).startswith("runtime isolation is required"), case
+
+    stale = IsolationEvidence.from_admission(
+        decision, execution_mode="sandbox", qualification=unusable["an old run recorded later"]
+    )
+    assert stale.qualified_at == _F2_NOT_BEFORE - 86_400
+    assert "predates the recorded acceptance" in _f2_refusal(stale)
+
+    # Without an active backend a qualification record proves nothing.
+    no_backend = SimpleNamespace(allowed=True, container_qualified=True, active_backend=None)
+    orphan = IsolationEvidence.from_admission(no_backend, execution_mode="sandbox", qualification=_f2_qualification())
+    assert (orphan.backend_id, orphan.qualification_id, orphan.qualified_at) == ("", "", 0.0)
+    assert _f2_refusal(orphan)
+    # A backend other than the pinned one is adapted faithfully and then refused.
+    other = IsolationEvidence.from_admission(
+        _f2_admission(image_digest="python@sha256:" + "cd" * 32),
+        execution_mode="sandbox",
+        qualification=_f2_qualification(),
+    )
+    assert "not the accepted runtime and image" in _f2_refusal(other)
 
 
 def test_ap007_budget_documents_are_never_rebuilt_field_by_field() -> None:

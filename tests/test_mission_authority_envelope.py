@@ -14,6 +14,7 @@ import pytest
 import app as studio
 import execution_budget
 import runtime_persistence
+import workflow_state
 
 
 @pytest.fixture()
@@ -642,3 +643,122 @@ def test_ap007_required_isolation_and_bounded_stops_deny_dispatch_at_the_tool_bo
     assert (stopped["ok"], stopped["error_code"]) == (False, "task_budget_exhausted")
     assert "no-progress limit exceeded" in stopped["output"]
     assert budgets.get_budget(stalled).tool_calls_used == 1
+
+
+_AP007_F2_INPUTS = {"request": "assemble the offline report", "input_version": 1}
+
+
+def _ap007_f2_claimed_plan_task(root: str, mission: str) -> tuple[str, int, str]:
+    """A mission plan under the running task ``root`` whose only task is claimed by a worker.
+
+    Returns the plan task's id with the epoch and worker of its lease.
+    """
+    sm = studio.get_task_state_machine()
+    sm.create_mission_plan(
+        root,
+        mission,
+        1,
+        (workflow_state.MissionTaskSpec("work", "Do the work", ("work-out",)),),
+        (),
+        inputs=_AP007_F2_INPUTS,
+        authority=studio.capture_mission_authority_envelope(root, root),
+    )
+    binding = sm.capture_mission_binding(mission, 1)
+    task = sm.list_mission_tasks(mission, 1)[0]
+    lease = sm.claim_ready_mission_task(
+        mission,
+        1,
+        "work",
+        binding=binding,
+        current_inputs=_AP007_F2_INPUTS,
+        current_authority=studio.capture_mission_authority_envelope(root, task.task_id),
+        worker_id="worker-work",
+    )
+    return task.task_id, lease.epoch.epoch, lease.epoch.worker_id
+
+
+def _ap007_f2_tool_call(
+    workspace: Path,
+    session_id: str,
+    task_id: str,
+    tool: str,
+    args: dict[str, Any],
+    *,
+    epoch: int | None = None,
+    worker_id: str | None = None,
+) -> dict[str, Any]:
+    return asyncio.run(
+        studio._execute_harness_tool(
+            None,
+            _session(workspace, session_id, task_id),
+            tool,
+            args,
+            epoch=epoch,
+            worker_id=worker_id,
+            step_id=1,
+            call_index=0,
+            mission_envelope=studio.capture_mission_authority_envelope(session_id, task_id),
+        )
+    )
+
+
+def test_ap007_f2_mission_owned_consequential_tools_are_refused_at_the_tool_boundary(
+    mission_env: Path,
+) -> None:
+    """AP-007-F2 at the real dispatch seam: mission-owned consequential work needs proven sandbox admission.
+
+    The plan declares no isolation requirement.  No acceptance is recorded and this
+    boundary presents no proof, so a consequential tool call of a plan task, or of a
+    task delegated by one, is refused before the tool runs.  Read-only calls of the
+    same tasks, and every call of work that no mission owns, are admitted as before.
+    """
+    (mission_env / "sample.txt").write_text("authority\n", encoding="utf-8")
+    root, mission, child = "ap007-f2-app-root", "ap007-f2-app", "ap007-f2-app-child"
+    _ap007_running_task(root, session_id=root)
+    plan_task, epoch, worker = _ap007_f2_claimed_plan_task(root, mission)
+    _ap007_running_task(child, session_id=root, parent_task_id=plan_task)  # delegated by the plan task
+    budgets = studio.get_task_state_machine().budgets
+    assert budgets.isolation_acceptance is None  # nothing is recorded in this build
+    for task_id in (root, plan_task, child):
+        assert budgets.get_budget(task_id).spec.isolation_required is False
+
+    owned: tuple[tuple[str, dict[str, Any]], ...] = (
+        (plan_task, {"epoch": epoch, "worker_id": worker}),
+        (child, {}),
+    )
+    write = {"path": "mission-write.txt", "content": "written without admission\n"}
+    for task_id, lease in owned:
+        refused = _ap007_f2_tool_call(mission_env, root, task_id, "write_file", write, **lease)
+        assert refused["ok"] is False, task_id
+        assert refused["error_code"] == "isolation_unavailable"
+        assert "no accepted isolation backend is recorded" in refused["output"]
+        assert "host shell is not used" in refused["output"]
+    assert not (mission_env / "mission-write.txt").exists()
+    assert [budgets.get_budget(task_id).tool_calls_used for task_id in (root, plan_task, child)] == [0, 0, 0]
+    assert _audit_statuses("write_file") == ["denied", "denied"]
+
+    # A read-only call of the same tasks is admitted and charged as before.
+    for task_id, lease in owned:
+        read = _ap007_f2_tool_call(mission_env, root, task_id, "read_file", {"path": "sample.txt"}, **lease)
+        assert read["ok"] is True, (task_id, read)
+        assert "authority" in read["output"]
+    assert [budgets.get_budget(task_id).tool_calls_used for task_id in (root, plan_task, child)] == [2, 1, 1]
+
+    # Work that no mission owns keeps its behaviour: the task the plan hangs from,
+    # a task outside every plan and that task's child run the same write.
+    plain, plain_child = "ap007-f2-app-plain", "ap007-f2-app-plain-child"
+    _ap007_running_task(plain, session_id=plain)
+    _ap007_running_task(plain_child, session_id=plain, parent_task_id=plain)
+    for session_id, task_id, name in (
+        (root, root, "root-write.txt"),
+        (plain, plain, "plain-write.txt"),
+        (plain, plain_child, "plain-child-write.txt"),
+    ):
+        written = _ap007_f2_tool_call(
+            mission_env, session_id, task_id, "write_file", {"path": name, "content": "as before\n"}
+        )
+        assert written["ok"] is True, (task_id, written)
+        assert (mission_env / name).read_text(encoding="utf-8") == "as before\n"
+    assert _audit_statuses("write_file")[2:] == ["completed", "completed", "completed"]
+    assert budgets.get_budget(root).tool_calls_used == 3
+    assert (budgets.get_budget(plain).tool_calls_used, budgets.get_budget(plain_child).tool_calls_used) == (2, 1)

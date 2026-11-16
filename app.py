@@ -12720,7 +12720,8 @@ class _AppMissionEnvelopeCoordinator:
         action_class: execution_spine.ActionClass,
         profile_outcome: execution_spine.ProfileAdmissionOutcome,
     ) -> execution_spine.ProfileAdmissionOutcome:
-        del action_class  # Every admitted task-bound dispatch consumes one tool call.
+        # Every admitted task-bound dispatch consumes one tool call.  The action
+        # class decides only whether mission-owned work needs isolation proof.
         if request.task_id is None:
             # Direct Chat and other explicitly taskless read paths retain their
             # existing policy/profile checks and do not fabricate mission tasks.
@@ -12763,6 +12764,7 @@ class _AppMissionEnvelopeCoordinator:
                 root_task_id=env.root_task_id,
                 session_id=env.session_id,
                 epoch=request.epoch,
+                consequential=execution_spine.is_consequential_action_class(action_class),
             )
         except runtime_persistence.StaleEpochError:
             # The task snapshot can race a takeover between its read and this
@@ -12777,6 +12779,9 @@ class _AppMissionEnvelopeCoordinator:
             # AP-007: no isolation evidence is presented here because no isolated
             # runtime is activated (U06). A task that requires isolation is refused;
             # there is no host-execution fallback.
+            # AP-007-F2: a consequential action of mission-owned work always requires
+            # it, and no acceptance is recorded, so such an action is refused here.
+            # Work that no mission owns is not affected.
             return self._denial(str(exc), "isolation_unavailable")
         except execution_budget.BudgetExceeded as exc:
             return self._denial(str(exc), "task_budget_exhausted")
