@@ -256,6 +256,7 @@
   "notes": [
     "Decision readiness is not story authorization; the AP ledger remains the story authority.",
     "The register and fixtures are offline planning evidence and are not consumed by app.py or studio.py.",
-    "Absent decisions, grants, measurements and qualification deny affected live actions without blocking unrelated offline work."
+    "Absent decisions, grants, measurements and qualification deny affected live actions without blocking unrelated offline work.",
+    "U06 owner input 2026-11-16T03:34:32Z (repository owner, recorded via agent session, not a resolution): backends container-only (M5-P3-01 pinned runtime/image; lifecycle, browser worker and host/disabled remain refused for AP); fresh target-host qualification run (scripts/qualify_environment.sh) required before U06 may be recorded satisfied (M5-P3-01 2026-10-31 alone insufficient for AP use); consequential mission actions dispatch only after proven sandbox admission (admission-then-dispatch, fail closed on refusal, never a host-execution fallback); activation order contained execution -> browser worker -> native lifecycle, each step its own recorded evidence, everything not yet activated remains refused; owner records/signs the U06 resolution in the AP ledger via the agent session from these explicit answers; AP-007 offline fail-closed subset is NOT accepted as the refusal foundation - rework is required before activation questions can be asked and U06 is blocked on AP-007 rework first. U06 remains pending, resolution stays null, blocker lists and blocked actions unchanged, runtime_activation_authorized remains false; AP-007 remains blocked; ADR-0040/0041 remain not-reviewed; this note is owner pre-decision input, not an approval or qualification."
   ]
 }
