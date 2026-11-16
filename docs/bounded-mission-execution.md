@@ -17,12 +17,14 @@ This is the **offline, fail-closed subset** of AP-007. Owner decision U06
 - the only processes terminated by this work are local fixture subprocesses
   started by the tests themselves.
 
-Three changes are on paths the running application already uses. Each one only
-adds a refusal. They are listed under
-[Changes on live paths](#changes-on-live-paths).
+Three changes are on paths the running application already uses. One of them
+changes what that application does today: two routes refuse six budget keys.
+They are listed under [Changes on live paths](#changes-on-live-paths).
 
 The design decision is recorded in
-[ADR-0041](adr/0041-mission-halt-bounded-stops-and-recovery-reports.md). The
+[ADR-0041](adr/0041-mission-halt-bounded-stops-and-recovery-reports.md).
+[ADR-0042](adr/0042-late-result-fence-limited-to-mission-owned-work.md) limits
+the late-result fence to mission-owned work. The
 mission plans this builds on are described in
 [Durable mission graphs](durable-mission-graphs.md).
 
@@ -35,7 +37,7 @@ at schema v4.
 |---|---|---|
 | Mission stop and recovery report | `workflow_state.DurableTaskStateMachine` | `halt_mission`, `halt_mission_async`, `mission_recovery_report`; a gate in `create_mission_plan`; isolation and deadline checks in `claim_ready_mission_task` and `prepare_mission_task_resume` |
 | Bounded limits and observations | `execution_budget` | six optional limit fields, their counters, `record_bounded_observation`, `IsolationEvidence` |
-| Late-result fence | `side_effect_ledger.DurableActionLedger`, `execution_spine.DurableActionBoundary` | `complete` and `record_exception` leave an `uncertain` action unchanged; the boundary reports `late_result_fenced` |
+| Late-result fence | `side_effect_ledger.DurableActionLedger`, `execution_spine.DurableActionBoundary` | `complete` and `record_exception` leave an `uncertain` mission-owned action unchanged; the boundary then reports `late_result_fenced` |
 | Process termination | `process_supervision.ProcessSupervisor` | reused as is; one read-only helper, `still_running` |
 | Stop records | `runtime_mission_joins` (existing table) | holds `mission_recovery` reports beside the AP-005 join snapshots |
 | HTTP budget parsing | `app._parse_task_budget_spec` | refuses the six new keys with 400 |
@@ -46,16 +48,26 @@ into one.
 
 ## Changes on live paths
 
-Most of this work is unreachable until a caller is added. These three changes
-are reachable today:
+Most of this work is unreachable until a caller is added. Three changes sit on
+paths the running application already uses. Only the second changes what that
+application does today.
 
-1. **Late-result fence.** Every tool call goes through `DurableActionBoundary`
-   and the action ledger. When a result arrives for an action that the ledger
-   has already marked `uncertain` (a cancel, a takeover or crash recovery got
-   there first), the result no longer settles the action. Before this change
-   the late result overwrote the `uncertain` verdict. The caller now receives
+1. **Late-result fence, for mission-owned work only.** Every tool call goes
+   through `DurableActionBoundary` and the action ledger, so this code is on
+   the path of every call. It changes the outcome only for an action that a
+   mission owns: its task is a task of a mission plan, or a descendant of one.
+   When a result arrives for such an action after the ledger marked it
+   `uncertain` (a mission stop, a takeover or recovery got there first), the
+   result does not settle the action. The caller receives
    `late_result_fenced`, and the harness pauses as it does for any other
-   uncertain result. This applies to every task, not only to mission tasks.
+   uncertain result.
+
+   For every other action the late result is recorded and replaces the
+   `uncertain` verdict, as it did before AP-007. Nothing in the running
+   application creates a mission plan, so the fence does not fire there.
+   PR #303 first merged this fence for every task;
+   [ADR-0042](adr/0042-late-result-fence-limited-to-mission-owned-work.md)
+   records why it was limited.
 2. **Budget keys over HTTP.** Two routes refuse six key names that they used to
    ignore. See [HTTP boundary](#http-boundary).
 3. **Budget charge.** Every tool-call charge now reads each budget from the task
@@ -191,12 +203,19 @@ requested.
 | Budget charge for a stopped task | `ExecutionCancelled` |
 | Action ledger `begin` with the fenced lease | denied, `StaleEpochError` |
 | Process spawn from the fenced lease | `StaleOriginFencedError` |
-| Action ledger `complete` or `record_exception` on an `uncertain` action | row unchanged |
+| Action ledger `complete` or `record_exception` on an `uncertain` action of the plan | row unchanged |
 | Action boundary receiving that late result | `ok: false`, `uncertain: true`, `error_code: "late_result_fenced"` |
 
-An `uncertain` action is resolved only by
+A fenced action is resolved only by
 `DurableActionLedger.resolve_uncertain_action`, with `verified_committed` or
 `verified_not_applied`. A late result is not stored on the fenced row.
+
+The last two rows cover the plan's tasks and the tasks they delegated. They do
+not depend on what declared the action `uncertain`: a mission stop, an ordinary
+task cancel, a takeover and recovery are treated alike. An action that no
+mission owns is outside the fence. That includes an action of the mission's
+root task and an action with no task. Its late result is recorded, as before
+AP-007.
 
 Startup recovery and resume do not revive a halted plan.
 
@@ -404,6 +423,11 @@ Other unknown keys are still ignored, as before.
   about running processes.
 - A superseded plan is fenced by the AP-005 path, which does not turn in-flight
   actions `uncertain`. That behaviour is unchanged here.
+- The late-result fence covers mission-owned work only. Outside a mission, a
+  late result still overwrites an `uncertain` verdict written by a cancel, a
+  takeover or crash recovery, as it did before AP-007. Extending the fence to
+  all work changes what the running application does and needs an owner
+  decision.
 - Results are author-run on a Linux host with no container runtime. They are not
   installed-runtime, owner, independent-security, screenshot, signing or release
   approval.
@@ -424,16 +448,16 @@ settle it.
 | G-6 refusal tests | Implemented offline, together with the behaviour they test. |
 | G-2, G-3, G-4, G-5 | Not touched. |
 
-The audit page is not edited here. If this work lands, the page's statements
-about AP-007 and G-1 are out of date. Its own maintenance rule then asks its
-owner to regenerate it or mark it superseded.
+The audit page is not edited here. This work landed through PR #303, so the
+page's statements about AP-007 and G-1 are out of date. Its own maintenance
+rule asks its owner to regenerate it or mark it superseded.
 
 ## Acceptance mapping and offline evidence
 
 | AP-007 acceptance criterion | Evidence |
 |---|---|
 | Cancellation stops dispatch and terminates owned work with measured cleanup latency | `halt_mission`; `tests/test_durable_task_state_machine.py` cases for cancellation, latency measured from the stop request, delegated descendants, containment retry and containment failure |
-| Late outputs are fenced; unresolved external effects remain uncertain and require reconciliation | ledger and boundary fence; `tests/test_durable_intent_ledger.py` (two cases); state-machine cases for late results and the planning gate |
+| Late outputs are fenced; unresolved external effects remain uncertain and require reconciliation | ledger and boundary fence for mission-owned work; `tests/test_durable_intent_ledger.py` (two cases for mission-owned work, three for the unchanged behaviour outside missions); state-machine cases for late results, the scope of the fence, recovery and the planning gate |
 | No-progress, repeated repair, deadline and memory/storage exhaustion stop boundedly | `execution_budget` limits; `tests/test_execution_budget.py`; state-machine cases for declared limits, the deadline, task scope, the measurement gap and stale workers |
 | Runtime isolation absence blocks dependent execution rather than switching to host shell | isolation gate; state-machine and budget cases; `tests/test_mission_authority_envelope.py` at the real tool boundary |
 | User receives retained partial artifacts and an actionable limitation instead of false success | `mission_recovery_report`; state-machine cases for checked artifacts, an uncarried stop and halted plans |
