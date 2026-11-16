@@ -454,6 +454,11 @@ G-6 statements were out of date; the audit has since been regenerated at
 and gap table now reflect the landed subset. The owner still decides which
 reading stands.
 
+The regenerated page describes the late-result fence for every task, as it was
+at `dc5ec57`, and names the change that limits it to mission-owned work
+([ADR-0042](adr/0042-late-result-fence-limited-to-mission-owned-work.md)). Its
+maintenance rule asks for another regeneration when that change lands.
+
 ## Acceptance mapping and offline evidence
 
 | AP-007 acceptance criterion | Evidence |
