@@ -463,6 +463,15 @@ the merge.
   fence scope after this landing: it describes the fence for every task and says
   that this holds until PR #307 lands. Its maintenance rule assigns the
   regeneration to its owner, and this record does not edit the page.
+- Owner input recorded after this landing: PR #309 (merged as
+  `9d18fef823d461ca5622a20d504a2ab080dcadc7`) records the owner's answers to the
+  six U06 questions as input, not as a resolution. One answer says that the
+  AP-007 offline fail-closed subset is not accepted as the refusal foundation and
+  that rework is required. This landing record is not an acceptance of the
+  subset, and AP-007-F1 is not that rework. The answers are in the
+  [operating envelope](autonomous-production-operating-envelope.md); they
+  authorize no story. This record was merged with `main` after PR #309 and
+  reconciled against it.
 
 As with the earlier landings, this record's own merge identity is recorded in its
 pull-request comment rather than in a further commit.
