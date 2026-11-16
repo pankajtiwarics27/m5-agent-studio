@@ -101,7 +101,7 @@ None of this moves any authority: U06 remains `pending` with `resolution: null`,
 the blocker lists and blocked actions are unchanged,
 `runtime_activation_authorized` remains `false`, AP-007 remains recorded
 `blocked` on U06 (and its remainder plus AP-008…AP-032 remain unauthorized),
-and ADR-0040 and ADR-0041 remain `not-reviewed`. These answers are owner input
+and ADR-0040, ADR-0041 and ADR-0042 (the AP-007-F1 fence-scope decision, `review_status: not-reviewed`) remain `not-reviewed`. These answers are owner input
 to be carried in the reviewed revision that eventually resolves U06 — they
 authorize no activation, no dispatch and no story.
 
