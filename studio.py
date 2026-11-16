@@ -23122,18 +23122,21 @@ async def stream_any_model(
             try:
                 if idx > 0:
                     yield {"type": "content", "text": f"> *OmniRoute Fallback activated -> `{target}`*\n\n"}
-                async for item in stream_any_model(
-                    client,
-                    target,
-                    clean_messages,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                    reasoning_mode=reasoning_mode,
-                    _depth=_depth + 1,
-                ):
-                    if item["type"] in ("content", "reasoning"):
-                        emitted_any = True
-                    yield item
+                async with contextlib.aclosing(
+                    stream_any_model(
+                        client,
+                        target,
+                        clean_messages,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                        reasoning_mode=reasoning_mode,
+                        _depth=_depth + 1,
+                    )
+                ) as target_source:
+                    async for item in target_source:
+                        if item["type"] in ("content", "reasoning"):
+                            emitted_any = True
+                        yield item
                 return
             except Exception as exc:
                 errors.append(f"{target}: {exc}")
