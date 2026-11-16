@@ -40089,9 +40089,12 @@ async def api_run_agile_sdlc_factory(request: Request) -> StreamingResponse:
                     },
                 ]
                 r_buf: list[str] = []
-                async for item in stream_any_model(client, critic_model, r_msgs, temperature=0.2, max_tokens=2200, reasoning_mode="off"):
-                    if item["type"] == "content":
-                        r_buf.append(item["text"])
+                async with contextlib.aclosing(
+                    stream_any_model(client, critic_model, r_msgs, temperature=0.2, max_tokens=2200, reasoning_mode="off")
+                ) as research_source:
+                    async for item in research_source:
+                        if item["type"] == "content":
+                            r_buf.append(item["text"])
                 research_md = f"# Phase 1: Product Research, Brainstorming & Online Inspiration\n\n{online_refs}\n\n---\n\n" + "".join(r_buf).strip()
                 _write_sdlc_confined_text(sdlc_dir, "RESEARCH.md", research_md)
                 if is_local_omlx_model(critic_model) and critic_model != lead_model:
@@ -40114,9 +40117,12 @@ async def api_run_agile_sdlc_factory(request: Request) -> StreamingResponse:
                         {"role": "user", "content": f"### Vision:\n{goal_text}\n\n### Discovery & Inspiration (`.sdlc/RESEARCH.md`):\n{research_md[:3800]}"},
                     ]
                     prd_buf: list[str] = []
-                    async for item in stream_any_model(client, lead_model, prd_msgs, temperature=0.0, max_tokens=2400, reasoning_mode=reasoning_mode):
-                        if item["type"] == "content":
-                            prd_buf.append(item["text"])
+                    async with contextlib.aclosing(
+                        stream_any_model(client, lead_model, prd_msgs, temperature=0.0, max_tokens=2400, reasoning_mode=reasoning_mode)
+                    ) as prd_source:
+                        async for item in prd_source:
+                            if item["type"] == "content":
+                                prd_buf.append(item["text"])
                     prd_md = "".join(prd_buf).strip() or f"# PRD: {goal_text}"
                     _write_sdlc_confined_text(sdlc_dir, "PRD.md", prd_md)
 
@@ -40137,9 +40143,12 @@ async def api_run_agile_sdlc_factory(request: Request) -> StreamingResponse:
                         {"role": "user", "content": f"### Vision:\n{goal_text}\n\n### `.sdlc/PRD.md`:\n{prd_md[:3800]}"},
                     ]
                     arch_buf: list[str] = []
-                    async for item in stream_any_model(client, lead_model, arch_msgs, temperature=0.0, max_tokens=2600, reasoning_mode=reasoning_mode):
-                        if item["type"] == "content":
-                            arch_buf.append(item["text"])
+                    async with contextlib.aclosing(
+                        stream_any_model(client, lead_model, arch_msgs, temperature=0.0, max_tokens=2600, reasoning_mode=reasoning_mode)
+                    ) as arch_source:
+                        async for item in arch_source:
+                            if item["type"] == "content":
+                                arch_buf.append(item["text"])
                     arch_md = "".join(arch_buf).strip() or f"# Architecture: {goal_text}"
                     _write_sdlc_confined_text(sdlc_dir, "ARCHITECTURE.md", arch_md)
 
@@ -40161,9 +40170,12 @@ async def api_run_agile_sdlc_factory(request: Request) -> StreamingResponse:
                         {"role": "user", "content": f"### Vision:\n{goal_text}\n\n### `.sdlc/PRD.md`:\n{prd_md[:2600]}\n\n### `.sdlc/ARCHITECTURE.md`:\n{arch_md[:2800]}"},
                     ]
                     bl_buf: list[str] = []
-                    async for item in stream_any_model(client, lead_model, bl_msgs, temperature=0.0, max_tokens=2200, reasoning_mode="off"):
-                        if item["type"] == "content":
-                            bl_buf.append(item["text"])
+                    async with contextlib.aclosing(
+                        stream_any_model(client, lead_model, bl_msgs, temperature=0.0, max_tokens=2200, reasoning_mode="off")
+                    ) as backlog_source:
+                        async for item in backlog_source:
+                            if item["type"] == "content":
+                                bl_buf.append(item["text"])
                     stories = _parse_or_synthesize_backlog_json("".join(bl_buf), goal_text, prefix="STORY", start_idx=1)
                     _write_sdlc_backlog(sdlc_dir, goal_text, stories)
                     if not _read_sdlc_confined_text(sdlc_dir, "PROGRESS.md"):
@@ -40188,25 +40200,28 @@ async def api_run_agile_sdlc_factory(request: Request) -> StreamingResponse:
             if mode in ("full", "run_sprints") and session_id not in _HARNESS_ABORT_FLAGS:
                 bp_data = _read_sdlc_backlog(sdlc_dir)
                 if bp_data:
-                    async for ev_chunk in _run_sdlc_sprints_stream(
-                        client=client,
-                        session_id=session_id,
-                        wt_dir=wt_dir,
-                        sdlc_dir=sdlc_dir,
-                        goal=goal_text,
-                        lead_model=lead_model,
-                        critic_model=critic_model,
-                        policy=policy,
-                        context_mode=context_mode,
-                        skill_block=skill_block,
-                        eff_block=eff_block,
-                        max_stories=max_stories,
-                        max_steps_per_story=max_steps,
-                        coord=coord,
-                        lease_epoch=lease_epoch,
-                        worker_id=worker_id,
-                    ):
-                        yield ev_chunk
+                    async with contextlib.aclosing(
+                        _run_sdlc_sprints_stream(
+                            client=client,
+                            session_id=session_id,
+                            wt_dir=wt_dir,
+                            sdlc_dir=sdlc_dir,
+                            goal=goal_text,
+                            lead_model=lead_model,
+                            critic_model=critic_model,
+                            policy=policy,
+                            context_mode=context_mode,
+                            skill_block=skill_block,
+                            eff_block=eff_block,
+                            max_stories=max_stories,
+                            max_steps_per_story=max_steps,
+                            coord=coord,
+                            lease_epoch=lease_epoch,
+                            worker_id=worker_id,
+                        )
+                    ) as runner:
+                        async for ev_chunk in runner:
+                            yield ev_chunk
 
             sm_sdlc = get_task_state_machine()
             try:
