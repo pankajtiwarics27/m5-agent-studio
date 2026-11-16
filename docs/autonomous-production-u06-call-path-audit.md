@@ -1,27 +1,28 @@
 # AP U06 call-path audit — lifecycle/sandbox qualification and refusal
 
-**State:** source-level audit, regenerated • **Pinned to:** `dc5ec57` (`main`
-after PR #306, 2026-11-16) • **Decision owned by:** repository owner (U06) •
+**State:** source-level audit, regenerated • **Pinned to:** `972ea74` (`main`
+after PR #310, 2026-11-16) • **Decision owned by:** repository owner (U06) •
 **Implements:** nothing — this document is evidence gathering, not authorization
 
-> **Revision history.** This page supersedes the `bc406fd` revision (2026-11-10,
-> PR #304), which was accurate when written. Material changes since: AP-007's
-> safe fail-closed offline subset landed through PR #303 (exact head
-> `b1b2e4d747f9916a8ffd77f1126c90f8288294c8`, merged as
-> `bf1fa6aefa24913ed7a88ceb12775b484dbc7cc5` on 2026-11-15) and its docs/ledger
-> completion record landed through PR #306 (as `dc5ec57`). Consequences for this
-> audit: the refusal-test half of the U06 safe work is now **implemented and
-> merged** (gap G-6 resolved); a mission-level isolation gate now exists offline
-> and fails closed with no host-execution fallback (gap G-1 addressed, not
-> settled — whether it suffices is U06); a late-result fence is on the live
-> action path for every task (§5). `bc406fd` line references in that revision are
-> preserved only in git history; this revision re-derives every checklist item at
-> `dc5ec57`. AP-007-F1 (PR #307, another session) narrows the late-result
-> fence to mission-owned work; when it lands, this page must be regenerated
-> again rather than edited in place. On 2026-11-16 the owner answered the six
-> §"For the owner's U06 decision" questions in the owner session; the answers are
-> recorded as a dated subsection there (and in the operating envelope and AP
-> roadmap) without moving any authority — U06 stays `pending`.
+> **Revision history.** This page supersedes the `dc5ec57` revision (2026-11-16,
+> PR #308), which was accurate when written. Material changes since: the
+> owner's U06 answers (2026-11-16, merged through PR #309 as `9d18fef…`) and the
+> landing of AP-007-F1, which limited the late-result fence to mission-owned
+> work (PR #307, exact head `bbcf0a2b…`, merged 2026-11-16T03:20:57Z as
+> `e28cccd…`; docs/ledger record through PR #310 as `972ea74…`). The AP-007
+> ledger record for #310 states that this page still described the every-task
+> fence and asked its owner to regenerate it — that is what this revision does.
+> Consequences: §4/§5 now record that the late-result fence covers actions
+> whose task is a mission-plan task or a descendant of one only (ADR-0042,
+> `review_status: not-reviewed`); outside missions the pre-AP-007 outcome
+> applies (gap G-7); and the refusal-Foundation answer recorded by the owner
+> (PR #309) is reproduced in the owner-answers subsection, unchanged.
+> Additions from `dc5ec57`: nothing. Removal: the draft-dated PR #307 caveats.
+> Line references are valid at `972ea74` only; re-derive them rather than trusting
+> them. On 2026-11-16 the owner answered the six §"For the owner's U06 decision"
+> questions in the owner session; the answers remain recorded as a dated
+> subsection there (and in the operating envelope and AP roadmap) without
+> moving any authority — U06 stays `pending`.
 
 This page audits where the repository currently refuses — or fails to refuse —
 unqualified lifecycle and sandbox execution, across the producer → authority →
@@ -51,7 +52,9 @@ now merged for the offline subset; what remains is the decision itself.
   remains AP-002…AP-006 and `runtime_activation_authorized` stays `false`. No
   approval of any kind is claimed or implied.
 - Not a security review or independent assessment. ADR-0040 remains
-  `review_status: not-reviewed`; ADR-0041 remains `review_status: not-reviewed`.
+  `review_status: not-reviewed`; ADR-0041 remains `review_status: not-reviewed`;
+  ADR-0042 (the AP-007-F1 fence-scope decision) is `accepted` with
+  `review_status: not-reviewed`.
 - Not a defect report and not a promise that every path listed is safe — it is
   a map of what exists, with open status marked `UNKNOWN` where the source does
   not establish an answer.
@@ -70,7 +73,7 @@ For lifecycle/sandbox paths that are **not qualified**, does an action refuse
 
 ## Method
 
-Source read at `dc5ec57` with line references. References drift; re-derive
+Source read at `972ea74` with line references. References drift; re-derive
 before relying on them. No services were started, no models were loaded, no
 network calls were made, no tests were run against live endpoints. Where a
 behavior is established only by tests, the test module is named. A path is
@@ -158,7 +161,7 @@ closed without host fallback.
   only for a checked complete outcome and lists every unresolved effect with
   one next action. Claims and resumes of an already-stopped plan raise
   `MissionIsolationRejected` when isolation evidence is absent.
-- **Re-verified gap (grep, at `dc5ec57`):** `workflow_orchestration.py`
+- **Re-verified gap (grep, at `972ea74`):** `workflow_orchestration.py`
   contains no reference to sandbox admission, `execution_mode` or
   `check_admission` — durable AP-005 mission tasks still inherit refusal
   strength from the shared action seam and the budget-chain charge, not from a
@@ -212,15 +215,23 @@ decision.
   unresolved uncertain effects are paused by the shared seam
   (`find_blocking_uncertain_writes` → `uncertain_mcp_write_paused`), and the
   session is paused rather than retried.
-- Since PR #303 the late-result fence is on the finalize path of every task
-  (not only missions): `DurableActionBoundary.admit_and_execute` reads the
-  intent-ledger verdict from `DurableActionLedger.complete` /
-  `record_exception`, and when the row was already declared `uncertain` (by a
-  cancel, takeover, bounded stop or recovery), the late result no longer
-  settles it — it comes back `uncertain: true` with
-  `error_code: "late_result_fenced"`. Only `resolve_uncertain_action` can
-  settle such a row. Note: PR #307 (draft, another session) narrows this fence
-  to mission-owned work; until it lands, every task is fenced.
+- Since PR #303 the late-result fence lives on the finalize path, and since
+  AP-007-F1 (landed 2026-11-16, ADR-0042) it covers mission-owned work only:
+  `DurableActionBoundary.admit_and_execute` reads the intent-ledger verdict
+  from `DurableActionLedger.complete` / `record_exception`, and when the row was
+  already declared `uncertain` **and its task is a mission-plan task or a
+  descendant of one** (`side_effect_ledger._late_result_is_fenced` — ownership
+  by who owns the action, not by what declared it uncertain; a store without
+  `runtime_mission_tasks` owns no mission work; the plan root's own task is not
+  mission-owned), the late result no longer settles it — it comes back
+  `uncertain: true` with `error_code: "late_result_fenced"`. Only
+  `resolve_uncertain_action` can settle such a row. Every other action (no
+  task, plain task, plain child task, mission root task) records its late
+  result as it did before AP-007. No production caller creates a mission plan
+  (`create_mission_plan` is referenced only in `workflow_state.py` and tests),
+  so the fence does not fire at runtime today. Widening the fence again is an
+  owner decision. Note: the every-task scope was live from 2026-11-15 (PR #303)
+  to 2026-11-16 (PR #307).
 - AP-005 mission joins report `partial`/`failed` explicitly; AP-006
   `artifact_status` reports `partial`/`invalidated` and `require_complete`
   refuses false-completion reads. Retention/delete keep tombstoned reference
@@ -232,7 +243,9 @@ decision.
 ### 5. AP-007 offline fail-closed subset — landed, dormant, fail closed
 
 Landed 2026-11-15 (PR #303, `bf1fa6a`) and recorded 2026-11-16 (PR #306,
-`dc5ec57`). Everything below is offline and fail closed; no production caller
+`dc5ec57`). AP-007-F1 landed 2026-11-16T03:20:57Z (PR #307, exact head
+`bbcf0a2…`) as `e28cccd…`, recorded 2026-11-16T04:14:33Z through PR #310 as
+`972ea74…`. Everything below is offline and fail closed; no production caller
 presents isolation evidence, so an isolation-required mission is always
 refused in this build.
 
@@ -247,7 +260,7 @@ refused in this build.
   across the whole leaf→root task chain at the budget charge, at claims and at
   resumes, with literal-proof `IsolationEvidence` or refusal — never a host
   fallback. Accepting path runs only under test fixtures.
-- Late-result fence: see §4.
+- Late-result fence: see §4 (mission-owned work only, since AP-007-F1).
 - Recovery report: retained partial artifacts with per-task verdicts, unresolved
   action ids and one next action per limitation; stored as hash-addressed rows
   in `runtime_mission_joins`; no UI/route surfaces it.
@@ -267,6 +280,7 @@ refused in this build.
 | G-4 | `STUDIO_EXECUTION_MODE=host` exists behind explicit opt-in; no audit of who may set it outside tests/docs was performed here | Owner (U04/U06) |
 | G-5 | Browser worker (AP-010) unqualified; not assessed here | AP-010 authorization |
 | G-6 | **Resolved 2026-11-15:** the refusal/cancellation/uncertain-effect tests were implemented and merged through PR #303 under the owner's explicit decision to land the offline subset with U06 pending (refusal tests include test_ap007_missing_isolation_blocks_dependent_execution_without_host_fallback) | — |
+| G-7 | **Open:** outside missions the pre-AP-007 late-result race is open again (a late success or failure overwrites an `uncertain` verdict written by a cancel, takeover or crash recovery; the session continues instead of pausing for reconciliation). ADR-0042 deliberately accepted this scope; widening the fence again is an owner decision | Owner (U06 / AP-007 remainder) |
 
 `UNKNOWN` markings: whether the shared seam denial covers every consequential
 action class under every executor (spot-checked via the named test modules, not
@@ -314,7 +328,7 @@ a U06 resolution:
 5. **Recording:** the repository owner records and signs the U06 resolution in
    the AP ledger (`product/M5_Autonomous_Production_Roadmap.json` plus the ADR
    register) via this agent session, drawn from these explicit answers. ADRs
-   0040/0041 remain `not-reviewed` by this recording.
+   0040/0041/0042 remain `not-reviewed` by this recording.
 6. **Refusal foundation:** the AP-007 offline fail-closed subset (§5) is
    **not** accepted as the refusal foundation. Rework is required before
    activation questions can even be asked; U06 is recorded as needing AP-007
@@ -343,9 +357,10 @@ the AP-007 blocker; this audit addresses its "Audit call paths" line.
 
 ## Maintenance
 
-Line references are valid at `dc5ec57` only. When the answer to any question
+Line references are valid at `972ea74` only. When the answer to any question
 above changes — a composition install lands, U06 resolves, a backend is
-qualified, PR #307 lands and narrows the late-result fence — this page must be
+qualified, the fence scope is widened again (an owner decision), or the owner's
+U06 answers are carried into a reviewed resolution — this page must be
 regenerated or explicitly superseded rather than edited in place. A
 re-derivation checklist: `_execution_mode`, `_start_code_process`,
 `_sandbox_command`, `build_container_invocation`,
@@ -355,6 +370,7 @@ re-derivation checklist: `_execution_mode`, `_start_code_process`,
 `False`), `workflow_orchestration.py` (expect no admission references until
 G-1 is decided), `execution_budget.IsolationEvidence` /
 `isolation_refusal` / the `charge_hierarchical_tool_call` isolation pre-pass,
+`side_effect_ledger._late_result_is_fenced` (mission-ownership rule),
 `DurableActionLedger.complete` / `record_exception`,
 `workflow_state.DurableTaskStateMachine.halt_mission` / `mission_recovery_report`,
 `runtime_dispatch_boundary.RuntimeDispatchBoundary`.

@@ -403,7 +403,7 @@ under an explicit in-session owner decision recorded before the merge
   the builder's own local results stay attributed to the builder while the gate and
   main results stay attributed to CI. The U06 call-path audit page
   (`docs/autonomous-production-u06-call-path-audit.md`) was out of date on G-1 and
-  G-6 after this landing; it has since been regenerated at `dc5ec57` (see the audit
+  G-6 after this landing; it has since been regenerated at `972ea74` (see the audit
   page's revision history), so its gap table and questions now reflect the landed
   subset.
 

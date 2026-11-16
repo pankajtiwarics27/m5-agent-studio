@@ -450,16 +450,9 @@ settle it.
 
 The audit page was not edited by that work. After it landed, the page's G-1 and
 G-6 statements were out of date; the audit has since been regenerated at
-`dc5ec57` (see the audit page's revision history), so its U06-decision questions
-and gap table now reflect the landed subset. The owner still decides which
-reading stands.
-
-The regenerated page describes the late-result fence for every task, as it was
-at `dc5ec57`, and names the change that limits it to mission-owned work
-([ADR-0042](adr/0042-late-result-fence-limited-to-mission-owned-work.md)). That
-change has since landed (PR #307, merged as `e28cccd`). Until the page is
-regenerated, as its maintenance rule asks, its statements about the fence scope
-describe the earlier state.
+`972ea74` (see the audit page's revision history), so its U06-decision questions,
+gap table and fence statements reflect the landed AP-007-F1 change. The owner
+still decides which reading stands.
 
 ## Acceptance mapping and offline evidence
 
