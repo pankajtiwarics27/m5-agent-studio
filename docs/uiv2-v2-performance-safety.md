@@ -16,11 +16,11 @@ Environment: `linux` / `x64`, 2 CPUs, Node `v22.22.3`, `Python 3.11.2`, `Headles
 
 | Metric | Actual | Gate |
 | --- | ---: | ---: |
-| Fast real SSE schedules | 58 in 334.9ms (173.2/s) | ≥20 and ≥50/s |
-| Coalesced chat renders | 18 | fewer than 58 schedules, complete text retained |
-| Full-window ten-event frame | mean 1.83ms; nearest-rank p95 2.40ms; max 2.60ms | mean ≤4ms |
+| Fast real SSE schedules | 58 in 366.6ms (158.2/s) | ≥20 and ≥50/s |
+| Coalesced chat renders | 20 | fewer than 58 schedules, complete text retained |
+| Full-window ten-event frame | mean 1.52ms; nearest-rank p95 2.00ms; max 2.00ms | mean ≤4ms |
 | Events / cache / cards | 30,000 / 5,000 / 300 | 5,000 / 300 ceilings |
-| Post-GC document nodes | 8544 → 8544 → 8544 | repeated-cycle growth ≤64 |
+| Post-GC document nodes | 8548 → 8548 → 8548 | repeated-cycle growth ≤64 |
 | Post-GC JS heap | 3.24 MiB → 3.20 MiB → 3.20 MiB | cycle growth ≤8 MiB; baseline growth ≤16 MiB |
 
 Memory readings use CDP `Performance.getMetrics` immediately after `HeapProfiler.collectGarbage`. They are repeated-cycle plateau checks, not a claim that a browser never allocates during a frame.
@@ -35,7 +35,7 @@ Streaming intentionally moves cards inside the trajectory scroller. The gate rep
 | 1640x900 | dark | 0.29613 | 0.29613 | 0.00000 | 0.00px | 0px |
 | 1440x900 | light | 0.26887 | 0.26887 | 0.00000 | 0.00px | 0px |
 | 1440x900 | dark | 0.38410 | 0.38410 | 0.00000 | 0.00px | 0px |
-| 1280x800 | light | 0.23537 | 0.23537 | 0.00000 | 0.00px | 0px |
+| 1280x800 | light | 0.27460 | 0.27460 | 0.00000 | 0.00px | 0px |
 | 1280x800 | dark | 0.39229 | 0.39229 | 0.00000 | 0.00px | 0px |
 | 390x844 | light | 0.94757 | 0.94757 | 0.00000 | 0.00px | 0px |
 | 390x844 | dark | 1.35367 | 1.35367 | 0.00000 | 0.00px | 0px |

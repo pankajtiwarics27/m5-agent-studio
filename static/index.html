@@ -3528,6 +3528,9 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
             <ol id="harnessTimelineList" class="harness-timeline-list" aria-label="Durable task events, oldest first" hidden></ol>
           </div>
 
+          <!-- Snapshot failures are distinct from a disconnected event stream. -->
+          <div id="harnessSnapshotState" role="status" aria-live="polite"></div>
+
           <!-- Trajectory Stream -->
           <div id="harnessRefusalState"></div>
           <div id="harnessStreamState"></div>
@@ -13040,6 +13043,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
 
   function startFreshHarnessDraft() {
     activeHarnessId = null;
+    clearHarnessSnapshotUnavailable();
     activeHarnessSession = null;
     harnessResetEventCache();
     harnessLogTelemetry = { source: "idle", reason: "", trigger: "", pages: 0, reloads: 0, resyncs: 0, streamed: 0, latest: 0, retained: 0 };
@@ -13478,8 +13482,10 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     if (sess.critic_model && unifiedCatalog.some(x => x.id === sess.critic_model)) document.getElementById("harnessCriticModel").value = sess.critic_model;
     updateHarnessRunControl();
     const st = (sess.status || "").toLowerCase();
-    if (st === "done" || st === "completed" || st === "failed" || st === "error") {
+    if (st === "done" || st === "completed") {
       harnessStageState.plan = harnessStageState.execute = harnessStageState.verify = "done";
+    } else if (st === "failed" || st === "error") {
+      harnessStageState.plan = "pending"; harnessStageState.execute = "blocked"; harnessStageState.verify = "pending";
     } else if (st === "running" || st === "active" || st === "paused") {
       harnessStageState.plan = "done"; harnessStageState.execute = "active";
     } else if (st === "blocked") {
@@ -13492,6 +13498,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     // Reload is a first-class path: rebuild from the authoritative task snapshot
     // and the durable event log, never from whatever DOM happened to survive.
     activeHarnessId = id;
+    clearHarnessSnapshotUnavailable();
     harnessResetEventCache();
     harnessLogTelemetry = { source: "idle", reason: "", trigger: "", pages: 0, reloads: 0, resyncs: 0, streamed: 0, latest: 0, retained: 0 };
     harnessSnapshot = null;
@@ -13504,9 +13511,13 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     await closeHarnessEventStream();
     try {
       const r = await fetch(`/api/harness/sessions/${encodeURIComponent(id)}`);
-      if (!r.ok) return;
-      updateHarnessHeaderBanner(await r.json());
-    } catch (e) {}
+      if (r.ok) {
+        const session = await r.json();
+        if (activeHarnessId !== id) return;
+        updateHarnessHeaderBanner(session);
+      }
+    } catch (e) {} // The authoritative snapshot below reports an unavailable service.
+    if (activeHarnessId !== id) return;
     renderHarnessSidebar();
     await harnessResyncFromSnapshot("select");
     await refreshHarnessGrants();
@@ -13604,6 +13615,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
   let harnessCachedSnapshot = null;       // the ordered array last handed out, until the cache moves
   let harnessCursor = 0;                  // highest seq applied to the UI
   let harnessSnapshot = null;             // last authoritative /state payload
+  let harnessSnapshotReadSerial = 0;       // fence overlapping snapshot requests
   let harnessEventStreamAbort = null;     // live follow stream (GET SSE) abort handle
   let harnessStreamRetryTimer = null;
   let harnessRunActive = false;           // a POST run stream owns the transcript
@@ -14004,23 +14016,46 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     }
   }
 
+  function presentHarnessSnapshotUnavailable(reason) {
+    const host = document.getElementById("harnessSnapshotState");
+    const hadFocus = Boolean(host && host.contains(document.activeElement));
+    const panel = presentInto("harnessSnapshotState", {
+      kind: "error",
+      title: "Task status unavailable",
+      cause: reason,
+      context: "The displayed task and decisions may be out of date. Your draft is unchanged; no outcome can be confirmed until the server is read again.",
+      actions: [{ label: "Retry status", run: () => harnessResyncFromSnapshot("operator"), title: "Read the current task state again" }],
+    });
+    if (hadFocus && panel) panel.querySelector("button")?.focus();
+    return panel;
+  }
+
+  function clearHarnessSnapshotUnavailable() {
+    clearPresentation("harnessSnapshotState");
+  }
+
   async function harnessResyncFromSnapshot(reason) {
     // Authoritative reload: task state + approval state + the durable event log.
     const sessionId = activeHarnessId;
     if (!sessionId) return;
+    const readSerial = ++harnessSnapshotReadSerial;
     harnessLastResyncAt = Date.now();
     let state;
     try {
       const r = await fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/state`);
-      if (!r.ok) return;
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
       state = await r.json();
-    } catch (e) { return; }
-    if (activeHarnessId !== sessionId) return;
+    } catch (e) {
+      if (activeHarnessId === sessionId && readSerial === harnessSnapshotReadSerial) presentHarnessSnapshotUnavailable(`The task snapshot could not be read (${e.message || "connection failed"}).`);
+      return;
+    }
+    if (activeHarnessId !== sessionId || readSerial !== harnessSnapshotReadSerial) return;
+    clearHarnessSnapshotUnavailable();
     harnessSnapshot = state;
     if (state.session) updateHarnessHeaderBanner(state.session);
     applyHarnessSnapshotState(state);
     const verdict = await loadHarnessEvents({ full: true });
-    if (activeHarnessId !== sessionId) return;
+    if (activeHarnessId !== sessionId || readSerial !== harnessSnapshotReadSerial) return;
     harnessLogTelemetry.source = "snapshot";
     harnessLogTelemetry.trigger = String(reason || "");
     harnessLogTelemetry.reason = verdict.gap && verdict.reason !== "session_changed" ? verdict.reason : "";
@@ -16053,6 +16088,11 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
         return;
       }
       const input = document.getElementById("harnessPromptInput");
+      if (input && input.value) {
+        harnessRecoverySay("Your draft is unchanged. Clear or save it before continuing with the earlier prompt.", "warn");
+        input.focus();
+        return;
+      }
       if (input) { input.value = prompt; fitHarnessComposer(); }
       runHarnessTurn();
       return;

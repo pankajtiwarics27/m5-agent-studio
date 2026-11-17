@@ -324,12 +324,12 @@
           "artifact": "product/M5_2_0_UIUX_Presentations.json",
           "totals": {
             "kinds": 3,
-            "surfaces": 19,
-            "containers": 9,
-            "wired_containers": 9,
+            "surfaces": 20,
+            "containers": 10,
+            "wired_containers": 10,
             "by_kind": {
               "empty": 3,
-              "error": 9,
+              "error": 10,
               "recovery": 7
             },
             "remaining_raw_writers": 2,

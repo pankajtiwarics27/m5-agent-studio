@@ -52,7 +52,7 @@
         "Re-check",
         "Providers"
       ],
-      "line": 5132
+      "line": 5135
     },
     {
       "container": "startRecentState",
@@ -65,7 +65,7 @@
         "Start a session",
         "Open Harness"
       ],
-      "line": 5197
+      "line": 5200
     },
     {
       "container": "startRecentState",
@@ -78,7 +78,7 @@
         "Retry",
         "Open Harness"
       ],
-      "line": 5272
+      "line": 5275
     },
     {
       "container": "startHealthState",
@@ -91,7 +91,7 @@
         "Re-check",
         "Monitor rail"
       ],
-      "line": 5370
+      "line": 5373
     },
     {
       "container": "startWorkspaceState",
@@ -104,7 +104,7 @@
         "Retry",
         "Open Harness"
       ],
-      "line": 5454
+      "line": 5457
     },
     {
       "container": "hallStream",
@@ -118,7 +118,7 @@
         "Ask one model",
         "Configure providers"
       ],
-      "line": 5987
+      "line": 5990
     },
     {
       "container": "debateSynthesisArea",
@@ -130,7 +130,7 @@
       "actions": [
         "Start Compare"
       ],
-      "line": 6001
+      "line": 6004
     },
     {
       "container": "chatState",
@@ -142,7 +142,7 @@
       "actions": [
         "Dismiss"
       ],
-      "line": 6050
+      "line": 6053
     },
     {
       "container": "harnessStreamState",
@@ -155,7 +155,7 @@
         "Reconnect now",
         "Reload from snapshot"
       ],
-      "line": 6073
+      "line": 6076
     },
     {
       "container": "hallSummonState",
@@ -168,7 +168,7 @@
         "Start a new session",
         "Reload the session list"
       ],
-      "line": 6979
+      "line": 6982
     },
     {
       "container": "hallSummonState",
@@ -181,7 +181,7 @@
         "Read it again",
         "Reload the session list"
       ],
-      "line": 6992
+      "line": 6995
     },
     {
       "container": "hallSummonState",
@@ -195,7 +195,7 @@
         "Read the conclusion",
         "Start a new session"
       ],
-      "line": 7006
+      "line": 7009
     },
     {
       "container": "hallSummonState",
@@ -208,7 +208,7 @@
         "Read it now",
         "Stop watching"
       ],
-      "line": 7022
+      "line": 7025
     },
     {
       "container": "hallSummonState",
@@ -222,7 +222,7 @@
         "Read the session",
         "Check readiness"
       ],
-      "line": 7038
+      "line": 7041
     },
     {
       "container": "hallSummonState",
@@ -235,7 +235,7 @@
         "Read the old conclusion",
         "Convene the round"
       ],
-      "line": 7632
+      "line": 7635
     },
     {
       "container": "hallSummonState",
@@ -249,7 +249,7 @@
         "Check readiness",
         "Ask one model"
       ],
-      "line": 8300
+      "line": 8303
     },
     {
       "container": "chatState",
@@ -262,7 +262,7 @@
         "Retry",
         "Dismiss"
       ],
-      "line": 12602
+      "line": 12605
     },
     {
       "container": "chatState",
@@ -275,7 +275,7 @@
         "Back to Chat",
         "Open Harness"
       ],
-      "line": 12628
+      "line": 12631
     },
     {
       "container": "chatState",
@@ -288,7 +288,19 @@
         "Undo",
         "Dismiss"
       ],
-      "line": 12812
+      "line": 12815
+    },
+    {
+      "container": "harnessSnapshotState",
+      "pane": "Harness",
+      "kind": "error",
+      "title": "Task status unavailable",
+      "has_cause": true,
+      "has_context": true,
+      "actions": [
+        "Retry status"
+      ],
+      "line": 14022
     }
   ],
   "containers": [
@@ -329,6 +341,12 @@
       "wired": true
     },
     {
+      "id": "harnessSnapshotState",
+      "pane": "Harness",
+      "meaning": "a task snapshot that could not be read",
+      "wired": true
+    },
+    {
       "id": "startRecentState",
       "pane": "Start",
       "meaning": "recent work that is empty or could not be read",
@@ -349,22 +367,22 @@
   ],
   "remaining_raw_writers": [
     {
-      "line": 6682,
+      "line": 6685,
       "handler": "installSkill"
     },
     {
-      "line": 14981,
+      "line": 15016,
       "handler": "openHarnessDiffModal"
     }
   ],
   "totals": {
     "kinds": 3,
-    "surfaces": 19,
-    "containers": 9,
-    "wired_containers": 9,
+    "surfaces": 20,
+    "containers": 10,
+    "wired_containers": 10,
     "by_kind": {
       "empty": 3,
-      "error": 9,
+      "error": 10,
       "recovery": 7
     },
     "remaining_raw_writers": 2,

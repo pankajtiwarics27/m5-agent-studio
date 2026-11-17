@@ -55,6 +55,7 @@ CONTAINERS = {
     "debateSynthesisArea": ("Compare", "no comparison yet"),
     "chatState": ("Chat", "a reply that stopped"),
     "harnessStreamState": ("Harness", "an event stream that dropped"),
+    "harnessSnapshotState": ("Harness", "a task snapshot that could not be read"),
     "startRecentState": ("Start", "recent work that is empty or could not be read"),
     "startHealthState": ("Start", "a health read that did not answer"),
     "startWorkspaceState": ("Start", "a workspace write that was refused"),
