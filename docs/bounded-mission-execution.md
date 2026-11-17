@@ -17,9 +17,10 @@ This is the **offline, fail-closed subset** of AP-007. Owner decision U06
 - the only processes terminated by this work are local fixture subprocesses
   started by the tests themselves.
 
-Three changes are on paths the running application already uses. One of them
-changes what that application does today: two routes refuse six budget keys.
-They are listed under [Changes on live paths](#changes-on-live-paths).
+Four changes are on paths the running application already uses. Two of them
+are visible to API clients today: two routes refuse six budget keys, and the
+security-incident routes return two more keys for a qualification. They are
+listed under [Changes on live paths](#changes-on-live-paths).
 
 The design decision is recorded in
 [ADR-0041](adr/0041-mission-halt-bounded-stops-and-recovery-reports.md).
@@ -27,8 +28,11 @@ The design decision is recorded in
 the late-result fence to mission-owned work.
 [ADR-0043](adr/0043-proven-sandbox-admission-for-mission-owned-consequential-work.md)
 makes isolation proof mandatory for consequential actions of mission-owned work
-and judges it against a recorded acceptance. The
-mission plans this builds on are described in
+and judges it against a recorded acceptance.
+[ADR-0044](adr/0044-qualification-provenance-and-reported-refusal-for-mission-isolation.md)
+adds two conditions to that proof, a qualification time that the report stated
+itself and the recorded target host, and makes the recovery report state the
+refusal. The mission plans this builds on are described in
 [Durable mission graphs](durable-mission-graphs.md).
 
 ## Owners
@@ -41,6 +45,7 @@ at schema v4.
 | Mission stop and recovery report | `workflow_state.DurableTaskStateMachine` | `halt_mission`, `halt_mission_async`, `mission_recovery_report`; a gate in `create_mission_plan`; isolation and deadline checks in `claim_ready_mission_task` and `prepare_mission_task_resume` |
 | Bounded limits and observations | `execution_budget` | six optional limit fields, their counters, `record_bounded_observation` |
 | Isolation gate | `execution_budget`, held by `DurableTaskBudgetManager` | `IsolationEvidence`, `IsolationAcceptance`, the three activation steps, `isolation_refusal`; the charge asks for proof for consequential actions of mission-owned work |
+| What a qualification rests on | `sandbox_boundary.BackendQualificationRecord` | two fields with defaults, `report_time_stated` and `host_fingerprint`; `qualification_host_fingerprint`. The sandbox admission of the application reads neither field |
 | Late-result fence | `side_effect_ledger.DurableActionLedger`, `execution_spine.DurableActionBoundary` | `complete` and `record_exception` leave an `uncertain` mission-owned action unchanged; the boundary then reports `late_result_fenced` |
 | Process termination | `process_supervision.ProcessSupervisor` | reused as is; one read-only helper, `still_running` |
 | Stop records | `runtime_mission_joins` (existing table) | holds `mission_recovery` reports beside the AP-005 join snapshots |
@@ -52,9 +57,9 @@ into one.
 
 ## Changes on live paths
 
-Most of this work is unreachable until a caller is added. Three changes sit on
-paths the running application already uses. Only the second changes what that
-application does today.
+Most of this work is unreachable until a caller is added. Four changes sit on
+paths the running application already uses. The second changes what that
+application does today, and the fourth adds two keys to JSON it already returns.
 
 1. **Late-result fence, for mission-owned work only.** Every tool call goes
    through `DurableActionBoundary` and the action ledger, so this code is on
@@ -86,6 +91,18 @@ application does today.
    mission owns the task, the action is refused with `isolation_unavailable`.
    Nothing in the running application creates a mission plan, so this refusal
    does not occur there. See [Isolation](#isolation).
+4. **Qualification records.** Since
+   [ADR-0044](adr/0044-qualification-provenance-and-reported-refusal-for-mission-isolation.md)
+   a qualification that the security store records carries two more fields:
+   whether its report stated a generation time of its own, and the fingerprint
+   of the machine the report describes. They are written by the three
+   security-incident routes that record a qualification, and they appear in the
+   JSON those routes and `GET /api/security/incidents` already return for a
+   qualification, and in the store file.
+
+   The application's own admission does not read them. It accepts the same
+   reports and gives the same answers as before. See
+   [What a qualification rests on](#what-a-qualification-rests-on).
 
 ## Stopping a mission
 
@@ -330,13 +347,16 @@ the stop.
 ## Isolation
 
 [ADR-0043](adr/0043-proven-sandbox-admission-for-mission-owned-consequential-work.md)
-records this section's rules. They follow the owner's U06 answers 1 to 4, which
+and
+[ADR-0044](adr/0044-qualification-provenance-and-reported-refusal-for-mission-isolation.md)
+record this section's rules. They follow the owner's U06 answers 1 to 4, which
 are owner input and not a resolution of U06.
 
 **In this build every consequential action of mission-owned work is refused.**
-No acceptance is recorded and no production caller presents proof. The accepting
-path runs only in tests, with a fictional acceptance record and fictional
-evidence, because no qualified runtime exists on the authoring host.
+No acceptance is recorded, no production caller presents proof, and nothing
+observes the host. The accepting path runs only in tests, with a fictional
+acceptance record and fictional evidence, because no qualified runtime exists on
+the authoring host.
 
 ### When proof is needed
 
@@ -384,12 +404,13 @@ without one nothing is accepted.
 | `decision_ref` | the recorded decision the acceptance comes from |
 | `runtime`, `runtime_version`, `image_digest` | the one container backend that is accepted; the digest must be a full `sha256` digest |
 | `qualified_not_before` | the earliest qualification run that is accepted |
+| `target_host` | the host the decision accepts, as a host fingerprint (see below) |
 | `activated_steps` | the steps the decision covers, as a prefix of the activation order |
 
 **The evidence**, `IsolationEvidence`, is what the server observed for one
 dispatch. `IsolationEvidence.from_admission` builds it from the sandbox
-admission decision and the active backend's qualification record. It is
-accepted only when all of these hold:
+admission decision, the active backend's qualification record and the host the
+server observed. It is accepted only when all of these hold:
 
 - the acceptance activates the step of the dispatch, and the evidence proves
   that step;
@@ -397,8 +418,12 @@ accepted only when all of these hold:
   literally qualified, and a backend id is present;
 - runtime, runtime version and image digest equal the accepted ones. The
   comparison is exact; only the runtime name is case-insensitive;
-- the evidence names a qualification, and the qualification run is not older
-  than `qualified_not_before`.
+- the evidence names a qualification, the qualification has a usable time for
+  its run, and that run is not older than `qualified_not_before`;
+- the qualification was run on the accepted target host (`qualified_host`), and
+  the dispatch happens on it (`observed_host`).
+
+Each refusal names the first condition that fails, in this order.
 
 `SecurityIncidentStore.check_admission` returns `allowed=True` with no backend
 when none exists, so `allowed` alone is never accepted as proof.
@@ -406,6 +431,50 @@ when none exists, so `allowed` alone is never accepted as proof.
 A qualification is as old as the run that produced it. The adapter uses the
 earlier of the time the qualification record was written and the time its report
 was generated. Recording an old report again does not make it fresh.
+
+### What a qualification rests on
+
+[ADR-0044](adr/0044-qualification-provenance-and-reported-refusal-for-mission-isolation.md)
+records these rules.
+
+**The time must be the report's own.** When a qualification report states no
+generation time, the sandbox layer records the time of ingestion. That time says
+nothing about the age of the run. The qualification record now says which case
+applies (`report_time_stated`), and the adapter takes a qualification time only
+from a record whose report stated one. Evidence without a usable time is refused
+with its own reason. A time that is zero, negative, not finite or not a number
+is not usable.
+
+**The host must be the recorded one.** A host is named by a fingerprint:
+`sha256:` and 64 hex digits, computed by
+`sandbox_boundary.qualification_host_fingerprint` from the machine description
+that a qualification report carries. Five values count: operating system,
+architecture, processor model, processor count and memory size. The
+operating-system release and version, the Python version, the git revision and
+the memory readings of the same description do not.
+
+| Value | Where it comes from |
+|---|---|
+| `IsolationAcceptance.target_host` | the recorded decision |
+| `IsolationEvidence.qualified_host` | the qualification record, which keeps the fingerprint of its report's machine description (`host_fingerprint`) |
+| `IsolationEvidence.observed_host` | server code, for the dispatch. It is never taken from a request or from the record |
+
+All three must be equal. A report produced on another machine fails on
+`qualified_host`. A security store copied to another machine fails on
+`observed_host`.
+
+What the fingerprint is not:
+
+- It is not a unique hardware identifier. Two machines of the same model and
+  memory size share it.
+- It is not authenticated. The gate believes what a report says about its
+  machine and its time, as the sandbox layer already believes its verdict.
+
+**For the application nothing changes.** The sandbox layer accepts an undated
+report, and a report without a machine description, as before. The backend is
+qualified for the application either way. A record written before these fields
+existed reads as not stated and no host: it stays valid for the application and
+is no proof for a mission until its report is ingested again.
 
 ### Steps
 
@@ -441,8 +510,8 @@ report = machine.mission_recovery_report(mission_id, plan_version, artifact_stat
 | `partial` | join succeeded, but an effect is unresolved or a retained output is not a finished artifact |
 | `cancelled` | the plan was cancelled, or the root is cancelled while the plan is still live |
 | `stopped` | the plan stopped at a limit, or the root budget requires a stop |
-| `blocked` | work is owed and required isolation is not proven |
-| `in_progress` | work is owed and nothing blocks it |
+| `blocked` | work is owed, the root budget declares `isolation_required`, and isolation is not proven |
+| `in_progress` | work is owed and the plan is not blocked as a whole |
 | `superseded` | a newer plan version replaced this one |
 | `partial` or `failed` (the join status) | work is owed but no task is still in progress: tasks failed, were cancelled or miss outputs |
 
@@ -455,10 +524,34 @@ as `unverified` and the report cannot claim success.
 Every limitation carries a next action. The codes are `mission_cancelled`,
 `no_progress`, `repair_attempts`, `deadline`, `memory`, `storage`,
 `measurement_unavailable`, `budget_unreadable`, `stop_record_missing`,
-`isolation_unavailable`, `uncertain_effects`, `owned_work_lingering`,
-`halt_required`, `owned_work_not_terminated`, `tasks_incomplete`,
-`missing_required_outputs`, `artifact_incomplete`, `artifacts_not_verified` and
-`plan_superseded`.
+`isolation_unavailable`, `consequential_actions_refused`, `uncertain_effects`,
+`owned_work_lingering`, `halt_required`, `owned_work_not_terminated`,
+`tasks_incomplete`, `missing_required_outputs`, `artifact_incomplete`,
+`artifacts_not_verified` and `plan_superseded`.
+
+**Refused consequential actions.** Every task of a plan is mission-owned, so the
+charge refuses each of its consequential actions without accepted proof. The
+report says so. For a live plan that still owes work and is neither cancelled
+nor stopped, it judges the evidence it was given (`isolation`) by the rule the
+charge uses. If the evidence is refused, the report carries
+`consequential_actions_refused` with the reason. In this build that is every
+such report, because no acceptance is recorded.
+
+The limitation does not change the outcome. A plan with unfinished tasks stays
+`in_progress`. It is not blocked as a whole: a read-only action is still
+charged, and the report cannot know whether the remaining tasks need a
+consequential action.
+
+A plan is live while its status is `active`. It owes work until its join
+succeeds.
+
+| Plan | What the report says about isolation |
+|---|---|
+| not live (halted or superseded), or the join succeeded | nothing |
+| live, owes work, proof accepted | nothing |
+| live, owes work, proof refused, root budget declares `isolation_required` | `isolation_unavailable`, as before |
+| live, owes work, proof refused, nothing declared, outcome `cancelled` or `stopped` | nothing; the report already says that the plan runs no further |
+| live, owes work, proof refused, nothing declared, any other outcome | `consequential_actions_refused` |
 
 Reports are stored as hash-addressed rows in `runtime_mission_joins`, marked
 `report_kind: "mission_recovery"`. A report identical to a stored one is not
@@ -498,6 +591,13 @@ Other unknown keys are still ignored, as before.
 
   No route can declare these limits, so a store written only through the HTTP
   API carries none of them.
+- The two fields of a qualification record need no migration. A security store
+  written before them reads with the refusing defaults. A binary older than
+  them ignores both keys.
+- A stored recovery report keeps its hash. A new report of a live unfinished
+  plan has another hash than one written before
+  `consequential_actions_refused` existed, because the limitation is part of the
+  hashed report.
 
 ## Known limits
 
@@ -514,18 +614,22 @@ Other unknown keys are still ignored, as before.
   takeover or crash recovery, as it did before AP-007. Extending the fence to
   all work changes what the running application does and needs an owner
   decision.
-- Nothing records an isolation acceptance, builds isolation evidence or presents
-  it in production. A mission therefore cannot dispatch a consequential action
-  in this build.
-- The recovery report does not say that consequential actions of a plan are
-  refused for lack of isolation. The refusal is reported where it happens, at
-  the tool boundary. A plan whose budget declares `isolation_required` is
-  reported `blocked`, as before.
+- Nothing records an isolation acceptance, builds isolation evidence, observes
+  the host or presents proof in production. A mission therefore cannot dispatch
+  a consequential action in this build. Whoever adds the observer must read the
+  five values the qualification suite records and digest them with
+  `qualification_host_fingerprint`; a fingerprint computed another way does not
+  match, and the gate refuses.
+- The host fingerprint names a kind of machine, not one unit, and a
+  qualification report is not authenticated.
+- The recovery report does not say that work of the browser-worker and
+  native-lifecycle steps is refused. That refusal is reported where it happens,
+  at the tool boundary.
+- The recovery report reads `isolation_required` from the root budget only. When
+  a task budget below the root declares it, the report states the refusal of
+  consequential actions and does not say `blocked`.
 - The isolation gate does not judge work that no mission owns, whatever step it
   names.
-- The sandbox layer gives a qualification report that carries no generation time
-  the time of ingestion. The gate cannot tell such a report from a fresh one.
-- The target host is not part of the isolation evidence.
 - Results are author-run on a Linux host with no container runtime. They are not
   installed-runtime, owner, independent-security, screenshot, signing or release
   approval.
@@ -542,7 +646,7 @@ settle it.
 
 | Audit gap | Effect of this work |
 |---|---|
-| G-1 mission-scoped sandbox gate | PR #303 added an optional mission-level refusal: a budget may declare `isolation_required`, and nothing declares it. ADR-0043 makes proof mandatory for consequential actions of mission-owned work and judges it against a recorded acceptance. Whether that is sufficient as the mission-scoped gate is still the owner's U06 decision. |
+| G-1 mission-scoped sandbox gate | PR #303 added an optional mission-level refusal: a budget may declare `isolation_required`, and nothing declares it. ADR-0043 makes proof mandatory for consequential actions of mission-owned work and judges it against a recorded acceptance. ADR-0044 adds a qualification time that the report stated itself and the recorded target host to that proof. Whether that is sufficient as the mission-scoped gate is still the owner's U06 decision. |
 | G-6 refusal tests | Implemented offline, together with the behaviour they test. |
 | G-2, G-3, G-4, G-5 | Not touched. |
 
@@ -553,9 +657,9 @@ gap table and fence statements reflect the landed AP-007-F1 change. The owner
 still decides which reading stands.
 
 That revision of the audit describes the isolation gate as opt-in. With
-ADR-0043 its statements about the gate describe the earlier state until the
-page is regenerated, as its maintenance rule asks. This work does not edit the
-page.
+ADR-0043 and ADR-0044 its statements about the gate describe the earlier state
+until the page is regenerated, as its maintenance rule asks. This work does not
+edit the page.
 
 ## Acceptance mapping and offline evidence
 
@@ -564,8 +668,8 @@ page.
 | Cancellation stops dispatch and terminates owned work with measured cleanup latency | `halt_mission`; `tests/test_durable_task_state_machine.py` cases for cancellation, latency measured from the stop request, delegated descendants, containment retry and containment failure |
 | Late outputs are fenced; unresolved external effects remain uncertain and require reconciliation | ledger and boundary fence for mission-owned work; `tests/test_durable_intent_ledger.py` (two cases for mission-owned work, three for the unchanged behaviour outside missions); state-machine cases for late results, the scope of the fence, recovery and the planning gate |
 | No-progress, repeated repair, deadline and memory/storage exhaustion stop boundedly | `execution_budget` limits; `tests/test_execution_budget.py`; state-machine cases for declared limits, the deadline, task scope, the measurement gap and stale workers |
-| Runtime isolation absence blocks dependent execution rather than switching to host shell | isolation gate; state-machine and budget cases, including the cases for mission-owned work, the recorded acceptance, the steps and the security store's own types; `tests/test_mission_authority_envelope.py` at the real tool boundary, for a declared requirement and for mission-owned work |
-| User receives retained partial artifacts and an actionable limitation instead of false success | `mission_recovery_report`; state-machine cases for checked artifacts, an uncarried stop and halted plans |
+| Runtime isolation absence blocks dependent execution rather than switching to host shell | isolation gate; state-machine and budget cases, including the cases for mission-owned work, the recorded acceptance, the steps, the stated qualification time, the target host and the security store's own types; `tests/test_sandbox_boundary.py` and `tests/test_security_incident_containment.py` for the host fingerprint and the unchanged admission of the application; `tests/test_mission_authority_envelope.py` at the real tool boundary, for a declared requirement and for mission-owned work |
+| User receives retained partial artifacts and an actionable limitation instead of false success | `mission_recovery_report`; state-machine cases for checked artifacts, an uncarried stop, halted plans and the refusal of consequential actions |
 
 The tests use temporary local SQLite stores and local fixture subprocesses. They
 use no network, provider or model.

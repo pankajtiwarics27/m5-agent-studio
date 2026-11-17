@@ -78,6 +78,31 @@ enforces five fail-closed checks before routing sandbox execution to an alternat
   cross-linked to `hold-{incident_id}` in `ContainmentStore` and reconciled on `init_db()`
   startup. Corrupt or symlinked state fails closed (`security_state_corrupt`, `HTTP 503`).
 
+## What a qualification record says about its report
+
+A `BackendQualificationRecord` carries two fields about the report it was built
+from ([ADR-0044](adr/0044-qualification-provenance-and-reported-refusal-for-mission-isolation.md)).
+Ingestion, fallback qualification and requalification before restoration all
+write them.
+
+| Field | Meaning |
+|---|---|
+| `report_time_stated` | `true` only when the report stated a usable generation time of its own (`generated_at_epoch`, `qualified_at` or `generated_at_utc`). When it is `false`, `report_generated_at` is the time of ingestion. |
+| `host_fingerprint` | `sha256:` and 64 hex digits, computed by `qualification_host_fingerprint` from the machine description in the report (`fingerprint`: operating system, architecture, processor model, processor count, memory size). Empty when the report carries no complete description. |
+
+Nothing in this document's admission, fallback or restoration rules reads these
+fields. A report without a generation time, or without a machine description, is
+accepted as before, and `check_admission` answers as before. The fields exist
+for the mission isolation gate, which accepts a qualification as proof only when
+its report stated its time and was produced on the recorded target host. See
+[Bounded mission execution](bounded-mission-execution.md#what-a-qualification-rests-on).
+
+Both fields appear in the `qualification` objects that
+`GET /api/security/incidents` and the three `POST` routes return, and in
+`state.json`. A record written before the fields existed reads as `false` and
+empty. The fingerprint identifies a kind of machine, not one unit, and a report
+is not authenticated.
+
 ## Evidence
 
 [`tests/test_security_incident_containment.py`](../tests/test_security_incident_containment.py)
@@ -85,4 +110,7 @@ verifies configuration generation tracking and drift/hardening regression suspen
 qualification failure ingestion, host-mode bypass refusal, live in-flight subprocess
 termination, shared-dependency fallback rejection, disjoint fallback routing,
 post-incident requalification before restoration, file/directory `fsync` crash recovery,
-corruption/symlink fail-closed behavior, and standalone `studio.py` parity.
+corruption/symlink fail-closed behavior, and standalone `studio.py` parity. One case
+sends reports with and without a generation time and a machine description through
+the three routes that record a qualification: each is accepted as before, and each
+record says what its report stated.
