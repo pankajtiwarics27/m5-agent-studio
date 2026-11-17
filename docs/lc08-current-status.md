@@ -11,7 +11,27 @@ consumer-close cases at the `step_reasoning` and `step_content` frames and
 the abort-flag `break` path are deterministic red/green proofs (red on the
 unchanged source; close now observed inside the consumer's `aclose()`).
 The checked-in matrix marks `api_run_harness_turn.event_gen`
-`bounded_harness_turn_stream_close`.
+`bounded_harness_turn_stream_close` (PR #323).
+
+The bounded
+[`execute_conservative_model_switch_async._run_probe_stream` audit](lc08-probe-stream-audit.md)
+assesses the last non-SSE owner whose recorded seam is `stream_any_model`, and
+**finds no consumer-close defect**: the helper is a plain coroutine with no
+`yield` in its loop body, so there is no generator boundary at which a caller
+can abandon it mid-item. Measured on the unchanged tree, a probe failure and a
+cancellation while suspended on `__anext__` both finalize the source before the
+caller resumes; the SSE-shaped alternative (an outer async generator dropped by
+its consumer) does not, even after `gc.collect()`. `app.py` is therefore **not**
+edited — an `aclosing` wrap here would be a no-op — and the matrix records a
+distinct assessment, `bounded_probe_stream_finalized`, rather than reusing the
+`bounded_*_stream_close` family. The audit also records that its
+source-finalization tests are **regression pins, not red/green proofs**: they
+pass on the unchanged tree and on a deliberately defect-shaped rewrite. **3 of
+29 owners remain `inventory_only_in_this_audit`** (`execute_child_delegation_async`
+and `execute_conservative_model_switch_async`, whose only seams are `_unload_*`
+acknowledgments and hold no delegated stream; and this probe owner, now
+assessed). It promotes no other owner and adds no activation, hardware
+qualification, release acceptance or LC09–11 status.
 
 The bounded [`api_run_sdlc_feedback_loop.fb_gen` audit](lc08-sdlc-feedback-loop-audit.md)
 adds one assessed owner and fixes the same delegated-source gap at the
@@ -24,12 +44,8 @@ sprint-delegation `yield ev_chunk` is a deterministic red/green proof
 `aclose()`). The two model loops contain no yields inside their loop
 bodies, so no consumer-visible red path is reachable there; those wraps
 are parity and covered by regression tests. The checked-in matrix marks
-`api_run_sdlc_feedback_loop.fb_gen` `bounded_feedback_stream_close` (PR #317).
-**3 of 29 owners remain `inventory_only_in_this_audit`**
-(`execute_child_delegation_async`, `execute_conservative_model_switch_async`
-and its `._run_probe_stream`). Neither audit promotes any other owner and
-neither adds activation, hardware qualification, release acceptance or
-LC09–11 status.
+`api_run_sdlc_feedback_loop.fb_gen` `bounded_feedback_stream_close` (PR #317). It promotes no other owner and adds
+no activation, hardware qualification, release acceptance or LC09–11 status.
 
 The bounded [`api_run_gsd_fresh_wave.gsd_gen` audit](lc08-gsd-fresh-wave-audit.md)
 adds one assessed owner and fixes the same delegated-source gap at the GSD
