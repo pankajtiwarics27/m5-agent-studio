@@ -2,6 +2,17 @@
 
 ## Continuation after this snapshot
 
+The bounded [`api_run_harness_turn.event_gen` audit](lc08-harness-turn-audit.md)
+adds one assessed owner and fixes the same delegated-source gap at the
+Harness turn SSE shell: the per-step lead-model `stream_any_model` call
+iterated through a bare `async for`; it is now in `contextlib.aclosing`, in
+parity with the combo, sprint-runner, factory and GSD audits. The
+consumer-close cases at the `step_reasoning` and `step_content` frames and
+the abort-flag `break` path are deterministic red/green proofs (red on the
+unchanged source; close now observed inside the consumer's `aclose()`).
+The checked-in matrix marks `api_run_harness_turn.event_gen`
+`bounded_harness_turn_stream_close`.
+
 The bounded [`api_run_sdlc_feedback_loop.fb_gen` audit](lc08-sdlc-feedback-loop-audit.md)
 adds one assessed owner and fixes the same delegated-source gap at the
 feedback router: the sprint-delegation loop and the two model loops
@@ -13,7 +24,12 @@ sprint-delegation `yield ev_chunk` is a deterministic red/green proof
 `aclose()`). The two model loops contain no yields inside their loop
 bodies, so no consumer-visible red path is reachable there; those wraps
 are parity and covered by regression tests. The checked-in matrix marks
-`api_run_sdlc_feedback_loop.fb_gen` `bounded_feedback_stream_close`.
+`api_run_sdlc_feedback_loop.fb_gen` `bounded_feedback_stream_close` (PR #317).
+**3 of 29 owners remain `inventory_only_in_this_audit`**
+(`execute_child_delegation_async`, `execute_conservative_model_switch_async`
+and its `._run_probe_stream`). Neither audit promotes any other owner and
+neither adds activation, hardware qualification, release acceptance or
+LC09–11 status.
 
 The bounded [`api_run_gsd_fresh_wave.gsd_gen` audit](lc08-gsd-fresh-wave-audit.md)
 adds one assessed owner and fixes the same delegated-source gap at the GSD
