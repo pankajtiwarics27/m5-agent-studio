@@ -37834,26 +37834,29 @@ async def api_run_harness_turn(request: Request) -> StreamingResponse:
                 active_target = lead_model
                 step_max_tok = 2048 if is_local_omlx_model(lead_model) else 4096
 
-                async for item in stream_any_model(
-                    client, lead_model, messages, temperature=0.0, max_tokens=step_max_tok, reasoning_mode=reasoning_mode
-                ):
-                    if session_id in _HARNESS_ABORT_FLAGS:
-                        break
-                    if item["type"] == "route_Attempt" and item.get("attempt", 1) > 1:
-                        yield _sse("fallback_switch", item)
-                    elif item["type"] == "route_fallback":
-                        yield _sse("fallback_notice", item)
-                    elif item["type"] == "route_selected":
-                        active_target = item["target"]
-                    elif item["type"] == "reasoning":
-                        reason_buf.append(item["text"])
-                        yield _sse("step_reasoning", {"step": step_idx, "text": item["text"]})
-                    elif item["type"] == "content":
-                        content_buf.append(item["text"])
-                        yield _sse("step_content", {"step": step_idx, "text": item["text"]})
-                    elif item["type"] == "usage":
-                        usage_pkt = item
-                        record_perf("harness", active_target, item["decode_tps"], item["prefill_tps"], item["ttft"], item["completion_tokens"], item["cached_tokens"], demo=bool(item.get("demo")))
+                async with contextlib.aclosing(
+                    stream_any_model(
+                        client, lead_model, messages, temperature=0.0, max_tokens=step_max_tok, reasoning_mode=reasoning_mode
+                    )
+                ) as model_source:
+                    async for item in model_source:
+                        if session_id in _HARNESS_ABORT_FLAGS:
+                            break
+                        if item["type"] == "route_Attempt" and item.get("attempt", 1) > 1:
+                            yield _sse("fallback_switch", item)
+                        elif item["type"] == "route_fallback":
+                            yield _sse("fallback_notice", item)
+                        elif item["type"] == "route_selected":
+                            active_target = item["target"]
+                        elif item["type"] == "reasoning":
+                            reason_buf.append(item["text"])
+                            yield _sse("step_reasoning", {"step": step_idx, "text": item["text"]})
+                        elif item["type"] == "content":
+                            content_buf.append(item["text"])
+                            yield _sse("step_content", {"step": step_idx, "text": item["text"]})
+                        elif item["type"] == "usage":
+                            usage_pkt = item
+                            record_perf("harness", active_target, item["decode_tps"], item["prefill_tps"], item["ttft"], item["completion_tokens"], item["cached_tokens"], demo=bool(item.get("demo")))
 
                 post_stream_boundary = sm.check_safe_boundary(
                     session_id,

@@ -71,9 +71,11 @@ collaborator the shell reaches before or during a step is substituted in the
 test: the session DB, message store, harness event log, worker-lease
 coordinator and task state machine, the portable-handoff and scoped-grant
 stores, the evidence-lesson store, workspace snapshots, the execution budget
-recorder, the tool executor and workspace-quarantine lookup. Every model source
-is a synthetic async iterator that records its own closure. The tests touch no
-database, subprocess, network or real worktree content.
+recorder, the tool executor and the verification-report object the shell reads
+at turn end. Every model source is a synthetic async iterator that records its
+own closure. The tests touch no database, subprocess, network or workspace
+content; `tmp_path` is used only as the session's worktree path, which the
+substituted collaborators never read.
 
 Cases:
 
@@ -84,7 +86,12 @@ Cases:
 2. **Red/green — the shell's own abort `break`.** `_HARNESS_ABORT_FLAGS` is
    populated for the session while a step is streaming, which is the in-process
    cancel path a Stop button takes; the shell must close the delegated source
-   it abandons on that `break`, not leave it to shutdown finalization.
+   it abandons on that `break`, not leave it to shutdown finalization. The
+   assertion runs inside the event loop, before that loop is closed: the
+   harness's own shutdown also finalizes async generators, so a post-run
+   assertion would pass on a broken tree too. Both red/green cases keep a
+   strong reference to the synthetic source for the same reason — an abandoned
+   generator that gets garbage-collected closes itself and would mask the gap.
 3. **Failure propagation.** A model error raised after at least one content
    frame surfaces as the terminal `error` SSE frame, and the source is
    finalized on the way out.
@@ -95,8 +102,11 @@ Cases:
    emits `turn_done`, and reaches the expected terminal state — this pins the
    wrap against a future reordering of the loop.
 6. **Tool-call step still drains before effect execution.** A step that does
-   request a tool must finish reading the source before any tool is executed,
-   so the wrap cannot move an effect ahead of the model's final frame.
+   request a tool finishes reading the source before the tool runs: the test
+   asserts that `run_command` actually executed, that the source closed, and
+   that the close happened while no tool had yet run. This pins the wrap
+   against a future reordering in which `aclosing` would release the source
+   before the model's final frame reached the effect.
 
 This is one bounded pass over one delegated consumer in one SSE shell. It does
 not prove production disconnect behaviour against a live ASGI server, native
