@@ -157,12 +157,16 @@ Consequences, all binding: `runtime_activation_authorized` remains `false`;
 no `IsolationAcceptance` is recorded; no dispatch is observed;
 installed-runtime qualification has **not** been run on any host (this
 session's sandbox is a Linux x86_64 host with no container runtime and is not
-the Apple M5 target); ADR-0040 through ADR-0044 remain `not-reviewed`; no
+the Apple M5 target); ADR-0040 through ADR-0045 remain `not-reviewed`; no
 owner-independent security, screenshot, media, signing or release approval is
-implied; the blocker lists of U06 are removed in the same reviewed revision;
-AP-007 is `in_progress` for its authorized remainder; AP-008 is authorized to
-start only after AP-007 is recorded done, one story per branch/PR; AP-009 and
-later remain unauthorized.
+implied; the blocker lists of U06 are removed in the same reviewed revision.
+AP-007-R1's observer seam landed through PR #327, and the separate docs/ledger
+completion record records AP-007 `done` for its authorized scope only. This
+completion claims no production caller, `IsolationAcceptance`, live dispatch,
+runtime activation, or installed-runtime qualification; the owner's fresh-run
+waiver and accepted evidence gap remain explicit. AP-008 is the owner-authorized
+next story after the completion record lands, but stays `not_started` until a
+fresh branch/PR claims it; AP-009 and later remain unauthorized.
 
 ## Hardware and runtime inventory recipe
 

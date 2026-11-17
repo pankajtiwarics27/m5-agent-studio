@@ -91,12 +91,18 @@ AS source/status record rather than a fourth interchangeable claim ledger.
   refusal foundation. Nothing is activated: `runtime_activation_authorized`
   remains false, no `IsolationAcceptance` is recorded, installed-runtime
   qualification has not been run, and the 2026-10-31 M5-P3-01 record is the
-  only machine evidence. AP-007 is `in_progress` for its authorized remainder;
-  AP-008 is authorized to start only after AP-007 is recorded done, one story
-  per branch/PR. AP-009…AP-032, product runtime activation, destructive
-  resets, and real external services remain unauthorized, and a later story
-  needs its own explicit owner authorization plus dependency evidence and its
-  own branch/PR before any work starts.
+  only machine evidence. AP-007-R1's observer seam landed through PR #327 at
+  final head `047378a48bde7e810fc80681d9d25febff22f190`, merged as
+  `6e357c4681b29b803b713d2f142979d9510fe78f`; its exact-head CI run
+  `44091638722` and exact-main run `44092926116` passed. The separate
+  docs/ledger completion record records AP-007 `done` for this authorized
+  scope only. No production caller, live dispatch, activation, or installed-
+  runtime qualification is claimed. AP-008 is the owner-authorized next story
+  after that record lands, but remains `not_started` and requires its own fresh
+  branch/PR. AP-009…AP-032, product runtime activation, destructive resets,
+  and real external services remain unauthorized; each later story needs its
+  own explicit owner authorization plus dependency evidence and its own
+  branch/PR before any work starts.
 
 Within the program you are working on, choose exactly one story that is both
 owner-authorized and dependency-ready, respect phase order, and take one story
