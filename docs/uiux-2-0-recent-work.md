@@ -14,8 +14,8 @@ Start shows the five most recent Harness sessions as buttons that open them wher
 |---|---|---|---|
 | `blocked` | danger | blocked | app.py:15040 (1×) |
 | `cancelled` | warn | stopped by you | app.py:14915 (7×) |
-| `completed` | ok | completed | app.py:20141 (4×) |
-| `error` | danger | failed | app.py:20272 (4×) |
+| `completed` | ok | completed | app.py:20144 (4×) |
+| `error` | danger | failed | app.py:20275 (4×) |
 | `idle` | info | ready | app.py:2314 (2×) |
 | `paused` | warn | paused | app.py:13074 (11×) |
 | `running` | busy | running | app.py:9161 (10×) |
