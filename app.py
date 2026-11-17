@@ -20425,14 +20425,17 @@ async def api_run_gsd_fresh_wave(request: Request) -> StreamingResponse:
                     ]
                     plan_buf: list[str] = []
                     w1_usage: dict[str, Any] = {}
-                    async for item in stream_any_model(client, lead_model, w1_msgs, temperature=0.0, max_tokens=2400, reasoning_mode=reasoning_mode):
-                        if session_id in _HARNESS_ABORT_FLAGS:
-                            break
-                        if item["type"] == "content":
-                            plan_buf.append(item["text"])
-                            yield _sse("step_content", {"step": 1, "wave": 1, "text": item["text"]})
-                        elif item["type"] == "usage":
-                            w1_usage = item
+                    async with contextlib.aclosing(
+                        stream_any_model(client, lead_model, w1_msgs, temperature=0.0, max_tokens=2400, reasoning_mode=reasoning_mode)
+                    ) as wave1_source:
+                        async for item in wave1_source:
+                            if session_id in _HARNESS_ABORT_FLAGS:
+                                break
+                            if item["type"] == "content":
+                                plan_buf.append(item["text"])
+                                yield _sse("step_content", {"step": 1, "wave": 1, "text": item["text"]})
+                            elif item["type"] == "usage":
+                                w1_usage = item
                     b_w1_after = sm.check_safe_boundary(session_id, epoch=lease_epoch, abort_requested=(session_id in _HARNESS_ABORT_FLAGS))
                     if b_w1_after != "continue":
                         halt_mode = "cancelled" if b_w1_after == "cancel" else "paused"
@@ -20550,17 +20553,20 @@ async def api_run_gsd_fresh_wave(request: Request) -> StreamingResponse:
                             cbuf: list[str] = []
                             rbuf: list[str] = []
                             upkt: dict[str, Any] = {}
-                            async for item in stream_any_model(client, lead_model, w2_msgs, temperature=0.0, max_tokens=3600, reasoning_mode=reasoning_mode):
-                                if session_id in _HARNESS_ABORT_FLAGS:
-                                    break
-                                if item["type"] == "reasoning":
-                                    rbuf.append(item["text"])
-                                    yield _sse("step_reasoning", {"step": global_step, "text": item["text"]})
-                                elif item["type"] == "content":
-                                    cbuf.append(item["text"])
-                                    yield _sse("step_content", {"step": global_step, "text": item["text"]})
-                                elif item["type"] == "usage":
-                                    upkt = item
+                            async with contextlib.aclosing(
+                                stream_any_model(client, lead_model, w2_msgs, temperature=0.0, max_tokens=3600, reasoning_mode=reasoning_mode)
+                            ) as wave2_source:
+                                async for item in wave2_source:
+                                    if session_id in _HARNESS_ABORT_FLAGS:
+                                        break
+                                    if item["type"] == "reasoning":
+                                        rbuf.append(item["text"])
+                                        yield _sse("step_reasoning", {"step": global_step, "text": item["text"]})
+                                    elif item["type"] == "content":
+                                        cbuf.append(item["text"])
+                                        yield _sse("step_content", {"step": global_step, "text": item["text"]})
+                                    elif item["type"] == "usage":
+                                        upkt = item
                             b_after_w2_stream = sm.check_safe_boundary(
                                 session_id,
                                 epoch=lease_epoch,
@@ -20828,14 +20834,17 @@ async def api_run_gsd_fresh_wave(request: Request) -> StreamingResponse:
                     ]
                     ver_buf: list[str] = []
                     w3_usage: dict[str, Any] = {}
-                    async for item in stream_any_model(client, critic_model, w3_msgs, temperature=0.0, max_tokens=1800, reasoning_mode="off"):
-                        if session_id in _HARNESS_ABORT_FLAGS:
-                            break
-                        if item["type"] == "content":
-                            ver_buf.append(item["text"])
-                            yield _sse("step_content", {"step": v_step, "wave": 3, "text": item["text"]})
-                        elif item["type"] == "usage":
-                            w3_usage = item
+                    async with contextlib.aclosing(
+                        stream_any_model(client, critic_model, w3_msgs, temperature=0.0, max_tokens=1800, reasoning_mode="off")
+                    ) as wave3_source:
+                        async for item in wave3_source:
+                            if session_id in _HARNESS_ABORT_FLAGS:
+                                break
+                            if item["type"] == "content":
+                                ver_buf.append(item["text"])
+                                yield _sse("step_content", {"step": v_step, "wave": 3, "text": item["text"]})
+                            elif item["type"] == "usage":
+                                w3_usage = item
 
                     b_w3_after = sm.check_safe_boundary(session_id, epoch=lease_epoch, abort_requested=(session_id in _HARNESS_ABORT_FLAGS))
                     if b_w3_after != "continue":

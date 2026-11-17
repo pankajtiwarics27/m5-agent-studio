@@ -9,6 +9,11 @@ AP-007-F2 makes isolation proof mandatory for consequential actions of
 mission-owned work, whether or not a budget declares the requirement, and judges
 the proof against a recorded :class:`IsolationAcceptance`.  No acceptance is
 recorded in this build, so every such dispatch is refused.
+
+AP-007-F3 adds two conditions to that proof.  The qualification must rest on a
+report that stated its own generation time, and the proof must come from the
+recorded target host: the host of the qualification run and the host observed for
+the dispatch must both be the host the acceptance names.
 """
 
 from __future__ import annotations
@@ -82,6 +87,9 @@ _ACCEPTANCE_RUNTIME_RE = re.compile(r"[a-z0-9][a-z0-9._-]{0,63}")
 #: A full content digest, optionally prefixed with the repository it was pulled from.
 #: A shortened id is not a pin.
 _ACCEPTANCE_DIGEST_RE = re.compile(r"(?:[A-Za-z0-9][A-Za-z0-9._/:-]{0,199}@)?sha256:[0-9a-f]{64}")
+#: A host fingerprint: the digest of a machine description, as
+#: ``sandbox_boundary.qualification_host_fingerprint`` writes it (AP-007-F3).
+_HOST_FINGERPRINT_RE = re.compile(r"sha256:[0-9a-f]{64}")
 
 
 def _acceptance_text(value: Any, name: str, *, max_len: int) -> str:
@@ -101,6 +109,14 @@ def _positive_finite_time(value: Any) -> float:
     return stamp if math.isfinite(stamp) and stamp > 0 else 0.0
 
 
+def _host_fingerprint(value: Any) -> str:
+    """Return ``value`` as a host fingerprint, or ``""`` when it is not a well-formed one."""
+    if not isinstance(value, str):
+        return ""
+    cleaned = value.strip()
+    return cleaned if _HOST_FINGERPRINT_RE.fullmatch(cleaned) else ""
+
+
 @dataclass(frozen=True, slots=True)
 class IsolationAcceptance:
     """What a recorded owner decision accepts as runtime isolation (AP-007-F2).
@@ -114,6 +130,11 @@ class IsolationAcceptance:
     digest), the earliest qualification time it accepts, and the activation steps it
     covers.  Steps are activated in the order of :data:`ISOLATION_STEPS`: a later
     step cannot be recorded without the earlier ones.
+
+    AP-007-F3: the record also names the target host, as the fingerprint of its
+    machine description (``sandbox_boundary.qualification_host_fingerprint``).  The
+    fingerprint identifies a kind of machine, not one unit: two machines of the same
+    model and memory size share it.
     """
 
     decision_ref: str
@@ -121,6 +142,7 @@ class IsolationAcceptance:
     runtime_version: str
     image_digest: str
     qualified_not_before: float
+    target_host: str
     activated_steps: frozenset[str] = frozenset()
 
     def __post_init__(self) -> None:
@@ -140,6 +162,10 @@ class IsolationAcceptance:
         if not not_before:
             raise BudgetError("qualified_not_before must be a positive finite epoch timestamp.")
         object.__setattr__(self, "qualified_not_before", not_before)
+        target_host = _host_fingerprint(_acceptance_text(self.target_host, "target_host", max_len=80))
+        if not target_host:
+            raise BudgetError("target_host must be a host fingerprint: `sha256:` and 64 lowercase hex digits.")
+        object.__setattr__(self, "target_host", target_host)
         steps = self.activated_steps
         if isinstance(steps, (str, bytes)) or not isinstance(steps, (frozenset, set, tuple, list)):
             raise BudgetError("activated_steps must be a collection of step names.")
@@ -160,6 +186,7 @@ class IsolationAcceptance:
             "runtime_version": self.runtime_version,
             "image_digest": self.image_digest,
             "qualified_not_before": self.qualified_not_before,
+            "target_host": self.target_host,
             "activated_steps": [step for step in ISOLATION_STEPS if step in self.activated_steps],
         }
 
@@ -176,6 +203,11 @@ class IsolationEvidence:
     image digest, the qualification it rests on with the time of the qualification
     run, and the one activation step it proves.  They are compared with the recorded
     :class:`IsolationAcceptance`.
+
+    AP-007-F3: the evidence names two hosts, each as a host fingerprint.
+    ``qualified_host`` is the host the qualification report was produced on, as the
+    qualification record says.  ``observed_host`` is the host the server observed
+    itself to run on for this dispatch.  Both must be the recorded target host.
     """
 
     execution_mode: str
@@ -190,6 +222,8 @@ class IsolationEvidence:
     qualification_id: str = ""
     qualified_at: float = 0.0
     step: str = CONTAINED_EXECUTION
+    qualified_host: str = ""
+    observed_host: str = ""
 
     @classmethod
     def from_admission(
@@ -198,6 +232,7 @@ class IsolationEvidence:
         *,
         execution_mode: str,
         qualification: Any = None,
+        observed_host: Any = None,
     ) -> IsolationEvidence:
         """Adapt a ``sandbox_boundary.SecurityAdmissionDecision`` without importing it.
 
@@ -212,11 +247,21 @@ class IsolationEvidence:
         generated, so recording an old report again does not make it fresh.  A record
         without both times carries no qualification time.  A sandbox admission proves
         the contained-execution step and no other.
+
+        AP-007-F3: the record must say that its report stated a generation time of
+        its own (``report_time_stated`` is the literal ``True``).  When a report
+        states none, the sandbox layer records the time of ingestion, which says
+        nothing about the age of the run; such a record carries no qualification
+        time here.  ``qualified_host`` is the record's ``host_fingerprint``.
+        ``observed_host`` is the fingerprint of the host this server runs on.  Server
+        code observes it; it is never taken from a request or from the record.  A
+        value that is not a well-formed fingerprint counts as absent.
         """
         backend = getattr(decision, "active_backend", None)
         backend_id = str(getattr(backend, "backend_id", "") or "")[:64]
         qualification_id = ""
         qualified_at = 0.0
+        qualified_host = ""
         if (
             backend_id
             and getattr(qualification, "verdict", None) == "qualified"
@@ -225,7 +270,9 @@ class IsolationEvidence:
             qualification_id = str(getattr(qualification, "qualification_id", "") or "").strip()[:120]
             recorded_at = _positive_finite_time(getattr(qualification, "qualified_at", None))
             run_at = _positive_finite_time(getattr(qualification, "report_generated_at", None))
-            qualified_at = min(recorded_at, run_at) if recorded_at and run_at else 0.0
+            time_stated = getattr(qualification, "report_time_stated", None) is True
+            qualified_at = min(recorded_at, run_at) if time_stated and recorded_at and run_at else 0.0
+            qualified_host = _host_fingerprint(getattr(qualification, "host_fingerprint", None))
         return cls(
             execution_mode=str(execution_mode or "").strip().lower(),
             admitted=getattr(decision, "allowed", None) is True,
@@ -239,6 +286,8 @@ class IsolationEvidence:
             qualification_id=qualification_id,
             qualified_at=qualified_at,
             step=CONTAINED_EXECUTION,
+            qualified_host=qualified_host,
+            observed_host=_host_fingerprint(observed_host),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -254,6 +303,8 @@ class IsolationEvidence:
             "qualification_id": self.qualification_id,
             "qualified_at": self.qualified_at,
             "step": self.step,
+            "qualified_host": self.qualified_host,
+            "observed_host": self.observed_host,
         }
 
 
@@ -274,6 +325,11 @@ def isolation_refusal(
     backend must be the pinned container runtime, runtime version and image, and its
     qualification must not predate the acceptance.  Contained execution is the only
     step this build defines evidence for, so the later steps are always refused.
+
+    AP-007-F3: a qualification without a usable time of its run is refused with its
+    own reason, and so is proof that does not come from the recorded target host.
+    The host of the qualification run and the host observed for the dispatch must
+    each be a well-formed fingerprint equal to the one the acceptance names.
     """
     wanted = step if isinstance(step, str) else ""
     if wanted not in ISOLATION_STEPS:
@@ -306,8 +362,21 @@ def isolation_refusal(
         return "runtime isolation is required but the active backend is not the accepted runtime and image"
     if not str(evidence.qualification_id or "").strip():
         return "runtime isolation is required but the active backend names no qualification"
-    if _positive_finite_time(evidence.qualified_at) < acceptance.qualified_not_before:
+    qualified_at = _positive_finite_time(evidence.qualified_at)
+    if not qualified_at:
+        return "runtime isolation is required but the backend qualification states no usable time for its run"
+    if qualified_at < acceptance.qualified_not_before:
         return "runtime isolation is required but the backend qualification predates the recorded acceptance"
+    qualified_host = _host_fingerprint(evidence.qualified_host)
+    if not qualified_host:
+        return "runtime isolation is required but the backend qualification names no host"
+    if qualified_host != acceptance.target_host:
+        return "runtime isolation is required but the backend qualification was not run on the accepted target host"
+    observed_host = _host_fingerprint(evidence.observed_host)
+    if not observed_host:
+        return "runtime isolation is required but the host of this dispatch was not observed"
+    if observed_host != acceptance.target_host:
+        return "runtime isolation is required but this host is not the accepted target host"
     return ""
 
 

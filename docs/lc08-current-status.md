@@ -13,13 +13,24 @@ sprint-delegation `yield ev_chunk` is a deterministic red/green proof
 `aclose()`). The two model loops contain no yields inside their loop
 bodies, so no consumer-visible red path is reachable there; those wraps
 are parity and covered by regression tests. The checked-in matrix marks
-`api_run_sdlc_feedback_loop.fb_gen` `bounded_feedback_stream_close`;
-**5 of 29 owners remain `inventory_only_in_this_audit`**. The GSD
-fresh-wave shell (`api_run_gsd_fresh_wave.gsd_gen`), the harness-turn
-shell and the child-delegation / conservative-model-switch owners remain
-inventory-only and unaudited. It does not promote any other owner and
-adds no activation, hardware qualification, release acceptance or
-LC09–11 status.
+`api_run_sdlc_feedback_loop.fb_gen` `bounded_feedback_stream_close`.
+
+The bounded [`api_run_gsd_fresh_wave.gsd_gen` audit](lc08-gsd-fresh-wave-audit.md)
+adds one assessed owner and fixes the same delegated-source gap at the GSD
+fresh-wave SSE shell: the Wave 1 plan loop, the Wave 2 fresh-context
+execution loop (per executor step) and the Wave 3 critic-verdict loop each
+iterated through a bare `async for` over `stream_any_model`; all three are
+now in `contextlib.aclosing`, in parity with the combo, sprint-runner and
+factory audits. The consumer-close cases at the wave-1/wave-2/wave-3
+`step_content` frames are deterministic red/green proofs (red on the
+unchanged source; close now observed inside the consumer's `aclose()`).
+The checked-in matrix marks `api_run_gsd_fresh_wave.gsd_gen`
+`bounded_gsd_fresh_wave_stream_close` (PR #318). **4 of 29 owners remain
+`inventory_only_in_this_audit`** (`api_run_harness_turn.event_gen`,
+in flight in PR #323; `execute_child_delegation_async`;
+`execute_conservative_model_switch_async` and its `._run_probe_stream`).
+Neither audit promotes any other owner and neither adds activation,
+hardware qualification, release acceptance or LC09–11 status.
 
 The bounded [`api_run_agile_sdlc_factory.sdlc_gen` audit](lc08-agile-sdlc-factory-audit.md)
 adds one assessed owner and fixes the same delegated-source gap at the
