@@ -881,6 +881,130 @@ def test_tampered_or_symlink_security_incident_state_fails_closed(
     assert symlink_denied["error_code"] == "security_state_corrupt"
 
 
+# AP-007-F3.  A machine description written by this test; it describes no real machine.
+_F3_MACHINE: dict[str, Any] = {
+    "os": "FixtureOS",
+    "machine": "fixture64",
+    "cpu_model": "Fixture CPU - not a real machine",
+    "cpu_count": 8,
+    "total_memory_bytes": 17_179_869_184,
+    "os_release": "0.0.0-test-fixture",
+}
+
+
+def _f3_report(backend: sb.SandboxBackendProfile, *, dated: bool, described: bool) -> dict[str, Any]:
+    """A qualified fixture report that states, or leaves out, its generation time and its machine."""
+    report = _make_qual_report(backend, generated_at_epoch=time.time() + 1.0)
+    if not dated:
+        del report["generated_at_utc"]
+        del report["generated_at_epoch"]
+    if described:
+        report["fingerprint"] = dict(_F3_MACHINE)
+    return report
+
+
+def test_ap007_f3_every_recorded_qualification_says_what_its_report_states(isolated_env: Path) -> None:
+    """Ingestion, fallback and restoration each record whether the report stated its time, and its machine.
+
+    The application accepts a report without either, exactly as before; the record
+    only notes that the report did not say.  Every report here is a test fixture.
+    """
+    client = _auth_client()
+    host = sb.qualification_host_fingerprint(_F3_MACHINE)
+    assert host.startswith("sha256:") and len(host) == 71
+    stated, silent = (True, host), (False, "")
+
+    def _provenance(qualification: dict[str, Any]) -> tuple[Any, Any]:
+        return qualification["report_time_stated"], qualification["host_fingerprint"]
+
+    # 1. Ingestion of a qualification report for the primary backend.
+    primary = studio._current_primary_backend_profile(runtime_path_override="/usr/bin/docker")
+    for dated, described, expected in ((True, True, stated), (False, False, silent), (True, False, (True, ""))):
+        resp = client.post(
+            "/api/security/incidents",
+            json={
+                "backend": primary.to_mapping(),
+                "qualification_report": _f3_report(primary, dated=dated, described=described),
+            },
+        )
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert body["ok"] is True  # the application accepts all three, as it did before
+        assert _provenance(body["qualification"]) == expected
+        assert _provenance(body["summary"]["qualifications"][primary.backend_id]) == expected
+        assert body["qualification"]["verdict"] == "qualified"
+    # ``GET /api/security/incidents`` returns this summary (after it has observed the configuration).
+    listed = studio.get_security_incident_store().summary()["qualifications"][primary.backend_id]
+    assert _provenance(listed) == (True, "")
+    # The application's admission is the same for a record that says nothing about its report.
+    decision = studio.get_security_incident_store().check_admission(
+        required_guarantees=("container_filesystem_isolation",),
+        execution_surface="subprocess",
+        execution_mode="sandbox",
+        session_id="ap007-f3-incident",
+        workspace_root=isolated_env,
+    )
+    assert (decision.allowed, decision.container_qualified) == (True, True)
+
+    # 2. Fallback qualification during an incident.
+    inc_resp = client.post(
+        "/api/security/incidents",
+        json={
+            "reason": "ap007_f3_fixture_incident",
+            "failed_guarantees": ["container_network_isolation", "container_privilege_containment"],
+            "failed_dependencies": ["dep:runtime:docker", "dep:oci_runtime:runc", "dep:kernel:orbstack_vm"],
+            "affected_backends": [primary.backend_id],
+        },
+    )
+    assert inc_resp.status_code == 201, inc_resp.text
+    inc_id = inc_resp.json()["incident"]["incident_id"]
+    fallback = sb.SandboxBackendProfile(
+        backend_id="podman-isolated",
+        runtime="podman",
+        runtime_path="/usr/bin/podman",
+        image="python:3.12-alpine",
+        image_digest="sha256:goodpodman777",
+        oci_runtime="crun",
+        kernel_boundary="podman_machine_vm",
+    )
+    for dated, described, expected in ((False, False, silent), (True, True, stated)):
+        resp = client.post(
+            f"/api/security/incidents/{inc_id}/fallback",
+            json={
+                "backend": fallback.to_mapping(),
+                "qualification_report": _f3_report(fallback, dated=dated, described=described),
+            },
+        )
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert body["ok"] is True and body["incident"]["status"] == "mitigated_via_fallback"
+        assert _provenance(body["qualification"]) == expected
+        assert _provenance(body["summary"]["qualifications"]["podman-isolated"]) == expected
+
+    # 3. Requalification before restoration.
+    remediated = sb.SandboxBackendProfile(
+        backend_id=primary.backend_id,
+        runtime="docker",
+        runtime_path="/usr/bin/docker",
+        image="python:3.12-slim",
+        image_digest="sha256:patchedclean222",
+        oci_runtime="runc-1.2.0-patched",
+        kernel_boundary="patched_vm",
+    )
+    resp = client.post(
+        f"/api/security/incidents/{inc_id}/restore",
+        json={
+            "backend": remediated.to_mapping(),
+            "qualification_report": _f3_report(remediated, dated=True, described=True),
+        },
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["ok"] is True and body["incident"]["status"] == "restored"
+    assert _provenance(body["qualification"]) == stated
+    assert _provenance(body["summary"]["qualifications"][primary.backend_id]) == stated
+
+
 def test_standalone_studio_bundle_security_incident_containment_parity(
     tmp_path: Path,
 ) -> None:

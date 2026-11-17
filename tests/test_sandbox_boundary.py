@@ -1,13 +1,21 @@
 from __future__ import annotations
 
+import hashlib
+import io
+import json
 from pathlib import Path
+import re
+from types import MappingProxyType
+from typing import Any
 
 import pytest
 
+import sandbox_boundary
 from sandbox_boundary import (
     SandboxBoundaryError,
     build_container_invocation,
     confined_path,
+    qualification_host_fingerprint,
     sandbox_command,
     validate_workspace,
 )
@@ -201,3 +209,137 @@ def test_settings_reject_host_mode_without_the_opt_in() -> None:
 
     with pytest.raises(ConfigurationError, match="STUDIO_ALLOW_HOST_EXECUTION"):
         load_settings({"STUDIO_EXECUTION_MODE": "host"}, base_dir=Path("."))
+
+
+# AP-007-F3.  A machine description written by this test; it describes no real machine.
+_F3_MACHINE: dict[str, Any] = {
+    "os": "FixtureOS",
+    "machine": "fixture64",
+    "cpu_model": "Fixture CPU - not a real machine",
+    "cpu_count": 8,
+    "total_memory_bytes": 17_179_869_184,
+}
+
+
+def test_ap007_f3_host_fingerprint_identifies_the_machine_a_report_describes() -> None:
+    digest = qualification_host_fingerprint(_F3_MACHINE)
+    # A known answer pins the recipe: SHA-256 over the canonical JSON of the five values.
+    assert digest == "sha256:d0e6477327db02803c288631c5bd3ad085ce68fd8b898cfe7e66957af4ed5440"
+    canonical = json.dumps(_F3_MACHINE, sort_keys=True, separators=(",", ":"))
+    assert digest == "sha256:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+    assert re.fullmatch(r"sha256:[0-9a-f]{64}", digest)
+
+    # What changes while the host stays the same is not part of the identity, and neither is key order.
+    noisy = {
+        **_F3_MACHINE,
+        "git_revision": "1" * 40,
+        "os_release": "9.9.9",
+        "os_version": "9",
+        "python": "3.13.0",
+        "total_memory_gib": 16.0,
+        "memory": {"swap_used_bytes": 123_456},
+        "hostname": "any-name",
+    }
+    assert qualification_host_fingerprint(noisy) == digest
+    assert qualification_host_fingerprint(dict(reversed(list(_F3_MACHINE.items())))) == digest
+    assert qualification_host_fingerprint({**_F3_MACHINE, "os": "  FixtureOS\n"}) == digest
+    assert qualification_host_fingerprint(MappingProxyType(_F3_MACHINE)) == digest
+
+    # The digested bytes are written out here: sorted keys, no spaces, text as UTF-8 and not escaped.
+    accented = {**_F3_MACHINE, "cpu_model": "Fixture CPU \u00fc\u4e2d"}
+    written_out = (
+        '{"cpu_count":8,"cpu_model":"Fixture CPU \u00fc\u4e2d","machine":"fixture64",'
+        '"os":"FixtureOS","total_memory_bytes":17179869184}'
+    )
+    assert "\\u" not in written_out
+    assert qualification_host_fingerprint(accented) == "sha256:" + hashlib.sha256(written_out.encode("utf-8")).hexdigest()
+
+    # Each of the five values matters, and each is compared exactly.
+    different = (
+        ("os", "OtherOS"),
+        ("os", "fixtureos"),
+        ("machine", "other64"),
+        ("cpu_model", "Fixture CPU - another one"),
+        ("cpu_count", 10),
+        ("total_memory_bytes", 34_359_738_368),
+    )
+    seen = {digest}
+    for key, other in different:
+        changed = qualification_host_fingerprint({**_F3_MACHINE, key: other})
+        assert re.fullmatch(r"sha256:[0-9a-f]{64}", changed), key
+        assert changed not in seen, key
+        seen.add(changed)
+
+
+def test_ap007_f3_a_description_that_identifies_no_host_has_no_fingerprint() -> None:
+    for key in _F3_MACHINE:
+        without = {name: value for name, value in _F3_MACHINE.items() if name != key}
+        assert qualification_host_fingerprint(without) == "", key
+    malformed: tuple[tuple[str, Any], ...] = (
+        ("os", ""),
+        ("os", "   "),
+        ("os", None),
+        ("os", 7),
+        ("machine", "x" * 201),
+        ("machine", b"fixture64"),
+        ("cpu_model", "two\nlines"),
+        ("cpu_model", ["Fixture CPU"]),
+        ("cpu_count", 0),
+        ("cpu_count", -8),
+        ("cpu_count", True),
+        ("cpu_count", 8.0),
+        ("cpu_count", "8"),
+        ("cpu_count", None),
+        ("total_memory_bytes", 0),
+        ("total_memory_bytes", False),
+        ("total_memory_bytes", 1.7e10),
+        ("total_memory_bytes", "17179869184"),
+        ("total_memory_bytes", None),
+    )
+    for key, bad in malformed:
+        assert qualification_host_fingerprint({**_F3_MACHINE, key: bad}) == "", (key, bad)
+    not_a_description: tuple[Any, ...] = (None, "", "FixtureOS", 7, [_F3_MACHINE], tuple(_F3_MACHINE.items()))
+    for value in not_a_description:
+        assert qualification_host_fingerprint(value) == ""
+
+
+def test_ap007_f3_a_report_of_the_qualification_suite_states_its_time_and_its_machine() -> None:
+    """The keys the provenance is read from are the keys ``scripts/qualify_environment.py`` writes.
+
+    The suite assembles a record with no checks; nothing is probed, installed or
+    qualified.  The machine description is the one the suite reads on this host.
+    """
+    from scripts import qualify_environment as qe
+
+    described = qe.environment_fingerprint()
+    record = qe.build_record(
+        qe.Recorder(stream=io.StringIO()),
+        fingerprint=described,
+        suites=[],
+        runtime_name="",
+        runtime_path="",
+        image="python:3.12-slim",
+        invocation=["qualify_environment.py"],
+    )
+    time_stated, host = sandbox_boundary._sb_report_provenance(record)
+    assert time_stated is True
+    assert host == qualification_host_fingerprint(record["fingerprint"])
+    # A second reading on the same host gives the same fingerprint although its memory snapshot differs.
+    assert qualification_host_fingerprint(qe.environment_fingerprint()) == host
+    # The suite never invents a value: a host it cannot describe completely has no fingerprint.
+    complete = all(
+        isinstance(described.get(key), str) and described[key].strip()
+        for key in sandbox_boundary.QUALIFICATION_HOST_TEXT_FIELDS
+    ) and all(
+        isinstance(described.get(key), int) and not isinstance(described.get(key), bool) and described[key] > 0
+        for key in sandbox_boundary.QUALIFICATION_HOST_COUNT_FIELDS
+    )
+    assert (host != "") is complete
+
+    # A report without the time keys, or without the machine block, states neither.
+    undated = {key: value for key, value in record.items() if key != "generated_at_utc"}
+    assert sandbox_boundary._sb_report_provenance(undated) == (False, host)
+    undescribed = {key: value for key, value in record.items() if key != "fingerprint"}
+    assert sandbox_boundary._sb_report_provenance(undescribed) == (True, "")
+    for not_a_report in (None, "", [], 7):
+        assert sandbox_boundary._sb_report_provenance(not_a_report) == (False, "")  # type: ignore[arg-type]

@@ -34,12 +34,17 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 # repository and no acceptance is recorded outside tests.
 _F2_DIGEST = "python@sha256:" + "ab" * 32
 _F2_NOT_BEFORE = 1_800_000_000.0
+# AP-007-F3.  Fictional host fingerprints: no host is recorded as a target and none
+# is observed outside tests.
+_F3_HOST = "sha256:" + "5a" * 32
+_F3_OTHER_HOST = "sha256:" + "6b" * 32
 _F2_ACCEPTANCE = IsolationAcceptance(
     decision_ref="test-fixture-acceptance-not-an-owner-decision",
     runtime="docker",
     runtime_version="0.0.0-test-fixture",
     image_digest=_F2_DIGEST,
     qualified_not_before=_F2_NOT_BEFORE,
+    target_host=_F3_HOST,
     activated_steps=frozenset({CONTAINED_EXECUTION}),
 )
 _F2_PROVEN = IsolationEvidence(
@@ -52,6 +57,8 @@ _F2_PROVEN = IsolationEvidence(
     image_digest=_F2_DIGEST,
     qualification_id="fixture-qualification",
     qualified_at=_F2_NOT_BEFORE,
+    qualified_host=_F3_HOST,
+    observed_host=_F3_HOST,
 )
 
 
@@ -274,16 +281,29 @@ def _f2_admission(**backend: Any) -> SimpleNamespace:
 
 
 def _f2_qualification(**fields: Any) -> SimpleNamespace:
-    """A stand-in for a ``BackendQualificationRecord``: when it was recorded and when its run happened."""
+    """A stand-in for a ``BackendQualificationRecord``.
+
+    It says when it was recorded and when its run happened and, since AP-007-F3,
+    that the report stated that time itself and which host produced the report.
+    """
     record = {
         "qualification_id": "fixture-qualification",
         "backend_id": "fixture-backend",
         "verdict": "qualified",
         "qualified_at": _F2_NOT_BEFORE,
         "report_generated_at": _F2_NOT_BEFORE,
+        "report_time_stated": True,
+        "host_fingerprint": _F3_HOST,
         **fields,
     }
     return SimpleNamespace(**record)
+
+
+def _f3_adapt(decision: Any, record: Any, *, observed_host: Any = _F3_HOST) -> IsolationEvidence:
+    """Adapt a sandbox admission as server code on the fixture host would."""
+    return IsolationEvidence.from_admission(
+        decision, execution_mode="sandbox", qualification=record, observed_host=observed_host
+    )
 
 
 def test_ap007_isolation_needs_literal_proof_and_has_no_host_fallback() -> None:
@@ -324,9 +344,13 @@ def test_ap007_isolation_needs_literal_proof_and_has_no_host_fallback() -> None:
     assert _f2_refusal(IsolationEvidence.from_admission(object(), execution_mode="sandbox"))
     qualified = _f2_admission()
     record = _f2_qualification()
-    proven_by_admission = IsolationEvidence.from_admission(qualified, execution_mode="sandbox", qualification=record)
+    proven_by_admission = _f3_adapt(qualified, record)
     assert _f2_refusal(proven_by_admission) == ""
-    assert _f2_refusal(IsolationEvidence.from_admission(qualified, execution_mode="host", qualification=record))
+    assert "`host`" in _f2_refusal(
+        IsolationEvidence.from_admission(
+            qualified, execution_mode="host", qualification=record, observed_host=_F3_HOST
+        )
+    )
     # AP-007-F2: an allowed, qualified admission is not enough without its qualification record.
     without_record = IsolationEvidence.from_admission(qualified, execution_mode="sandbox")
     assert "names no qualification" in _f2_refusal(without_record)
@@ -343,6 +367,8 @@ def test_ap007_isolation_needs_literal_proof_and_has_no_host_fallback() -> None:
         "qualification_id",
         "qualified_at",
         "step",
+        "qualified_host",
+        "observed_host",
     }
 
 
@@ -379,13 +405,14 @@ def test_ap007_f2_nothing_is_accepted_without_a_recorded_acceptance() -> None:
         ("qualification_id", "", "names no qualification"),
         ("qualification_id", "   ", "names no qualification"),
         ("qualified_at", _F2_NOT_BEFORE - 0.001, "predates the recorded acceptance"),
-        ("qualified_at", 0.0, "predates the recorded acceptance"),
-        ("qualified_at", -1.0, "predates the recorded acceptance"),
-        ("qualified_at", float("nan"), "predates the recorded acceptance"),
-        ("qualified_at", float("inf"), "predates the recorded acceptance"),
-        ("qualified_at", True, "predates the recorded acceptance"),
-        ("qualified_at", str(_F2_NOT_BEFORE + 10), "predates the recorded acceptance"),
-        ("qualified_at", None, "predates the recorded acceptance"),
+        # AP-007-F3: a time that cannot be used is not an old time; it has its own reason.
+        ("qualified_at", 0.0, "states no usable time for its run"),
+        ("qualified_at", -1.0, "states no usable time for its run"),
+        ("qualified_at", float("nan"), "states no usable time for its run"),
+        ("qualified_at", float("inf"), "states no usable time for its run"),
+        ("qualified_at", True, "states no usable time for its run"),
+        ("qualified_at", str(_F2_NOT_BEFORE + 10), "states no usable time for its run"),
+        ("qualified_at", None, "states no usable time for its run"),
         ("step", BROWSER_WORKER, "proves the `browser_worker` step, not `contained_execution`"),
         ("step", NATIVE_LIFECYCLE, "proves the `native_lifecycle` step, not `contained_execution`"),
         ("step", "", "proves the `unknown` step"),
@@ -475,6 +502,18 @@ def test_ap007_f2_each_step_is_refused_until_it_is_recorded_and_has_evidence() -
         ("qualified_not_before", True),
         ("qualified_not_before", "1800000000"),
         ("qualified_not_before", None),
+        # AP-007-F3: the target host is a full host fingerprint and nothing else.
+        ("target_host", ""),
+        ("target_host", "   "),
+        ("target_host", None),
+        ("target_host", 7),
+        ("target_host", "the-owner-mac"),
+        ("target_host", "sha256:" + "5a" * 31),
+        ("target_host", "sha256:" + "5a" * 33),
+        ("target_host", "sha256:" + "5A" * 32),
+        ("target_host", "md5:" + "5a" * 32),
+        ("target_host", "host@sha256:" + "5a" * 32),
+        ("target_host", "sha256:" + "5a" * 16 + "\n" + "5a" * 16),
         ("activated_steps", frozenset({BROWSER_WORKER})),
         ("activated_steps", frozenset({NATIVE_LIFECYCLE})),
         ("activated_steps", frozenset({CONTAINED_EXECUTION, NATIVE_LIFECYCLE})),
@@ -499,6 +538,7 @@ def test_ap007_f2_an_acceptance_record_is_normalised_and_keeps_the_activation_or
         runtime_version=" 0.0.0-test-fixture ",
         image_digest="sha256:" + "ab" * 32,
         qualified_not_before=1_800_000_000,
+        target_host="  " + _F3_HOST + "\n",
         activated_steps=[BROWSER_WORKER, CONTAINED_EXECUTION],  # type: ignore[arg-type]
     )
     assert (record.decision_ref, record.runtime, record.runtime_version) == (
@@ -514,6 +554,7 @@ def test_ap007_f2_an_acceptance_record_is_normalised_and_keeps_the_activation_or
         "runtime_version": "0.0.0-test-fixture",
         "image_digest": "sha256:" + "ab" * 32,
         "qualified_not_before": 1_800_000_000.0,
+        "target_host": _F3_HOST,
         "activated_steps": [CONTAINED_EXECUTION, BROWSER_WORKER],
     }
     # Each prefix of the order is a valid record; nothing recorded is one of them.
@@ -527,10 +568,9 @@ def test_ap007_f2_an_acceptance_record_is_normalised_and_keeps_the_activation_or
 def test_ap007_f2_evidence_takes_a_qualification_only_for_the_active_backend() -> None:
     """A sandbox admission is adapted with the backend it names and the qualification of that backend."""
     decision = _f2_admission(runtime="Docker", runtime_version=" 0.0.0-test-fixture ")
-    adapted = IsolationEvidence.from_admission(
+    adapted = _f3_adapt(
         decision,
-        execution_mode="sandbox",
-        qualification=_f2_qualification(qualified_at=_F2_NOT_BEFORE + 900, report_generated_at=_F2_NOT_BEFORE + 0.5),
+        _f2_qualification(qualified_at=_F2_NOT_BEFORE + 900, report_generated_at=_F2_NOT_BEFORE + 0.5),
     )
     assert (adapted.runtime, adapted.runtime_version, adapted.image_digest) == (
         "docker",
@@ -544,54 +584,208 @@ def test_ap007_f2_evidence_takes_a_qualification_only_for_the_active_backend() -
     )
     assert _f2_refusal(adapted) == ""
 
-    unusable: dict[str, Any] = {
-        "no record": None,
-        "another backend's record": _f2_qualification(backend_id="other-backend"),
-        "a record that names no backend": _f2_qualification(backend_id=""),
-        "a failed verdict": _f2_qualification(verdict="failed"),
-        "a truthy verdict": _f2_qualification(verdict=True),
-        "no qualification id": _f2_qualification(qualification_id=""),
-        "no record time": _f2_qualification(qualified_at=None),
-        "no run time": _f2_qualification(report_generated_at=None),
-        "a run time of zero": _f2_qualification(report_generated_at=0.0),
-        "a time that is not a number": _f2_qualification(qualified_at=float("nan")),
-        "a run time that is not a number": _f2_qualification(report_generated_at=float("inf")),
-        "a boolean time": _f2_qualification(qualified_at=True),
-        "an older qualification": _f2_qualification(
-            qualified_at=_F2_NOT_BEFORE - 1, report_generated_at=_F2_NOT_BEFORE - 1
+    # Each record is adapted on the fixture host, so that the record is what refuses.
+    no_qualification = "names no qualification"
+    no_time = "states no usable time for its run"
+    too_old = "predates the recorded acceptance"
+    unusable: dict[str, tuple[Any, str]] = {
+        "no record": (None, no_qualification),
+        "another backend's record": (_f2_qualification(backend_id="other-backend"), no_qualification),
+        "a record that names no backend": (_f2_qualification(backend_id=""), no_qualification),
+        "a failed verdict": (_f2_qualification(verdict="failed"), no_qualification),
+        "a truthy verdict": (_f2_qualification(verdict=True), no_qualification),
+        "no qualification id": (_f2_qualification(qualification_id=""), no_qualification),
+        "no record time": (_f2_qualification(qualified_at=None), no_time),
+        "no run time": (_f2_qualification(report_generated_at=None), no_time),
+        "a run time of zero": (_f2_qualification(report_generated_at=0.0), no_time),
+        "a time that is not a number": (_f2_qualification(qualified_at=float("nan")), no_time),
+        "a run time that is not a number": (_f2_qualification(report_generated_at=float("inf")), no_time),
+        "a boolean time": (_f2_qualification(qualified_at=True), no_time),
+        "an older qualification": (
+            _f2_qualification(qualified_at=_F2_NOT_BEFORE - 1, report_generated_at=_F2_NOT_BEFORE - 1),
+            too_old,
         ),
         # Answer 2: an old run recorded again today is still an old run.
-        "an old run recorded later": _f2_qualification(
-            qualified_at=_F2_NOT_BEFORE + 86_400, report_generated_at=_F2_NOT_BEFORE - 86_400
+        "an old run recorded later": (
+            _f2_qualification(qualified_at=_F2_NOT_BEFORE + 86_400, report_generated_at=_F2_NOT_BEFORE - 86_400),
+            too_old,
         ),
         # A record written before the run it claims to rest on is judged by the earlier time.
-        "a record older than its run": _f2_qualification(
-            qualified_at=_F2_NOT_BEFORE - 5, report_generated_at=_F2_NOT_BEFORE + 5
+        "a record older than its run": (
+            _f2_qualification(qualified_at=_F2_NOT_BEFORE - 5, report_generated_at=_F2_NOT_BEFORE + 5),
+            too_old,
         ),
-        "an unrelated object": object(),
+        "an unrelated object": (object(), no_qualification),
     }
-    for case, record in unusable.items():
-        evidence = IsolationEvidence.from_admission(decision, execution_mode="sandbox", qualification=record)
-        assert _f2_refusal(evidence).startswith("runtime isolation is required"), case
+    for case, (record, fragment) in unusable.items():
+        refusal = _f2_refusal(_f3_adapt(decision, record))
+        assert refusal.startswith("runtime isolation is required"), case
+        assert fragment in refusal, case
 
-    stale = IsolationEvidence.from_admission(
-        decision, execution_mode="sandbox", qualification=unusable["an old run recorded later"]
-    )
+    stale = _f3_adapt(decision, unusable["an old run recorded later"][0])
     assert stale.qualified_at == _F2_NOT_BEFORE - 86_400
     assert "predates the recorded acceptance" in _f2_refusal(stale)
 
     # Without an active backend a qualification record proves nothing.
     no_backend = SimpleNamespace(allowed=True, container_qualified=True, active_backend=None)
-    orphan = IsolationEvidence.from_admission(no_backend, execution_mode="sandbox", qualification=_f2_qualification())
-    assert (orphan.backend_id, orphan.qualification_id, orphan.qualified_at) == ("", "", 0.0)
-    assert _f2_refusal(orphan)
+    orphan = _f3_adapt(no_backend, _f2_qualification())
+    assert (orphan.backend_id, orphan.qualification_id, orphan.qualified_at, orphan.qualified_host) == ("", "", 0.0, "")
+    assert "no qualified sandbox backend is active" in _f2_refusal(orphan)
     # A backend other than the pinned one is adapted faithfully and then refused.
-    other = IsolationEvidence.from_admission(
-        _f2_admission(image_digest="python@sha256:" + "cd" * 32),
-        execution_mode="sandbox",
-        qualification=_f2_qualification(),
-    )
+    other = _f3_adapt(_f2_admission(image_digest="python@sha256:" + "cd" * 32), _f2_qualification())
     assert "not the accepted runtime and image" in _f2_refusal(other)
+
+
+def test_ap007_f3_an_undated_qualification_report_is_not_a_fresh_qualification() -> None:
+    """A record whose report stated no time of its own carries the time of ingestion, which proves nothing."""
+    decision = _f2_admission()
+    dated = _f3_adapt(decision, _f2_qualification())
+    assert dated.qualified_at == _F2_NOT_BEFORE
+    assert _f2_refusal(dated) == ""
+
+    # The two times of such a record look perfectly fresh: both are the time of ingestion.
+    fresh_looking = {"qualified_at": _F2_NOT_BEFORE + 60.0, "report_generated_at": _F2_NOT_BEFORE + 60.0}
+    assert _f2_refusal(_f3_adapt(decision, _f2_qualification(**fresh_looking))) == ""
+    not_stated: tuple[Any, ...] = (False, None, 0, 1, "true", "True", "yes", [True], object())
+    for flag in not_stated:
+        evidence = _f3_adapt(decision, _f2_qualification(report_time_stated=flag, **fresh_looking))
+        # The qualification is still named; only its time is withheld.
+        assert (evidence.qualification_id, evidence.qualified_at) == ("fixture-qualification", 0.0), flag
+        assert _f2_refusal(evidence) == (
+            "runtime isolation is required but the backend qualification states no usable time for its run"
+        ), flag
+
+    # A record written before the field existed does not have it, and is refused the same way.
+    legacy = _f2_qualification(**fresh_looking)
+    del legacy.report_time_stated
+    del legacy.host_fingerprint
+    evidence = _f3_adapt(decision, legacy)
+    assert (evidence.qualified_at, evidence.qualified_host) == (0.0, "")
+    assert "states no usable time for its run" in _f2_refusal(evidence)
+    # Saying that the time was stated does not repair a time that is unusable.
+    for field in ("qualified_at", "report_generated_at"):
+        for bad in (None, 0.0, -1.0, float("nan"), float("inf"), True, "1800000000"):
+            broken = _f3_adapt(decision, _f2_qualification(report_time_stated=True, **{field: bad}))
+            assert "states no usable time for its run" in _f2_refusal(broken), (field, bad)
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "fragment"),
+    [
+        ("qualified_host", "", "the backend qualification names no host"),
+        ("qualified_host", "   ", "the backend qualification names no host"),
+        ("qualified_host", None, "the backend qualification names no host"),
+        ("qualified_host", 7, "the backend qualification names no host"),
+        ("qualified_host", True, "the backend qualification names no host"),
+        ("qualified_host", "sha256:" + "5a" * 31, "the backend qualification names no host"),
+        ("qualified_host", "sha256:" + "5A" * 32, "the backend qualification names no host"),
+        ("qualified_host", "host@sha256:" + "5a" * 32, "the backend qualification names no host"),
+        ("qualified_host", "the-owner-mac", "the backend qualification names no host"),
+        ("qualified_host", _F3_OTHER_HOST, "was not run on the accepted target host"),
+        ("observed_host", "", "the host of this dispatch was not observed"),
+        ("observed_host", "   ", "the host of this dispatch was not observed"),
+        ("observed_host", None, "the host of this dispatch was not observed"),
+        ("observed_host", 7, "the host of this dispatch was not observed"),
+        ("observed_host", True, "the host of this dispatch was not observed"),
+        ("observed_host", "sha256:" + "5a" * 31, "the host of this dispatch was not observed"),
+        ("observed_host", "sha256:" + "5A" * 32, "the host of this dispatch was not observed"),
+        ("observed_host", "host@sha256:" + "5a" * 32, "the host of this dispatch was not observed"),
+        ("observed_host", "the-owner-mac", "the host of this dispatch was not observed"),
+        ("observed_host", _F3_OTHER_HOST, "this host is not the accepted target host"),
+    ],
+)
+def test_ap007_f3_proof_must_come_from_the_recorded_target_host(field: str, value: Any, fragment: str) -> None:
+    """Answer 2: the qualification was run on the recorded host, and the dispatch happens on it."""
+    assert _f2_refusal(_F2_PROVEN) == ""
+    refusal = _f2_refusal(dataclasses.replace(_F2_PROVEN, **{field: value}))
+    assert refusal.startswith("runtime isolation is required")
+    assert fragment in refusal
+
+
+def test_ap007_f3_the_host_comparison_is_exact_and_follows_the_other_checks() -> None:
+    # Surrounding whitespace is not a difference; anything else is.
+    padded = dataclasses.replace(_F2_PROVEN, qualified_host=f" {_F3_HOST} ", observed_host=f"{_F3_HOST}\n")
+    assert _f2_refusal(padded) == ""
+    # Recording another host turns the same proof into a refusal, and the reverse.
+    elsewhere = dataclasses.replace(_F2_ACCEPTANCE, target_host=_F3_OTHER_HOST)
+    assert "was not run on the accepted target host" in isolation_refusal(_F2_PROVEN, acceptance=elsewhere)
+    moved = dataclasses.replace(_F2_PROVEN, qualified_host=_F3_OTHER_HOST, observed_host=_F3_OTHER_HOST)
+    assert isolation_refusal(moved, acceptance=elsewhere) == ""
+    # One matching host is not enough, whichever it is.
+    copied_store = dataclasses.replace(_F2_PROVEN, observed_host=_F3_OTHER_HOST)
+    assert "this host is not the accepted target host" in _f2_refusal(copied_store)
+    foreign_report = dataclasses.replace(_F2_PROVEN, qualified_host=_F3_OTHER_HOST)
+    assert "was not run on the accepted target host" in _f2_refusal(foreign_report)
+
+    # Each refusal names the first thing that is missing, in a fixed order: the pin, the
+    # qualification, its time, its age, the host of the run, the host of the dispatch.
+    nothing_right = dataclasses.replace(
+        _F2_PROVEN,
+        runtime="podman",
+        qualification_id="",
+        qualified_at=0.0,
+        qualified_host="",
+        observed_host="",
+    )
+    steps = (
+        ("not the accepted runtime and image", {"runtime": "docker"}),
+        ("names no qualification", {"qualification_id": "fixture-qualification"}),
+        ("states no usable time for its run", {"qualified_at": _F2_NOT_BEFORE - 1}),
+        ("predates the recorded acceptance", {"qualified_at": _F2_NOT_BEFORE}),
+        ("the backend qualification names no host", {"qualified_host": _F3_OTHER_HOST}),
+        ("was not run on the accepted target host", {"qualified_host": _F3_HOST}),
+        ("the host of this dispatch was not observed", {"observed_host": _F3_OTHER_HOST}),
+        ("this host is not the accepted target host", {"observed_host": _F3_HOST}),
+    )
+    evidence = nothing_right
+    for fragment, repair in steps:
+        assert fragment in _f2_refusal(evidence), fragment
+        evidence = dataclasses.replace(evidence, **repair)
+    assert _f2_refusal(evidence) == ""
+    # The hosts are only read after the mode and the admission: host mode is still host mode.
+    assert "`host`" in _f2_refusal(dataclasses.replace(_F2_PROVEN, execution_mode="host"))
+
+
+def test_ap007_f3_evidence_takes_its_hosts_from_the_record_and_from_the_server() -> None:
+    """The host of the run comes from the qualification record; the host of the dispatch from server code."""
+    decision = _f2_admission()
+    adapted = _f3_adapt(decision, _f2_qualification())
+    assert (adapted.qualified_host, adapted.observed_host) == (_F3_HOST, _F3_HOST)
+    assert adapted.to_dict()["qualified_host"] == _F3_HOST
+    assert adapted.to_dict()["observed_host"] == _F3_HOST
+
+    # A caller that observes no host gets evidence that is refused for exactly that.
+    unobserved = IsolationEvidence.from_admission(
+        decision, execution_mode="sandbox", qualification=_f2_qualification()
+    )
+    assert unobserved.observed_host == ""
+    assert _f2_refusal(unobserved) == "runtime isolation is required but the host of this dispatch was not observed"
+    # The observed host is never taken from the record: a record cannot vouch for where it is read.
+    assert _f3_adapt(decision, _f2_qualification(observed_host=_F3_HOST), observed_host=None).observed_host == ""
+
+    # Anything that is not a well-formed fingerprint counts as absent, on both sides.
+    malformed: tuple[Any, ...] = (None, "", 7, True, b"sha256:" + b"5a" * 32, "sha256:" + "5a" * 31, {"host": _F3_HOST})
+    for value in malformed:
+        assert _f3_adapt(decision, _f2_qualification(host_fingerprint=value)).qualified_host == "", value
+        assert _f3_adapt(decision, _f2_qualification(), observed_host=value).observed_host == "", value
+    assert "the backend qualification names no host" in _f2_refusal(
+        _f3_adapt(decision, _f2_qualification(host_fingerprint=""))
+    )
+
+    # The host of a record is taken only with the record itself.
+    for record in (
+        _f2_qualification(backend_id="other-backend"),
+        _f2_qualification(verdict="failed"),
+        None,
+    ):
+        assert _f3_adapt(decision, record).qualified_host == ""
+    # A report produced elsewhere and a store read elsewhere are both adapted faithfully and then refused.
+    assert "was not run on the accepted target host" in _f2_refusal(
+        _f3_adapt(decision, _f2_qualification(host_fingerprint=_F3_OTHER_HOST))
+    )
+    assert "this host is not the accepted target host" in _f2_refusal(
+        _f3_adapt(decision, _f2_qualification(), observed_host=_F3_OTHER_HOST)
+    )
 
 
 def test_ap007_budget_documents_are_never_rebuilt_field_by_field() -> None:
