@@ -8,8 +8,8 @@
   "check_with": "python3 scripts/uiux_authorization_trace.py --check",
   "statement": "For state-changing route candidates resolved by the browser map: the shared gates every request passes, handler refusals, referenced authority and durable-state subsystems, and possible effects. The route map is a lexical scan, not proof of exhaustive browser coverage; a reference is evidence of a consultation, not proof of enforcement.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "app_sha256": "bf6e967d5656d789cdb0f7830f982a9b01aaf1660f5dfc84d8b7758d93260467",
-  "route_map_sha256": "21c09445befa2548b6b91a789dea8270377eb51c38160cb0a235c3b90c2dd581",
+  "app_sha256": "8565628a1293b5466064d4f894ad7651ffd9a6704199a5c088df569b25dc73ab",
+  "route_map_sha256": "f349f9007719787c674da1f17a8cfad96742d332ff75a48a79b35c26d65d241a",
   "totals": {
     "routes_in_app": 121,
     "state_changing_routes_in_app": 81,
@@ -1339,7 +1339,7 @@
       "method": "POST",
       "path": "/api/harness/sdlc/feedback",
       "handler": "api_run_sdlc_feedback_loop",
-      "handler_line": 22148,
+      "handler_line": 22157,
       "response": "stream",
       "ui_callers": [
         "consumeSSE"
@@ -1420,7 +1420,7 @@
       "method": "POST",
       "path": "/api/harness/sdlc/run",
       "handler": "api_run_agile_sdlc_factory",
-      "handler_line": 21814,
+      "handler_line": 21823,
       "response": "stream",
       "ui_callers": [
         "consumeSSE"

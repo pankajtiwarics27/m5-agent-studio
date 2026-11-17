@@ -2,6 +2,24 @@
 
 ## Continuation after this snapshot
 
+The bounded [`api_run_gsd_fresh_wave.gsd_gen` audit](lc08-gsd-fresh-wave-audit.md)
+adds one assessed owner and fixes the same delegated-source gap at the GSD
+fresh-wave SSE shell: the Wave 1 plan loop, the Wave 2 fresh-context
+execution loop (per executor step) and the Wave 3 critic-verdict loop each
+iterated through a bare `async for` over `stream_any_model`; all three are
+now in `contextlib.aclosing`, in parity with the combo, sprint-runner and
+factory audits. The consumer-close cases at the wave-1/wave-2/wave-3
+`step_content` frames are deterministic red/green proofs (red on the
+unchanged source; close now observed inside the consumer's `aclose()`).
+The checked-in matrix marks `api_run_gsd_fresh_wave.gsd_gen`
+`bounded_gsd_fresh_wave_stream_close`; **5 of 29 owners remain
+`inventory_only_in_this_audit`**. The SDLC feedback router
+(`api_run_sdlc_feedback_loop.fb_gen`) remains inventory-only and unaudited,
+as are the Harness turn shell and the child-delegation /
+conservative-model-switch owners. It does not promote any other owner and
+adds no activation, hardware qualification, release acceptance or LC09–11
+status.
+
 The bounded [`api_run_agile_sdlc_factory.sdlc_gen` audit](lc08-agile-sdlc-factory-audit.md)
 adds one assessed owner and fixes the same delegated-source gap at the
 factory SSE shell: the Phase 5 sprint-runner loop and the four phase model
