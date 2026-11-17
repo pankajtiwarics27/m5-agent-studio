@@ -15,9 +15,11 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import platform
 import re
 import shlex
 import stat
+import subprocess
 import threading
 import time
 from typing import Any
@@ -399,6 +401,106 @@ def qualification_host_fingerprint(machine: Any) -> str:
         identity[key] = count
     canonical = json.dumps(identity, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return "sha256:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _sb_sysctl(argv: Sequence[str], *, timeout: float = 10.0) -> str:
+    """Run a bounded, shell-free sysctl read; return empty text on failure (AP-007-R1)."""
+    try:
+        result = subprocess.run(
+            list(argv),
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    return result.stdout or ""
+
+
+def _sb_darwin_host_values() -> tuple[str, int | None]:
+    """Read Darwin CPU and memory values with one bounded sysctl invocation."""
+    output = _sb_sysctl(["sysctl", "machdep.cpu.brand_string", "hw.model", "hw.memsize"])
+    values: dict[str, str] = {}
+    for line in output.splitlines():
+        name, separator, value = line.partition(":")
+        if separator:
+            values[name.strip()] = value.strip()
+
+    cpu_model = values.get("machdep.cpu.brand_string", "").strip()
+    if not cpu_model:
+        cpu_model = values.get("hw.model", "").strip()
+
+    memory_text = values.get("hw.memsize", "").strip()
+    try:
+        total_memory = int(memory_text) if memory_text.isascii() and memory_text.isdigit() else None
+    except ValueError:
+        total_memory = None
+    return cpu_model, total_memory
+
+
+def _sb_cpu_model() -> str:
+    """Read the non-Darwin processor model as the qualification suite does."""
+    try:
+        for line in Path("/proc/cpuinfo").read_text(encoding="utf-8").splitlines():
+            if line.lower().startswith("model name"):
+                return line.split(":", 1)[1].strip()
+    except (OSError, UnicodeError, IndexError):
+        return ""
+    return ""
+
+
+def _sb_total_memory_bytes() -> int | None:
+    """Read non-Darwin physical memory as the qualification suite does."""
+    try:
+        for line in Path("/proc/meminfo").read_text(encoding="utf-8").splitlines():
+            if line.startswith("MemTotal:"):
+                return int(line.split(":", 1)[1].split()[0]) * 1024
+    except (OSError, UnicodeError, ValueError, IndexError):
+        return None
+    return None
+
+
+def observe_host_fingerprint() -> str:
+    """Return the server host's qualification-compatible fingerprint, or ``""`` (AP-007-R1).
+
+    Call this in server composition at dispatch time and pass its result as the
+    ``observed_host`` argument to ``IsolationEvidence.from_admission``. The value
+    is never accepted from a request, a qualification record or a model. It uses
+    the same five fields and canonical digest as the host description produced by
+    ``scripts/qualify_environment.py``: ``os`` (``platform.system()``),
+    ``machine`` (``platform.machine()``), ``cpu_model`` (Darwin's
+    ``machdep.cpu.brand_string`` with ``hw.model`` fallback, or the non-Darwin
+    ``model name:`` entry in ``/proc/cpuinfo``), ``cpu_count`` (``os.cpu_count()``)
+    and ``total_memory_bytes`` (Darwin's ``hw.memsize`` or non-Darwin ``MemTotal``
+    from ``/proc/meminfo``). It is digest-compatible with
+    ``qualification_host_fingerprint`` of those same five values.
+
+    Reads are lazy: nothing is probed at import time or stored at rest. Darwin
+    uses one bounded, shell-free ``sysctl`` subprocess; non-Darwin systems read
+    two small ``/proc`` files. The fingerprint is not a unique hardware
+    identifier; machines of the same model and memory size share it. If any value
+    is missing or malformed, or a read fails, return ``""``. The existing
+    mission-isolation gate refuses an empty observation, so an unreadable host
+    never dispatches.
+    """
+    try:
+        system = platform.system()
+        if system == "Darwin":
+            cpu_model, total_memory_bytes = _sb_darwin_host_values()
+        else:
+            cpu_model = _sb_cpu_model()
+            total_memory_bytes = _sb_total_memory_bytes()
+        description = {
+            "os": system,
+            "machine": platform.machine(),
+            "cpu_model": cpu_model,
+            "cpu_count": os.cpu_count(),
+            "total_memory_bytes": total_memory_bytes,
+        }
+        return qualification_host_fingerprint(description)
+    except Exception:  # noqa: BLE001 - host observation must fail closed, never raise
+        return ""
 
 
 def _sb_host_fingerprint_text(value: Any) -> str:

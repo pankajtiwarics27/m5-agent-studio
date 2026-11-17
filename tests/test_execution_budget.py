@@ -814,3 +814,79 @@ def test_ap007_budget_documents_are_never_rebuilt_field_by_field() -> None:
             if node.args or {keyword.arg for keyword in node.keywords} - {"spec"}:
                 offenders.append(f"{name}:{node.lineno}")
     assert offenders == []
+
+
+# AP-007-R1. This server-observed value is the last host fact in the isolation proof.
+def test_ap007_r1_isolation_gate_requires_matching_server_observation() -> None:
+    import re
+
+    import sandbox_boundary
+
+    observed = sandbox_boundary.observe_host_fingerprint()
+    assert re.fullmatch(r"sha256:[0-9a-f]{64}", observed)
+    other_host = "sha256:" + "6b" * 32
+    acceptance = IsolationAcceptance(
+        decision_ref="test-fixture-acceptance-not-an-owner-decision",
+        runtime="docker",
+        runtime_version="0.0.0-test-fixture",
+        image_digest=_F2_DIGEST,
+        qualified_not_before=_F2_NOT_BEFORE,
+        target_host=observed,
+        activated_steps=frozenset({CONTAINED_EXECUTION}),
+    )
+    decision = SimpleNamespace(
+        allowed=True,
+        container_qualified=True,
+        active_backend=SimpleNamespace(
+            backend_id="fixture-backend",
+            runtime="docker",
+            runtime_version="0.0.0-test-fixture",
+            image_digest=_F2_DIGEST,
+        ),
+        error_code="",
+        reason="",
+    )
+    record = SimpleNamespace(
+        qualification_id="fixture-qualification",
+        backend_id="fixture-backend",
+        verdict="qualified",
+        qualified_at=_F2_NOT_BEFORE,
+        report_generated_at=_F2_NOT_BEFORE,
+        report_time_stated=True,
+        host_fingerprint=observed,
+    )
+
+    matching = IsolationEvidence.from_admission(
+        decision,
+        execution_mode="sandbox",
+        qualification=record,
+        observed_host=observed,
+    )
+    assert isolation_refusal(matching, acceptance=acceptance) == ""
+
+    for observed_host, reason in (
+        (None, "the host of this dispatch was not observed"),
+        ("", "the host of this dispatch was not observed"),
+        (other_host, "this host is not the accepted target host"),
+    ):
+        kwargs = {} if observed_host is None else {"observed_host": observed_host}
+        evidence = IsolationEvidence.from_admission(
+            decision,
+            execution_mode="sandbox",
+            qualification=record,
+            **kwargs,
+        )
+        assert isolation_refusal(evidence, acceptance=acceptance) == (
+            f"runtime isolation is required but {reason}"
+        )
+
+    foreign_record = SimpleNamespace(**{**vars(record), "host_fingerprint": other_host})
+    foreign_qualification = IsolationEvidence.from_admission(
+        decision,
+        execution_mode="sandbox",
+        qualification=foreign_record,
+        observed_host=observed,
+    )
+    assert isolation_refusal(foreign_qualification, acceptance=acceptance) == (
+        "runtime isolation is required but the backend qualification was not run on the accepted target host"
+    )
