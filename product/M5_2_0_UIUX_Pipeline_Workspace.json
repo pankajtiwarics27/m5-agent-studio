@@ -10,7 +10,7 @@
     },
     "backend": {
       "path": "app.py",
-      "sha256": "8565628a1293b5466064d4f894ad7651ffd9a6704199a5c088df569b25dc73ab"
+      "sha256": "fefdb9bf661c288d63661aa91f4a9d7ceb247f86f8ab4831a3ca15716ea96c3c"
     },
     "walk": {
       "path": "scripts/pipeline_workspace_walk.mjs",

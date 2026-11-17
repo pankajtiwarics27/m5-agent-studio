@@ -22247,9 +22247,12 @@ async def api_run_sdlc_feedback_loop(request: Request) -> StreamingResponse:
                 },
             ]
             fb_buf: list[str] = []
-            async for item in stream_any_model(client, critic_model, fb_res_msgs, temperature=0.2, max_tokens=2000, reasoning_mode="off"):
-                if item["type"] == "content":
-                    fb_buf.append(item["text"])
+            async with contextlib.aclosing(
+                stream_any_model(client, critic_model, fb_res_msgs, temperature=0.2, max_tokens=2000, reasoning_mode="off")
+            ) as research_source:
+                async for item in research_source:
+                    if item["type"] == "content":
+                        fb_buf.append(item["text"])
             fb_analysis = "".join(fb_buf).strip()
             fb_entry = f"\n\n---\n## Feedback Iteration ({time.strftime('%Y-%m-%d %H:%M:%S')})\n**User Feedback**: {feedback}\n\n{online_insp}\n\n### Research & Brainstorm Synthesis\n{fb_analysis}\n"
             _write_sdlc_confined_text(sdlc_dir, "FEEDBACK_LOG.md", fb_entry, append=True)
@@ -22274,9 +22277,12 @@ async def api_run_sdlc_feedback_loop(request: Request) -> StreamingResponse:
                 {"role": "user", "content": f"### User Feedback:\n{feedback}\n\n### Research Team Synthesis:\n{fb_analysis[:3000]}"},
             ]
             d_buf: list[str] = []
-            async for item in stream_any_model(client, lead_model, delta_msgs, temperature=0.0, max_tokens=1600, reasoning_mode="off"):
-                if item["type"] == "content":
-                    d_buf.append(item["text"])
+            async with contextlib.aclosing(
+                stream_any_model(client, lead_model, delta_msgs, temperature=0.0, max_tokens=1600, reasoning_mode="off")
+            ) as delta_source:
+                async for item in delta_source:
+                    if item["type"] == "content":
+                        d_buf.append(item["text"])
             new_stories = _parse_or_synthesize_backlog_json("".join(d_buf), feedback, prefix="STORY-FB", start_idx=next_fb_idx)
             merged_stories = existing_stories + new_stories
             _write_sdlc_backlog(sdlc_dir, sess["title"], merged_stories)
@@ -22294,25 +22300,28 @@ async def api_run_sdlc_feedback_loop(request: Request) -> StreamingResponse:
 
             # 3. Auto-Implement Delta Stories in Fresh Context Windows
             if auto_implement and session_id not in _HARNESS_ABORT_FLAGS:
-                async for ev_chunk in _run_sdlc_sprints_stream(
-                    client=client,
-                    session_id=session_id,
-                    wt_dir=wt_dir,
-                    sdlc_dir=sdlc_dir,
-                    goal=feedback,
-                    lead_model=lead_model,
-                    critic_model=critic_model,
-                    policy=policy,
-                    context_mode=True,
-                    skill_block=skill_block,
-                    eff_block=eff_block,
-                    max_stories=max(sum(1 for s in merged_stories if not s.get("passes")), len(new_stories)),
-                    max_steps_per_story=max_steps,
-                    coord=coord_fb,
-                    lease_epoch=lease_epoch_fb,
-                    worker_id=worker_id_fb,
-                ):
-                    yield ev_chunk
+                async with contextlib.aclosing(
+                    _run_sdlc_sprints_stream(
+                        client=client,
+                        session_id=session_id,
+                        wt_dir=wt_dir,
+                        sdlc_dir=sdlc_dir,
+                        goal=feedback,
+                        lead_model=lead_model,
+                        critic_model=critic_model,
+                        policy=policy,
+                        context_mode=True,
+                        skill_block=skill_block,
+                        eff_block=eff_block,
+                        max_stories=max(sum(1 for s in merged_stories if not s.get("passes")), len(new_stories)),
+                        max_steps_per_story=max_steps,
+                        coord=coord_fb,
+                        lease_epoch=lease_epoch_fb,
+                        worker_id=worker_id_fb,
+                    )
+                ) as runner:
+                    async for ev_chunk in runner:
+                        yield ev_chunk
 
             sm_fb = get_task_state_machine()
             try:
