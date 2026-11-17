@@ -1717,7 +1717,7 @@
       "title": "Expose clean mission controls and artifact-first status",
       "priority": "P0",
       "optional": false,
-      "status": "not_started",
+      "status": "in_progress",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-005",
@@ -1769,18 +1769,18 @@
         "Push/PR state; owner/independent approvals where required"
       ],
       "tracking": {
-        "owner": null,
-        "branch": null,
-        "base_sha": null,
-        "head_sha": null,
-        "claimed_at": null,
-        "heartbeat_at": null,
+        "owner": "arena/63f06456-m5-agent-studio",
+        "branch": "arena/63f06456-m5-agent-studio",
+        "base_sha": "c4d289c66ac9c9ec10c5ccbf8489e8d15ed5fd84",
+        "head_sha": "c4d289c66ac9c9ec10c5ccbf8489e8d15ed5fd84",
+        "claimed_at": "2026-11-17T15:40:27Z",
+        "heartbeat_at": "2026-11-17T15:40:27Z",
         "pr_url": null,
-        "delivery_status": "not_pushed",
+        "delivery_status": "pushed",
         "acceptance_evidence": [],
         "tests_executed": [],
         "blockers": [],
-        "handoff": null
+        "handoff": "Claim only; implementation and acceptance evidence pending. Owner authorized AP-008 after AP-007 completion (issue #322 and PR #324); no runtime activation. Main advanced from handoff base 863debd to c4d289c via unrelated LC08 PR #326 before claim; branch fast-forwarded. Mission plan and recovery-report methods have no production caller; do not imply live mission execution. See draft PR for pre-edit acceptance mapping, scope, risks and verification plan. Owner visual implementation review and all required gates remain pending."
       },
       "implementation_prompt": "Implement AP-008: Expose clean mission controls and artifact-first status. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
