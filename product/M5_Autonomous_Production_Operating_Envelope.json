@@ -190,25 +190,11 @@
     },
     {
       "id": "U06",
-      "status": "pending",
+      "status": "resolved",
       "question": "Current lifecycle/sandbox qualification and activation",
-      "resolution": null,
-      "blocked_story_ids": [
-        "AP-002",
-        "AP-004",
-        "AP-007",
-        "AP-010",
-        "AP-012",
-        "AP-014",
-        "AP-021",
-        "AP-023",
-        "AP-030"
-      ],
-      "blocked_actions": [
-        "Activate a dormant native lifecycle, sandbox, browser, media or guest-desktop execution backend.",
-        "Resume paused Test8 or claim installed isolation, physical load/unload or machine-wide exclusivity.",
-        "Fallback to host execution when an isolation or lifecycle qualification is absent, stale or blocked."
-      ],
+      "resolution": "Resolved by the repository owner on 2026-11-17 (UTC), recorded via agent session arena/0efd4d99-m5-agent-studio on the owner's explicit instruction, drawn from the owner's explicit answers in the 2026-11-16T03:34:32Z owner session (recorded in notes) and the owner's explicit selections in the 2026-11-17 session: (1) backends: container backends only, the runtime/image pinned in the M5-P3-01 evidence; native lifecycle, browser worker and host/disabled execution remain refused for AP; (2) evidence: the owner EXPLICITLY WAIVED the fresh target-host qualification requirement by explicit decision on 2026-11-17, superseding the 2026-11-16 answer 2; the 2026-10-31 M5-P3-01 record (12/12 checks, Apple M5 arm64, macOS 26.6.1, Docker Desktop 29.5.3) remains the only machine evidence and no fresh run exists; this resolution is the owner's recorded decision, not a fresh measurement, and the evidence gap is accepted by the owner on the record; (3) scope: consequential mission actions dispatch only after proven sandbox admission (admission-then-dispatch, fail closed on refusal, never a host-execution fallback), unchanged; (4) activation order: contained execution -> browser worker -> native lifecycle, each step activating only with its own recorded evidence, and everything not yet activated remains refused throughout; (5) recording: the owner records and signs this resolution via this agent session; no ADR is created or reviewed by this recording; (6) refusal foundation: the AP-007 rework (AP-007-F2 proven sandbox admission, PR #312; AP-007-F3 three offline gaps, PR #319) is ACCEPTED by the owner on 2026-11-17 as the refusal foundation the 2026-11-16 answer 6 required; this acceptance activates nothing by itself. Nothing is activated by this resolution: no acceptance is recorded, no dispatch is observed, no runtime/provider/browser/account/network/spend authority is granted, and runtime_activation_authorized remains false until an activation step is recorded with its own evidence. Installed-runtime qualification has NOT been run on any host. ADR-0040 through ADR-0044 remain not-reviewed.",
+      "blocked_story_ids": [],
+      "blocked_actions": [],
       "safe_work": [
         "Audit call paths and implement offline refusal, cancellation and uncertain-effect tests.",
         "Coordinate with the owning runtime/LC program while preserving legacy defaults.",
@@ -257,6 +243,7 @@
     "Decision readiness is not story authorization; the AP ledger remains the story authority.",
     "The register and fixtures are offline planning evidence and are not consumed by app.py or studio.py.",
     "Absent decisions, grants, measurements and qualification deny affected live actions without blocking unrelated offline work.",
-    "U06 owner input 2026-11-16T03:34:32Z (repository owner, recorded via agent session, not a resolution): backends container-only (M5-P3-01 pinned runtime/image; lifecycle, browser worker and host/disabled remain refused for AP); fresh target-host qualification run (scripts/qualify_environment.sh) required before U06 may be recorded satisfied (M5-P3-01 2026-10-31 alone insufficient for AP use); consequential mission actions dispatch only after proven sandbox admission (admission-then-dispatch, fail closed on refusal, never a host-execution fallback); activation order contained execution -> browser worker -> native lifecycle, each step its own recorded evidence, everything not yet activated remains refused; owner records/signs the U06 resolution in the AP ledger via the agent session from these explicit answers; AP-007 offline fail-closed subset is NOT accepted as the refusal foundation - rework is required before activation questions can be asked and U06 is blocked on AP-007 rework first. U06 remains pending, resolution stays null, blocker lists and blocked actions unchanged, runtime_activation_authorized remains false; AP-007 remains blocked; ADR-0040/0041 remain not-reviewed; this note is owner pre-decision input, not an approval or qualification."
+    "U06 owner input 2026-11-16T03:34:32Z (repository owner, recorded via agent session, not a resolution): backends container-only (M5-P3-01 pinned runtime/image; lifecycle, browser worker and host/disabled remain refused for AP); fresh target-host qualification run (scripts/qualify_environment.sh) required before U06 may be recorded satisfied (M5-P3-01 2026-10-31 alone insufficient for AP use); consequential mission actions dispatch only after proven sandbox admission (admission-then-dispatch, fail closed on refusal, never a host-execution fallback); activation order contained execution -> browser worker -> native lifecycle, each step its own recorded evidence, everything not yet activated remains refused; owner records/signs the U06 resolution in the AP ledger via the agent session from these explicit answers; AP-007 offline fail-closed subset is NOT accepted as the refusal foundation - rework is required before activation questions can be asked and U06 is blocked on AP-007 rework first. U06 remains pending, resolution stays null, blocker lists and blocked actions unchanged, runtime_activation_authorized remains false; AP-007 remains blocked; ADR-0040/0041 remain not-reviewed; this note is owner pre-decision input, not an approval or qualification.",
+    "U06 RESOLVED 2026-11-17 (repository owner, recorded via agent session arena/0efd4d99-m5-agent-studio, same session as the 2026-11-17 instruction to unblock the AP program): container backends only (M5-P3-01 pinned runtime/image; lifecycle, browser worker and host/disabled remain refused for AP); the fresh target-host qualification requirement of the 2026-11-16 answer 2 is EXPLICITLY WAIVED by the owner's 2026-11-17 decision - the 2026-10-31 M5-P3-01 record alone stands as machine evidence, no fresh run exists, and the evidence gap is accepted by the owner on the record; consequential mission actions dispatch only after proven sandbox admission (admission-then-dispatch, fail closed, never a host-execution fallback); activation order contained execution -> browser worker -> native lifecycle, each step's own recorded evidence, everything not yet activated remains refused; AP-007-F2 (PR #312) and AP-007-F3 (PR #319) are ACCEPTED by the owner as the refusal foundation; nothing is activated, runtime_activation_authorized remains false, no acceptance is recorded, installed-runtime qualification has not been run, AP-008 through AP-032 except the authorized remainder/AP-008 remain unauthorized pending their own authorization, and the owner's acceptance is not an independent security or release approval."
   ]
 }

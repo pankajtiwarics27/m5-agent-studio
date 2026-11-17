@@ -5,15 +5,15 @@
   "program": "AP",
   "revision": "1.2",
   "prepared_date": "2026-11-08",
-  "lifecycle": "registered_tracking_ap006_landed_ap007_offline_subset_landed",
+  "lifecycle": "registered_tracking_u06_resolved_ap007_in_progress",
   "source_snapshot": "a67e8b291614f8afdac7c8d38ba51bcc8926d695",
   "source_repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "specification": "docs/autonomous-production-roadmap.md",
   "agent_prompt": "M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md",
   "authority": {
     "precedence": "AGENTS.md, existing security/approval rules and owning program ledgers remain binding.",
-    "scope": "AP-001 through AP-006 are delivered. AP-007’s safe fail-closed offline subset then landed through PR #303 (exact head b1b2e4d747f9916a8ffd77f1126c90f8288294c8, merged as bf1fa6aefa24913ed7a88ceb12775b484dbc7cc5 on 2026-11-15T16:24:38Z) after the owner decided it may land while U06 remains pending; its exact-merge main CI (https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/43735318772) passed. That landing is not a full AP-007 authorization and does not resolve U06: the remainder of AP-007 (execution on a qualified backend, installed-runtime qualification and any activation) stays blocked by U06, as do AP-008 through AP-032, product runtime activation and real external actions. AP-007 is not added to authorized_downstream_stories, runtime_activation_authorized stays false, and a later story needs its own explicit owner authorization, dependency evidence and fixed branch/PR before any work starts.",
-    "registration_gate": "AP-001 records the tracking source and claim protocol; its merge did not authorize downstream work. AP-002/AP-003, AP-004, AP-005 and AP-006 were separately authorized and delivered; AP-006 landed through PR #299. AP-007’s fail-closed offline subset was claimed on PR #303 on two recorded owner instructions and landed through PR #303 (merge bf1fa6aefa24913ed7a88ceb12775b484dbc7cc5) after the owner decided it may land while U06 remains pending. This landing records delivery of that subset only. The remainder of AP-007 stays blocked by U06, nothing is authorized beyond the subset, and AP-008 or any later story requires its own explicit owner authorization plus dependency and authority gates.",
+    "scope": "AP-001 through AP-006 are delivered. AP-007's safe fail-closed offline subset landed through PR #303 (merge bf1fa6aefa24913ed7a88ceb12775b484dbc7cc5) and its owner-selected follow-ups AP-007-F1 (PR #307), AP-007-F2 (PR #312) and AP-007-F3 (PR #319, recorded by PR #320) are landed and recorded. On 2026-11-17 the repository owner resolved U06 by explicit recorded decision (via agent session arena/0efd4d99-m5-agent-studio): container backends only, the fresh target-host qualification requirement waived by explicit owner override, admission-then-dispatch fail closed, activation order contained execution -> browser worker -> native lifecycle with each step's own recorded evidence, AP-007-F2/F3 accepted as the refusal foundation. NOTHING is activated: runtime_activation_authorized remains false, no IsolationAcceptance is recorded, no dispatch is observed, installed-runtime qualification has not been run on any host, and the 2026-10-31 M5-P3-01 record is the only machine evidence. AP-007 is in_progress on arena/0efd4d99-m5-agent-studio (authorized remainder: host-observer seam, then recording). The owner authorized AP-008 to start only after AP-007 is recorded done, one story per branch and pull request. AP-009 through AP-032, product runtime activation and real external actions remain unauthorized.",
+    "registration_gate": "AP-001 through AP-006 delivered and recorded. AP-007's subset, follow-ups and U06 resolution are recorded. On 2026-11-17 the owner explicitly authorized: (a) recording the U06 resolution; (b) implementing and recording AP-007's authorized remainder; (c) authorizing AP-008 to start only after AP-007 is recorded done. Every later story (AP-009 onwards) still requires its own explicit owner authorization and its own branch and PR; dependency readiness is not authorization. runtime_activation_authorized stays false until an activation step is recorded with its own evidence.",
     "other_ledgers": "Do not alter AS/M5/UIUX/UIV2/LC tracking without the owning protocol.",
     "approval": "Agents cannot fabricate owner, screenshot, independent security or release approval."
   },
@@ -216,8 +216,7 @@
         "U02",
         "U03",
         "U04",
-        "U05",
-        "U06"
+        "U05"
       ],
       "implementation_rules": [
         "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
@@ -498,8 +497,7 @@
       ],
       "blocked_by_decisions": [
         "U03",
-        "U04",
-        "U06"
+        "U04"
       ],
       "implementation_rules": [
         "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
@@ -989,7 +987,7 @@
       "title": "Implement bounded execution, cancellation and truthful recovery",
       "priority": "P0",
       "optional": false,
-      "status": "blocked",
+      "status": "in_progress",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-004",
@@ -1025,9 +1023,7 @@
         "R06",
         "R13"
       ],
-      "blocked_by_decisions": [
-        "U06"
-      ],
+      "blocked_by_decisions": [],
       "implementation_rules": [
         "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
         "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
@@ -1083,9 +1079,9 @@
           "Post-merge main run 43735318772 (push, merge commit bf1fa6aefa24913ed7a88ceb12775b484dbc7cc5), lander-observed CI: completed success — test (3.11) / test (3.12) / test (3.13) / Browser safety regressions all green."
         ],
         "blockers": [
-          "U06 (current lifecycle/sandbox qualification and activation) remains pending. Not delivered and still blocked: execution on a qualified isolation backend, installed-runtime qualification, and any production caller of the mission stop, the recovery report or the observation recorder. The accepting isolation path is exercised only with a test fixture.",
-          "No browser, provider, model, account, network destination, media service, guest desktop, background worker, credential or billable action is activated. Owned-work termination is exercised only against local fixture subprocesses that the tests themselves start.",
-          "AP-008 through AP-032, product runtime activation and real external actions remain unauthorized; this story resolves none of U01-U06 and claims no owner, independent-security, screenshot, media, signing or release approval. ADR-0041 is review_status not-reviewed."
+          "AP-007 is claimed on arena/0efd4d99-m5-agent-studio for its authorized remainder (host-observer seam and completion record). U06 is resolved (2026-11-17, owner recording, explicit waiver of the fresh target-host qualification by owner decision; AP-007-F2/F3 accepted as the refusal foundation), so the story is no longer decision-blocked.",
+          "No browser, provider, model, account, network destination, media service, guest desktop, background worker, credential or billable action is activated. runtime_activation_authorized remains false; no IsolationAcceptance is recorded; no dispatch is observed; installed-runtime qualification has NOT been run on any host; contained execution remains refused everywhere until an acceptance is recorded with its own evidence, in the owner's activation order (contained execution -> browser worker -> native lifecycle).",
+          "AP-008 is authorized by the owner (2026-11-17) to start only after AP-007 is recorded done, one story per branch/PR; AP-009 through AP-032, product runtime activation and real external actions remain unauthorized. This story claims no owner-independent security, screenshot, media, signing or release approval. ADR-0040 through ADR-0044 remain review_status not-reviewed."
         ],
         "handoff": "AP-007’s safe fail-closed offline subset landed on 2026-11-15T16:24:38Z as bf1fa6aefa24913ed7a88ceb12775b484dbc7cc5 (merge of PR #303, exact head b1b2e4d747f9916a8ffd77f1126c90f8288294c8). The remainder of AP-007 (execution on a qualified isolation backend, installed-runtime qualification, any activation, and any production caller of the mission stop, the recovery report or the observation recorder) remains blocked by U06, which is still pending; no production caller exists in this build and the accepting isolation path runs only with a test fixture. Behaviour landed in six production modules (workflow_state.py, execution_budget.py, side_effect_ledger.py, execution_spine.py, process_supervision.py, app.py) plus rebuilt studio.py; see docs/bounded-mission-execution.md and ADR-0041 (review_status: not-reviewed).",
         "blast_radius": {
@@ -1181,7 +1177,8 @@
           "Risk review recorded by the builder at handoff, preserved here without re-performing it: (1) late-result fence on the live action path in side_effect_ledger.DurableActionLedger.complete / record_exception and execution_spine.DurableActionBoundary — a result arriving after the ledger marked the action uncertain no longer settles it, for every task; (2) HTTP 400 for six budget keys on /api/harness/run and /api/harness/gsd-wave; (3) planning gate — create_mission_plan refuses a new plan on a root task until a stopped plan is settled; (4) rollback hazard — an older binary must not write to a task that declares the new limits. No production caller invokes the mission stop, the recovery report or the observation recorder; no route, endpoint, UI control, table or schema version was added (schema stays v4).",
           "The U06 call-path audit page (docs/autonomous-production-u06-call-path-audit.md) was out of date on G-1 and G-6 after this merge; it has since been regenerated at dc5ec57 (see the audit page's revision history), so its gap table and U06-decision questions reflect the landed subset.",
           "This closeout is the terminal record for the AP-007 offline subset. Its own merge SHA, merge time and post-merge main run are recorded in its pull-request comment, because a commit cannot carry its own merge identity; no further AP-007 completion PR is required.",
-          "Owner U06 answers recorded 2026-11-16T03:34:32Z (repository owner, via agent session, not a resolution): backends container-only (M5-P3-01 pinned runtime/image; lifecycle, browser worker and host/disabled remain refused for AP); a fresh target-host qualification run (scripts/qualify_environment.sh) is required before U06 can be recorded satisfied - M5-P3-01 alone is insufficient for AP use; consequential mission actions dispatch only after proven sandbox admission (admission-then-dispatch, fail closed, never a host-execution fallback); activation order contained execution -> browser worker -> native lifecycle, each step with its own recorded evidence, everything not yet activated remains refused; the owner records and signs the U06 resolution in the AP ledger via this agent session from explicit answers; the AP-007 offline fail-closed subset is NOT accepted as the refusal foundation - rework is required before activation questions can even be asked and U06 is blocked on AP-007 rework first. U06 remains pending (resolution null), AP-007 remains blocked, blocked_by_decisions unchanged, runtime_activation_authorized remains false, ADR-0040/0041 not-reviewed; this is owner pre-decision input, not an approval or qualification."
+          "Owner U06 answers recorded 2026-11-16T03:34:32Z (repository owner, via agent session, not a resolution): backends container-only (M5-P3-01 pinned runtime/image; lifecycle, browser worker and host/disabled remain refused for AP); a fresh target-host qualification run (scripts/qualify_environment.sh) is required before U06 can be recorded satisfied - M5-P3-01 alone is insufficient for AP use; consequential mission actions dispatch only after proven sandbox admission (admission-then-dispatch, fail closed, never a host-execution fallback); activation order contained execution -> browser worker -> native lifecycle, each step with its own recorded evidence, everything not yet activated remains refused; the owner records and signs the U06 resolution in the AP ledger via this agent session from explicit answers; the AP-007 offline fail-closed subset is NOT accepted as the refusal foundation - rework is required before activation questions can even be asked and U06 is blocked on AP-007 rework first. U06 remains pending (resolution null), AP-007 remains blocked, blocked_by_decisions unchanged, runtime_activation_authorized remains false, ADR-0040/0041 not-reviewed; this is owner pre-decision input, not an approval or qualification.",
+          "U06 RESOLVED 2026-11-17 by the repository owner, recorded via agent session arena/0efd4d99-m5-agent-studio on the owner's explicit instruction (this decision recording, not a story change): (1) container backends only, the M5-P3-01 pinned runtime/image; native lifecycle, browser worker and host/disabled remain refused for AP; (2) the 2026-11-16 answer 2 requirement of a fresh target-host qualification run is EXPLICITLY WAIVED by the owner's 2026-11-17 decision - the 2026-10-31 M5-P3-01 record is the only machine evidence and no fresh run exists; the evidence gap is accepted by the owner on the record; (3) consequential mission actions dispatch only after proven sandbox admission, admission-then-dispatch, fail closed, never a host-execution fallback (unchanged); (4) activation order contained execution -> browser worker -> native lifecycle, each step with its own recorded evidence, everything not yet activated remains refused; (5) the owner records and signs this resolution via this agent session, no ADR is created; (6) AP-007-F2 (PR #312) and AP-007-F3 (PR #319) are ACCEPTED by the owner as the refusal foundation the 2026-11-16 answer 6 required; the acceptance activates nothing by itself. runtime_activation_authorized remains false; no acceptance is recorded; installed-runtime qualification has not been run; authorized_downstream_stories remains AP-002 through AP-006 until AP-007 is recorded done (AP-008 then authorized). AP-007 moves blocked -> in_progress; blocked_by_decisions is empty (same revision as the envelope resolution); U06 is removed from the blocker lists of AP-002, AP-004, AP-010, AP-012, AP-014, AP-021, AP-023 and AP-030 as the register requires. The resolution text (verbatim with the owner's answers) is in product/M5_Autonomous_Production_Operating_Envelope.json decisions[U06].resolution."
         ],
         "post_completion_authorization": "None granted. AP-007’s landing does not authorize the remainder of AP-007 or any later story: authorized_downstream_stories remains AP-002 through AP-006, product runtime activation stays false, and AP-008…AP-032, the remainder of AP-007, real external actions and all owner/independent-security/screenshot/media/signing/release approvals remain unauthorized or unclaimed. ADR-0041 remains review_status: not-reviewed.",
         "completion_note": "The owner asked whether the offline subset completes AP-007 and has not decided that it does; this record therefore marks delivery of the subset as merged and the story as blocked on U06 for its remainder, following the builder handoff recommendation. If the owner later decides the offline subset completes the story, AP-007 can be recorded done by that explicit owner decision only.",
@@ -1829,8 +1826,7 @@
         "R38"
       ],
       "blocked_by_decisions": [
-        "U04",
-        "U06"
+        "U04"
       ],
       "implementation_rules": [
         "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
@@ -1987,8 +1983,7 @@
       ],
       "blocked_by_decisions": [
         "U02",
-        "U04",
-        "U06"
+        "U04"
       ],
       "implementation_rules": [
         "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
@@ -2151,8 +2146,7 @@
       ],
       "blocked_by_decisions": [
         "U02",
-        "U03",
-        "U06"
+        "U03"
       ],
       "implementation_rules": [
         "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
@@ -2688,8 +2682,7 @@
         "U01",
         "U02",
         "U03",
-        "U04",
-        "U06"
+        "U04"
       ],
       "implementation_rules": [
         "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
@@ -2848,8 +2841,7 @@
         "U01",
         "U02",
         "U03",
-        "U04",
-        "U06"
+        "U04"
       ],
       "implementation_rules": [
         "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
@@ -3399,8 +3391,7 @@
       "blocked_by_decisions": [
         "U01",
         "U02",
-        "U04",
-        "U06"
+        "U04"
       ],
       "implementation_rules": [
         "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
@@ -3616,7 +3607,7 @@
     "reconciliation_evidence": "docs/autonomous-production-ap001-reconciliation.md",
     "registered_by_story": "AP-001",
     "owner_authorized_date": "2026-11-10",
-    "activation_scope": "AP-001 through AP-006 are delivered. AP-007’s safe fail-closed offline subset landed as bf1fa6aefa24913ed7a88ceb12775b484dbc7cc5 (merge of PR #303; its exact-merge main CI passed). That landing resolves nothing about U06 and activates nothing: no route, scheduler, provider, model, network, browser, account or background worker calls the mission stop, the recovery report or the observation recorder, and nothing declares the new limits. Three fail-closed changes are on paths the running application already uses. PR #303 landed the first, the late-result fence, for all tasks; PR #307 (merged as e28cccdac003975a8717a7f28f7783f38c1aa97a) limits it to mission-owned work (stories[AP-007].tracking.post_completion_changes), and the running application creates no mission plan, so the fence does not fire there. The second is the budget charge, which reads every budget from the task to the root. PR #312 (merged as aa91fe96e72dc6fdaf21d4ceebfd66d9aec5f28d) adds to it, for mission-owned work, a requirement of isolation proof for every consequential action (AP-007-F2 in stories[AP-007].tracking.post_completion_changes); no acceptance is recorded, so no proof is accepted, and because the running application creates no mission plan, the requirement does not fire there. The third is unchanged: /api/harness/run and /api/harness/gsd-wave answer 400 for the six new budget keys. A fourth change on such a path is not a refusal: with PR #319 (merged as dc2f7b5bf4085a1f4d8f8b869a30a4406fa361a5; AP-007-F3 in stories[AP-007].tracking.post_completion_changes) a qualification object of the security store carries two more keys, report_time_stated and host_fingerprint, which the security-incident routes write and return; the application's own sandbox admission reads neither and accepts the same reports as before. The remainder of AP-007, AP-008 through AP-032, product runtime activation and real external actions remain unauthorized, and no later story may start without its own explicit owner authorization.",
+    "activation_scope": "AP-001 through AP-006 are delivered. AP-007’s safe fail-closed offline subset landed as bf1fa6aefa24913ed7a88ceb12775b484dbc7cc5 (merge of PR #303; its exact-merge main CI passed). That landing resolves nothing about U06 and activates nothing: no route, scheduler, provider, model, network, browser, account or background worker calls the mission stop, the recovery report or the observation recorder, and nothing declares the new limits. Three fail-closed changes are on paths the running application already uses. PR #303 landed the first, the late-result fence, for all tasks; PR #307 (merged as e28cccdac003975a8717a7f28f7783f38c1aa97a) limits it to mission-owned work (stories[AP-007].tracking.post_completion_changes), and the running application creates no mission plan, so the fence does not fire there. The second is the budget charge, which reads every budget from the task to the root. PR #312 (merged as aa91fe96e72dc6fdaf21d4ceebfd66d9aec5f28d) adds to it, for mission-owned work, a requirement of isolation proof for every consequential action (AP-007-F2 in stories[AP-007].tracking.post_completion_changes); no acceptance is recorded, so no proof is accepted, and because the running application creates no mission plan, the requirement does not fire there. The third is unchanged: /api/harness/run and /api/harness/gsd-wave answer 400 for the six new budget keys. A fourth change on such a path is not a refusal: with PR #319 (merged as dc2f7b5bf4085a1f4d8f8b869a30a4406fa361a5; AP-007-F3 in stories[AP-007].tracking.post_completion_changes) a qualification object of the security store carries two more keys, report_time_stated and host_fingerprint, which the security-incident routes write and return; the application's own sandbox admission reads neither and accepts the same reports as before. The remainder of AP-007, AP-008 through AP-032, product runtime activation and real external actions remain unauthorized, and no later story may start without its own explicit owner authorization. On 2026-11-17 the repository owner resolved U06 by explicit recorded decision (agent session arena/0efd4d99-m5-agent-studio), overriding the 2026-11-16 answer 2 fresh-qualification requirement by explicit owner waiver and accepting AP-007-F2 (PR #312) and AP-007-F3 (PR #319) as the refusal foundation (superseding the answer 6 refusal, in the owner's explicit words). The resolution activates nothing: no IsolationAcceptance is recorded, no host is observed for dispatch, installed-runtime qualification has not been run, runtime_activation_authorized remains false, and every backend except a recorded contained-execution acceptance remains refused. AP-007 is in_progress for its authorized remainder. The owner authorized AP-008 to start only after AP-007 is recorded done. AP-009 through AP-032 and all runtime activation remain unauthorized.",
     "runtime_activation_authorized": false,
     "authorized_downstream_stories": [
       "AP-002",
@@ -3710,6 +3701,16 @@
         "mode": "owner_follow_up_to_a_landed_fail_closed_rework",
         "scope": "Close three offline gaps of the AP-007 isolation gate for mission-owned work, taken from the not-delivered list of ADR-0043: refuse proof that rests on a qualification report without a generation time; require proof from the recorded target host; make the recovery report state that consequential work is refused. An additive change in sandbox_boundary.py that does not change the admission of the running application. Offline and fail closed; nothing is activated or accepted. Not an authorization of the remainder of AP-007 or of any later story. U06 stays pending; AP-007 is not added to authorized_downstream_stories.",
         "source": "Owner selection in the AP-007 builder session, in reply to that session's question about what to do next: “Close the three offline gaps (recommended)”. The owner also selected “Merge when the gate is green” for the pull requests of this work. No timestamp was recorded for the selections, so authorized_at is null. They were made after the questions were put and before the session's first command after the answer (2026-11-17T05:34:33Z); the batch of tool calls that put the questions also started a workspace-setup process, whose scratch directory was created at 2026-11-16T09:22:25Z. Every option that was offered is recorded word for word in stories[AP-007].tracking.post_completion_changes."
+      },
+      {
+        "authorized_at": "2026-11-17",
+        "stories": [
+          "AP-007",
+          "AP-008"
+        ],
+        "mode": "owner_resolution_then_sequential_stories",
+        "scope": "Resolve U06 (owner override of the fresh target-host qualification requirement; AP-007-F2/F3 accepted as the refusal foundation). Authorize: (a) recording the resolution in the AP ledger and operating envelope; (b) implementing and recording AP-007's remainder (host-observer seam; completion record) on arena/0efd4d99-m5-agent-studio; (c) AP-008 (Expose clean mission controls and artifact-first status) to start only after AP-007 is recorded done, one story per branch/PR. Activation order retained: contained execution -> browser worker -> native lifecycle, each step with its own recorded evidence; everything not yet activated remains refused. runtime_activation_authorized stays false; no acceptance is recorded; installed-runtime qualification has not been run. AP-008's own implementation is not started by this recording. Future stories AP-009 and later are NOT authorized.",
+        "source": "Owner instruction to the AP relay session (2026-11-17, in reply to the session's blocker report, issue #322): 'take required steps to unblock AP program and complete it asap'; in the recorded questions the owner selected: 'Record U06 without a fresh run - my decision overrides my earlier answer 2' (u06_qualification), 'Accept F2+F3 as the refusal foundation' (refusal_foundation), 'Record U06, finish AP-007, then start AP-008' (authorization_next) and 'Merge when the gate is green' (landing_rule). The selections are recorded verbatim in this entry; the questions and every offered option are recorded in issue #322's thread and in the session record."
       }
     ]
   }
