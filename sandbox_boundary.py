@@ -141,6 +141,15 @@ _SB_FORBIDDEN_BACKEND_IDS: frozenset[str] = frozenset(
     {"host", "unsandboxed", "disabled", "none", "local_host", "raw_host"}
 )
 
+#: Fields of a qualification report's machine description (its ``fingerprint`` block)
+#: that identify the host the report was produced on (AP-007-F3).  The same block
+#: also carries the operating-system release, the Python version, the git revision
+#: and memory readings; those change while the host stays the same, so they are not
+#: part of the identity.
+QUALIFICATION_HOST_TEXT_FIELDS: tuple[str, ...] = ("os", "machine", "cpu_model")
+QUALIFICATION_HOST_COUNT_FIELDS: tuple[str, ...] = ("cpu_count", "total_memory_bytes")
+_SB_HOST_FINGERPRINT_RE = re.compile(r"sha256:[0-9a-f]{64}")
+
 
 def confined_path(root: Path, raw_path: str) -> Path:
     """Resolve a path and reject traversal, sibling-prefix, and symlink escapes."""
@@ -350,6 +359,67 @@ def _sb_parse_iso_or_epoch(value: Any) -> float | None:
             except ValueError:
                 continue
     return None
+
+
+def _sb_report_generation_time(report: Mapping[str, Any]) -> float | None:
+    """The generation time a qualification report states for itself, or ``None``."""
+    return (
+        _sb_parse_iso_or_epoch(report.get("generated_at_epoch"))
+        or _sb_parse_iso_or_epoch(report.get("qualified_at"))
+        or _sb_parse_iso_or_epoch(report.get("generated_at_utc"))
+    )
+
+
+def qualification_host_fingerprint(machine: Any) -> str:
+    """Digest of the machine description of a qualification report, or ``""`` (AP-007-F3).
+
+    ``machine`` is the ``fingerprint`` block that ``scripts/qualify_environment.py``
+    writes.  Operating system, architecture, processor model, processor count and
+    memory size identify the host; the mission isolation gate compares the digest
+    with the recorded target host.  It is not a unique hardware identifier: two
+    machines of the same model and memory size have the same digest.  A block that is
+    missing, or in which one of the five values is missing or malformed, identifies
+    no host and yields ``""``.
+    """
+    if not isinstance(machine, Mapping):
+        return ""
+    identity: dict[str, Any] = {}
+    for key in QUALIFICATION_HOST_TEXT_FIELDS:
+        text = machine.get(key)
+        if not isinstance(text, str):
+            return ""
+        text = text.strip()
+        if not text or len(text) > 200 or any(ord(char) < 32 or ord(char) == 127 for char in text):
+            return ""
+        identity[key] = text
+    for key in QUALIFICATION_HOST_COUNT_FIELDS:
+        count = machine.get(key)
+        if isinstance(count, bool) or not isinstance(count, int) or count <= 0:
+            return ""
+        identity[key] = count
+    canonical = json.dumps(identity, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return "sha256:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _sb_host_fingerprint_text(value: Any) -> str:
+    """``value`` when it is a well-formed host fingerprint, else ``""``."""
+    return value if isinstance(value, str) and _SB_HOST_FINGERPRINT_RE.fullmatch(value) else ""
+
+
+def _sb_report_provenance(report: Mapping[str, Any] | None) -> tuple[bool, str]:
+    """What a qualification report says about its own time and host (AP-007-F3).
+
+    The first value is true only when the report states a usable generation time.
+    Without one the sandbox layer records the time of ingestion, and the record must
+    say so, because that time says nothing about the age of the qualification run.
+    """
+    if not isinstance(report, Mapping):
+        return False, ""
+    stated = _sb_report_generation_time(report)
+    return (
+        stated is not None and 0.0 < stated < float("inf"),
+        qualification_host_fingerprint(report.get("fingerprint")),
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -757,6 +827,14 @@ class BackendQualificationRecord:
     verified_disjoint_from: tuple[str, ...]
     qualified_at: float
     report_generated_at: float
+    # AP-007-F3: where the report's time and host come from.  The sandbox admission
+    # of the application reads neither field.  ``report_time_stated`` is true only
+    # when the report carried a usable generation time of its own; otherwise
+    # ``report_generated_at`` is the time of ingestion.  ``host_fingerprint`` is the
+    # digest of the report's machine description, or ``""`` when it carried none.  A
+    # record written before these fields existed reads as not stated and no host.
+    report_time_stated: bool = False
+    host_fingerprint: str = ""
 
     def to_mapping(self) -> dict[str, Any]:
         return {
@@ -770,6 +848,8 @@ class BackendQualificationRecord:
             "verified_disjoint_from": list(self.verified_disjoint_from),
             "qualified_at": self.qualified_at,
             "report_generated_at": self.report_generated_at,
+            "report_time_stated": self.report_time_stated,
+            "host_fingerprint": self.host_fingerprint,
         }
 
     @classmethod
@@ -787,6 +867,9 @@ class BackendQualificationRecord:
             verified_disjoint_from=tuple(str(x) for x in (raw.get("verified_disjoint_from") or ())),
             qualified_at=float(raw.get("qualified_at") or 0.0),
             report_generated_at=float(raw.get("report_generated_at") or 0.0),
+            # Only the literal ``true`` and a well-formed digest count.
+            report_time_stated=raw.get("report_time_stated") is True,
+            host_fingerprint=_sb_host_fingerprint_text(raw.get("host_fingerprint")),
         )
 
 
@@ -1070,11 +1153,7 @@ def _sb_evaluate_qualification_evidence(
             )
 
     # Timestamp freshness check (reject replay of pre-incident qualification artifacts).
-    rep_ts = (
-        _sb_parse_iso_or_epoch(report.get("generated_at_epoch"))
-        or _sb_parse_iso_or_epoch(report.get("qualified_at"))
-        or _sb_parse_iso_or_epoch(report.get("generated_at_utc"))
-    )
+    rep_ts = _sb_report_generation_time(report)
     if rep_ts is None:
         rep_ts = time.time()
     if min_timestamp is not None and rep_ts + 0.001 < min_timestamp:
@@ -1784,6 +1863,7 @@ class SecurityIncidentStore:
                 missing_guarantees=(covered if err_code == "qualification_incomplete_coverage" else ()),
             )
 
+        time_stated, host_fingerprint = _sb_report_provenance(report)
         with self._lock:
             state = self._read_state_unlocked()
             # Refuse silent restoration of an active incident via `ingest_qualification_report`;
@@ -1812,6 +1892,8 @@ class SecurityIncidentStore:
                 verified_disjoint_from=(),
                 qualified_at=time.time(),
                 report_generated_at=rep_ts,
+                report_time_stated=time_stated,
+                host_fingerprint=host_fingerprint,
             )
             state["qualifications"][backend.backend_id] = qual.to_mapping()
             state["active_backend_id"] = backend.backend_id
@@ -1936,6 +2018,7 @@ class SecurityIncidentStore:
                 missing_guarantees=(covered if err_code == "qualification_incomplete_coverage" else ()),
             )
 
+        time_stated, host_fingerprint = _sb_report_provenance(eff_report)
         with self._lock:
             state = self._read_state_unlocked()
             # Re-read incident inside lock to guard concurrent updates.
@@ -1951,6 +2034,8 @@ class SecurityIncidentStore:
                 verified_disjoint_from=cur_inc.failed_dependencies,
                 qualified_at=time.time(),
                 report_generated_at=rep_ts,
+                report_time_stated=time_stated,
+                host_fingerprint=host_fingerprint,
             )
             updated_inc = SecurityIncidentRecord(
                 incident_id=cur_inc.incident_id,
@@ -2076,6 +2161,7 @@ class SecurityIncidentStore:
                 missing_guarantees=(covered if err_code == "qualification_incomplete_coverage" else ()),
             )
 
+        time_stated, host_fingerprint = _sb_report_provenance(eff_report)
         with self._lock:
             state = self._read_state_unlocked()
             cur_inc = SecurityIncidentRecord.from_mapping(state["incidents"][incident_id])
@@ -2103,6 +2189,8 @@ class SecurityIncidentStore:
                 verified_disjoint_from=(),
                 qualified_at=now,
                 report_generated_at=rep_ts,
+                report_time_stated=time_stated,
+                host_fingerprint=host_fingerprint,
             )
             restored_inc = SecurityIncidentRecord(
                 incident_id=cur_inc.incident_id,

@@ -740,6 +740,11 @@ _MISSION_NEXT_ACTIONS: dict[str, str] = {
     "isolation_unavailable": (
         "Qualify and enable an isolated runtime before this mission can run. It is not executed on the host."
     ),
+    "consequential_actions_refused": (
+        "Consequential actions stay refused until an isolated runtime is accepted by a recorded owner decision "
+        "and proven on the accepted target machine. They are not executed on the host shell instead. Tasks that "
+        "depend on them cannot complete until then."
+    ),
     "uncertain_effects": (
         "Verify each listed action and reconcile it as committed or not applied before relying on this work. "
         "After a stop, no new plan is accepted for this task until every one is reconciled."
@@ -1431,8 +1436,16 @@ def _mission_recovery_locked(
         else []
     )
     isolation_refused = ""
-    if live and work_owed and root_budget is not None and root_budget.spec.isolation_required:
-        isolation_refused = execution_budget.isolation_refusal(isolation, acceptance=acceptance)
+    # AP-007-F3: every task of a plan is mission-owned, so the charge refuses each of
+    # its consequential actions without proof, whether or not a budget declares the
+    # requirement.  The report judges the evidence it was given by the same rule.
+    consequential_refused = ""
+    if live and work_owed:
+        unproven = execution_budget.isolation_refusal(isolation, acceptance=acceptance)
+        if root_budget is not None and root_budget.spec.isolation_required:
+            isolation_refused = unproven
+        else:
+            consequential_refused = unproven
     incomplete = any(task.outcome == "incomplete" for task in tasks)
 
     if plan_status == "superseded":
@@ -1498,6 +1511,15 @@ def _mission_recovery_locked(
             _mission_limitation(
                 "isolation_unavailable",
                 f"{isolation_refused}; dependent execution is blocked and the host shell is not used.",
+            )
+        )
+    elif consequential_refused and outcome not in {"cancelled", "stopped"}:
+        # A cancelled or stopped plan already says that it runs no further.
+        limitations.append(
+            _mission_limitation(
+                "consequential_actions_refused",
+                "Consequential actions of this plan are refused before they run: "
+                f"{consequential_refused}; the host shell is not used.",
             )
         )
     if unresolved:

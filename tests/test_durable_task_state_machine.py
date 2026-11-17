@@ -1369,6 +1369,9 @@ _AP007_IDLE_CHILD = "import time\nwhile True:\n    time.sleep(0.05)\n"
 # is qualified in this repository; these tests never claim that one exists.
 _AP007_FIXTURE_DIGEST = "python@sha256:" + "ab" * 32
 _AP007_FIXTURE_NOT_BEFORE = 1_800_000_000.0
+# AP-007-F3: an equally fictional host fingerprint.  No host is recorded as a target
+# and nothing observes the host outside tests.
+_AP007_FIXTURE_HOST = "sha256:" + "5a" * 32
 _AP007_FIXTURE_ISOLATION = execution_budget.IsolationEvidence(
     execution_mode="sandbox",
     admitted=True,
@@ -1379,6 +1382,8 @@ _AP007_FIXTURE_ISOLATION = execution_budget.IsolationEvidence(
     image_digest=_AP007_FIXTURE_DIGEST,
     qualification_id="test-fixture-qualification-not-a-real-run",
     qualified_at=_AP007_FIXTURE_NOT_BEFORE,
+    qualified_host=_AP007_FIXTURE_HOST,
+    observed_host=_AP007_FIXTURE_HOST,
 )
 # AP-007-F2: an equally fictional acceptance record.  No owner decision records one
 # (U06 is pending), so no process of this build is composed with one.  A test that
@@ -1389,6 +1394,7 @@ _AP007_FIXTURE_ACCEPTANCE = execution_budget.IsolationAcceptance(
     runtime_version="0.0.0-test-fixture",
     image_digest=_AP007_FIXTURE_DIGEST,
     qualified_not_before=_AP007_FIXTURE_NOT_BEFORE,
+    target_host=_AP007_FIXTURE_HOST,
     activated_steps=frozenset({execution_budget.CONTAINED_EXECUTION}),
 )
 
@@ -2764,10 +2770,36 @@ def test_ap007_f2_a_store_without_mission_tables_owns_no_mission_work(tmp_path: 
     assert still_v3 is None
 
 
+# AP-007-F3: marks a key that a test removes from a stored record.
+_AP007_F3_ABSENT: Any = object()
+# AP-007-F3: a machine description written by these tests.  It describes no real machine.
+_AP007_F3_FIXTURE_MACHINE: dict[str, Any] = {
+    "git_revision": "0" * 40,
+    "os": "FixtureOS",
+    "os_release": "0.0.0-test-fixture",
+    "os_version": "0",
+    "machine": "fixture64",
+    "cpu_model": "Fixture CPU - not a real machine",
+    "cpu_count": 8,
+    "total_memory_bytes": 17_179_869_184,
+    "total_memory_gib": 16.0,
+    "python": "0.0.0",
+    "memory": {"swap_used_bytes": 0},
+}
+
+
 def _ap007_f2_fixture_qualification_report(
-    backend: sandbox_boundary.SandboxBackendProfile, *, fingerprint: str, generated_at: float
+    backend: sandbox_boundary.SandboxBackendProfile,
+    *,
+    fingerprint: str,
+    generated_at: float | None,
+    machine: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """A qualification report written by this test.  No qualification run produced it."""
+    """A qualification report written by this test.  No qualification run produced it.
+
+    AP-007-F3: ``generated_at=None`` leaves the generation time out, and ``machine``
+    adds the machine description that a report of the qualification suite carries.
+    """
     check_ids = (
         "p3.runtime.cli",
         "p3.runtime.image",
@@ -2779,10 +2811,8 @@ def _ap007_f2_fixture_qualification_report(
         "p3.product.argv",
         "p3.product.no_host_fallback",
     )
-    return {
+    report: dict[str, Any] = {
         "schema_version": 1,
-        "generated_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(generated_at)),
-        "generated_at_epoch": generated_at,
         "sandbox": {
             "runtime": backend.runtime,
             "runtime_path": backend.runtime_path,
@@ -2800,6 +2830,12 @@ def _ap007_f2_fixture_qualification_report(
         },
         "config_fingerprint": fingerprint,
     }
+    if generated_at is not None:
+        report["generated_at_utc"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(generated_at))
+        report["generated_at_epoch"] = generated_at
+    if machine is not None:
+        report["fingerprint"] = dict(machine)
+    return report
 
 
 def test_ap007_f2_evidence_is_adapted_from_the_real_sandbox_admission_types(
@@ -2825,13 +2861,21 @@ def test_ap007_f2_evidence_is_adapted_from_the_real_sandbox_admission_types(
     generation, incident = incidents.observe_configuration(backend, execution_mode="sandbox")
     assert incident is None
     run_at = time.time() - 3_600.0  # the fictional run happened an hour before it is recorded
+    host = sandbox_boundary.qualification_host_fingerprint(_AP007_F3_FIXTURE_MACHINE)
     outcome = incidents.ingest_qualification_report(
-        _ap007_f2_fixture_qualification_report(backend, fingerprint=generation.config_fingerprint, generated_at=run_at),
+        _ap007_f2_fixture_qualification_report(
+            backend,
+            fingerprint=generation.config_fingerprint,
+            generated_at=run_at,
+            machine=_AP007_F3_FIXTURE_MACHINE,
+        ),
         backend=backend,
     )
     assert outcome.ok is True and outcome.qualification is not None
     record = outcome.qualification
     assert record.qualified_at > run_at + 3_000 and abs(record.report_generated_at - run_at) < 1.0
+    # AP-007-F3: the record says that the report stated its time, and which machine it describes.
+    assert (record.report_time_stated, record.host_fingerprint) == (True, host)
 
     def _observe(mode: str) -> execution_budget.IsolationEvidence:
         decision = incidents.check_admission(
@@ -2841,7 +2885,9 @@ def test_ap007_f2_evidence_is_adapted_from_the_real_sandbox_admission_types(
             session_id="ap007-f2-real-root",
             workspace_root=isolated_env,
         )
-        return execution_budget.IsolationEvidence.from_admission(decision, execution_mode=mode, qualification=record)
+        return execution_budget.IsolationEvidence.from_admission(
+            decision, execution_mode=mode, qualification=record, observed_host=host
+        )
 
     evidence = _observe("sandbox")
     assert (evidence.admitted, evidence.qualified, evidence.backend_id) == (True, True, "fixture-docker")
@@ -2854,6 +2900,7 @@ def test_ap007_f2_evidence_is_adapted_from_the_real_sandbox_admission_types(
     # The qualification is as old as its run, not as young as its record.
     assert abs(evidence.qualified_at - run_at) < 1.0
     assert evidence.step == execution_budget.CONTAINED_EXECUTION
+    assert (evidence.qualified_host, evidence.observed_host) == (host, host)
 
     def _acceptance(**changes: Any) -> execution_budget.IsolationAcceptance:
         fields: dict[str, Any] = {
@@ -2862,6 +2909,7 @@ def test_ap007_f2_evidence_is_adapted_from_the_real_sandbox_admission_types(
             "runtime_version": "0.0.0-test-fixture",
             "image_digest": "sha256:" + "12" * 32,
             "qualified_not_before": run_at - 60.0,
+            "target_host": host,
             "activated_steps": frozenset({execution_budget.CONTAINED_EXECUTION}),
             **changes,
         }
@@ -2876,6 +2924,11 @@ def test_ap007_f2_evidence_is_adapted_from_the_real_sandbox_admission_types(
         "another runtime": (_acceptance(runtime="podman"), "not the accepted runtime and image"),
         # U06 answer 2: the run predates the acceptance although its record was written after it.
         "an older run": (_acceptance(qualified_not_before=run_at + 60.0), "predates the recorded acceptance"),
+        # AP-007-F3: another host is recorded as the target.
+        "another host": (
+            _acceptance(target_host="sha256:" + "6b" * 32),
+            "was not run on the accepted target host",
+        ),
         "nothing activated": (_acceptance(activated_steps=frozenset()), "step is not activated"),
     }
     for case, (acceptance, fragment) in refused.items():
@@ -2910,6 +2963,319 @@ def test_ap007_f2_evidence_is_adapted_from_the_real_sandbox_admission_types(
     assert sm.budgets.get_budget(lease.task.task_id).tool_calls_used == 0
     sm.budgets.charge_hierarchical_tool_call(lease.task.task_id, isolation=evidence, **charge)
     assert sm.budgets.get_budget(lease.task.task_id).tool_calls_used == 1
+
+
+def test_ap007_f3_the_security_store_marks_what_a_report_says_about_itself(
+    isolated_env: Path, tmp_path: Path
+) -> None:
+    """An undated report, or a report from another machine, stays valid for the application and proves nothing to a mission.
+
+    The store is a temporary one and every report is written by this test: nothing
+    is installed, started or qualified.
+    """
+    store_dir = tmp_path / "ap007_f3_security"
+    incidents = sandbox_boundary.SecurityIncidentStore(store_dir)
+    backend = sandbox_boundary.SandboxBackendProfile(
+        backend_id="fixture-docker",
+        runtime="docker",
+        runtime_path="/usr/bin/docker",
+        image="python:3.12-slim",
+        image_digest="sha256:" + "12" * 32,
+        runtime_version="0.0.0-test-fixture",
+        oci_runtime="runc",
+        kernel_boundary="fixture_vm",
+    )
+    generation, incident = incidents.observe_configuration(backend, execution_mode="sandbox")
+    assert incident is None
+    machine = _AP007_F3_FIXTURE_MACHINE
+    elsewhere = {**machine, "cpu_model": "Fixture CPU - another machine that is not real either"}
+    host = sandbox_boundary.qualification_host_fingerprint(machine)
+    other_host = sandbox_boundary.qualification_host_fingerprint(elsewhere)
+    assert host and other_host and host != other_host
+    started = time.time()
+    acceptance = execution_budget.IsolationAcceptance(
+        decision_ref="test-fixture-acceptance-not-an-owner-decision",
+        runtime="docker",
+        runtime_version="0.0.0-test-fixture",
+        image_digest="sha256:" + "12" * 32,
+        qualified_not_before=started - 3_600.0,
+        target_host=host,
+        activated_steps=frozenset({execution_budget.CONTAINED_EXECUTION}),
+    )
+    required = "runtime isolation is required but "
+
+    def _ingest(
+        *, generated_at: float | None, described: dict[str, Any] | None, **extra: Any
+    ) -> sandbox_boundary.BackendQualificationRecord:
+        report = _ap007_f2_fixture_qualification_report(
+            backend, fingerprint=generation.config_fingerprint, generated_at=generated_at, machine=described
+        )
+        report.update(extra)
+        outcome = incidents.ingest_qualification_report(report, backend=backend)
+        assert outcome.ok is True and outcome.qualification is not None, outcome.reason
+        return outcome.qualification
+
+    def _admission(store: sandbox_boundary.SecurityIncidentStore) -> sandbox_boundary.SecurityAdmissionDecision:
+        return store.check_admission(
+            required_guarantees=("container_boundary",),
+            execution_surface="run_bash",
+            execution_mode="sandbox",
+            session_id="ap007-f3-store-root",
+            workspace_root=isolated_env,
+        )
+
+    def _application_view(store: sandbox_boundary.SecurityIncidentStore) -> tuple[Any, ...]:
+        """What the application's own admission reads from the store."""
+        decision = _admission(store)
+        active = decision.active_backend.backend_id if decision.active_backend is not None else None
+        return (decision.allowed, decision.error_code, decision.container_qualified, active)
+
+    def _mission_view(record: Any, *, observed: Any = host) -> str:
+        """What the mission gate answers for the same admission and this record."""
+        evidence = execution_budget.IsolationEvidence.from_admission(
+            _admission(incidents), execution_mode="sandbox", qualification=record, observed_host=observed
+        )
+        return execution_budget.isolation_refusal(evidence, acceptance=acceptance)
+
+    # A dated report from the recorded host is the one case a mission accepts.
+    dated = _ingest(generated_at=started - 60.0, described=machine)
+    assert (dated.report_time_stated, dated.host_fingerprint) == (True, host)
+    assert _mission_view(dated) == ""
+    for_the_application = _application_view(incidents)
+    assert for_the_application == (True, "", True, "fixture-docker")
+
+    # An undated report.  The sandbox layer gives it the time of ingestion, as it did
+    # before, so both times of the record look fresh; the record now says where they come from.
+    undated = _ingest(generated_at=None, described=machine)
+    assert undated.report_time_stated is False
+    assert undated.report_generated_at >= started and undated.qualified_at >= started
+    assert _application_view(incidents) == for_the_application
+    assert _mission_view(undated) == required + "the backend qualification states no usable time for its run"
+
+    # Every key a report can state its time with counts, in the forms the sandbox layer reads.
+    moment = started - 5.0
+    for stated in (
+        {"generated_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(moment))},
+        {"generated_at_epoch": moment},
+        {"generated_at_epoch": str(moment)},
+        {"qualified_at": moment},
+    ):
+        record = _ingest(generated_at=None, described=machine, **stated)
+        assert record.report_time_stated is True, stated
+        assert _mission_view(record) == "", stated
+    # A value that is no time, or no usable one, is not a statement.
+    for unstated in (
+        {"generated_at_utc": "soon"},
+        {"generated_at_utc": ""},
+        {"generated_at_epoch": None},
+        {"generated_at_epoch": True},
+        {"generated_at_epoch": 0},
+        {"generated_at_epoch": -5.0},
+        {"generated_at_epoch": "inf"},
+        {"generated_at_epoch": "nan"},
+    ):
+        record = _ingest(generated_at=None, described=machine, **unstated)
+        assert record.report_time_stated is False, unstated
+        assert _mission_view(record) == required + "the backend qualification states no usable time for its run", unstated
+        assert _application_view(incidents) == for_the_application, unstated
+
+    # A report that describes no machine, and one that describes another machine.
+    undescribed = _ingest(generated_at=started - 60.0, described=None)
+    assert (undescribed.report_time_stated, undescribed.host_fingerprint) == (True, "")
+    assert _mission_view(undescribed) == required + "the backend qualification names no host"
+    incomplete = _ingest(generated_at=started - 60.0, described={**machine, "cpu_count": 0})
+    assert incomplete.host_fingerprint == ""
+    foreign = _ingest(generated_at=started - 60.0, described=elsewhere)
+    assert foreign.host_fingerprint == other_host
+    assert _mission_view(foreign) == required + "the backend qualification was not run on the accepted target host"
+    assert _application_view(incidents) == for_the_application
+
+    # The report of the recorded host, read by a server on another machine (a copied store),
+    # and by a server that observed no host.
+    home = _ingest(generated_at=started - 60.0, described=machine)
+    assert _mission_view(home, observed=other_host) == required + "this host is not the accepted target host"
+    assert _mission_view(home, observed=None) == required + "the host of this dispatch was not observed"
+    assert _mission_view(home) == ""
+
+    # Both fields are part of the stored qualification and of what the store reports.
+    stored = json.loads(incidents.state_path.read_text(encoding="utf-8"))
+    raw = stored["qualifications"]["fixture-docker"]
+    assert (raw["report_time_stated"], raw["host_fingerprint"]) == (True, host)
+    reported = incidents.summary()["qualifications"]["fixture-docker"]
+    assert (reported["report_time_stated"], reported["host_fingerprint"]) == (True, host)
+
+    def _reopen(**fields: Any) -> tuple[sandbox_boundary.SecurityIncidentStore, Any]:
+        """Rewrite the stored qualification and read it with a fresh store, as after a restart."""
+        changed = json.loads(json.dumps(stored))
+        target = changed["qualifications"]["fixture-docker"]
+        for key, value in fields.items():
+            if value is _AP007_F3_ABSENT:
+                target.pop(key, None)
+            else:
+                target[key] = value
+        incidents.state_path.write_text(json.dumps(changed), encoding="utf-8")
+        store = sandbox_boundary.SecurityIncidentStore(store_dir)
+        read_back = sandbox_boundary.BackendQualificationRecord.from_mapping(
+            json.loads(store.state_path.read_text(encoding="utf-8"))["qualifications"]["fixture-docker"]
+        )
+        return store, read_back
+
+    # A record written before the fields existed: still valid for the application, no proof for a mission.
+    store, legacy = _reopen(report_time_stated=_AP007_F3_ABSENT, host_fingerprint=_AP007_F3_ABSENT)
+    assert (legacy.report_time_stated, legacy.host_fingerprint) == (False, "")
+    assert _application_view(store) == for_the_application
+    assert _mission_view(legacy) == required + "the backend qualification states no usable time for its run"
+    summary = store.summary()["qualifications"]["fixture-docker"]
+    assert (summary["report_time_stated"], summary["host_fingerprint"]) == (False, "")
+    # Only the literal true and a well-formed fingerprint are read back.
+    for not_true in ("true", "True", 1, "yes", [True], None):
+        store, read_back = _reopen(report_time_stated=not_true)
+        assert read_back.report_time_stated is False, not_true
+        assert _application_view(store) == for_the_application, not_true
+    for not_a_fingerprint in (host.upper(), host[:-2], "the-owner-mac", 7, None, [host]):
+        store, read_back = _reopen(host_fingerprint=not_a_fingerprint)
+        assert read_back.host_fingerprint == "", not_a_fingerprint
+        assert _application_view(store) == for_the_application, not_a_fingerprint
+    store, restored = _reopen()
+    assert (restored.report_time_stated, restored.host_fingerprint) == (True, host)
+    assert _mission_view(restored) == ""
+
+
+def test_ap007_f3_report_states_that_consequential_actions_are_refused(isolated_env: Path) -> None:
+    """AC5: a live plan is not reported as simply in progress while each of its consequential actions is refused."""
+    root, mission = "ap007-f3-report-root", "ap007-f3-report"
+    sm = _ap007_machine(isolated_env, root)  # no acceptance is recorded: the state of this build
+    binding, tasks = _ap007_plan(sm, root, mission, keys=("work", "next"))
+    lease = _ap007_claim(sm, root, mission, "work", tasks["work"], binding)
+    charge = {"root_task_id": root, "session_id": root, "epoch": lease.epoch.epoch}
+    code = "consequential_actions_refused"
+    nothing_recorded = "runtime isolation is required but no accepted isolation backend is recorded"
+
+    report = sm.mission_recovery_report(mission, 1, persist=False)
+    assert (report.outcome, report.plan_status, report.claims_success) == ("in_progress", "active", False)
+    assert report.limitation_codes == (code, "tasks_incomplete")
+    stated = report.limitations[0]
+    assert stated["message"] == (
+        f"Consequential actions of this plan are refused before they run: {nothing_recorded}; "
+        "the host shell is not used."
+    )
+    assert "recorded owner decision" in stated["next_action"]
+    assert "not executed on the host" in stated["next_action"]
+
+    # The report gives the reason the charge gives.
+    with pytest.raises(execution_budget.IsolationUnavailable) as refused:
+        sm.budgets.charge_hierarchical_tool_call(lease.task.task_id, **charge)
+    assert str(refused.value) == f"{nothing_recorded}; dependent execution is blocked and the host shell is not used."
+    # The plan is not blocked as a whole: a read-only action is still charged, and the outcome says so.
+    sm.budgets.charge_hierarchical_tool_call(lease.task.task_id, consequential=False, **charge)
+    assert sm.budgets.get_budget(lease.task.task_id).tool_calls_used == 1
+    assert sm.mission_recovery_report(mission, 1, persist=False).outcome == "in_progress"
+    # Fictional proof changes nothing while no acceptance is recorded.
+    unaccepted = sm.mission_recovery_report(mission, 1, isolation=_AP007_FIXTURE_ISOLATION, persist=False)
+    assert unaccepted.limitations == report.limitations
+
+    # With a recorded acceptance (a test fixture) the report judges the evidence it is given,
+    # and the charge refuses the same evidence for the same reason.
+    accepting = workflow_state.DurableTaskStateMachine(
+        studio.STORAGE, studio.DB_PATH, isolation_acceptance=_AP007_FIXTURE_ACCEPTANCE
+    )
+    other_host = "sha256:" + "6b" * 32
+    judged: dict[str, execution_budget.IsolationEvidence | None] = {
+        "no isolation evidence was presented": None,
+        "not `sandbox`": replace(_AP007_FIXTURE_ISOLATION, execution_mode="host"),
+        "states no usable time for its run": replace(_AP007_FIXTURE_ISOLATION, qualified_at=0.0),
+        "predates the recorded acceptance": replace(
+            _AP007_FIXTURE_ISOLATION, qualified_at=_AP007_FIXTURE_NOT_BEFORE - 1
+        ),
+        "the backend qualification names no host": replace(_AP007_FIXTURE_ISOLATION, qualified_host=""),
+        "was not run on the accepted target host": replace(_AP007_FIXTURE_ISOLATION, qualified_host=other_host),
+        "the host of this dispatch was not observed": replace(_AP007_FIXTURE_ISOLATION, observed_host=""),
+        "this host is not the accepted target host": replace(_AP007_FIXTURE_ISOLATION, observed_host=other_host),
+    }
+    for fragment, proof in judged.items():
+        unproven = accepting.mission_recovery_report(mission, 1, isolation=proof, persist=False)
+        assert (unproven.outcome, unproven.limitation_codes) == ("in_progress", (code, "tasks_incomplete")), fragment
+        assert fragment in unproven.limitations[0]["message"], fragment
+        with pytest.raises(execution_budget.IsolationUnavailable, match=fragment):
+            accepting.budgets.charge_hierarchical_tool_call(lease.task.task_id, isolation=proof, **charge)
+    assert sm.budgets.get_budget(lease.task.task_id).tool_calls_used == 1  # nothing was debited
+
+    # Accepted proof removes the limitation, and the charge passes.
+    proven = accepting.mission_recovery_report(mission, 1, isolation=_AP007_FIXTURE_ISOLATION, persist=False)
+    assert (proven.outcome, proven.limitation_codes, proven.claims_success) == (
+        "in_progress",
+        ("tasks_incomplete",),
+        False,
+    )
+    accepting.budgets.charge_hierarchical_tool_call(lease.task.task_id, isolation=_AP007_FIXTURE_ISOLATION, **charge)
+    assert sm.budgets.get_budget(lease.task.task_id).tool_calls_used == 2
+
+    # The limitation is part of the report's identity, and a stored report is found again.
+    assert proven.report_hash != report.report_hash
+    stored = sm.mission_recovery_report(mission, 1)
+    assert stored.report_hash == report.report_hash
+    assert sm.mission_recovery_report(mission, 1).report_hash == stored.report_hash
+    restarted = workflow_state.DurableTaskStateMachine(studio.STORAGE, studio.DB_PATH)
+    assert restarted.mission_recovery_report(mission, 1, persist=False).limitations == report.limitations
+
+
+def test_ap007_f3_report_states_it_only_while_the_plan_is_expected_to_run(isolated_env: Path) -> None:
+    """The refusal is stated for a live plan that owes work; a plan that runs no further already says so."""
+    code = "consequential_actions_refused"
+
+    # A declared requirement blocks the whole plan and keeps its own limitation.
+    root, mission = "ap007-f3-declared-root", "ap007-f3-declared"
+    declared = _ap007_machine(
+        isolated_env, root, execution_budget.TaskBudgetSpec(max_steps=50, isolation_required=True)
+    )
+    _ap007_plan(declared, root, mission, keys=("work",))
+    blocked = declared.mission_recovery_report(mission, 1, persist=False)
+    assert blocked.outcome == "blocked"
+    assert "isolation_unavailable" in blocked.limitation_codes and code not in blocked.limitation_codes
+
+    # The root is cancelled while the plan is live: the report asks for the stop, and after the halt records it.
+    root, mission = "ap007-f3-cancelled-root", "ap007-f3-cancelled"
+    sm = _ap007_machine(isolated_env, root)
+    _ap007_plan(sm, root, mission, keys=("work",))
+    assert code in sm.mission_recovery_report(mission, 1, persist=False).limitation_codes
+    sm.cancel_task(root)
+    unhalted = sm.mission_recovery_report(mission, 1, persist=False)
+    assert (unhalted.outcome, unhalted.plan_status) == ("cancelled", "active")
+    assert unhalted.limitation_codes[:2] == ("mission_cancelled", "halt_required")
+    assert code not in unhalted.limitation_codes
+    halted = sm.halt_mission(mission, 1, authority=_mission_authority(root))
+    assert (halted.outcome, halted.plan_status) == ("cancelled", "cancelled")
+    assert code not in halted.limitation_codes
+
+    # A deadline that has passed: the root budget requires a stop.
+    root, mission = "ap007-f3-deadline-root", "ap007-f3-deadline"
+    deadline = time.time() + 3_600
+    timed = _ap007_machine(isolated_env, root, execution_budget.TaskBudgetSpec(max_steps=50, deadline_at=deadline))
+    _ap007_plan(timed, root, mission, keys=("work",))
+    assert code in timed.mission_recovery_report(mission, 1, persist=False).limitation_codes
+    late = timed.mission_recovery_report(mission, 1, persist=False, now=deadline + 1)
+    assert (late.outcome, late.plan_status) == ("stopped", "active")
+    assert late.limitation_codes[:2] == ("deadline", "halt_required")
+    assert code not in late.limitation_codes
+
+    # A superseded version says nothing about it; the version that replaced it does.
+    root, mission = "ap007-f3-replan-root", "ap007-f3-replan"
+    replanned = _ap007_machine(isolated_env, root)
+    _ap007_plan(replanned, root, mission, keys=("work",))
+    _ap007_plan(replanned, root, mission, version=2, keys=("work",))
+    old = replanned.mission_recovery_report(mission, 1, persist=False)
+    assert old.outcome == "superseded" and code not in old.limitation_codes
+    assert code in replanned.mission_recovery_report(mission, 2, persist=False).limitation_codes
+
+    # No work is owed any more: the join succeeded.
+    root, mission = "ap007-f3-done-root", "ap007-f3-done"
+    finished = _ap007_machine(isolated_env, root)
+    binding, tasks = _ap007_plan(finished, root, mission, keys=("work",))
+    lease = _ap007_claim(finished, root, mission, "work", tasks["work"], binding)
+    assert code in finished.mission_recovery_report(mission, 1, persist=False).limitation_codes
+    _ap007_complete(finished, root, mission, "work", lease, binding, "e" * 64)
+    complete = finished.mission_recovery_report(mission, 1, persist=False)
+    assert (complete.outcome, complete.limitation_codes) == ("unverified", ("artifacts_not_verified",))
 
 
 def test_ap007_f2_a_resume_needs_the_same_proof_as_a_fresh_claim(isolated_env: Path) -> None:
@@ -2993,7 +3359,8 @@ def test_ap007_recovery_report_claims_success_only_for_checked_complete_artifact
     _ap007_complete(sm, root, mission, "draft", draft, binding, checked)
     partial = sm.mission_recovery_report(mission, 1, artifact_status=registry.artifact_status)
     assert (partial.outcome, partial.claims_success) == ("in_progress", False)
-    assert partial.limitation_codes == ("tasks_incomplete",)
+    # AP-007-F3: a live plan that still owes work also says that its consequential actions are refused.
+    assert partial.limitation_codes == ("consequential_actions_refused", "tasks_incomplete")
     assert [item["counts_as_complete"] for item in partial.retained_outputs] == [True]
 
     final = _ap007_claim(sm, root, mission, "final", tasks["final"], binding)
