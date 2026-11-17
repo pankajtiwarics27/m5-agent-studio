@@ -1004,6 +1004,32 @@ def test_ap007_f3_every_recorded_qualification_says_what_its_report_states(isola
     assert _provenance(body["qualification"]) == stated
     assert _provenance(body["summary"]["qualifications"][primary.backend_id]) == stated
 
+    # A second incident, restored with a report that states neither.  The route accepts it as before.
+    again = client.post(
+        "/api/security/incidents",
+        json={
+            "reason": "ap007_f3_second_fixture_incident",
+            "failed_guarantees": ["container_network_isolation"],
+            "failed_dependencies": ["dep:runtime:docker"],
+            "affected_backends": [primary.backend_id],
+        },
+    )
+    assert again.status_code == 201, again.text
+    second_id = again.json()["incident"]["incident_id"]
+    assert second_id != inc_id
+    resp = client.post(
+        f"/api/security/incidents/{second_id}/restore",
+        json={
+            "backend": remediated.to_mapping(),
+            "qualification_report": _f3_report(remediated, dated=False, described=False),
+        },
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["ok"] is True and body["incident"]["status"] == "restored"
+    assert _provenance(body["qualification"]) == silent
+    assert _provenance(body["summary"]["qualifications"][primary.backend_id]) == silent
+
 
 def test_standalone_studio_bundle_security_incident_containment_parity(
     tmp_path: Path,

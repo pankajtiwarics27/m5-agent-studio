@@ -327,9 +327,14 @@ def test_ap007_f3_a_report_of_the_qualification_suite_states_its_time_and_its_ma
     # A second reading on the same host gives the same fingerprint although its memory snapshot differs.
     assert qualification_host_fingerprint(qe.environment_fingerprint()) == host
     # The suite never invents a value: a host it cannot describe completely has no fingerprint.
+    def _usable_text(value: Any) -> bool:
+        if not isinstance(value, str):
+            return False
+        text = value.strip()
+        return 0 < len(text) <= 200 and not any(ord(char) < 32 or ord(char) == 127 for char in text)
+
     complete = all(
-        isinstance(described.get(key), str) and described[key].strip()
-        for key in sandbox_boundary.QUALIFICATION_HOST_TEXT_FIELDS
+        _usable_text(described.get(key)) for key in sandbox_boundary.QUALIFICATION_HOST_TEXT_FIELDS
     ) and all(
         isinstance(described.get(key), int) and not isinstance(described.get(key), bool) and described[key] > 0
         for key in sandbox_boundary.QUALIFICATION_HOST_COUNT_FIELDS
