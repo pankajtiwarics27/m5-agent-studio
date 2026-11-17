@@ -116,6 +116,13 @@ A qualification is as old as the run that produced it. The adapter
 qualification record was written and the time its report was generated, so
 recording an old report again does not make it fresh.
 
+> Extended by
+> [ADR-0044](0044-qualification-provenance-and-reported-refusal-for-mission-isolation.md):
+> the acceptance also names a target host, the qualification time must be one
+> the report stated itself, and both the qualification run and the dispatch must
+> come from that host. The text above is kept as the decision that PR #312
+> merged with.
+
 ### Steps follow the activation order
 
 The steps are `contained_execution`, `browser_worker` and `native_lifecycle`. An
@@ -188,6 +195,13 @@ Not delivered, and stated here so that it is not assumed:
   `sandbox_boundary.py` is not changed here.
 - The target host is not part of the evidence. The qualification record is local
   to the security store of the host that holds it.
+
+> [ADR-0044](0044-qualification-provenance-and-reported-refusal-for-mission-isolation.md)
+> delivers three items of this list for mission-owned work: the recovery report
+> states the refusal of consequential actions, a report without a generation
+> time is no proof, and the target host is part of the acceptance and of the
+> evidence. The first and the third item of the list still hold. The list above
+> is kept as the state that PR #312 merged with.
 
 Pinned expectations changed. AP-007 cases that charged a consequential action on
 a plan task without proof now present fixture proof, and the proof cases need an
