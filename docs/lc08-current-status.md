@@ -2,6 +2,24 @@
 
 ## Continuation after this snapshot
 
+The bounded [`api_run_harness_turn.event_gen` audit](lc08-harness-turn-audit.md)
+adds one assessed owner and fixes the same delegated-source gap at the Harness
+multi-step turn shell: the per-step lead-model loop iterated through a bare
+`async for` over `stream_any_model`, so both consumer abandonment at a
+`step_content` frame and the shell's own `_HARNESS_ABORT_FLAGS` `break` left
+the delegated source open until interpreter-shutdown finalization. The call is
+now in `contextlib.aclosing`, in parity with the combo, sprint-runner, factory
+and GSD audits. Both cases are deterministic red/green proofs (red on the
+unchanged source; close now observed inside the consumer's `aclose()` and
+before the turn continues past the `break`). The checked-in matrix marks
+`api_run_harness_turn.event_gen` `bounded_harness_turn_stream_close`; **4 of 29
+owners remain `inventory_only_in_this_audit`**. The SDLC feedback router
+(`api_run_sdlc_feedback_loop.fb_gen`) is claimed by open PR #317 on another
+fixed branch and is deliberately not audited here, as are the
+child-delegation and conservative-model-switch owners. It does not promote any
+other owner and adds no activation, hardware qualification, release acceptance
+or LC09–11 status.
+
 The bounded [`api_run_gsd_fresh_wave.gsd_gen` audit](lc08-gsd-fresh-wave-audit.md)
 adds one assessed owner and fixes the same delegated-source gap at the GSD
 fresh-wave SSE shell: the Wave 1 plan loop, the Wave 2 fresh-context
