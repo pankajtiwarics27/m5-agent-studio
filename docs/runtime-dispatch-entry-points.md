@@ -15,8 +15,8 @@ all-path inclusion validation remain required before activation.
 | `AnthropicProviderAdapter.stream` | `_stream_cloud_anthropic` | 4603 |
 | `OpenAICompatibleProviderAdapter.stream` | `_stream_cloud_openai` | 4582 |
 | `_coordinated_gateway_chat.events` | `stream_any_model` | 5195 |
-| `_mcp_summon_model` | `_unload_omlx_model` | 23243 |
-| `_mcp_summon_model` | `stream_any_model` | 23236 |
+| `_mcp_summon_model` | `_unload_omlx_model` | 23252 |
+| `_mcp_summon_model` | `stream_any_model` | 23245 |
 | `_run_sdlc_sprints_stream` | `_unload_omlx_model` | 21762 |
 | `_run_sdlc_sprints_stream` | `_unload_omlx_model` | 21795 |
 | `_run_sdlc_sprints_stream` | `stream_any_model` | 21638 |
@@ -48,9 +48,9 @@ all-path inclusion validation remain required before activation.
 | `api_run_gsd_fresh_wave.gsd_gen` | `stream_any_model` | 20841 |
 | `api_run_harness_turn.event_gen` | `_unload_other_omlx_models` | 19515 |
 | `api_run_harness_turn.event_gen` | `stream_any_model` | 19673 |
-| `api_run_sdlc_feedback_loop.fb_gen` | `_unload_omlx_model` | 22261 |
-| `api_run_sdlc_feedback_loop.fb_gen` | `stream_any_model` | 22253 |
-| `api_run_sdlc_feedback_loop.fb_gen` | `stream_any_model` | 22280 |
+| `api_run_sdlc_feedback_loop.fb_gen` | `_unload_omlx_model` | 22264 |
+| `api_run_sdlc_feedback_loop.fb_gen` | `stream_any_model` | 22254 |
+| `api_run_sdlc_feedback_loop.fb_gen` | `stream_any_model` | 22284 |
 | `api_unload_all` | `guarded legacy HTTP (not coordinated authority)` | 6135 |
 | `api_unload_model` | `guarded legacy HTTP (not coordinated authority)` | 6191 |
 | `api_workspace_picker_suggest` | `stream_any_model` | 5619 |

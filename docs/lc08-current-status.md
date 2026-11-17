@@ -11,13 +11,25 @@ consumer-close cases at the `step_reasoning` and `step_content` frames and
 the abort-flag `break` path are deterministic red/green proofs (red on the
 unchanged source; close now observed inside the consumer's `aclose()`).
 The checked-in matrix marks `api_run_harness_turn.event_gen`
-`bounded_harness_turn_stream_close`; **4 of 29 owners remain
-`inventory_only_in_this_audit`**. The SDLC feedback router
-(`api_run_sdlc_feedback_loop.fb_gen`, PR #317) remains inventory-only and
-unaudited in this branch, as are the child-delegation /
-conservative-model-switch owners. It does not promote any other owner and
-adds no activation, hardware qualification, release acceptance or LC09–11
-status.
+`bounded_harness_turn_stream_close`.
+
+The bounded [`api_run_sdlc_feedback_loop.fb_gen` audit](lc08-sdlc-feedback-loop-audit.md)
+adds one assessed owner and fixes the same delegated-source gap at the
+feedback router: the sprint-delegation loop and the two model loops
+(research/critic and delta backlog/lead) wrapped bare `async for`
+consumers; all three are now in `contextlib.aclosing`, in parity with the
+combo, sprint-runner and factory audits. The consumer-close case at the
+sprint-delegation `yield ev_chunk` is a deterministic red/green proof
+(red on the unchanged source; close now observed inside the consumer's
+`aclose()`). The two model loops contain no yields inside their loop
+bodies, so no consumer-visible red path is reachable there; those wraps
+are parity and covered by regression tests. The checked-in matrix marks
+`api_run_sdlc_feedback_loop.fb_gen` `bounded_feedback_stream_close` (PR #317).
+**3 of 29 owners remain `inventory_only_in_this_audit`**
+(`execute_child_delegation_async`, `execute_conservative_model_switch_async`
+and its `._run_probe_stream`). Neither audit promotes any other owner and
+neither adds activation, hardware qualification, release acceptance or
+LC09–11 status.
 
 The bounded [`api_run_gsd_fresh_wave.gsd_gen` audit](lc08-gsd-fresh-wave-audit.md)
 adds one assessed owner and fixes the same delegated-source gap at the GSD
@@ -29,13 +41,12 @@ factory audits. The consumer-close cases at the wave-1/wave-2/wave-3
 `step_content` frames are deterministic red/green proofs (red on the
 unchanged source; close now observed inside the consumer's `aclose()`).
 The checked-in matrix marks `api_run_gsd_fresh_wave.gsd_gen`
-`bounded_gsd_fresh_wave_stream_close`; **5 of 29 owners remain
-`inventory_only_in_this_audit`**. The SDLC feedback router
-(`api_run_sdlc_feedback_loop.fb_gen`) remains inventory-only and unaudited,
-as are the Harness turn shell and the child-delegation /
-conservative-model-switch owners. It does not promote any other owner and
-adds no activation, hardware qualification, release acceptance or LC09–11
-status.
+`bounded_gsd_fresh_wave_stream_close` (PR #318). **4 of 29 owners remain
+`inventory_only_in_this_audit`** (`api_run_harness_turn.event_gen`,
+in flight in PR #323; `execute_child_delegation_async`;
+`execute_conservative_model_switch_async` and its `._run_probe_stream`).
+Neither audit promotes any other owner and neither adds activation,
+hardware qualification, release acceptance or LC09–11 status.
 
 The bounded [`api_run_agile_sdlc_factory.sdlc_gen` audit](lc08-agile-sdlc-factory-audit.md)
 adds one assessed owner and fixes the same delegated-source gap at the

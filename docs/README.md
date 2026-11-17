@@ -113,7 +113,9 @@ Model and provider: [`provider-adapters.md`](provider-adapters.md),
 [`lc08-stream-any-model-audit.md`](lc08-stream-any-model-audit.md) (bounded combo-dispatch delegated-source close; no activation or native qualification),
 [`lc08-sdlc-sprints-stream-audit.md`](lc08-sdlc-sprints-stream-audit.md) (bounded sprint worker/critic delegated-model-source close; no activation or native qualification),
 [`lc08-agile-sdlc-factory-audit.md`](lc08-agile-sdlc-factory-audit.md) (bounded Agile SDLC factory phase/sprint delegated-source close; no activation or native qualification),
+[`lc08-sdlc-feedback-loop-audit.md`](lc08-sdlc-feedback-loop-audit.md) (bounded SDLC feedback router delegated-source close; no activation or native qualification),
 [`lc08-gsd-fresh-wave-audit.md`](lc08-gsd-fresh-wave-audit.md) (bounded GSD fresh-wave plan/execute/verdict delegated-source close; no activation or native qualification),
+[`lc08-harness-turn-audit.md`](lc08-harness-turn-audit.md) (bounded Harness turn per-step delegated-model-source close; no activation or native qualification),
 [`lc08-mcp-summon-audit.md`](lc08-mcp-summon-audit.md) (bounded MCP stdio input/close/admission/cleanup audit; no activation),
 [`lc08-hall-summon-audit.md`](lc08-hall-summon-audit.md) (bounded Hall HTTP input/retry/close/cleanup evidence; no activation),
 [`lc08-current-status.md`](lc08-current-status.md) (current dormant LC08 implementation, remaining gaps, evidence and next bounded increment),
@@ -161,7 +163,7 @@ measurements without trusting them).
 · [`autonomous-production-operating-envelope.md`](autonomous-production-operating-envelope.md) (AP-002 U01–U06 register, target-host inventory recipe, fictional deny-by-default policy/budget examples and promotion boundaries)
 · [`autonomous-production-evaluation-briefs.md`](autonomous-production-evaluation-briefs.md) (AP-003 four-part quality rubric, provisional baseline/partitions, protected held-out boundary, synthetic failure fixtures and private-trace scrub contract)
 · [`autonomous-production-u06-call-path-audit.md`](autonomous-production-u06-call-path-audit.md) (read-only U06 call-path audit of lifecycle/sandbox refusal paths; source-level evidence, not a qualification or authorization)
-· [`bounded-mission-execution.md`](bounded-mission-execution.md) (AP-007 offline fail-closed subset: mission stop with measured cleanup latency, late-result fence, bounded limits, isolation requirement and recovery report; U06 pending, no production caller)
+· [`bounded-mission-execution.md`](bounded-mission-execution.md) (AP-007 offline fail-closed subset: mission stop with measured cleanup latency, late-result fence, bounded limits, isolation requirement and recovery report; U06 resolved 2026-11-17 by owner decision, no production caller, nothing activated)
 · [`../M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md`](../M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md) (AP claim, evidence and handoff protocol)
 · [`uiux-2-0-program.md`](uiux-2-0-program.md) (UI/UX phases, gates and evidence bar)
 · [`uiux-2-0-transformation-plan.md`](uiux-2-0-transformation-plan.md) (what each UI/UX story changes, and how two sessions share one HTML file)

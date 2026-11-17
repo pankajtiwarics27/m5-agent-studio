@@ -62,16 +62,32 @@ def test_repository_bundle_separates_owner_target_from_measured_inventory() -> N
     assert [decision.id for decision in bundle.decisions] == [
         f"U{number:02d}" for number in range(1, 7)
     ]
-    assert {decision.status for decision in bundle.decisions} == {"pending"}
+    by_id = {decision.id: decision for decision in bundle.decisions}
+    assert by_id["U06"].status == "resolved"
+    assert by_id["U06"].resolution
+    assert by_id["U06"].blocked_story_ids == ()
+    assert by_id["U06"].blocked_actions == ()
     assert {
-        decision.id: len(decision.blocked_story_ids) for decision in bundle.decisions
+        decision.id: decision.status
+        for decision in bundle.decisions
+        if decision.id != "U06"
+    } == {
+        "U01": "pending",
+        "U02": "pending",
+        "U03": "pending",
+        "U04": "pending",
+        "U05": "pending",
+    }
+    assert {
+        decision.id: len(decision.blocked_story_ids)
+        for decision in bundle.decisions
+        if decision.id != "U06"
     } == {
         "U01": 6,
         "U02": 8,
         "U03": 10,
         "U04": 10,
         "U05": 3,
-        "U06": 9,
     }
     assert not any(item.automatic_promotion for item in bundle.promotion_classes)
 
@@ -375,6 +391,6 @@ def test_cli_validates_repository_bundle_without_host_or_network_probe() -> None
     assert payload["runtime_activation_authorized"] is False
     assert payload["inventory_status"] == "not_measured"
     assert payload["automatic_promotion_classes"] == []
-    assert payload["decision_states"] == {
-        decision_id: "pending" for decision_id in [f"U{n:02d}" for n in range(1, 7)]
-    }
+    expected = {decision_id: "pending" for decision_id in [f"U{n:02d}" for n in range(1, 6)]}
+    expected["U06"] = "resolved"
+    assert payload["decision_states"] == expected

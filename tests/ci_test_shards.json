@@ -26,7 +26,7 @@
       645.0
     ],
     "module_counts": [
-      80,
+      81,
       75,
       74
     ],
@@ -218,6 +218,7 @@
       "tests/test_workflow_hall_coordinated.py",
       "tests/test_workflow_harness_turn_cancel.py",
       "tests/test_workflow_orchestration.py",
+      "tests/test_workflow_sdlc_feedback_loop_cancel.py",
       "tests/test_workflow_sdlc_sprints_stream_cancel.py",
       "tests/test_workflow_stream_any_model_cancel.py",
       "tests/test_workflow_unload_legacy.py",

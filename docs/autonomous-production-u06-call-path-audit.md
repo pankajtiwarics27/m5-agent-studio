@@ -374,3 +374,29 @@ G-1 is decided), `execution_budget.IsolationEvidence` /
 `DurableActionLedger.complete` / `record_exception`,
 `workflow_state.DurableTaskStateMachine.halt_mission` / `mission_recovery_report`,
 `runtime_dispatch_boundary.RuntimeDispatchBoundary`.
+## Addendum — U06 resolved 2026-11-17 (page superseded in its U06 statements)
+
+On 2026-11-17 the repository owner resolved U06 by explicit recorded decision
+(agent session `arena/0efd4d99-m5-agent-studio`), on the owner's instruction
+"take required steps to unblock AP program and complete it asap". The decision
+(see `docs/autonomous-production-operating-envelope.md`, "U06 resolved
+2026-11-17", and issue #322): container backends only (M5-P3-01 pinned
+runtime/image); the fresh target-host qualification requirement of the
+2026-11-16 answer 2 is explicitly waived by the owner's override; admission-then-dispatch
+fail closed (unchanged); activation order contained execution → browser
+worker → native lifecycle with each step's own recorded evidence; AP-007-F2
+(PR #312) and AP-007-F3 (PR #319) are accepted as the refusal foundation.
+
+Every statement in this page that says "U06 remains pending", "AP-007 remains
+recorded blocked on U06", "the remainder of AP-007 and AP-008…AP-032 remain
+unauthorized" or "U01–U06 remain pending" described the state up to
+2026-11-17 and is retained as dated history; read it as superseded by the
+resolution above and by the AP ledger. The maintenance rule applies: a full
+regeneration of this page at current `main` (including the gate's behaviour
+after F2/F3) is deliberately not done in the decision-recording revision; the
+page's owner-facing maintenance obligation stands for the next revision that
+touches it. Line references remain valid at `972ea74` only. AP-007 is
+`in_progress` on `arena/0efd4d99-m5-agent-studio`; AP-008 is authorized to
+start only after AP-007 is recorded done; AP-009 and later remain
+unauthorized. `runtime_activation_authorized` remains `false`; no acceptance
+is recorded; installed-runtime qualification has not been run.

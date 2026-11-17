@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "scope": "Static owner mapping plus bounded Council/Debate adapters, Hall HTTP/MCP summon, workspace suggestion, legacy cleanup, direct load/unload/cache-clear routes, child-stream consumer-close handling, the stream_any_model combo delegated-source close handoff, the Agile SDLC factory phase/sprint delegation close handoff, and the sprint-runner delegated-source close handoff; not all-workflow or native qualification.",
+  "scope": "Static owner mapping plus bounded Council/Debate adapters, Hall HTTP/MCP summon, workspace suggestion, legacy cleanup, direct load/unload/cache-clear routes, child-stream consumer-close handling, the stream_any_model combo delegated-source close handoff, the Agile SDLC factory phase/sprint delegation close handoff, the SDLC feedback router delegation close handoff, and the sprint-runner delegated-source close handoff; not all-workflow or native qualification.",
   "assembly_owners": [
     "api_council_stream.event_gen",
     "api_debate_stream.event_gen"
@@ -164,8 +164,8 @@
         "_unload_omlx_model",
         "stream_any_model"
       ],
-      "assessment": "inventory_only_in_this_audit",
-      "evidence": "docs/runtime-dispatch-entry-points.md"
+      "assessment": "bounded_feedback_stream_close",
+      "evidence": "tests/test_workflow_sdlc_feedback_loop_cancel.py"
     },
     {
       "owner": "api_unload_all",

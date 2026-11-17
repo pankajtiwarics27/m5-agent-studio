@@ -20,11 +20,16 @@ merged as `5872cc612cb1cf521cbfbe5a32ef5dbaaed40116` with a green exact-main run
 (exact head `b1b2e4d747f9916a8ffd77f1126c90f8288294c8`, merged as
 `bf1fa6aefa24913ed7a88ceb12775b484dbc7cc5` on 2026-11-15) with a green exact-main
 run (43735318772), after the owner decided it may land while U06 remains pending.
-That landing is not a full AP-007 authorization and resolves nothing about U06. No
-further story is authorized, so the remainder of AP-007 and AP-008 through AP-032
-remain unauthorized. U01–U06 remain pending, including the initial specialization
-choice. Therefore research, website, and short-video briefs below are generic
-fixture categories, not launch commitments or owner acceptance.
+That landing was not a full AP-007 authorization and did not resolve U06. On
+2026-11-17 the repository owner resolved U06 by explicit recorded decision (agent
+session `arena/0efd4d99-m5-agent-studio`): the fresh target-host qualification
+requirement was waived by explicit owner override, and the AP-007 rework
+(AP-007-F2 PR #312, AP-007-F3 PR #319) was accepted as the refusal foundation.
+The remainder of AP-007 is authorized; AP-008 is authorized to start only after
+AP-007 is recorded done. U01–U05 remain pending, including the initial
+specialization choice; U06 is resolved but nothing is activated and no acceptance
+is recorded. Therefore research, website, and short-video briefs below are
+generic fixture categories, not launch commitments or owner acceptance.
 
 The records are:
 
