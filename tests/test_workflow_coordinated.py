@@ -480,6 +480,7 @@ def test_owner_matrix_matches_current_static_inventory_without_promoting_coverag
             "stream_any_model": "bounded_combo_stream_close",
             "_run_sdlc_sprints_stream": "bounded_sprints_stream_close",
             "api_run_agile_sdlc_factory.sdlc_gen": "bounded_factory_stream_close",
+            "api_run_gsd_fresh_wave.gsd_gen": "bounded_gsd_fresh_wave_stream_close",
         }
         assert row["assessment"] == assessments.get(
             row["owner"], "inventory_only_in_this_audit"

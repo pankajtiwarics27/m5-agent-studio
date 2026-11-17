@@ -146,8 +146,8 @@
         "_unload_omlx_model",
         "stream_any_model"
       ],
-      "assessment": "inventory_only_in_this_audit",
-      "evidence": "docs/runtime-dispatch-entry-points.md"
+      "assessment": "bounded_gsd_fresh_wave_stream_close",
+      "evidence": "tests/test_workflow_gsd_fresh_wave_cancel.py"
     },
     {
       "owner": "api_run_harness_turn.event_gen",

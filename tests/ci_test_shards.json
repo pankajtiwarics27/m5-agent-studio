@@ -26,7 +26,7 @@
       645.0
     ],
     "module_counts": [
-      78,
+      79,
       75,
       74
     ],
@@ -214,6 +214,7 @@
       "tests/test_workflow_agile_sdlc_factory_cancel.py",
       "tests/test_workflow_chat_stream_cancel.py",
       "tests/test_workflow_checkpoints.py",
+      "tests/test_workflow_gsd_fresh_wave_cancel.py",
       "tests/test_workflow_hall_coordinated.py",
       "tests/test_workflow_orchestration.py",
       "tests/test_workflow_sdlc_sprints_stream_cancel.py",
