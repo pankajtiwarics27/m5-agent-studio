@@ -2,6 +2,27 @@
 
 ## Continuation after this snapshot
 
+The bounded
+[`execute_conservative_model_switch_async._run_probe_stream` audit](lc08-probe-stream-audit.md)
+assesses the last non-SSE owner whose recorded seam is `stream_any_model`, and
+**finds no consumer-close defect**: the helper is a plain coroutine with no
+`yield` in its loop body, so there is no generator boundary at which a caller
+can abandon it mid-item. Measured on the unchanged tree, a probe failure and a
+cancellation while suspended on `__anext__` both finalize the source before the
+caller resumes; the SSE-shaped alternative (an outer async generator dropped by
+its consumer) does not, even after `gc.collect()`. `app.py` is therefore **not**
+edited — an `aclosing` wrap here would be a no-op — and the matrix records a
+distinct assessment, `bounded_probe_stream_finalized`, rather than reusing the
+`bounded_*_stream_close` family. The audit also records that its
+source-finalization tests are **regression pins, not red/green proofs**: they
+pass on the unchanged tree and on a deliberately defect-shaped rewrite. **3 of
+29 owners remain `inventory_only_in_this_audit`** (`api_run_harness_turn.event_gen`,
+in flight in PR #323, and `execute_child_delegation_async` /
+`execute_conservative_model_switch_async`, whose only seams are `_unload_*`
+acknowledgments and hold no delegated stream). It promotes no other owner and
+adds no activation, hardware qualification, release acceptance or LC09–11
+status.
+
 The bounded [`api_run_sdlc_feedback_loop.fb_gen` audit](lc08-sdlc-feedback-loop-audit.md)
 adds one assessed owner and fixes the same delegated-source gap at the
 feedback router: the sprint-delegation loop and the two model loops
