@@ -1645,8 +1645,8 @@
             "head_sha": null,
             "claimed_at": "2026-11-17T11:46:09Z",
             "heartbeat_at": "2026-11-17T11:46:09Z",
-            "pr_url": null,
-            "delivery_status": "not_pushed",
+            "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/325",
+            "delivery_status": "pr_open",
             "story_status_effect": "AP-007 moves from blocked to in_progress (done in the U06 resolution recording, PR #324). This entry carries the claim and delivery of the authorized remainder so the #303 delivery record and the AP-007-F1..F3 records are not rewritten. The story is done only when this remainder lands and the completion record is written.",
             "authorization_record": {
               "authorization": "Owner instruction of 2026-11-17 (issue #322): 'take required steps to unblock AP program and complete it asap'; recorded selections: 'Record U06 without a fresh run - my decision overrides my earlier answer 2', 'Accept F2+F3 as the refusal foundation', 'Record U06, finish AP-007, then start AP-008' (which, per its own text, is the AP-007 remainder: 'execution on the qualified backend, installed-runtime qualification, any authorized activation - in your activation order'), 'Merge when the gate is green'. Not an authorization of any story beyond AP-007 and AP-008, not a runtime activation, and not an independent security or release approval. AP-009 and later remain unauthorized.",
