@@ -560,3 +560,103 @@ the builder session also landed the change.
 
 As with the earlier landings, this record's own merge identity is recorded in its
 pull-request comment rather than in a further commit.
+
+## 14. AP-007-F3 landing record (qualification provenance and reported refusal)
+
+AP-007-F3 is a follow-up change to the landed AP-007 subset, not a story.
+ADR-0043, the decision record of AP-007-F2, lists what that rework did not
+deliver. When the AP-007-F2 record had landed, nothing further was authorized,
+so the builder session asked the owner what to do next. The owner selected
+"Close the three offline gaps (recommended)" and "Merge when the gate is green".
+On that second selection the builder session also landed the change. The ledger
+entry quotes both questions and every option that was offered.
+
+- Builder: `arena/282c6b34-m5-agent-studio`, PR #319. For mission-owned work, a
+  backend qualification now counts as isolation proof only when its report
+  stated its own generation time and was produced on the recorded target host,
+  and when the dispatch is observed on that host. The recovery report of a live
+  plan that still owes work carries the limitation
+  `consequential_actions_refused`. `sandbox_boundary.py` records two more fields
+  on a qualification, `report_time_stated` and `host_fingerprint`. They appear in
+  the store file and in the JSON that the security-incident routes return, and
+  the sandbox admission of the running application reads neither. No acceptance
+  is recorded and nothing observes the host, so every consequential action of
+  mission-owned work stays refused, as before.
+  [ADR-0044](adr/0044-qualification-provenance-and-reported-refusal-for-mission-isolation.md)
+  records the decision, its cost and what is not delivered: among other things,
+  the host fingerprint does not tell apart two machines of the same model and
+  memory size, and a qualification report is not authenticated. §13 lists what a
+  recorded acceptance pins, as PR #312 merged it; an acceptance now also names
+  the target host.
+- Failing runs on the way, not rerun: tests failed on generated drift in two
+  `pull_request` runs while the pull request was a draft. The implementation
+  commit `7c0521a3c38e1539ed17c8b5bad3b776b19e8c75` changed three source modules
+  and rebuilt `studio.py`, and it was pushed before the artifacts that are bound
+  to those files were regenerated. Run
+  [`44029651356`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/44029651356)
+  on that head was cancelled by the next push after four of its nine Python
+  shards had failed. Run
+  [`44030127978`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/44030127978)
+  on `bc606caaf660445c8607a55f0effdfe08059cc39` failed in all nine: per Python
+  version, eleven tests of `tests/test_uiv2_performance_safety.py`,
+  `tests/test_uiux_release_gate.py`, `tests/test_uiux_source_manifest.py` and
+  `tests/test_uiv2_release_review.py`.
+  `111c812c38b62a1c4b50e285b39c240435b0daf8` regenerated six artifacts with their
+  owning generators, and run
+  [`44031173682`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/44031173682)
+  passed on it. No test of the change failed. Nothing was changed to obtain a
+  green result: the pull request changes none of those four test modules, no
+  generator and not the workflow.
+- Base: `main` stayed at `e57943a12d129403674fed94a9394c4c42b22879` from the claim
+  to the merge. Nothing was merged into the branch.
+- Gate: `pull_request` run
+  [`44034997168`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/44034997168)
+  passed at the exact head `e51ec391c9f36bf0e522e348b81b901ef3038e74` — plan,
+  source/release-independent gates, nine Python shards over 3.11/3.12/3.13, three
+  shard-identity checks, five browser-safety shards, browser-safety regressions
+  and the `test` aggregates.
+- Landed by `arena/282c6b34-m5-agent-studio` at `2026-11-17T07:04:03Z` as
+  `dc2f7b5bf4085a1f4d8f8b869a30a4406fa361a5` via `gh pr merge 319 --merge`, pinned
+  to that head, after re-verifying the unchanged head, the unchanged base and the
+  `MERGEABLE`/`CLEAN` state. The merge commit and the tested head have the same
+  tree. Exact-main push run
+  [`44035843331`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/44035843331)
+  passed on that merge SHA (`test` 3.11/3.12/3.13 and `Browser safety regressions`
+  all green).
+- Superseded: run `44034980516` started on the final head while the pull request
+  was a draft and was cancelled by same-PR concurrency when the ready event
+  arrived. Its aggregate jobs show `failure` because the jobs they wait for did
+  not complete; no test ran. Run `44031173682` passed on the regenerated
+  artifacts and was superseded by the ledger commit that became the final head.
+- No independent review: PR #319 has no review on GitHub, and ADR-0044 is
+  `review_status: not-reviewed`. The local evidence is the builder's own, on
+  Linux without a container runtime and with fixture records. It does not show
+  any behaviour on a qualified backend, on the target host or in an installed
+  runtime, and it does not show the macOS readings of the qualification suite.
+- Unchanged by this landing: U06 is pending and AP-007 is recorded `blocked`, not
+  `done`; `authorized_downstream_stories` remains AP-002…AP-006 and
+  `runtime_activation_authorized` stays `false`.
+- Not decided: whether the rework, with or without this follow-up, is accepted as
+  the refusal foundation. The `done` status of AP-007-F3 records that its change
+  merged. It is not the owner's acceptance. The answers that PR #309 recorded in
+  the [operating envelope](autonomous-production-operating-envelope.md) are not
+  edited; they still say that U06 needs the AP-007 rework first.
+- The U06 call-path audit page
+  (`docs/autonomous-production-u06-call-path-audit.md`) is pinned to `972ea74`
+  and describes the isolation gate as opt-in. Its statements about the gate
+  describe the state before AP-007-F2. The owner was offered its regeneration as
+  one of four options and selected another, and this record does not edit the
+  page.
+- Corrections: the handoff on PR #319 listed the first failing run only as
+  cancelled, and it said that the documents had been pushed before the artifacts
+  were regenerated. Tests failed in two runs, and the push that caused it was
+  the source change. A comment on PR #319 corrects the handoff, and
+  `record_corrections` of the ledger entry lists this and three smaller points.
+  One of them is a commit message (`cda2e515698d3fce4fc3af8712debfeda1ba34b4`)
+  that is wrong in one point; the ledger entry has said so since PR #319.
+- Reconciled with `main` at `dc2f7b5bf4085a1f4d8f8b869a30a4406fa361a5`, the merge
+  commit of PR #319 itself. Nothing had merged after it when this record was
+  written, so its post-merge run is also the latest `main` run.
+
+As with the earlier landings, this record's own merge identity is recorded in its
+pull-request comment rather than in a further commit.
