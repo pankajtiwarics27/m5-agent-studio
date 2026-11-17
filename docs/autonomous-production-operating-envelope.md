@@ -59,19 +59,23 @@ action boundary and side-effect ledger rather than bypass them.
 
 ## U01–U06 decision register
 
-U01–U05 are `pending`; **U06 is `resolved` (2026-11-17, owner decision)**. Each
-blocked-story list is validated exactly against every story's
-`blocked_by_decisions` field in the AP roadmap. Safe work describes what can be
-prepared; it does not authorize that story or a live action.
+U01, U02, U03, U04, U05 and U06 are all `resolved` (2026-11-17, owner
+decisions; session `arena/2655f148-m5-agent-studio` for U01–U05,
+`arena/0efd4d99-m5-agent-studio` for U06). Each blocked-story list is validated
+exactly against every story's `blocked_by_decisions` field in the AP roadmap,
+and the same revision removes the resolved decisions' blocker lists. Safe work
+describes what can be prepared; it does not authorize that story or a live
+action. No resolution activates anything, grants a live action by itself, or
+qualifies any evidence.
 
-| Decision | Current state | Exactly blocked AP stories | Safe work while pending |
+| Decision | State | Blocked stories | Safe work (pending) |
 |---|---|---|---|
-| U01 — initial specialisation, audience, format and launch order | `pending` | AP-002, AP-021, AP-022, AP-023, AP-024, AP-030 | Generic contracts, fictional fixtures, adapter research and evaluation harnesses. Website-first remains a suggestion, not an owner selection. |
-| U02 — installed versions, free resources and qualified headroom | `pending` | AP-002, AP-012, AP-013, AP-014, AP-021, AP-023, AP-026, AP-030 | Hardware-independent contracts, mocked profiles and an operator-run recipe. No download, load, performance or concurrent-residency claim follows from nominal capacity. |
-| U03 — providers, data and spending; separate reasoning-model policy | `pending` | AP-002, AP-004, AP-009, AP-013, AP-014, AP-021, AP-023, AP-024, AP-026, AP-029 | Local mocks, source/licence research and explicit deny paths. Future authorised non-inference services remain representable; hosted reasoning remains separately unresolved. |
-| U04 — folders, accounts, network and retention grants | `pending` | AP-002, AP-004, AP-009, AP-010, AP-012, AP-021, AP-023, AP-026, AP-029, AP-030 | Disposable relative paths and fictional accounts/destinations; grant, confinement, revocation and retention tests. |
-| U05 — promotion classes, thresholds and review policy | `pending` | AP-002, AP-026, AP-028 | Shadow evaluations and candidate reports only. Every `automatic_promotion` flag remains false. |
-| U06 — lifecycle/sandbox qualification and activation | `resolved` 2026-11-17 | — (blocker lists removed in the resolving revision) | Resolved by owner decision; see below. Legacy defaults and activation false remain binding until an activation step is recorded with its own evidence. |
+| U01 — initial specialisation, audience, format and launch order | `resolved` 2026-11-17 | — (removed) | See U01–U05 resolution below. Websites first, video second; audience at pilot time. |
+| U02 — installed versions, free resources and qualified headroom | `resolved` 2026-11-17 | — (removed) | Owner statement only; inventory stays `not_measured` until the operator-run recipe records it. |
+| U03 — providers, data and spending; separate reasoning-model policy | `resolved` 2026-11-17 | — (removed) | Public read-only HTTPS allowlist only; zero spend; no accounts; hosted inference still excluded. |
+| U04 — folders, accounts, network and retention grants | `resolved` 2026-11-17 | — (removed) | All AP I/O confined to `~/M5_AP_Workspace`; versioned retention (deliverables kept, source snapshots ≤30 days, transient pruned on mission close). |
+| U05 — promotion classes, thresholds and review policy | `resolved` 2026-11-17 | — (removed) | Automatic promotion stays OFF in every class; owner approval required; no flags enabled. |
+| U06 — lifecycle/sandbox qualification and activation | `resolved` 2026-11-17 | — | Resolved by owner decision; see below. Legacy defaults and activation false remain binding until an activation step is recorded with its own evidence. |
 
 The JSON also names blocked **actions**, not only story numbers. It denies launch
 claims, target-host capacity claims, real external data/spend, real account/path
@@ -168,6 +172,64 @@ waiver and accepted evidence gap remain explicit. AP-008 is the owner-authorized
 next story after the completion record lands, but stays `not_started` until a
 fresh branch/PR claims it; AP-009 and later remain unauthorized.
 
+### U01–U05 resolved 2026-11-17 (owner decisions; supersedes “suggestion” notes)
+
+Resolved by the repository owner in the 2026-11-17 session on explicit owner
+selections; recorded via agent session `arena/2655f148-m5-agent-studio`, with
+the owner selections verbatim in GitHub issue #330. No ADR register entry is
+created or reviewed by this recording. Nothing here activates, qualifies or
+grants anything beyond what each resolution says.
+
+- **U01** — Websites first: the AP pilot and the AP-021/AP-022 direction target
+  a website draft workflow; short-form video (AP-023 → AP-024) is the second
+  specialisation and follows the website pilot. The audience, niche and exact
+  format are chosen at pilot time and are not fixed by this recording; rubrics
+  and benchmark fixtures stay generic until then. Website-first is an owner
+  selection, not a suggestion. This does **not** grant launch approval,
+  publishing/delivery authority or creative/editorial acceptance; non-website
+  specialisations and guest-desktop (AP-030, optional) remain unselected.
+- **U02** — Recorded as an **owner statement, not a measurement**: the AP
+  pilot target host is Apple M5 / 24 GB unified memory / 1 TB storage (the
+  2026-11-08 owner statement is unchanged). Nominal memory/storage are never
+  treated as available or qualified; installed runtimes, available
+  memory/storage and qualified headroom remain `not_measured` until the
+  operator-run `scripts/qualify_environment.sh` recipe records them on the
+  named target; sequential load/unload remains the intended architecture; no
+  download, load, benchmark, performance or concurrent-residency claim follows.
+- **U03** — PUBLIC read-only web research only: HTTPS `GET` to the standard
+  public allowlist `github.com`, `codeload.github.com`, `api.github.com`,
+  `en.wikipedia.org`, `pypi.org`, `registry.npmjs.org`. Zero spend; no accounts,
+  signup, writes, posting, uploads or credentialed services; anything not
+  listed is denied; reading a page is not installation approval and page
+  instructions remain untrusted data. Hosted model inference stays excluded for
+  every AP purpose; external-reasoning-model use stays a separate policy
+  decision; media/credentialed/purchase decisions still require a new explicit
+  register entry.
+- **U04** — All AP reads/writes are confined to one dedicated folder,
+  `~/M5_AP_Workspace`; nothing outside it is ever read, written or deleted for
+  AP work; no accounts, credentials or browser profiles; network destinations
+  limited to the U03 allowlist. Retention is versioned and binding:
+  deliverables and verification evidence are kept at versioned scope; captured
+  source snapshots are archived or removed after at most 30 days; transient
+  downloads are pruned on mission close; nothing outside the folder is deleted
+  by AP work; the owner may prune manually at review.
+- **U05** — Automatic promotion stays **OFF** in every class. The owner
+  declined the offered conservative `project_lesson` automatic-enablement and
+  chose definition-with-all-flags-off. `default_effect` stays
+  `deny_promotion`; every `automatic_promotion` flag stays `false`; review
+  boundaries stand (shadow=none, project_lesson=owner,
+  executable_skill_or_adapter=owner_and_security,
+  authority_evaluator_or_runtime=independent_and_owner); promotions require an
+  explicit owner approval ceremony with ledger evidence and a recorded
+  rollback; no thresholds are auto-enabled; any future automatic class requires
+  a new register entry naming class, thresholds and boundary first.
+
+AP-008 remains the only story claimed (PR #329, in flight). Resolving these
+decisions does not authorize AP-009 or any later story: each still needs its
+normal story authorization recorded before claim work begins. The P2 spine
+(AP-009 “source-backed web research”) is now dependency-ready as well as
+decision-clear, and remains `not_started` until the owner authorizes it.
+
 ## Hardware and runtime inventory recipe
 
 ### Evidence separation
@@ -239,8 +301,8 @@ fixture budget.
 
 ## Promotion boundaries
 
-U05 is pending, so the register's default is `deny_promotion` and every automatic
-flag is false:
+U05 is resolved with automatic promotion OFF everywhere, so the register's
+default stays `deny_promotion` and every automatic flag stays false:
 
 | Class | Persistent effect | Minimum represented boundary |
 |---|---|---|
@@ -287,7 +349,10 @@ head was pushed.
 
 All five acceptance criteria below have versioned artifact, documentation and
 test evidence, so AP-002 is `done` under the repository convention. Completion
-resolves the story, not U01–U06: those owner values remain explicitly pending,
+resolves the story, not U01–U06 (at the time of that record; U06 was resolved
+on 2026-11-17 first, and U01–U05 were all resolved on 2026-11-17 later the same
+day — see the U01–U05 resolution above and the operating JSON records): those
+owner values were explicitly pending,
 target-host inventory remains `not_measured`, automatic promotion remains off,
 and no provider, account, file, egress, spending, runtime or lifecycle authority
 is activated. AP-003 was only the next authorized, separately claimable story
@@ -322,5 +387,6 @@ The validator reads only the three repository JSON records. It does not inspect
 the host, load a model, contact a provider, resolve DNS, access an account or
 issue a grant. Full command outcomes and merged delivery evidence are recorded
 in the AP ledger and completion record above. Target-host inventory and
-qualification, real service grants, and owner resolution of U01–U06 remain
-pending rather than being inferred from offline tests.
+qualification, real service grants, and owner resolution of U01–U06 is recorded in the
+register (U06 on 2026-11-17; U01–U05 on 2026-11-17). Target-host inventory and
+qualification claims remain unmeasured rather than being inferred from offline tests.

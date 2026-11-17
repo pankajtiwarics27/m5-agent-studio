@@ -1,6 +1,6 @@
 # M5 Agent Studio — Autonomous Production Product Roadmap
 
-**Revision:** 1.2 • **Prepared:** 2026-11-08 • **Status:** owner-requested product specification and proposed execution program; not evidence of implementation, independent security acceptance, or authorization to bypass existing gates.
+**Revision:** 1.3 • **Prepared:** 2026-11-08 • **Status:** owner-requested product specification and proposed execution program; not evidence of implementation, independent security acceptance, or authorization to bypass existing gates.
 
 **Audience:** any implementation agent or human entering without this conversation. Read this document, the companion story ledger, and the agent prompt before proposing changes.
 
@@ -12,6 +12,26 @@
 **Source snapshot inspected:** `pankajtiwarics27/m5-agent-studio` main at `a67e8b291614f8afdac7c8d38ba51bcc8926d695`. Inspection covered repository guidance, module contracts and selected runtime-status documents; not a full code/security audit, installed-runtime qualification, or fresh end-to-end execution. Refresh against current main before implementing.
 
 **Precedence:** repository `AGENTS.md`, accepted security decisions, existing program ownership and signed approvals remain binding. This program does not replace the AS, M5 runtime, UIUX/UIV2, or LC ledgers, and does not reopen their completed stories. Reconcile overlapping work in AP-001. Drafting this roadmap does not grant automatic execution authority to its stories or to downloaded tools.
+
+## Revision 1.3 — owner resolves U01–U05 (2026-11-17; takes precedence for those decisions)
+
+This revision records the repository owner's explicit 2026-11-17 selections,
+recorded via session `arena/2655f148-m5-agent-studio` (session bookkeeping
+prefix of the recording; owner selections verbatim in issue #330). U01
+selects websites first (AP-021/AP-022 direction) with video second, audience at
+pilot time. U02 records the M5/24 GB/1 TB owner statement without measurement
+claims. U03 grants PUBLIC read-only HTTPS research to the standard public
+allowlist (github.com, codeload.github.com, api.github.com, en.wikipedia.org,
+pypi.org, registry.npmjs.org), zero spend, no accounts, no writes, hosted
+inference excluded. U04 confines ALL AP reads/writes to `~/M5_AP_Workspace`
+with versioned retention (deliverables kept; source snapshots ≤30 days;
+transient downloads pruned on mission close; nothing outside the folder
+deleted). U05 keeps automatic promotion OFF in every class: no thresholds are
+auto-enabled, all `automatic_promotion` flags stay false, promotions require an
+explicit owner approval ceremony. No resolution activates anything, qualifies
+nothing and authorizes no story by itself; AP-009 and later still require
+their normal story authorization. See
+[the operating envelope register](autonomous-production-operating-envelope.md).
 
 ## Revision 1.2 — owner clarification and UX direction (takes precedence)
 
@@ -98,18 +118,22 @@ The product may support side-income projects through useful deliverables. It mus
 - Production and improvement experiments use separate state and promotion paths.
 - A small website pilot before a short-video pilot is a suggested order, not an owner-selected launch order.
 
-### 2.3 Decisions that remain open
+### 2.3 Decisions U01–U06 — all resolved 2026-11-17 (owner decisions)
 
-| ID | Decision | Blocks | Safe work while unresolved |
-|---|---|---|---|
-| U01 | First specialisation, audience and output format; next specialisation | Final pilot rubrics and launch | Generic contracts, fixtures, adapter research and evaluation harness |
-| U02 | M5/24 GB/1 TB confirmed; measure free memory/storage and installed runtime versions | Installed admission, downloads and performance claims | Hardware-independent contracts and mocked tests; never equate nominal 24 GB with available model memory |
-| U03 | Permitted public research/connectors and external non-inference services; currency/spending; hosted inference excluded | External-service actions; no hosted-model fallback | Local mocks and explicit deny paths |
-| U04 | Allowed folders/accounts/network destinations and retention rules | Real data access and external effects | Disposable fixtures and policy representation |
-| U05 | Concrete automatic-promotion thresholds and high-risk review policy | Persistent production promotion | Shadow evaluations and candidate reports |
-| U06 | Qualification/activation status of existing lifecycle/sandbox paths | New execution on unqualified backends | Audit call paths, implement refusal tests, coordinate with the owning program |
+| ID | Resolution (2026-11-17) | What it does NOT authorize |
+|---|---|---|
+| U01 | Websites first (AP-021/AP-022), video second (AP-023/AP-024); audience/format at pilot time | Launch approval, publishing authority, creative acceptance |
+| U02 | M5/24 GB/1 TB owner statement; inventory and headroom remain `not_measured` | Download/load/benchmark/performance or concurrency claims |
+| U03 | Public HTTPS GET allowlist (github.com, codeload.github.com, api.github.com, en.wikipedia.org, pypi.org, registry.npmjs.org), zero spend, no accounts, no writes; hosted inference still excluded | Media/credentialed services, spending, hosted models |
+| U04 | All AP reads/writes confined to `~/M5_AP_Workspace`; versioned retention (deliverables kept, source ≤30 days, transient pruned on close) | Access to other folders/accounts/profiles; external delivery |
+| U05 | Automatic promotion OFF everywhere; owner-approval ceremony only; no auto-enabled classes | Persistent automatic promotion of anything |
+| U06 | Resolved 2026-11-17 (container-only admission, owner-waived fresh run, admission-then-dispatch, ordered activation) | Runtime activation, isolated-execution claims |
 
-Ask the owner once for a blocking decision with specific options. Never reopen settled requirements or block unrelated safe stories on all open questions.
+Safe work completed before the decisions remains recorded in history;
+persistent `blocked_by_decisions` are removed from the ledger in revision 1.3.
+Asking the owner once for a blocking decision with specific options remains the
+rule. Never reopen settled requirements or block unrelated safe stories on
+unanswered questions.
 
 ## 3. Existing-system integration map
 

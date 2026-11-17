@@ -63,32 +63,12 @@ def test_repository_bundle_separates_owner_target_from_measured_inventory() -> N
         f"U{number:02d}" for number in range(1, 7)
     ]
     by_id = {decision.id: decision for decision in bundle.decisions}
-    assert by_id["U06"].status == "resolved"
-    assert by_id["U06"].resolution
-    assert by_id["U06"].blocked_story_ids == ()
-    assert by_id["U06"].blocked_actions == ()
-    assert {
-        decision.id: decision.status
-        for decision in bundle.decisions
-        if decision.id != "U06"
-    } == {
-        "U01": "pending",
-        "U02": "pending",
-        "U03": "pending",
-        "U04": "pending",
-        "U05": "pending",
-    }
-    assert {
-        decision.id: len(decision.blocked_story_ids)
-        for decision in bundle.decisions
-        if decision.id != "U06"
-    } == {
-        "U01": 6,
-        "U02": 8,
-        "U03": 10,
-        "U04": 10,
-        "U05": 3,
-    }
+    assert set(by_id) == {"U01", "U02", "U03", "U04", "U05", "U06"}
+    for decision_id, decision in by_id.items():
+        assert decision.status == "resolved", decision_id
+        assert decision.resolution, decision_id
+        assert decision.blocked_story_ids == (), decision_id
+        assert decision.blocked_actions == (), decision_id
     assert not any(item.automatic_promotion for item in bundle.promotion_classes)
 
 
@@ -102,10 +82,12 @@ def test_decision_register_blocked_stories_are_source_bound_to_roadmap(
     assert isinstance(first, dict)
     blocked = first["blocked_story_ids"]
     assert isinstance(blocked, list)
-    blocked.pop()
+    # U01 is resolved; resolved decisions must carry an empty blocker list,
+    # so injecting one must trip the same strict source-binding check.
+    blocked.append("AP-002")
 
     with pytest.raises(
-        OperatingEnvelopeError, match="must match the AP roadmap exactly"
+        OperatingEnvelopeError, match="cannot retain blockers after resolution"
     ):
         _load_mutated(tmp_path, envelope=envelope)
 
@@ -259,17 +241,46 @@ def test_policy_examples_require_every_scope_and_reject_unknown_fields(
 
 
 def test_pending_promotion_decision_forbids_automatic_promotion(tmp_path: Path) -> None:
+    # U05 is resolved in the repository (all automatic flags false). Exercise
+    # the pending-U05 guard with a synthetic pending pair bound to a mutated
+    # roadmap so the guard stays covered.
     envelope = _read(ENVELOPE)
+    roadmap = _read(ROADMAP)
+    roadmap_stories = roadmap["stories"]
+    assert isinstance(roadmap_stories, list)
+    affected = 0
+    for story in roadmap_stories:
+        assert isinstance(story, dict)
+        if story.get("id") in ("AP-002", "AP-026", "AP-028"):
+            story["blocked_by_decisions"] = ["U05"]
+            affected += 1
+    assert affected == 3
+    for decision in envelope["decisions"]:
+        assert isinstance(decision, dict)
+        if decision["id"] == "U05":
+            decision["status"] = "pending"
+            decision["resolution"] = None
+            decision["blocked_story_ids"] = ["AP-002", "AP-026", "AP-028"]
+            decision["blocked_actions"] = [
+                "Automatically promote a lesson, skill, adapter, model route, "
+                "evaluator or authority change into persistent production use."
+            ]
     promotion = envelope["promotion_policy"]
     assert isinstance(promotion, dict)
+    promotion["decision_status"] = "pending"
     classes = promotion["classes"]
     assert isinstance(classes, list)
     project_lesson = classes[1]
     assert isinstance(project_lesson, dict)
     project_lesson["automatic_promotion"] = True
 
+    envelope_path = _write(tmp_path / "envelope.json", envelope)
+    roadmap_path = _write(tmp_path / "roadmap.json", roadmap)
+    policy_path = _write(tmp_path / "policies.json", _read(POLICIES))
     with pytest.raises(OperatingEnvelopeError, match="U05 is pending"):
-        _load_mutated(tmp_path, envelope=envelope)
+        load_operating_envelope(
+            envelope_path, roadmap_path=roadmap_path, policy_examples_path=policy_path
+        )
 
 
 def test_inventory_recipe_accepts_generic_observation_without_changing_owner_statement(
@@ -391,6 +402,6 @@ def test_cli_validates_repository_bundle_without_host_or_network_probe() -> None
     assert payload["runtime_activation_authorized"] is False
     assert payload["inventory_status"] == "not_measured"
     assert payload["automatic_promotion_classes"] == []
-    expected = {decision_id: "pending" for decision_id in [f"U{n:02d}" for n in range(1, 6)]}
-    expected["U06"] = "resolved"
-    assert payload["decision_states"] == expected
+    assert payload["decision_states"] == {
+        decision_id: "resolved" for decision_id in [f"U{n:02d}" for n in range(1, 7)]
+    }
