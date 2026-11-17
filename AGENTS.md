@@ -83,12 +83,20 @@ AS source/status record rather than a fourth interchangeable claim ledger.
   PR #303 (exact head `b1b2e4d747f9916a8ffd77f1126c90f8288294c8`, merged as
   `bf1fa6aefa24913ed7a88ceb12775b484dbc7cc5` on 2026-11-15, exact-merge main CI
   green), after the owner decided it may land while U06 remains pending. That
-  landing is not a full AP-007 authorization and resolves nothing about U06;
-  AP-007 is recorded `blocked` on U06 for its remainder. No further story is
-  authorized: the remainder of AP-007, AP-008…AP-032, product runtime activation,
-  destructive resets, and real external services remain unauthorized, and a later
-  story needs its own explicit owner authorization plus dependency evidence and
-  its own branch/PR before any work starts.
+  landing is not a full AP-007 authorization and resolves nothing about U06. On
+  2026-11-17 the repository owner resolved U06 by explicit recorded decision
+  (agent session `arena/0efd4d99-m5-agent-studio`): the fresh target-host
+  qualification requirement is waived by explicit owner override, and the
+  AP-007 rework (AP-007-F2 PR #312, AP-007-F3 PR #319) is accepted as the
+  refusal foundation. Nothing is activated: `runtime_activation_authorized`
+  remains false, no `IsolationAcceptance` is recorded, installed-runtime
+  qualification has not been run, and the 2026-10-31 M5-P3-01 record is the
+  only machine evidence. AP-007 is `in_progress` for its authorized remainder;
+  AP-008 is authorized to start only after AP-007 is recorded done, one story
+  per branch/PR. AP-009…AP-032, product runtime activation, destructive
+  resets, and real external services remain unauthorized, and a later story
+  needs its own explicit owner authorization plus dependency evidence and its
+  own branch/PR before any work starts.
 
 Within the program you are working on, choose exactly one story that is both
 owner-authorized and dependency-ready, respect phase order, and take one story

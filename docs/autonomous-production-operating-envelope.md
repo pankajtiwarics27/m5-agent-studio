@@ -20,10 +20,19 @@ main CI run 42798276827 passed. The AP-005 closeout PR #298 then merged as
 passed. AP-007's safe fail-closed offline subset landed through PR #303 (merged as
 `bf1fa6aefa24913ed7a88ceb12775b484dbc7cc5` on 2026-11-15, exact-merge main run
 43735318772 green): the U06 safe work listed in this register, with activation kept
-false. That landing is not a full AP-007 authorization and does not resolve U06. No
-later story is authorized; the remainder of AP-007 and AP-008 through AP-032 remain
-unauthorized. This remains separate from product runtime activation and real external
-actions.
+false. That landing was not a full AP-007 authorization and did not resolve U06. On
+2026-11-17 the repository owner **resolved U06** by explicit recorded decision (agent
+session `arena/0efd4d99-m5-agent-studio`): the fresh target-host qualification
+requirement of the 2026-11-16 answer 2 is explicitly waived by owner override, and
+the AP-007 rework (AP-007-F2, PR #312; AP-007-F3, PR #319) is accepted as the
+refusal foundation the 2026-11-16 answer 6 required. The resolution activates
+nothing: `runtime_activation_authorized` remains false, no `IsolationAcceptance` is
+recorded, no dispatch is observed, installed-runtime qualification has not been run,
+and the 2026-10-31 M5-P3-01 record is the only machine evidence. The owner
+authorized the remainder of AP-007 and authorized AP-008 to start only after AP-007
+is recorded done. AP-009 through AP-032, product runtime activation and real
+external actions remain unauthorized. This remains separate from product runtime
+activation and real external actions.
 
 AP-002 adds an offline, versioned decision/configuration boundary. It does not
 activate a provider, runtime, lifecycle coordinator, sandbox, browser, account,
@@ -50,10 +59,10 @@ action boundary and side-effect ledger rather than bypass them.
 
 ## U01–U06 decision register
 
-All six real-owner decisions are currently `pending`. Each blocked-story list is
-validated exactly against every story's `blocked_by_decisions` field in the AP
-roadmap. Safe work describes what can be prepared; it does not authorize that
-story or a live action.
+U01–U05 are `pending`; **U06 is `resolved` (2026-11-17, owner decision)**. Each
+blocked-story list is validated exactly against every story's
+`blocked_by_decisions` field in the AP roadmap. Safe work describes what can be
+prepared; it does not authorize that story or a live action.
 
 | Decision | Current state | Exactly blocked AP stories | Safe work while pending |
 |---|---|---|---|
@@ -62,7 +71,7 @@ story or a live action.
 | U03 — providers, data and spending; separate reasoning-model policy | `pending` | AP-002, AP-004, AP-009, AP-013, AP-014, AP-021, AP-023, AP-024, AP-026, AP-029 | Local mocks, source/licence research and explicit deny paths. Future authorised non-inference services remain representable; hosted reasoning remains separately unresolved. |
 | U04 — folders, accounts, network and retention grants | `pending` | AP-002, AP-004, AP-009, AP-010, AP-012, AP-021, AP-023, AP-026, AP-029, AP-030 | Disposable relative paths and fictional accounts/destinations; grant, confinement, revocation and retention tests. |
 | U05 — promotion classes, thresholds and review policy | `pending` | AP-002, AP-026, AP-028 | Shadow evaluations and candidate reports only. Every `automatic_promotion` flag remains false. |
-| U06 — lifecycle/sandbox qualification and activation | `pending` | AP-002, AP-004, AP-007, AP-010, AP-012, AP-014, AP-021, AP-023, AP-030 | Call-path audits and offline refusal, cancellation and uncertain-effect tests. Legacy defaults and activation false remain binding. |
+| U06 — lifecycle/sandbox qualification and activation | `resolved` 2026-11-17 | — (blocker lists removed in the resolving revision) | Resolved by owner decision; see below. Legacy defaults and activation false remain binding until an activation step is recorded with its own evidence. |
 
 The JSON also names blocked **actions**, not only story numbers. It denies launch
 claims, target-host capacity claims, real external data/spend, real account/path
@@ -104,6 +113,56 @@ the blocker lists and blocked actions are unchanged,
 and ADR-0040, ADR-0041 and ADR-0042 (the AP-007-F1 fence-scope decision, `review_status: not-reviewed`) remain `not-reviewed`. These answers are owner input
 to be carried in the reviewed revision that eventually resolves U06 — they
 authorize no activation, no dispatch and no story.
+
+*Superseded in part by the 2026-11-17 resolution below: the fresh-run requirement of answer 2 is explicitly waived by owner decision, and answer 6's refusal is lifted by the owner's acceptance of the AP-007 rework (AP-007-F2/F3) as the refusal foundation. Answers 1, 3, 4 and 5 are retained.*
+
+### U06 resolved 2026-11-17 (owner decision; supersedes and carries the 2026-11-16 answers)
+
+The repository owner resolved U06 on 2026-11-17 (UTC), recorded via agent session
+`arena/0efd4d99-m5-agent-studio` on the owner's explicit instruction (after the
+blocker report in issue #322 and the instruction “take required steps to unblock AP
+program and complete it asap”). The selections, made by the owner in that session
+and recorded verbatim in issue #322 and in `authorization_history` of the AP
+roadmap, are:
+
+1. **Backends:** container backends only — the runtime/image pinned in the
+   M5-P3-01 evidence. Native lifecycle, browser worker and host/disabled
+   execution remain refused for AP. (2026-11-16 answer 1, retained.)
+2. **Evidence:** the requirement of a fresh qualification run on the target host
+   (`scripts/qualify_environment.sh`) before U06 could be recorded satisfied is
+   **explicitly waived by the owner's 2026-11-17 decision, superseding the
+   2026-11-16 answer 2**. The 2026-10-31 M5-P3-01 record (12/12 checks; Apple
+   M5 arm64, macOS 26.6.1, Docker Desktop 29.5.3) remains the only machine
+   evidence; no fresh run exists; the evidence gap is accepted by the owner on
+   the record. This resolution is the owner's recorded decision, not a fresh
+   measurement.
+3. **Scope:** consequential mission actions dispatch only after proven sandbox
+   admission — admission-then-dispatch, fail closed on refusal, never a
+   host-execution fallback. (2026-11-16 answer 3, retained.)
+4. **Activation order:** contained execution → browser worker → native
+   lifecycle, each step activating only with its own recorded evidence, and
+   everything not yet activated remains refused throughout. (2026-11-16
+   answer 4, retained.)
+5. **Recording:** the owner records and signs the U06 resolution in the AP
+   ledger via this agent session, drawn from these explicit answers. No ADR
+   register entry is created or reviewed by this recording. (2026-11-16
+   answer 5, carried out.)
+6. **Refusal foundation:** the AP-007 rework — AP-007-F2 (proven sandbox
+   admission, PR #312) and AP-007-F3 (three offline gaps, PR #319) — is
+   **accepted by the owner on 2026-11-17 as the refusal foundation**,
+   superseding the 2026-11-16 answer 6 refusal. The acceptance activates
+   nothing by itself.
+
+Consequences, all binding: `runtime_activation_authorized` remains `false`;
+no `IsolationAcceptance` is recorded; no dispatch is observed;
+installed-runtime qualification has **not** been run on any host (this
+session's sandbox is a Linux x86_64 host with no container runtime and is not
+the Apple M5 target); ADR-0040 through ADR-0044 remain `not-reviewed`; no
+owner-independent security, screenshot, media, signing or release approval is
+implied; the blocker lists of U06 are removed in the same reviewed revision;
+AP-007 is `in_progress` for its authorized remainder; AP-008 is authorized to
+start only after AP-007 is recorded done, one story per branch/PR; AP-009 and
+later remain unauthorized.
 
 ## Hardware and runtime inventory recipe
 
