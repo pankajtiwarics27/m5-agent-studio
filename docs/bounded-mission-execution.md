@@ -435,7 +435,8 @@ was generated. Recording an old report again does not make it fresh.
 ### What a qualification rests on
 
 [ADR-0044](adr/0044-qualification-provenance-and-reported-refusal-for-mission-isolation.md)
-records these rules.
+records these rules; [ADR-0045](adr/0045-server-observed-host-fingerprint-helper-for-mission-isolation.md)
+records the later observer seam without activating it.
 
 **The time must be the report's own.** When a qualification report states no
 generation time, the sandbox layer records the time of ingestion. That time says
@@ -462,6 +463,26 @@ the memory readings of the same description do not.
 All three must be equal. A report produced on another machine fails on
 `qualified_host`. A security store copied to another machine fails on
 `observed_host`.
+
+**The server-observed value.** AP-007-R1 adds
+`sandbox_boundary.observe_host_fingerprint()`. It reads these same five values
+at call time and passes them through `qualification_host_fingerprint`, so the
+result uses the exact same canonical digest as a qualification report. A test
+pins the digest against `scripts/qualify_environment.py` on the authoring host.
+The function mirrors the suite's Darwin `sysctl` and non-Darwin `/proc` readers
+without importing the suite, and reads no extra hardware identifier. If a value
+is missing, malformed or unreadable, it returns `""`; the existing isolation
+gate then refuses with “the host of this dispatch was not observed.” It does not
+read the host at import time.
+
+This is an observer seam, not a dispatch integration. No production caller is
+added here: a separately authorized server composition must call it at dispatch
+time and pass the result as `observed_host` to
+`IsolationEvidence.from_admission`. No `IsolationAcceptance` is recorded, no
+production dispatch is observed, and nothing is activated. Installed-runtime
+qualification is **NOT RUN**; the Linux test host does not stand in for the
+Apple M5 target. The mission isolation gate therefore continues to refuse
+consequential actions of mission-owned work.
 
 What the fingerprint is not:
 
