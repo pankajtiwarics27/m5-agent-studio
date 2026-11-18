@@ -5,7 +5,7 @@
   "source": {
     "frontend": "static/index.html",
     "style_block": "#m5-redesign-system",
-    "style_block_sha256": "d237205bfe2036377ff72575a5a90c9a5e1bb309627819df1c9b5715676cb618",
+    "style_block_sha256": "011d2156ffb994bb78df675d2ff4aa85e19113693fb085c1952ba4202826994b",
     "superseded_blocks": [
       "the first <style> block declares an older palette that this one overrides; it is kept only so a stale rule cannot resolve to an undefined name"
     ]
@@ -42,7 +42,7 @@
   "totals": {
     "tokens": 58,
     "groups": 8,
-    "references": 1645,
+    "references": 1650,
     "theme_overrides": 20,
     "density_overrides": 5,
     "contrast_pairs": 28,
@@ -153,7 +153,7 @@
         "light": "#FFFFFF"
       },
       "density_override": null,
-      "references": 74
+      "references": 75
     },
     {
       "name": "--bg-hover",
@@ -193,7 +193,7 @@
         "light": "#DDE2E8"
       },
       "density_override": null,
-      "references": 209
+      "references": 210
     },
     {
       "name": "--border-hi",
@@ -213,7 +213,7 @@
         "light": "#1B2430"
       },
       "density_override": null,
-      "references": 109
+      "references": 110
     },
     {
       "name": "--text-dim",
@@ -223,7 +223,7 @@
         "light": "#596579"
       },
       "density_override": null,
-      "references": 192
+      "references": 193
     },
     {
       "name": "--text-faint",
@@ -459,7 +459,7 @@
       "value": "6px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 56
+      "references": 57
     },
     {
       "name": "--radius-md",

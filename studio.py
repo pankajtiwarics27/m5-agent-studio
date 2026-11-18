@@ -6145,7 +6145,8 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
 #pane-harness .harness-main { min-width: 0; min-height: 0; overflow-y: auto; position: relative; }
 #pane-harness .harness-stream { width: 100%; max-width: 900px; margin: 0 auto; padding: 24px; min-height: 120px; }
 #pane-harness .harness-main:has(.harness-welcome) .harness-stages,
-#pane-harness .harness-main:has(.harness-welcome) #harnessInfoBanner { display: none !important; }
+#pane-harness .harness-main:has(.harness-welcome) #harnessInfoBanner,
+#pane-harness .harness-main:has(.harness-welcome) .harness-workspace-review { display: none !important; }
 #pane-harness .harness-main:has(.harness-welcome) .harness-stream { flex: 0 0 auto; margin-top: auto; overflow: visible; }
 #pane-harness .harness-main:has(.harness-welcome) .task-composer { margin-bottom: auto; }
 .harness-welcome { text-align: center; padding: 16px 0 4px; }
@@ -20368,6 +20369,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
       // The turn is over: re-render from the durable log so missed live frames can
       // never leave a duplicate or a missing completion on screen.
       setHarnessRunActive(false);
+      fitHarnessComposer();
     });
   }
 

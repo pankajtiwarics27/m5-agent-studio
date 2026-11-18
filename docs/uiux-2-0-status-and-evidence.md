@@ -45,30 +45,30 @@ through `setStatus()`, so the state, the tone and the label cannot disagree.
 
 | Element | Tone | Announced | Line |
 |---|---|---|---|
-| (unnamed) | `ok` | no | 2502 |
-| `#dockerStateBadge` | `neutral` | no | 2549 |
-| `#sdlcProgressBadge` | `neutral` | no | 3210 |
-| `#startReadinessPill` | `neutral` | yes | 3337 |
-| `#startRecentSummary` | `neutral` | yes | 3365 |
-| `#onboardingSummary` | `neutral` | yes | 3383 |
-| `#startHealthSummary` | `neutral` | yes | 3424 |
-| `#startWorkspaceSummary` | `neutral` | yes | 3444 |
-| `#harnessActiveStatusBadge` | `info` | yes | 3501 |
-| `#hallStatusBadge` | `info` | yes | 3690 |
-| `#councilReadinessCount` | `neutral` | no | 3704 |
-| `#pipelineWorkspaceState` | `info` | no | 3864 |
-| (unnamed) | `warn` | no | 7409 |
-| (unnamed) | `warn` | no | 7507 |
-| (unnamed) | `neutral` | no | 11512 |
-| (unnamed) | `busy` | no | 11513 |
-| (unnamed) | `ok` | no | 11514 |
-| (unnamed) | `warn` | no | 11515 |
+| (unnamed) | `ok` | no | 2503 |
+| `#dockerStateBadge` | `neutral` | no | 2550 |
+| `#sdlcProgressBadge` | `neutral` | no | 3211 |
+| `#startReadinessPill` | `neutral` | yes | 3338 |
+| `#startRecentSummary` | `neutral` | yes | 3366 |
+| `#onboardingSummary` | `neutral` | yes | 3384 |
+| `#startHealthSummary` | `neutral` | yes | 3425 |
+| `#startWorkspaceSummary` | `neutral` | yes | 3445 |
+| `#harnessActiveStatusBadge` | `info` | yes | 3502 |
+| `#hallStatusBadge` | `info` | yes | 3691 |
+| `#councilReadinessCount` | `neutral` | no | 3705 |
+| `#pipelineWorkspaceState` | `info` | no | 3865 |
+| (unnamed) | `warn` | no | 7410 |
+| (unnamed) | `warn` | no | 7508 |
+| (unnamed) | `neutral` | no | 11513 |
+| (unnamed) | `busy` | no | 11514 |
+| (unnamed) | `ok` | no | 11515 |
 | (unnamed) | `warn` | no | 11516 |
 | (unnamed) | `warn` | no | 11517 |
-| (unnamed) | `danger` | no | 11518 |
-| (unnamed) | `warn` | no | 11519 |
+| (unnamed) | `warn` | no | 11518 |
+| (unnamed) | `danger` | no | 11519 |
 | (unnamed) | `warn` | no | 11520 |
-| (unnamed) | `neutral` | no | 11521 |
+| (unnamed) | `warn` | no | 11521 |
+| (unnamed) | `neutral` | no | 11522 |
 
 ## Writers
 

@@ -17,16 +17,16 @@
       "callers": [
         {
           "kind": "markup",
-          "line": 2483
+          "line": 2484
         }
       ],
       "triggers": [
         {
           "kind": "markup",
-          "line": 2483
+          "line": 2484
         }
       ],
-      "line": 2564
+      "line": 2565
     },
     {
       "id": "cmdPaletteModal",
@@ -39,20 +39,20 @@
       "callers": [
         {
           "kind": "markup",
-          "line": 2487
+          "line": 2488
         },
         {
           "kind": "script",
-          "line": 4460
+          "line": 4461
         }
       ],
       "triggers": [
         {
           "kind": "markup",
-          "line": 2487
+          "line": 2488
         }
       ],
-      "line": 2638
+      "line": 2639
     },
     {
       "id": "hallConclusionModal",
@@ -65,28 +65,28 @@
       "callers": [
         {
           "kind": "script",
-          "line": 4173
+          "line": 4174
         },
         {
           "kind": "script",
-          "line": 7033
+          "line": 7034
         },
         {
           "kind": "markup",
-          "line": 7491
+          "line": 7492
         },
         {
           "kind": "script",
-          "line": 7658
+          "line": 7659
         }
       ],
       "triggers": [
         {
           "kind": "markup",
-          "line": 7491
+          "line": 7492
         }
       ],
-      "line": 2652
+      "line": 2653
     },
     {
       "id": "contextModal",
@@ -99,11 +99,7 @@
       "callers": [
         {
           "kind": "markup",
-          "line": 3577
-        },
-        {
-          "kind": "script",
-          "line": 4161
+          "line": 3578
         },
         {
           "kind": "script",
@@ -114,25 +110,29 @@
           "line": 4163
         },
         {
+          "kind": "script",
+          "line": 4164
+        },
+        {
           "kind": "markup",
-          "line": 6235
+          "line": 6236
         },
         {
           "kind": "script",
-          "line": 8471
+          "line": 8472
         }
       ],
       "triggers": [
         {
           "kind": "markup",
-          "line": 3577
+          "line": 3578
         },
         {
           "kind": "markup",
-          "line": 6235
+          "line": 6236
         }
       ],
-      "line": 2663
+      "line": 2664
     },
     {
       "id": "mcpModal",
@@ -145,254 +145,7 @@
       "callers": [
         {
           "kind": "script",
-          "line": 4164
-        },
-        {
-          "kind": "markup",
-          "line": 6236
-        },
-        {
-          "kind": "script",
-          "line": 8469
-        }
-      ],
-      "triggers": [
-        {
-          "kind": "markup",
-          "line": 6236
-        }
-      ],
-      "line": 2767
-    },
-    {
-      "id": "externalHarnessModal",
-      "role": "dialog",
-      "label": "Official DeepSeek Harness & OpenHarness Bridge",
-      "backdrop_close": "closeExternalHarnessModal",
-      "open_function": "openExternalHarnessModal",
-      "open_via_controller": true,
-      "close_via_controller": true,
-      "callers": [
-        {
-          "kind": "script",
           "line": 4165
-        },
-        {
-          "kind": "script",
-          "line": 8472
-        }
-      ],
-      "triggers": [],
-      "line": 2982
-    },
-    {
-      "id": "harnessDiffModal",
-      "role": "dialog",
-      "label": "Harness Git Diff",
-      "backdrop_close": "closeHarnessDiffModal",
-      "open_function": "openHarnessDiffModal",
-      "open_via_controller": true,
-      "close_via_controller": true,
-      "callers": [
-        {
-          "kind": "markup",
-          "line": 3030
-        },
-        {
-          "kind": "script",
-          "line": 4169
-        },
-        {
-          "kind": "markup",
-          "line": 6217
-        },
-        {
-          "kind": "script",
-          "line": 8479
-        },
-        {
-          "kind": "script",
-          "line": 15122
-        },
-        {
-          "kind": "markup",
-          "line": 15381
-        },
-        {
-          "kind": "markup",
-          "line": 15550
-        }
-      ],
-      "triggers": [
-        {
-          "kind": "markup",
-          "line": 3030
-        },
-        {
-          "kind": "markup",
-          "line": 6217
-        },
-        {
-          "kind": "markup",
-          "line": 15381
-        },
-        {
-          "kind": "markup",
-          "line": 15550
-        }
-      ],
-      "line": 3021
-    },
-    {
-      "id": "harnessEvidenceModal",
-      "role": "dialog",
-      "label": "What a completion claim rests on",
-      "backdrop_close": "closeHarnessEvidenceModal",
-      "open_function": "openHarnessEvidenceModal",
-      "open_via_controller": true,
-      "close_via_controller": true,
-      "callers": [
-        {
-          "kind": "markup",
-          "line": 3031
-        },
-        {
-          "kind": "markup",
-          "line": 3513
-        },
-        {
-          "kind": "script",
-          "line": 4170
-        },
-        {
-          "kind": "markup",
-          "line": 6225
-        },
-        {
-          "kind": "script",
-          "line": 8483
-        },
-        {
-          "kind": "markup",
-          "line": 15380
-        }
-      ],
-      "triggers": [
-        {
-          "kind": "markup",
-          "line": 3031
-        },
-        {
-          "kind": "markup",
-          "line": 3513
-        },
-        {
-          "kind": "markup",
-          "line": 6225
-        },
-        {
-          "kind": "markup",
-          "line": 15380
-        }
-      ],
-      "line": 3049
-    },
-    {
-      "id": "harnessGrantsModal",
-      "role": "dialog",
-      "label": "Harness permissions for this session",
-      "backdrop_close": "closeHarnessGrants",
-      "open_function": "openHarnessGrants",
-      "open_via_controller": true,
-      "close_via_controller": true,
-      "callers": [
-        {
-          "kind": "markup",
-          "line": 3650
-        },
-        {
-          "kind": "script",
-          "line": 8480
-        }
-      ],
-      "triggers": [
-        {
-          "kind": "markup",
-          "line": 3650
-        }
-      ],
-      "line": 3073
-    },
-    {
-      "id": "providersModal",
-      "role": "dialog",
-      "label": "Cloud Providers & OmniRoute Router",
-      "backdrop_close": "closeProvidersModal",
-      "open_function": "openProvidersModal",
-      "open_via_controller": true,
-      "close_via_controller": true,
-      "callers": [
-        {
-          "kind": "markup",
-          "line": 3399
-        },
-        {
-          "kind": "script",
-          "line": 4166
-        },
-        {
-          "kind": "script",
-          "line": 4998
-        },
-        {
-          "kind": "script",
-          "line": 5161
-        },
-        {
-          "kind": "script",
-          "line": 5175
-        },
-        {
-          "kind": "script",
-          "line": 6015
-        },
-        {
-          "kind": "markup",
-          "line": 6238
-        },
-        {
-          "kind": "script",
-          "line": 8101
-        },
-        {
-          "kind": "script",
-          "line": 8468
-        }
-      ],
-      "triggers": [
-        {
-          "kind": "markup",
-          "line": 3399
-        },
-        {
-          "kind": "markup",
-          "line": 6238
-        }
-      ],
-      "line": 3100
-    },
-    {
-      "id": "skillsModal",
-      "role": "dialog",
-      "label": "Agent Skills Manager",
-      "backdrop_close": "closeSkillsModal",
-      "open_function": "openSkillsModal",
-      "open_via_controller": true,
-      "close_via_controller": true,
-      "callers": [
-        {
-          "kind": "script",
-          "line": 4167
         },
         {
           "kind": "markup",
@@ -409,7 +162,254 @@
           "line": 6237
         }
       ],
-      "line": 3172
+      "line": 2768
+    },
+    {
+      "id": "externalHarnessModal",
+      "role": "dialog",
+      "label": "Official DeepSeek Harness & OpenHarness Bridge",
+      "backdrop_close": "closeExternalHarnessModal",
+      "open_function": "openExternalHarnessModal",
+      "open_via_controller": true,
+      "close_via_controller": true,
+      "callers": [
+        {
+          "kind": "script",
+          "line": 4166
+        },
+        {
+          "kind": "script",
+          "line": 8473
+        }
+      ],
+      "triggers": [],
+      "line": 2983
+    },
+    {
+      "id": "harnessDiffModal",
+      "role": "dialog",
+      "label": "Harness Git Diff",
+      "backdrop_close": "closeHarnessDiffModal",
+      "open_function": "openHarnessDiffModal",
+      "open_via_controller": true,
+      "close_via_controller": true,
+      "callers": [
+        {
+          "kind": "markup",
+          "line": 3031
+        },
+        {
+          "kind": "script",
+          "line": 4170
+        },
+        {
+          "kind": "markup",
+          "line": 6218
+        },
+        {
+          "kind": "script",
+          "line": 8480
+        },
+        {
+          "kind": "script",
+          "line": 15123
+        },
+        {
+          "kind": "markup",
+          "line": 15382
+        },
+        {
+          "kind": "markup",
+          "line": 15551
+        }
+      ],
+      "triggers": [
+        {
+          "kind": "markup",
+          "line": 3031
+        },
+        {
+          "kind": "markup",
+          "line": 6218
+        },
+        {
+          "kind": "markup",
+          "line": 15382
+        },
+        {
+          "kind": "markup",
+          "line": 15551
+        }
+      ],
+      "line": 3022
+    },
+    {
+      "id": "harnessEvidenceModal",
+      "role": "dialog",
+      "label": "What a completion claim rests on",
+      "backdrop_close": "closeHarnessEvidenceModal",
+      "open_function": "openHarnessEvidenceModal",
+      "open_via_controller": true,
+      "close_via_controller": true,
+      "callers": [
+        {
+          "kind": "markup",
+          "line": 3032
+        },
+        {
+          "kind": "markup",
+          "line": 3514
+        },
+        {
+          "kind": "script",
+          "line": 4171
+        },
+        {
+          "kind": "markup",
+          "line": 6226
+        },
+        {
+          "kind": "script",
+          "line": 8484
+        },
+        {
+          "kind": "markup",
+          "line": 15381
+        }
+      ],
+      "triggers": [
+        {
+          "kind": "markup",
+          "line": 3032
+        },
+        {
+          "kind": "markup",
+          "line": 3514
+        },
+        {
+          "kind": "markup",
+          "line": 6226
+        },
+        {
+          "kind": "markup",
+          "line": 15381
+        }
+      ],
+      "line": 3050
+    },
+    {
+      "id": "harnessGrantsModal",
+      "role": "dialog",
+      "label": "Harness permissions for this session",
+      "backdrop_close": "closeHarnessGrants",
+      "open_function": "openHarnessGrants",
+      "open_via_controller": true,
+      "close_via_controller": true,
+      "callers": [
+        {
+          "kind": "markup",
+          "line": 3651
+        },
+        {
+          "kind": "script",
+          "line": 8481
+        }
+      ],
+      "triggers": [
+        {
+          "kind": "markup",
+          "line": 3651
+        }
+      ],
+      "line": 3074
+    },
+    {
+      "id": "providersModal",
+      "role": "dialog",
+      "label": "Cloud Providers & OmniRoute Router",
+      "backdrop_close": "closeProvidersModal",
+      "open_function": "openProvidersModal",
+      "open_via_controller": true,
+      "close_via_controller": true,
+      "callers": [
+        {
+          "kind": "markup",
+          "line": 3400
+        },
+        {
+          "kind": "script",
+          "line": 4167
+        },
+        {
+          "kind": "script",
+          "line": 4999
+        },
+        {
+          "kind": "script",
+          "line": 5162
+        },
+        {
+          "kind": "script",
+          "line": 5176
+        },
+        {
+          "kind": "script",
+          "line": 6016
+        },
+        {
+          "kind": "markup",
+          "line": 6239
+        },
+        {
+          "kind": "script",
+          "line": 8102
+        },
+        {
+          "kind": "script",
+          "line": 8469
+        }
+      ],
+      "triggers": [
+        {
+          "kind": "markup",
+          "line": 3400
+        },
+        {
+          "kind": "markup",
+          "line": 6239
+        }
+      ],
+      "line": 3101
+    },
+    {
+      "id": "skillsModal",
+      "role": "dialog",
+      "label": "Agent Skills Manager",
+      "backdrop_close": "closeSkillsModal",
+      "open_function": "openSkillsModal",
+      "open_via_controller": true,
+      "close_via_controller": true,
+      "callers": [
+        {
+          "kind": "script",
+          "line": 4168
+        },
+        {
+          "kind": "markup",
+          "line": 6238
+        },
+        {
+          "kind": "script",
+          "line": 8471
+        }
+      ],
+      "triggers": [
+        {
+          "kind": "markup",
+          "line": 6238
+        }
+      ],
+      "line": 3173
     },
     {
       "id": "sdlcModal",
@@ -422,19 +422,19 @@
       "callers": [
         {
           "kind": "script",
-          "line": 4154
+          "line": 4155
         },
         {
           "kind": "script",
-          "line": 8482
+          "line": 8483
         },
         {
           "kind": "script",
-          "line": 8835
+          "line": 8836
         }
       ],
       "triggers": [],
-      "line": 3202
+      "line": 3203
     },
     {
       "id": "spawnModal",
@@ -447,36 +447,36 @@
       "callers": [
         {
           "kind": "markup",
-          "line": 3673
+          "line": 3674
         },
         {
           "kind": "script",
-          "line": 7005
+          "line": 7006
         },
         {
           "kind": "script",
-          "line": 7034
+          "line": 7035
         },
         {
           "kind": "script",
-          "line": 7760
+          "line": 7761
         },
         {
           "kind": "script",
-          "line": 7773
+          "line": 7774
         },
         {
           "kind": "script",
-          "line": 8334
+          "line": 8335
         }
       ],
       "triggers": [
         {
           "kind": "markup",
-          "line": 3673
+          "line": 3674
         }
       ],
-      "line": 3297
+      "line": 3298
     },
     {
       "id": "pathPickerModal",
@@ -489,11 +489,7 @@
       "callers": [
         {
           "kind": "markup",
-          "line": 2727
-        },
-        {
-          "kind": "markup",
-          "line": 2856
+          "line": 2728
         },
         {
           "kind": "markup",
@@ -501,37 +497,37 @@
         },
         {
           "kind": "markup",
-          "line": 2857
+          "line": 2858
         },
         {
           "kind": "markup",
-          "line": 2865
+          "line": 2858
         },
         {
           "kind": "markup",
-          "line": 2865
+          "line": 2866
         },
         {
           "kind": "markup",
-          "line": 3226
+          "line": 2866
         },
         {
           "kind": "markup",
-          "line": 3457
+          "line": 3227
         },
         {
           "kind": "markup",
-          "line": 3593
+          "line": 3458
+        },
+        {
+          "kind": "markup",
+          "line": 3594
         }
       ],
       "triggers": [
         {
           "kind": "markup",
-          "line": 2727
-        },
-        {
-          "kind": "markup",
-          "line": 2856
+          "line": 2728
         },
         {
           "kind": "markup",
@@ -539,30 +535,34 @@
         },
         {
           "kind": "markup",
-          "line": 2857
+          "line": 2858
         },
         {
           "kind": "markup",
-          "line": 2865
+          "line": 2858
         },
         {
           "kind": "markup",
-          "line": 2865
+          "line": 2866
         },
         {
           "kind": "markup",
-          "line": 3226
+          "line": 2866
         },
         {
           "kind": "markup",
-          "line": 3457
+          "line": 3227
         },
         {
           "kind": "markup",
-          "line": 3593
+          "line": 3458
+        },
+        {
+          "kind": "markup",
+          "line": 3594
         }
       ],
-      "line": 4037
+      "line": 4038
     }
   ],
   "shortcuts": {
