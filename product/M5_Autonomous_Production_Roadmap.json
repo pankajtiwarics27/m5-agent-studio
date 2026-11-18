@@ -3,9 +3,9 @@
   "document_type": "proposed_autonomous_production_execution_ledger",
   "product": "M5 Agent Studio",
   "program": "AP",
-  "revision": "1.2",
+  "revision": "1.3",
   "prepared_date": "2026-11-08",
-  "lifecycle": "registered_tracking_ap007_done_ap008_authorized",
+  "lifecycle": "registered_tracking_ap007_done_ap008_authorized_u01_u05_resolved",
   "source_snapshot": "a67e8b291614f8afdac7c8d38ba51bcc8926d695",
   "source_repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "specification": "docs/autonomous-production-roadmap.md",
@@ -211,13 +211,7 @@
         "R40",
         "R41"
       ],
-      "blocked_by_decisions": [
-        "U01",
-        "U02",
-        "U03",
-        "U04",
-        "U05"
-      ],
+      "blocked_by_decisions": [],
       "implementation_rules": [
         "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
         "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
@@ -495,10 +489,7 @@
         "R07",
         "R25"
       ],
-      "blocked_by_decisions": [
-        "U03",
-        "U04"
-      ],
+      "blocked_by_decisions": [],
       "implementation_rules": [
         "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
         "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
@@ -1825,10 +1816,7 @@
         "R23",
         "R40"
       ],
-      "blocked_by_decisions": [
-        "U03",
-        "U04"
-      ],
+      "blocked_by_decisions": [],
       "implementation_rules": [
         "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
         "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
@@ -1898,9 +1886,7 @@
         "R06",
         "R38"
       ],
-      "blocked_by_decisions": [
-        "U04"
-      ],
+      "blocked_by_decisions": [],
       "implementation_rules": [
         "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
         "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
@@ -2054,10 +2040,7 @@
         "R13",
         "R32"
       ],
-      "blocked_by_decisions": [
-        "U02",
-        "U04"
-      ],
+      "blocked_by_decisions": [],
       "implementation_rules": [
         "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
         "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
@@ -2136,10 +2119,7 @@
         "R40",
         "R41"
       ],
-      "blocked_by_decisions": [
-        "U02",
-        "U03"
-      ],
+      "blocked_by_decisions": [],
       "implementation_rules": [
         "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
         "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
@@ -2217,10 +2197,7 @@
         "R40",
         "R41"
       ],
-      "blocked_by_decisions": [
-        "U02",
-        "U03"
-      ],
+      "blocked_by_decisions": [],
       "implementation_rules": [
         "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
         "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
@@ -2751,12 +2728,7 @@
         "R21",
         "R38"
       ],
-      "blocked_by_decisions": [
-        "U01",
-        "U02",
-        "U03",
-        "U04"
-      ],
+      "blocked_by_decisions": [],
       "implementation_rules": [
         "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
         "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
@@ -2827,9 +2799,7 @@
         "R21",
         "R38"
       ],
-      "blocked_by_decisions": [
-        "U01"
-      ],
+      "blocked_by_decisions": [],
       "implementation_rules": [
         "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
         "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
@@ -2910,12 +2880,7 @@
         "R31",
         "R39"
       ],
-      "blocked_by_decisions": [
-        "U01",
-        "U02",
-        "U03",
-        "U04"
-      ],
+      "blocked_by_decisions": [],
       "implementation_rules": [
         "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
         "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
@@ -2990,10 +2955,7 @@
         "R33",
         "R39"
       ],
-      "blocked_by_decisions": [
-        "U01",
-        "U03"
-      ],
+      "blocked_by_decisions": [],
       "implementation_rules": [
         "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
         "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
@@ -3153,12 +3115,7 @@
         "R40",
         "R41"
       ],
-      "blocked_by_decisions": [
-        "U02",
-        "U03",
-        "U04",
-        "U05"
-      ],
+      "blocked_by_decisions": [],
       "implementation_rules": [
         "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
         "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
@@ -3310,9 +3267,7 @@
         "R27",
         "R32"
       ],
-      "blocked_by_decisions": [
-        "U05"
-      ],
+      "blocked_by_decisions": [],
       "implementation_rules": [
         "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
         "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
@@ -3386,10 +3341,7 @@
         "R08",
         "R25"
       ],
-      "blocked_by_decisions": [
-        "U03",
-        "U04"
-      ],
+      "blocked_by_decisions": [],
       "implementation_rules": [
         "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
         "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
@@ -3461,11 +3413,7 @@
         "R04",
         "R07"
       ],
-      "blocked_by_decisions": [
-        "U01",
-        "U02",
-        "U04"
-      ],
+      "blocked_by_decisions": [],
       "implementation_rules": [
         "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
         "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
@@ -3669,7 +3617,7 @@
     "external_non_inference_services": "separate explicit decision; network research is not hosted inference; do not assume hosted speech/image/video generation is approved"
   },
   "revision_precedence": {
-    "policy": "Revision 1.2 overrides earlier blanket hosted-media exclusions. Local inference is default; explicitly granted external cloud/media capabilities are feasible. No silent fallback. External reasoning-model use requires a separate policy decision.",
+    "policy": "Revision 1.3 (2026-11-17): the 2026-11-17 owner session resolved U01, U02, U03, U04 and U05 (see the operating envelope register and docs/autonomous-production-operating-envelope.md); their blocker lists are removed in this same revision. Revision 1.2 remains binding for unchanged content: Revision 1.2 overrides earlier blanket hosted-media exclusions. Local inference is default; explicitly granted external cloud/media capabilities are feasible. No silent fallback. External reasoning-model use requires a separate policy decision. No resolution activates anything; AP-009 and later stories still require their normal story authorization. Owner selections for U01-U05 are recorded verbatim in issue #330.",
     "ux_direction": "docs/autonomous-production-ux-direction.md",
     "approval_scope": "Concept direction only; no implementation, screenshot, security or release acceptance."
   },

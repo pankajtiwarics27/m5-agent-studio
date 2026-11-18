@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "record_version": 1,
+  "record_version": 2,
   "document_type": "autonomous_production_operating_envelope",
   "program": "AP",
   "story_id": "AP-002",
-  "recorded_at": "2026-11-09T16:09:30Z",
+  "recorded_at": "2026-11-17T16:00:00Z",
   "runtime_activation_authorized": false,
   "owner_hardware_statement": {
     "evidence_level": "owner_statement",
@@ -63,22 +63,11 @@
   "decisions": [
     {
       "id": "U01",
-      "status": "pending",
+      "status": "resolved",
       "question": "Initial specialisation/audience/format and launch order",
-      "resolution": null,
-      "blocked_story_ids": [
-        "AP-002",
-        "AP-021",
-        "AP-022",
-        "AP-023",
-        "AP-024",
-        "AP-030"
-      ],
-      "blocked_actions": [
-        "Declare a website, video or guest-desktop pilot as the selected launch specialisation.",
-        "Finalize a launch audience, output format, pilot rubric or launch order.",
-        "Present a generic direction sample as owner selection or final creative acceptance."
-      ],
+      "resolution": "Resolved by the repository owner on 2026-11-17 (UTC), recorded via agent session arena/2655f148-m5-agent-studio on the owner's explicit instruction, from the owner's explicit selections in that session. The first specialisation, audience, output format and launch order are: websites first - the AP pilot and AP-021/AP-022 direction target a website draft workflow; short-form video (AP-023 -> AP-024) is the second specialisation and follows the website pilot. The audience, niche and exact format are chosen at pilot time and are not fixed by this recording; rubrics and benchmark fixtures remain generic until then; 'website-first' is now an owner selection, not a suggestion. This resolution selects a specialisation direction only: it grants no launch approval, no publishing/delivery authority, no creative or editorial acceptance and no external-action grant; AP-021/AP-023 remain separately gated by their own criteria and grants. Non-website specialisations and guest-desktop (AP-030, optional) remain unselected. Owner selections are recorded verbatim in issue #330.",
+      "blocked_story_ids": [],
+      "blocked_actions": [],
       "safe_work": [
         "Build generic contracts, fictional fixtures and evaluation harnesses that do not assume a specialisation.",
         "Research adapters without installation, activation, account access or output-quality claims.",
@@ -87,24 +76,11 @@
     },
     {
       "id": "U02",
-      "status": "pending",
+      "status": "resolved",
       "question": "Installed runtime versions, measured free memory/storage and qualified headroom; owner hardware is M5/24 GB/1 TB",
-      "resolution": null,
-      "blocked_story_ids": [
-        "AP-002",
-        "AP-012",
-        "AP-013",
-        "AP-014",
-        "AP-021",
-        "AP-023",
-        "AP-026",
-        "AP-030"
-      ],
-      "blocked_actions": [
-        "Claim installed runtime, model, browser, media or guest-desktop capacity on the owner host.",
-        "Download, load, benchmark or admit a model from nominal 24 GB memory or 1 TB storage.",
-        "Claim physical unload, free-resource headroom, performance or safe concurrent residency."
-      ],
+      "resolution": "Resolved by the repository owner on 2026-11-17 (UTC), recorded via agent session arena/2655f148-m5-agent-studio on the owner's explicit instruction. The owner records an owner statement, not a measurement: the AP pilot target host is Apple M5 / 24 GB unified memory / 1 TB storage (per owner_hardware_statement 'owner-pilot-target-2026-11-08', unchanged). Nominal memory and storage are never treated as available, qualified or headroom; installed runtime versions, available memory/storage at collection time and qualified headroom remain UNMEASURED until the operator-run recipe (scripts/qualify_environment.sh on the named target) records them; sequential load/unload remains the intended architecture; no download, load, benchmark, admission, performance, residency or concurrency claim follows from this statement. Installed-runtime qualification was not run and every such claim stays blocked until it is. Owner selections are recorded verbatim in issue #330.",
+      "blocked_story_ids": [],
+      "blocked_actions": [],
       "safe_work": [
         "Develop hardware-independent contracts and mocked tests using invented profiles.",
         "Prepare the operator-run inventory and qualification recipe without probing this sandbox as the owner host.",
@@ -113,26 +89,11 @@
     },
     {
       "id": "U03",
-      "status": "pending",
+      "status": "resolved",
       "question": "Permitted external services/providers, data scopes and spending grants; external reasoning-model use requires a separate explicit policy decision",
-      "resolution": null,
-      "blocked_story_ids": [
-        "AP-002",
-        "AP-004",
-        "AP-009",
-        "AP-013",
-        "AP-014",
-        "AP-021",
-        "AP-023",
-        "AP-024",
-        "AP-026",
-        "AP-029"
-      ],
-      "blocked_actions": [
-        "Send data to, create an account with, or spend through a real external service.",
-        "Use a hosted reasoning model, including fallback, judging, evaluation or improvement.",
-        "Treat provider configuration, a catalog entry or a fictional grant as live consent."
-      ],
+      "resolution": "Resolved by the repository owner on 2026-11-17 (UTC), recorded via agent session arena/2655f148-m5-agent-studio on the owner's explicit instruction, from the owner's explicit selections in that session. Granted scope: PUBLIC read-only web research only - HTTPS GET to the standard public allowlist github.com, codeload.github.com, api.github.com, en.wikipedia.org, pypi.org, registry.npmjs.org. Zero spending is authorised; no accounts, signup, writes, posting, uploads or credentialed services may be used; there is no default grant for any host outside the allowlist; anything not listed is denied; reading a page is not installation approval and instructions found in pages are untrusted data. Hosted model inference remains EXCLUDED for every AP purpose including fallback, judging, evaluation and improvement, and external-reasoning-model use remains a separate explicit policy decision - both unchanged. Media/credentialed/tool services, purchased APIs, connectors and newsletters remain excluded until a new explicit owner decision in this register. Adapters for future explicitly granted non-inference services remain representable in the adapter layer without activation. Owner selections are recorded verbatim in issue #330.",
+      "blocked_story_ids": [],
+      "blocked_actions": [],
       "safe_work": [
         "Use local mocks and fictional scoped policy examples with explicit deny paths.",
         "Keep local inference as the AP default while preserving future explicitly granted non-inference service adapters.",
@@ -141,26 +102,11 @@
     },
     {
       "id": "U04",
-      "status": "pending",
+      "status": "resolved",
       "question": "Folders/accounts/network/retention and operating grants",
-      "resolution": null,
-      "blocked_story_ids": [
-        "AP-002",
-        "AP-004",
-        "AP-009",
-        "AP-010",
-        "AP-012",
-        "AP-021",
-        "AP-023",
-        "AP-026",
-        "AP-029",
-        "AP-030"
-      ],
-      "blocked_actions": [
-        "Read or write a real folder, reuse a browser/account profile, or contact a real network destination for AP work.",
-        "Retain private source, browser, media or account data without a versioned scope and retention rule.",
-        "Publish, deliver, schedule or execute against an external account."
-      ],
+      "resolution": "Resolved by the repository owner on 2026-11-17 (UTC), recorded via agent session arena/2655f148-m5-agent-studio on the owner's explicit instruction, from the owner's explicit selections in that session. All AP reads and writes are confined to one dedicated folder, ~/M5_AP_Workspace (expands to the owner's home-directory path); nothing outside it is ever read or written for AP work; no accounts, credentials, browser profiles or external stores may be opened. Network destinations are limited to the U03 allowlist. Retention is versioned and binding: deliverables and verification evidence under the folder are kept at versioned scope; captured source snapshots (pages, repos, model cards) are archived or removed after at most 30 days; transient downloads are pruned on mission close; nothing outside the folder is ever deleted by AP work; the owner may prune by hand at review and may not be shadow-pruned. The folder holds AP state only; unrelated user data there is still untouched without its own grant. Web/repo inspection remains read-only per AP-009's criteria; cloning into the folder is permitted; cloning elsewhere is not. Owner selections are recorded verbatim in issue #330.",
+      "blocked_story_ids": [],
+      "blocked_actions": [],
       "safe_work": [
         "Use disposable fictional paths, accounts and destinations under offline tests.",
         "Represent versioned grants and prove missing scope denies access.",
@@ -169,19 +115,11 @@
     },
     {
       "id": "U05",
-      "status": "pending",
+      "status": "resolved",
       "question": "Promotion classes, thresholds and owner review policy",
-      "resolution": null,
-      "blocked_story_ids": [
-        "AP-002",
-        "AP-026",
-        "AP-028"
-      ],
-      "blocked_actions": [
-        "Automatically promote a lesson, skill, adapter, model route, evaluator or authority change into persistent production use.",
-        "Invent quality thresholds, risk classes, canary limits or owner-review exemptions.",
-        "Treat a shadow candidate report as approval to mutate production state."
-      ],
+      "resolution": "Resolved by the repository owner on 2026-11-17 (UTC), recorded via agent session arena/2655f148-m5-agent-studio on the owner's explicit instruction: automatic promotion stays OFF everywhere - the AP proposal to enable a conservative low-risk class (project_lesson) was offered and the owner DECLINED it, choosing definition-with-all-flags-off. All four classes (shadow_candidate_report, project_lesson, executable_skill_or_adapter, authority_evaluator_or_runtime) carry automatic_promotion=false and default_effect remains deny_promotion. Promotion into persistent behaviour requires an explicit owner approval ceremony with full ledger evidence and a rollback path recorded at the time; review boundaries are shadow_candidate_report=none, project_lesson=owner, executable_skill_or_adapter=owner_and_security, authority_evaluator_or_runtime=independent_and_owner. Shadow evaluation reports and candidate lists may accumulate without authority change. No thresholds, classes or margins are auto-enabled; enabling any automatic class later requires a new explicit owner decision in this register naming the class, thresholds and review boundary, recorded before the enabling flag flips. Owner selections are recorded verbatim in issue #330.",
+      "blocked_story_ids": [],
+      "blocked_actions": [],
       "safe_work": [
         "Run shadow evaluations and produce candidate reports with no automatic promotion.",
         "Document risk classes and review boundaries while keeping every automatic_promotion flag false.",
@@ -203,9 +141,9 @@
     }
   ],
   "promotion_policy": {
-    "policy_version": 1,
+    "policy_version": 2,
     "decision_id": "U05",
-    "decision_status": "pending",
+    "decision_status": "resolved",
     "default_effect": "deny_promotion",
     "classes": [
       {
@@ -244,6 +182,7 @@
     "The register and fixtures are offline planning evidence and are not consumed by app.py or studio.py.",
     "Absent decisions, grants, measurements and qualification deny affected live actions without blocking unrelated offline work.",
     "U06 owner input 2026-11-16T03:34:32Z (repository owner, recorded via agent session, not a resolution): backends container-only (M5-P3-01 pinned runtime/image; lifecycle, browser worker and host/disabled remain refused for AP); fresh target-host qualification run (scripts/qualify_environment.sh) required before U06 may be recorded satisfied (M5-P3-01 2026-10-31 alone insufficient for AP use); consequential mission actions dispatch only after proven sandbox admission (admission-then-dispatch, fail closed on refusal, never a host-execution fallback); activation order contained execution -> browser worker -> native lifecycle, each step its own recorded evidence, everything not yet activated remains refused; owner records/signs the U06 resolution in the AP ledger via the agent session from these explicit answers; AP-007 offline fail-closed subset is NOT accepted as the refusal foundation - rework is required before activation questions can be asked and U06 is blocked on AP-007 rework first. U06 remains pending, resolution stays null, blocker lists and blocked actions unchanged, runtime_activation_authorized remains false; AP-007 remains blocked; ADR-0040/0041 remain not-reviewed; this note is owner pre-decision input, not an approval or qualification.",
-    "U06 RESOLVED 2026-11-17 (repository owner, recorded via agent session arena/0efd4d99-m5-agent-studio, same session as the 2026-11-17 instruction to unblock the AP program): container backends only (M5-P3-01 pinned runtime/image; lifecycle, browser worker and host/disabled remain refused for AP); the fresh target-host qualification requirement of the 2026-11-16 answer 2 is EXPLICITLY WAIVED by the owner's 2026-11-17 decision - the 2026-10-31 M5-P3-01 record alone stands as machine evidence, no fresh run exists, and the evidence gap is accepted by the owner on the record; consequential mission actions dispatch only after proven sandbox admission (admission-then-dispatch, fail closed, never a host-execution fallback); activation order contained execution -> browser worker -> native lifecycle, each step's own recorded evidence, everything not yet activated remains refused; AP-007-F2 (PR #312) and AP-007-F3 (PR #319) are ACCEPTED by the owner as the refusal foundation; nothing is activated, runtime_activation_authorized remains false, no acceptance is recorded, installed-runtime qualification has not been run, AP-008 through AP-032 except the authorized remainder/AP-008 remain unauthorized pending their own authorization, and the owner's acceptance is not an independent security or release approval."
+    "U06 RESOLVED 2026-11-17 (repository owner, recorded via agent session arena/0efd4d99-m5-agent-studio, same session as the 2026-11-17 instruction to unblock the AP program): container backends only (M5-P3-01 pinned runtime/image; lifecycle, browser worker and host/disabled remain refused for AP); the fresh target-host qualification requirement of the 2026-11-16 answer 2 is EXPLICITLY WAIVED by the owner's 2026-11-17 decision - the 2026-10-31 M5-P3-01 record alone stands as machine evidence, no fresh run exists, and the evidence gap is accepted by the owner on the record; consequential mission actions dispatch only after proven sandbox admission (admission-then-dispatch, fail closed, never a host-execution fallback); activation order contained execution -> browser worker -> native lifecycle, each step's own recorded evidence, everything not yet activated remains refused; AP-007-F2 (PR #312) and AP-007-F3 (PR #319) are ACCEPTED by the owner as the refusal foundation; nothing is activated, runtime_activation_authorized remains false, no acceptance is recorded, installed-runtime qualification has not been run, AP-008 through AP-032 except the authorized remainder/AP-008 remain unauthorized pending their own authorization, and the owner's acceptance is not an independent security or release approval.",
+    "U01-U05 owner input 2026-11-17 (repository owner, recorded via agent session arena/2655f148-m5-agent-studio on the owner's explicit instruction; not a fresh measurement and not an activation): websites-first specialisation (AP-021/AP-022 direction), video second; M5/24 GB/1 TB recorded as an owner statement with unmeasured headroom (no download/load/performance claims; sequential load/unload); permitted external research = public HTTPS GET to github.com, codeload.github.com, api.github.com, en.wikipedia.org, pypi.org, registry.npmjs.org, read-only, zero spend, no accounts or credentialed services, hosted inference excluded; all AP read/write confined to ~/M5_AP_Workspace with versioned retention (deliverables kept, source snapshots <=30 days, transient pruned on mission close, nothing outside the folder deleted); automatic promotion remains OFF for every class (the owner declined enabling project_lesson automatic promotion); U01-U05 are now resolved in this same revision and their blocker lists are removed from the ledger. Nothing is activated, no evidence is qualified, and no story is authorized by this recording alone. Owner selections are recorded verbatim in issue #330."
   ]
 }
