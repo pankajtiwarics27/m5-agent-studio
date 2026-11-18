@@ -339,6 +339,45 @@ async function run(args) {
       );
       await shoot(page, "paused-panel");
 
+      // AP-008: preview untrusted content as text only, including at phone widths.
+      for (const [theme, width] of [["light", 390], ["dark", 320]]) {
+        await page.setViewport({ width, height: 844, deviceScaleFactor: 1 });
+        await page.evaluate(async (theme) => {
+          applyTheme(theme);
+          const original = window.fetch;
+          window.fetch = (url, options) => String(url).endsWith('/diff')
+            ? Promise.resolve(new Response(JSON.stringify({is_git:true,status:' M artifact.html',diff:'<img src=x onerror=window.__ap008Injected=1><script>window.__ap008Injected=1</script>'}), {status:200,headers:{'Content-Type':'application/json'}}))
+            : original(url, options);
+          try { document.getElementById('harnessWorkspaceReview').open = true; await refreshHarnessWorkspaceReview(); }
+          finally { window.fetch = original; }
+        }, theme);
+        const preview = await page.evaluate(() => ({
+          text: document.getElementById('harnessWorkspaceDiffPreview').textContent,
+          images: document.querySelectorAll('#harnessWorkspaceDiffPreview img, #harnessWorkspaceDiffPreview script, #harnessWorkspaceDiffPreview iframe').length,
+          injected: Boolean(window.__ap008Injected),
+          width: document.documentElement.scrollWidth,
+          viewport: window.innerWidth,
+        }));
+        record(`inert workspace preview at ${width}px in ${theme}`, /<script>/.test(preview.text) && preview.images === 0 && !preview.injected && preview.width <= preview.viewport + 1, JSON.stringify(preview));
+        await page.focus('#harnessWorkspaceReview summary');
+        await page.keyboard.press('Enter');
+        const closed = await page.evaluate(() => !document.getElementById('harnessWorkspaceReview').open && document.activeElement.tagName === 'SUMMARY');
+        record(`workspace disclosure supports keyboard at ${width}px in ${theme}`, closed, `closed and focused=${closed}`);
+      }
+
+      await page.setViewport({ width: 780, height: 900, deviceScaleFactor: 1 });
+      await page.evaluate(async () => {
+        document.body.style.zoom = '2';
+        document.getElementById('harnessWorkspaceReview').open = true;
+        await refreshHarnessWorkspaceReview();
+      });
+      const zoom = await page.evaluate(() => {
+        const summary = document.querySelector('#harnessWorkspaceReview summary').getBoundingClientRect();
+        return {width:document.documentElement.scrollWidth, viewport:window.innerWidth, left:summary.left, right:summary.right};
+      });
+      record('workspace disclosure remains reachable at CSS 200 percent zoom', zoom.width <= zoom.viewport + 1 && zoom.left >= 0 && zoom.right <= zoom.viewport + 1, JSON.stringify(zoom));
+      await page.evaluate(() => { document.body.style.zoom = ''; document.getElementById('harnessWorkspaceReview').open = false; });
+
       // Fail only the snapshot read; the fixture remains the real backend. Re-check
       // with the real route and keyboard, including the warning's focus restoration.
       for (const [theme, width] of [["light", 390], ["dark", 320]]) {

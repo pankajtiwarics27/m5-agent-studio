@@ -951,6 +951,11 @@
   @media (max-width: 880px) { .harness-shell { grid-template-columns: 1fr; } .harness-sidebar { display: none; } }
   .harness-sidebar { background: var(--bg-elev); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
   .harness-main { display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
+  .harness-workspace-review { margin: 8px 16px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-card); min-width: 0; }
+  .harness-workspace-review summary { cursor: pointer; padding: 9px 12px; font-weight: 600; }
+  .harness-workspace-review-body { padding: 0 12px 12px; color: var(--text-dim); overflow-wrap: anywhere; }
+  .harness-workspace-review-body p { margin: 8px 0; }
+  .harness-workspace-review pre { max-height: 16rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text); }
   .harness-bar { padding: 9px 16px; background: var(--bg-elev); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .harness-stream { flex: 1; min-height: 96px; overflow-y: auto; padding: 14px 18px 22px; display: flex; flex-direction: column; gap: 11px; }
   /* The stream is focusable so it can be scrolled with the arrow keys; without a ring the focus
@@ -3496,6 +3501,18 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
               <span id="harnessActiveStatusBadge" class="status" data-tone="info" role="status">ready</span>
             </div>
           </div>
+
+          <details id="harnessWorkspaceReview" class="harness-workspace-review" ontoggle="if (this.open) refreshHarnessWorkspaceReview()">
+            <summary>Files, progress &amp; resources</summary>
+            <div class="harness-workspace-review-body">
+              <p id="harnessWorkspaceProgress" role="status">Select a session to see its recorded progress.</p>
+              <p id="harnessWorkspaceDiffState" role="status" aria-live="polite">Open this section to inspect workspace changes.</p>
+              <pre id="harnessWorkspaceDiffPreview" aria-label="Inert text preview of workspace changes" hidden></pre>
+              <p>Preview is text, not an active website. Source references are not available here. Workspace changes are current, not a frozen artifact version.</p>
+              <button type="button" class="btn btn-xs" onclick="refreshHarnessWorkspaceReview()">Refresh workspace changes</button>
+              <button type="button" class="btn btn-xs" onclick="openHarnessEvidenceModal()">Verification &amp; artifacts</button>
+            </div>
+          </details>
 
           <!-- Recovery: the state the run was left in, what survived it, and the way
                forward. Present only when the task is not simply ready or finished, and
@@ -13048,6 +13065,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     harnessResetEventCache();
     harnessLogTelemetry = { source: "idle", reason: "", trigger: "", pages: 0, reloads: 0, resyncs: 0, streamed: 0, latest: 0, retained: 0 };
     harnessSnapshot = null;
+    resetHarnessWorkspaceReview();
     closeHarnessEventStream();
     document.getElementById("harnessActiveLabel").textContent = "New Harness Draft — choose workspace, worktree isolation, & policy, then run your task below.";
     setStatus("harnessActiveStatusBadge", "neutral", uiStatus("draft").label);
@@ -13502,6 +13520,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     harnessResetEventCache();
     harnessLogTelemetry = { source: "idle", reason: "", trigger: "", pages: 0, reloads: 0, resyncs: 0, streamed: 0, latest: 0, retained: 0 };
     harnessSnapshot = null;
+    resetHarnessWorkspaceReview();
     harnessGrantSnapshot = null;
     harnessGrantConfirm = "";
     harnessApprovalRequests.clear();
@@ -13994,8 +14013,69 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     return verdict;
   }
 
+  let harnessWorkspaceReviewSerial = 0;
+
+  function renderHarnessWorkspaceProgress() {
+    const node = document.getElementById("harnessWorkspaceProgress");
+    if (!node) return;
+    const state = harnessSnapshot;
+    if (!activeHarnessId) { node.textContent = "Select a session to see its recorded progress."; return; }
+    if (!state || state.session_id !== activeHarnessId) { node.textContent = "Task state is unavailable; no progress can be confirmed."; return; }
+    const milestones = Array.isArray(state.milestones) ? state.milestones : [];
+    const completed = milestones.filter(item => item && item.state === "completed").length;
+    const approvals = state.approvals && Array.isArray(state.approvals.pending) ? state.approvals.pending.length : 0;
+    const budget = state.budget || {};
+    const parts = [`Task: ${state.task_status || "unknown"}`, milestones.length ? `Milestones: ${completed}/${milestones.length} complete` : "No milestones recorded", `${approvals} decision(s) pending`];
+    if (Number.isFinite(budget.steps_used)) parts.push(`Steps used: ${budget.steps_used}`);
+    const stale = document.querySelector("#harnessSnapshotState .presentation");
+    node.textContent = `${stale ? "Last known (may be stale): " : "Recorded: "}${parts.join(" · ")}`;
+  }
+
+  function resetHarnessWorkspaceReview() {
+    harnessWorkspaceReviewSerial += 1;
+    const status = document.getElementById("harnessWorkspaceDiffState");
+    const preview = document.getElementById("harnessWorkspaceDiffPreview");
+    if (status) status.textContent = activeHarnessId ? "Open or refresh to inspect workspace changes." : "No session selected; workspace changes are unavailable.";
+    if (preview) { preview.textContent = ""; preview.hidden = true; }
+    renderHarnessWorkspaceProgress();
+    const panel = document.getElementById("harnessWorkspaceReview");
+    if (activeHarnessId && panel && panel.open) refreshHarnessWorkspaceReview();
+  }
+
+  async function refreshHarnessWorkspaceReview() {
+    const status = document.getElementById("harnessWorkspaceDiffState");
+    const preview = document.getElementById("harnessWorkspaceDiffPreview");
+    if (!status || !preview) return;
+    const sessionId = activeHarnessId;
+    const readSerial = ++harnessWorkspaceReviewSerial;
+    renderHarnessWorkspaceProgress();
+    preview.textContent = "";
+    preview.hidden = true;
+    if (!sessionId) { status.textContent = "No session selected; workspace changes are unavailable."; return; }
+    status.textContent = "Reading workspace changes…";
+    try {
+      const response = await fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/diff`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      if (activeHarnessId !== sessionId || readSerial !== harnessWorkspaceReviewSerial) return;
+      if (!data.is_git) { status.textContent = "This workspace is not a Git repository; no Git preview is available."; return; }
+      const diff = typeof data.diff === "string" ? data.diff : "";
+      if (diff.startsWith("Git diff error:")) { status.textContent = `Workspace changes are unavailable: ${diff}`; return; }
+      const gitStatus = typeof data.status === "string" ? data.status : "";
+      status.textContent = gitStatus ? `Workspace status:\n${gitStatus}` : "No workspace changes reported by Git.";
+      if (diff) {
+        preview.textContent = diff;
+        preview.hidden = false;
+        if (diff.length >= 50000) status.textContent += " Preview may be truncated.";
+      } else if (gitStatus) status.textContent += " No diff preview is available for the reported status.";
+    } catch (error) {
+      if (activeHarnessId === sessionId && readSerial === harnessWorkspaceReviewSerial) status.textContent = `Workspace changes are unavailable: ${error.message || "connection failed"}.`;
+    }
+  }
+
   function applyHarnessSnapshotState(state) {
     if (!state) return;
+    renderHarnessWorkspaceProgress();
     const badge = document.getElementById("harnessActiveStatusBadge");
     const b = harnessStatusBadge(state);
     if (badge) setStatus(badge, b.cls, b.label);
@@ -14027,6 +14107,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
       actions: [{ label: "Retry status", run: () => harnessResyncFromSnapshot("operator"), title: "Read the current task state again" }],
     });
     if (hadFocus && panel) panel.querySelector("button")?.focus();
+    renderHarnessWorkspaceProgress();
     return panel;
   }
 
@@ -14996,12 +15077,20 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     openOverlay("harnessDiffModal");
     document.getElementById("harnessGitStatusBox").textContent = "Inspecting workspace git status...";
     document.getElementById("harnessGitDiffBox").innerHTML = "";
+    document.getElementById("harnessGitDiffSummary").textContent = "";
+    document.getElementById("harnessDiffMeta").textContent = "";
+    document.getElementById("applyWorktreeBtn").style.display = "none";
     try {
-      const d = await (await fetch(`/api/harness/sessions/${encodeURIComponent(activeHarnessId)}/diff`)).json();
+      const sessionId = activeHarnessId;
+      const response = await fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/diff`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const d = await response.json();
+      if (activeHarnessId !== sessionId) return;
+      if (typeof d.diff === "string" && d.diff.startsWith("Git diff error:")) throw new Error(d.diff);
       const s = activeHarnessSession || {};
       document.getElementById("harnessDiffMeta").textContent = `${s.worktree_dir || ""} ${d.branch ? "(" + d.branch + ")" : ""}`;
-      document.getElementById("applyWorktreeBtn").style.display = (s.use_worktree && s.workspace_dir !== s.worktree_dir) ? "inline-flex" : "none";
-      document.getElementById("harnessGitStatusBox").textContent = d.status ? d.status : "(clean working tree — no modified/untracked files)";
+      document.getElementById("applyWorktreeBtn").style.display = (d.is_git !== false && s.use_worktree && s.workspace_dir !== s.worktree_dir) ? "inline-flex" : "none";
+      document.getElementById("harnessGitStatusBox").textContent = d.is_git === false ? "Workspace is not a Git repository; Git status is unavailable." : (d.status ? d.status : "(clean working tree — no modified/untracked files)");
       const files = harnessDiffFiles(d.diff || "");
       const summaryBox = document.getElementById("harnessGitDiffSummary");
       if (summaryBox) {
@@ -16188,16 +16277,24 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     payload: () => harnessRecoveryPayload,
   };
 
+  function harnessClearSubmittedDraft(input, submittedDraft) {
+    if (input && input.value === submittedDraft) {
+      input.value = "";
+      fitHarnessComposer();
+    }
+  }
+
   function runHarnessTurn() {
     const input = document.getElementById("harnessPromptInput");
-    const prompt = input.value.trim();
+    const submittedDraft = input.value;
+    const submittedSessionId = activeHarnessId;
+    const prompt = submittedDraft.trim();
     if (!prompt) {
       updateHarnessRunControl();
       input.focus();
       return;
     }
-    input.value = "";
-    fitHarnessComposer();
+    // Preserve the draft until a turn-start event confirms the server recorded it.
 
     const stream = document.getElementById("harnessStream");
     if (!activeHarnessId) stream.innerHTML = "";
@@ -16252,6 +16349,8 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
       skills: [...selectedSkills],
     }, {
       turn_start(d) {
+        if (activeHarnessId !== submittedSessionId) return;
+        harnessClearSubmittedDraft(input, submittedDraft);
         if (activeHarnessId !== d.session.id) {
           activeHarnessId = d.session.id;
           harnessResetEventCache();
@@ -16321,8 +16420,14 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
       error(d) {
         const errDiv = document.createElement("div");
         errDiv.className = "h-tool-card err";
-        errDiv.innerHTML = `<strong>Harness Error:</strong> ${escapeHtml(d.message || "")}`;
+        errDiv.innerHTML = `<strong>Harness Error:</strong> ${escapeHtml(d.message || "")}<p>The request may have reached the server. Check the session record before retrying; any unsent draft remains in the composer.</p>`;
         stream.appendChild(errDiv);
+      },
+      closed() {
+        const notice = document.createElement("div");
+        notice.className = "h-tool-card err";
+        notice.textContent = "The stream closed without a final outcome. Check the session record before retrying; the request may have reached the server.";
+        stream.appendChild(notice);
       }
     }, () => {
       document.getElementById("harnessRunBtn").disabled = false;

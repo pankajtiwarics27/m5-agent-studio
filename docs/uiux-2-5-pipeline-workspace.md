@@ -71,12 +71,12 @@ The walk starts `scripts/pipeline_recovery_seed.py` and Chromium itself. It writ
 
 ## Source anchors
 
-- `pane`: static/index.html line 3773
-- `workspace`: static/index.html line 3844
-- `stage_selection`: static/index.html line 10441
-- `state_model`: static/index.html line 9769
-- `activity`: static/index.html line 9720
-- `stream_handlers`: static/index.html line 10562
-- `recovery`: static/index.html line 10344
+- `pane`: static/index.html line 3790
+- `workspace`: static/index.html line 3861
+- `stage_selection`: static/index.html line 10458
+- `state_model`: static/index.html line 9786
+- `activity`: static/index.html line 9737
+- `stream_handlers`: static/index.html line 10579
+- `recovery`: static/index.html line 10361
 
 Rollback is reverting only the isolated UIV2-25 commit. It does not delete sessions, database state, MCP secrets, checkpoints or workspace files.
