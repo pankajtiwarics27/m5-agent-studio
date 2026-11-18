@@ -1,6 +1,6 @@
 # M5 Agent Studio — Autonomous Production Product Roadmap
 
-**Revision:** 1.3 • **Prepared:** 2026-11-08 • **Status:** owner-requested product specification and proposed execution program; not evidence of implementation, independent security acceptance, or authorization to bypass existing gates.
+**Revision:** 1.4 • **Prepared:** 2026-11-08 • **Status:** owner-requested product specification and proposed execution program; not evidence of implementation, independent security acceptance, or authorization to bypass existing gates.
 
 **Audience:** any implementation agent or human entering without this conversation. Read this document, the companion story ledger, and the agent prompt before proposing changes.
 
@@ -12,6 +12,23 @@
 **Source snapshot inspected:** `pankajtiwarics27/m5-agent-studio` main at `a67e8b291614f8afdac7c8d38ba51bcc8926d695`. Inspection covered repository guidance, module contracts and selected runtime-status documents; not a full code/security audit, installed-runtime qualification, or fresh end-to-end execution. Refresh against current main before implementing.
 
 **Precedence:** repository `AGENTS.md`, accepted security decisions, existing program ownership and signed approvals remain binding. This program does not replace the AS, M5 runtime, UIUX/UIV2, or LC ledgers, and does not reopen their completed stories. Reconcile overlapping work in AP-001. Drafting this roadmap does not grant automatic execution authority to its stories or to downloaded tools.
+
+## Revision 1.4 — AP-009 delivery starts (2026-11-18; AP-009 only)
+
+The repository owner wrote, 2026-11-18: "merge and continue with AP-009 -
+approved" (referring to merging PR #331 and starting AP-009). The merge landed
+as `394e1f4`; the AP-009 claim is recorded on this branch with issue #332 as
+the authorization record. AP-009 is the only story this authorizes; AP-010 and
+later remain unauthorized. The AP-009 implementation delivers
+`autonomous_production_research.py` — an offline, fail-closed contract
+boundary: public HTTPS GET to the U03 standard public allowlist behind an
+injected fetch/DNS boundary, explicit claim/source/contradiction records with
+provenance and retrieval dates, read-only budget-bounded repository
+inspection, capped downloads and hostile-source/redirect/DNS-bypass test
+coverage. It is not activated, not wired into any production caller, and
+grants no account, credential, spend or external action; nothing outside
+`~/M5_AP_Workspace` is touched. See
+[the AP-009 research boundary](autonomous-production-research.md).
 
 ## Revision 1.3 — owner resolves U01–U05 (2026-11-17; takes precedence for those decisions)
 

@@ -3,7 +3,7 @@
   "document_type": "proposed_autonomous_production_execution_ledger",
   "product": "M5 Agent Studio",
   "program": "AP",
-  "revision": "1.3",
+  "revision": "1.4",
   "prepared_date": "2026-11-08",
   "lifecycle": "registered_tracking_ap007_done_ap008_authorized_u01_u05_resolved",
   "source_snapshot": "a67e8b291614f8afdac7c8d38ba51bcc8926d695",
@@ -1838,7 +1838,7 @@
         "base_sha": "394e1f4844632397dd46f547a14d154ae1473507",
         "head_sha": null,
         "claimed_at": "2026-11-18T05:21:32Z",
-        "heartbeat_at": "2026-11-18T05:21:32Z",
+        "heartbeat_at": "2026-11-18T05:25:00Z",
         "pr_url": null,
         "delivery_status": "delivery_pending",
         "acceptance_evidence": [],
@@ -3644,7 +3644,8 @@
       "AP-004",
       "AP-005",
       "AP-006",
-      "AP-008"
+      "AP-008",
+      "AP-009"
     ],
     "claim_authority": "A pushed draft pull request plus the matching story tracking block is the remote coordination claim; a local JSON edit alone is not atomic.",
     "fixed_branch_exception": "Arena sessions use their assigned arena/<session>-m5-agent-studio branch instead of renaming to the proposed ap-XXX-short-slug convention.",
@@ -3741,6 +3742,15 @@
         "mode": "owner_resolution_then_sequential_stories",
         "scope": "Resolve U06 (owner override of the fresh target-host qualification requirement; AP-007-F2/F3 accepted as the refusal foundation). Authorize: (a) recording the resolution in the AP ledger and operating envelope; (b) implementing and recording AP-007's remainder (host-observer seam; completion record) on arena/0efd4d99-m5-agent-studio; (c) AP-008 (Expose clean mission controls and artifact-first status) to start only after AP-007 is recorded done, one story per branch/PR. Activation order retained: contained execution -> browser worker -> native lifecycle, each step with its own recorded evidence; everything not yet activated remains refused. runtime_activation_authorized stays false; no acceptance is recorded; installed-runtime qualification has not been run. AP-008's own implementation is not started by this recording. Future stories AP-009 and later are NOT authorized.",
         "source": "Owner instruction to the AP relay session (2026-11-17, in reply to the session's blocker report, issue #322): 'take required steps to unblock AP program and complete it asap'; in the recorded questions the owner selected: 'Record U06 without a fresh run - my decision overrides my earlier answer 2' (u06_qualification), 'Accept F2+F3 as the refusal foundation' (refusal_foundation), 'Record U06, finish AP-007, then start AP-008' (authorization_next) and 'Merge when the gate is green' (landing_rule). The selections are recorded verbatim in this entry; the questions and every offered option are recorded in issue #322's thread and in the session record."
+      },
+      {
+        "authorized_at": "2026-11-18",
+        "stories": [
+          "AP-009"
+        ],
+        "mode": "single_story",
+        "scope": "Authorize AP-009 (Add source-backed safe search, reading and repository inspection) only: public HTTPS GET research against the U03 standard public allowlist (github.com, codeload.github.com, api.github.com, en.wikipedia.org, pypi.org, registry.npmjs.org) with an injected testable fetch boundary; explicit claim/source/contradiction records with provenance and retrieval dates; read-only, budget-bounded repository inspection; hostile-source/redirect/DNS-bypass/oversize-download tests; no live network in default tests; AP I/O confined to ~/M5_AP_Workspace; no activation; no production caller wiring; hosted inference excluded; AP-010 through AP-032 remain unauthorized.",
+        "source": "Owner instruction in the AP-009 session, verbatim: 'merge and continue with AP-009 - approved'. Recorded in issue #332 (https://github.com/pankajtiwarics27/m5-agent-studio/issues/332). The 2026-11-17 ledger note 'Future stories AP-009 and later are NOT authorized' predates this approval; it is superseded for AP-009 only."
       }
     ]
   }
