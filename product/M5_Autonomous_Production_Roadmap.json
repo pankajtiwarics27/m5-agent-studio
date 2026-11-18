@@ -1781,7 +1781,7 @@
       "title": "Add source-backed safe search, reading and repository inspection",
       "priority": "P1",
       "optional": false,
-      "status": "not_started",
+      "status": "in_progress",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-003",
@@ -1833,18 +1833,26 @@
         "Push/PR state; owner/independent approvals where required"
       ],
       "tracking": {
-        "owner": null,
-        "branch": null,
-        "base_sha": null,
+        "owner": "arena/0ed4460e-m5-agent-studio",
+        "branch": "arena/0ed4460e-m5-agent-studio",
+        "base_sha": "394e1f4844632397dd46f547a14d154ae1473507",
         "head_sha": null,
-        "claimed_at": null,
-        "heartbeat_at": null,
+        "claimed_at": "2026-11-18T05:21:32Z",
+        "heartbeat_at": "2026-11-18T05:21:32Z",
         "pr_url": null,
-        "delivery_status": "not_pushed",
+        "delivery_status": "delivery_pending",
         "acceptance_evidence": [],
         "tests_executed": [],
         "blockers": [],
-        "handoff": null
+        "handoff": null,
+        "authorization_record": {
+          "authorization": "normal_story_authorization — owner-approved single story (AP-009 only)",
+          "owner_instruction": "In the 2026-11-17/18 session that led here, the repository owner wrote, verbatim: 'merge and continue with AP-009 - approved'. The instruction referred to merging AP decision-recording PR #331 (merged 2026-11-18T03:47:08Z as 394e1f4) and continuing with AP-009.",
+          "recorded_issue": "Issue #332 records the claim and scope.",
+          "recorded_state_on_main": "origin/main at 394e1f4 (merge of PR #331) records revision 1.3: U01-U05 resolved 2026-11-17 (issue #330), AP-007 done (PR #328 completion record), AP-008 authorized and claimed by PR #329, AP-009 not_started and unclaimed, with U03/U04 (its only blocked-by-decisions) resolved. Dependencies AP-003, AP-004, AP-006, AP-007 are all done.",
+          "claim_timing": "First claim on branch arena/0ed4460e-m5-agent-studio, based on 394e1f4. An earlier session (arena/2655f148-m5-agent-studio) prepared the identical claim and delivery locally, but that branch's remote was blocked after its PR #331 merged and the workspace was restarted on this branch; no AP-009 commit ever reached origin. This is the first pushed AP-009 claim. Read-only checks 2026-11-18 found no other AP-009 claim or PR; the parallel AP-008 session (arena/63f06456-m5-agent-studio, PR #329) owns only AP-008.",
+          "scope_limit": "AP-009 only: source-backed safe search, reading and read-only repository inspection behind U03/U04 limits. AP-010 through AP-032 remain unauthorized. Offline/default build: no live network in default tests; no account, credential, browser profile or folder outside ~/M5_AP_Workspace; no activation; nothing claimed complete without the repository completion convention; no production caller wired into the running Studio without its own authorization."
+        }
       },
       "implementation_prompt": "Implement AP-009: Add source-backed safe search, reading and repository inspection. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
