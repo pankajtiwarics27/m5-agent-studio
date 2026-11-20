@@ -1,9 +1,9 @@
 # AP-010 — Controlled browser worker, isolation and human takeover
 
-**Status:** delivered as a governed contract module plus a real-browser bridge;
-**not activated**, **not wired into any production caller**, and **not a
-production guarantee**. This page records what the worker decides, what it
-proves with a real browser, and what it does not decide.
+**Status:** delivered on PR #335 as a governed contract module plus a
+real-browser bridge; **not activated**, **not wired into any production
+caller**, and **not a production guarantee**. This page records what the worker
+decides, what it proves with a real browser, and what it does not decide.
 
 ## Story and owner scope
 
@@ -66,6 +66,20 @@ facts back. It never widens a policy and never retries around a refusal.
   policy-visible outcomes only — executed steps, refusals, failures and bytes.
   A candidate cannot win by doing more than the policy allows, because refusals
   are counted on both sides.
+
+## Why the profile guard is name-based
+
+`assert_not_personal_profile` refuses personal application/config roots
+(`~/.config`, `~/.local/share`, `~/Library/Application Support`, `~/AppData`,
+`~/.mozilla`, `~/snap`, `~/.var/app`) and every known browser user-data marker.
+It deliberately does **not** refuse "anything under `$HOME`", which was the first
+implementation. GitHub Actions runs with `HOME=/home/runner` and places pytest's
+temporary directory under `/home/runner/work/_temp`, so the broader rule refused
+the runner's own scratch space and failed every real-browser test in CI while
+passing locally, where the temp directory sits outside `HOME`. Naming the
+personal roots refuses what matters without breaking legitimate scratch space.
+`tests/test_browser_worker.py` pins both halves: the CI condition is allowed,
+and a personal directory is still refused.
 
 ## Real-browser evidence
 
