@@ -5,7 +5,7 @@
   "statement": "Measured runtime accessibility and recovery evidence, not a screen-reader certification or a cosmetic-only completion.",
   "execution_policy": {
     "contract_is_not_run_evidence": true,
-    "run_manifest": "product/M5_2_0_UIUX_V2_Accessibility_Adversarial_Run.json",
+    "run_manifest": "product/M5_2_0_UIUX_V2_Accessibility_AP008_Run.json",
     "browser_ci_job": "Browser safety regressions",
     "external_requests": "blocked except the isolated loopback fixture",
     "screen_reader_scope": "DOM names, roles, tab order and focus are asserted; this is not a claim of NVDA/JAWS/VoiceOver certification"
@@ -17,7 +17,7 @@
     "zoom_factor": 2
   },
   "source_sha256": {
-    "static/index.html": "d413b55326ff54df47fab183367a02de1808d877a35a5447b3f7ad5cf765ee59",
+    "static/index.html": "452405a8a941792f03a71d6153eee8d7820154186b28f32c380c36b7cd6f397c",
     "scripts/uiv2_accessibility_adversarial_walk.mjs": "831d65473af6d28d3e77294420fa49130addb5c02d132b433d0141ded525e0c7",
     "scripts/a11y_walk.mjs": "191400491161725465f2f87acd78456e75be08938e29cfcef99d733ea9037c7d",
     "scripts/responsive_walk.mjs": "f39b774a33f1122458c5435d8e566c57e30cba64834239091a26034b1cd40cbd",
@@ -607,7 +607,7 @@
     "required": "all 21 rows, every source-mapped control/route/test/walk, no API/session/workspace/authorization/sandbox/ledger/fencing/model-memory regression"
   },
   "evidence": {
-    "run": "product/M5_2_0_UIUX_V2_Accessibility_Adversarial_Run.json",
+    "run": "product/M5_2_0_UIUX_V2_Accessibility_AP008_Run.json",
     "status": "passed",
     "totals": {
       "checks": 120,
@@ -616,7 +616,7 @@
       "captures": 62
     },
     "git": {
-      "head": "7d37a49efc0efb928fbee26d4ea8908b604c9e5b",
+      "head": "fbef4f365ee74bdaf6e35f9ce3f2d40a88b1f499",
       "dirty": true
     },
     "validation_errors": []

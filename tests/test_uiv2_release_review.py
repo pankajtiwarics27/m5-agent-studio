@@ -188,20 +188,26 @@ def test_ci_teardown_failure_is_disclosed_and_process_group_cleanup_is_fixed(pay
 def test_uiv2_29_final_summary_uses_actual_metrics_not_flat_transcription(payload: dict) -> None:
     memory = payload["measured_performance"]["memory"]
     nodes = [memory[key]["Nodes"] for key in ("baseline", "after_cycle_1", "after_cycle_2")]
-    # Node counts are deterministic for a given markup, so the plateau is pinned rather than
-    # derived: UIV2-P7-07's single-row header and Settings overlay moved it from 8481 to 8544
-    # without repeated-cycle growth. The summary must quote the newest committed run.
-    assert nodes == [8544, 8544, 8544]
+    # This imported run is distinct from the last historical ledger run.
+    assert nodes == [8548, 8548, 8548]
+    heap = [memory[key]["JSHeapUsedSize"] for key in ("baseline", "after_cycle_1", "after_cycle_2")]
+    assert heap == [3398220, 3354876, 3360016]
     tracking = next(story for story in roadmap()["stories"] if story["id"] == "UIV2-29")["tracking"]
     final = [row for row in tracking["tests_executed"] if row.startswith("Final full-window timing")][-1]
     assert "8544 -> 8544 -> 8544" in final
-    # The heap figures vary run to run, so the property worth asserting is that the ledger
-    # quotes *the committed run*, not one particular sample. Hardcoding a sample meant any
-    # legitimate regeneration of the UIV2-29 record failed this test for no real reason.
-    heap = " -> ".join(str(memory[key]["JSHeapUsedSize"]) for key in ("baseline", "after_cycle_1", "after_cycle_2"))
-    assert heap in final
-    assert "flat at 8481" not in " ".join(tracking["acceptance_evidence"])
+    assert "3399592 -> 3356304 -> 3359700" in final
+    acceptance = " ".join(tracking["acceptance_evidence"])
+    assert "8544 -> 8544 -> 8544" in acceptance
+    assert "3399592 -> 3356304 -> 3359700" in acceptance
+    assert "flat at 8481" not in acceptance
     assert contract.roadmap_findings(roadmap()) == []
+
+
+def test_historical_imported_run_cannot_be_silently_rewritten(tmp_path, monkeypatch) -> None:
+    changed = tmp_path / "historical.json"
+    changed.write_text(contract.PERFORMANCE_RUN_PATH.read_text(encoding="utf-8") + " ", encoding="utf-8")
+    monkeypatch.setattr(contract, "PERFORMANCE_RUN_PATH", changed)
+    assert any(row["check"] == "metric-summary" for row in contract.roadmap_findings(roadmap()))
 
 
 def test_pending_ci_regression_is_closed_by_the_real_merged_run(payload: dict) -> None:

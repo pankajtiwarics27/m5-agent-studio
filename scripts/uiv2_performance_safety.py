@@ -30,8 +30,9 @@ STATIC_PATH = ROOT / "static" / "index.html"
 WALK_PATH = ROOT / "scripts" / "uiv2_performance_safety_walk.mjs"
 WORKFLOW_PATH = ROOT / ".github" / "workflows" / "ci.yml"
 JSON_PATH = ROOT / "product" / "M5_2_0_UIUX_V2_Performance_Safety.json"
-RUN_PATH = ROOT / "product" / "M5_2_0_UIUX_V2_Performance_Run.json"
-BACKEND_RUN_PATH = ROOT / "product" / "M5_2_0_UIUX_V2_Backend_Safety_Run.json"
+# Preserve the historical UIV2-29 records; AP-008 evidence is recorded separately.
+RUN_PATH = ROOT / "product" / "M5_2_0_UIUX_V2_Performance_AP008_Run.json"
+BACKEND_RUN_PATH = ROOT / "product" / "M5_2_0_UIUX_V2_Backend_Safety_AP008_Run.json"
 DOC_PATH = ROOT / "docs" / "uiv2-v2-performance-safety.md"
 CROSS_TAB_PATH = ROOT / "product" / "M5_2_0_UIUX_V2_Cross_Tab_Reference.json"
 
