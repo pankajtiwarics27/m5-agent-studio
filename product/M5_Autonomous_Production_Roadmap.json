@@ -3,7 +3,7 @@
   "document_type": "proposed_autonomous_production_execution_ledger",
   "product": "M5 Agent Studio",
   "program": "AP",
-  "revision": "1.3",
+  "revision": "1.4",
   "prepared_date": "2026-11-08",
   "lifecycle": "registered_tracking_ap007_done_ap008_authorized_u01_u05_resolved",
   "source_snapshot": "a67e8b291614f8afdac7c8d38ba51bcc8926d695",
@@ -1781,7 +1781,7 @@
       "title": "Add source-backed safe search, reading and repository inspection",
       "priority": "P1",
       "optional": false,
-      "status": "not_started",
+      "status": "in_review",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-003",
@@ -1833,18 +1833,39 @@
         "Push/PR state; owner/independent approvals where required"
       ],
       "tracking": {
-        "owner": null,
-        "branch": null,
-        "base_sha": null,
-        "head_sha": null,
-        "claimed_at": null,
-        "heartbeat_at": null,
-        "pr_url": null,
-        "delivery_status": "not_pushed",
-        "acceptance_evidence": [],
-        "tests_executed": [],
+        "owner": "arena/0ed4460e-m5-agent-studio",
+        "branch": "arena/0ed4460e-m5-agent-studio",
+        "base_sha": "394e1f4844632397dd46f547a14d154ae1473507",
+        "head_sha": "1574ae7da5ba1b1c074f37a181f5681ee768537e",
+        "claimed_at": "2026-11-18T05:21:32Z",
+        "heartbeat_at": "2026-11-18T08:40:00Z",
+        "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/333",
+        "delivery_status": "pr_open",
+        "acceptance_evidence": [
+          "AC1 every source records URL, retrieval date, publication date if known, and supporting excerpts/provenance: SourceRecord carries url, final_url (after the validated redirect chain), retrieved_at, http_status, content_sha256, a bounded excerpt, byte_count and publication_date; publication_date is derived only from source-supplied evidence (Date/Last-Modified) and stays None otherwise. Tests: test_ok_fetch_records_provenance_and_publication_date, test_missing_publication_date_stays_none, test_bundle_to_dict_is_json_serializable_and_honest.",
+          "AC2 unsupported facts, missing dates and contradictions remain explicit: add_claim without a supporting source stays 'unsupported'; record_contradiction requires >=2 sources and marks the claim 'contradicted' without reconciling; failed/partial/refused sources stay on the bundle and are listed by incomplete_reason(). Tests: test_claim_without_supporting_source_is_unsupported, test_contradiction_requires_two_sources_and_marks_claim, test_http_500_is_failed_and_marks_bundle_incomplete.",
+          "AC3 private/loopback/link-local/metadata access and redirect/DNS bypasses are blocked at the network boundary: PUBLIC_READ_ALLOWLIST is exactly the six U03 hosts; https only, port 443 only, userinfo refused; blocked v4/v6 ranges including 169.254.169.254, CGNAT, documentation, benchmark, multicast, reserved and IPv4-mapped v6; allowlisted hosts are DNS-checked and fail closed when any answer is blocked; redirects are validated hop-by-hop with a cap and a fetcher final_url that disagrees with the chain is refused. Tests: the is_blocked_ip parametrisation, test_allowlisted_host_resolving_to_private_dns_is_refused, test_redirect_crossing_to_private_ip_is_refused, test_redirect_crossing_allowlist_is_refused, test_redirect_chain_length_cap, test_final_url_mismatch_with_chain_is_refused, test_literal_metadata_host_is_refused.",
+          "AC4 external instructions cannot expand grants or trigger installation: the module holds no installation, activation, account, spend or publishing path; fetched content is handled only as bounded text bytes/excerpts and never interpreted; the allowlist is a module constant that no fetched input can widen. Tests: test_allowlist_contains_exactly_the_u03_standard_public_set, test_non_allowlist_host_is_refused, test_http_scheme_is_refused, test_url_with_userinfo_is_refused, test_non_443_port_is_refused.",
+          "AC5 repository inspection is read-only and budget-respecting: inspect_repository refuses symlinks and never writes, enforces max_files / max_file_bytes / max_total_bytes, records sha256 per regular file and sets truncated when a cap stops the walk. Tests: test_repo_inspection_is_read_only_and_bounded (before/after tree equality), test_repo_inspection_refuses_symlinks_outside_root, test_repo_inspection_enforces_per_file_and_total_budgets, test_repo_inspection_per_file_cap.",
+          "AC6 provider failure yields honest incomplete research, never invented citations: fetcher exceptions and HTTP 5xx become failed SourceRecords; a failed provider leaves claims unsupported and the bundle incomplete with reasons; adapters never fabricate results from an unparseable payload. Tests: test_fetcher_exception_is_failed_not_raised, test_provider_failure_never_invents_a_citation, test_github_search_bad_json_is_partial_and_lists_no_repos, test_dns_resolver_failure_refuses_not_raises.",
+          "Deliverables: search/read adapters (github_search_repositories via api.github.com, wikipedia_raw_article via en.wikipedia.org, both over the injected boundary), claim/source and contradiction records, and hostile-source/redirect/download coverage (oversize-body truncation, non-UTF8 replacement decoding, redirect and DNS bypasses, HTTP 5xx).",
+          "Self-review defect fix (post-delivery, same story): the first delivery parsed GitHub search JSON from the human-readable excerpt, which is capped at 4000 characters, so a valid 5.7 KB response returned zero repositories as an ordinary result; adapters now parse the retained byte-capped body via guarded_fetch_with_body, which is the same body hashed into the record. The same review found adapters ignoring the caller's SourceBudget and fetching at the 512 KiB default; they now pass bundle.budget through. Truncation is explicit through a new upstream_byte_count field. Regression tests: test_github_search_parses_payload_larger_than_the_excerpt_budget, test_github_search_parsing_does_not_depend_on_content_type, test_github_search_on_source_cap_parses_nothing_and_says_so, test_github_search_json_array_payload_is_partial_with_no_repos, test_truncated_source_record_reports_upstream_and_retained_bytes, test_untruncated_source_record_has_equal_byte_counts."
+        ],
+        "tests_executed": [
+          "Author-run at the review-fix head (Linux, Python 3.11): tests/test_autonomous_production_research.py 63 passed offline — every network call injected via a fake fetcher and every DNS answer supplied by a callable; no socket is opened.",
+          "Author-run full suite at the review-fix head: 5597 passed, 33 skipped plus 5 test_baseline/test_uiv2_release_review failures that are shallow-clone artifacts (BASELINE_COMMIT 7904892d759bb66b817bb17b6f4f377874bd6e25 absent); after git fetch --unshallow those 24 tests pass, i.e. 5602 passed / 33 skipped / 0 failed on a complete clone.",
+          "Author-run static/docs gates at the review-fix head: ruff clean; mypy clean over 79 source files; scripts/validate_docs.py passed (301 files); scripts/validate_governance.py passed (7 files); scripts/ci_test_shard.py --validate passed (232 modules); autonomous_production_decisions.py reported valid: true."
+        ],
         "blockers": [],
-        "handoff": null
+        "handoff": "AP-009 is implemented and pushed for its authorized scope on PR #333 (head 1574ae7da5ba1b1c074f37a181f5681ee768537e, delivery pr_open, story in_review); it is not merged and not activated. The module autonomous_production_research.py is an offline contract layer with no production importer: nothing in the Studio, Harness, dormancy or UI paths calls it, no live network call is made by importing it, and the six-host U03 allowlist is a module constant, not a live grant. runtime_activation_authorized stays false, ADR-0040-0045 stay not-reviewed, no promotion flag changed, AP-008 remains untouched on its own parallel PR #329, and AP-010 through AP-032 remain unauthorized. This record does not claim qualification of any installed runtime or of the M5 host. If this PR merges, a separate completion record must move AP-009 to done with merged delivery evidence; this PR itself claims no completion.",
+        "authorization_record": {
+          "authorization": "normal_story_authorization — owner-approved single story (AP-009 only)",
+          "owner_instruction": "In the 2026-11-17/18 session that led here, the repository owner wrote, verbatim: 'merge and continue with AP-009 - approved'. The instruction referred to merging AP decision-recording PR #331 (merged 2026-11-18T03:47:08Z as 394e1f4) and continuing with AP-009.",
+          "recorded_issue": "Issue #332 records the claim and scope.",
+          "recorded_state_on_main": "origin/main at 394e1f4 (merge of PR #331) records revision 1.3: U01-U05 resolved 2026-11-17 (issue #330), AP-007 done (PR #328 completion record), AP-008 authorized and claimed by PR #329, AP-009 not_started and unclaimed, with U03/U04 (its only blocked-by-decisions) resolved. Dependencies AP-003, AP-004, AP-006, AP-007 are all done.",
+          "claim_timing": "First claim on branch arena/0ed4460e-m5-agent-studio, based on 394e1f4. An earlier session (arena/2655f148-m5-agent-studio) prepared the identical claim and delivery locally, but that branch's remote was blocked after its PR #331 merged and the workspace was restarted on this branch; no AP-009 commit ever reached origin. This is the first pushed AP-009 claim. Read-only checks 2026-11-18 found no other AP-009 claim or PR; the parallel AP-008 session (arena/63f06456-m5-agent-studio, PR #329) owns only AP-008.",
+          "scope_limit": "AP-009 only: source-backed safe search, reading and read-only repository inspection behind U03/U04 limits. AP-010 through AP-032 remain unauthorized. Offline/default build: no live network in default tests; no account, credential, browser profile or folder outside ~/M5_AP_Workspace; no activation; nothing claimed complete without the repository completion convention; no production caller wired into the running Studio without its own authorization."
+        }
       },
       "implementation_prompt": "Implement AP-009: Add source-backed safe search, reading and repository inspection. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
@@ -3636,7 +3657,8 @@
       "AP-004",
       "AP-005",
       "AP-006",
-      "AP-008"
+      "AP-008",
+      "AP-009"
     ],
     "claim_authority": "A pushed draft pull request plus the matching story tracking block is the remote coordination claim; a local JSON edit alone is not atomic.",
     "fixed_branch_exception": "Arena sessions use their assigned arena/<session>-m5-agent-studio branch instead of renaming to the proposed ap-XXX-short-slug convention.",
@@ -3733,6 +3755,15 @@
         "mode": "owner_resolution_then_sequential_stories",
         "scope": "Resolve U06 (owner override of the fresh target-host qualification requirement; AP-007-F2/F3 accepted as the refusal foundation). Authorize: (a) recording the resolution in the AP ledger and operating envelope; (b) implementing and recording AP-007's remainder (host-observer seam; completion record) on arena/0efd4d99-m5-agent-studio; (c) AP-008 (Expose clean mission controls and artifact-first status) to start only after AP-007 is recorded done, one story per branch/PR. Activation order retained: contained execution -> browser worker -> native lifecycle, each step with its own recorded evidence; everything not yet activated remains refused. runtime_activation_authorized stays false; no acceptance is recorded; installed-runtime qualification has not been run. AP-008's own implementation is not started by this recording. Future stories AP-009 and later are NOT authorized.",
         "source": "Owner instruction to the AP relay session (2026-11-17, in reply to the session's blocker report, issue #322): 'take required steps to unblock AP program and complete it asap'; in the recorded questions the owner selected: 'Record U06 without a fresh run - my decision overrides my earlier answer 2' (u06_qualification), 'Accept F2+F3 as the refusal foundation' (refusal_foundation), 'Record U06, finish AP-007, then start AP-008' (authorization_next) and 'Merge when the gate is green' (landing_rule). The selections are recorded verbatim in this entry; the questions and every offered option are recorded in issue #322's thread and in the session record."
+      },
+      {
+        "authorized_at": "2026-11-18",
+        "stories": [
+          "AP-009"
+        ],
+        "mode": "single_story",
+        "scope": "Authorize AP-009 (Add source-backed safe search, reading and repository inspection) only: public HTTPS GET research against the U03 standard public allowlist (github.com, codeload.github.com, api.github.com, en.wikipedia.org, pypi.org, registry.npmjs.org) with an injected testable fetch boundary; explicit claim/source/contradiction records with provenance and retrieval dates; read-only, budget-bounded repository inspection; hostile-source/redirect/DNS-bypass/oversize-download tests; no live network in default tests; AP I/O confined to ~/M5_AP_Workspace; no activation; no production caller wiring; hosted inference excluded; AP-010 through AP-032 remain unauthorized.",
+        "source": "Owner instruction in the AP-009 session, verbatim: 'merge and continue with AP-009 - approved'. Recorded in issue #332 (https://github.com/pankajtiwarics27/m5-agent-studio/issues/332). The 2026-11-17 ledger note 'Future stories AP-009 and later are NOT authorized' predates this approval; it is superseded for AP-009 only."
       }
     ]
   }
