@@ -3,7 +3,7 @@
   "document_type": "proposed_autonomous_production_execution_ledger",
   "product": "M5 Agent Studio",
   "program": "AP",
-  "revision": "1.4",
+  "revision": "1.5",
   "prepared_date": "2026-11-08",
   "lifecycle": "registered_tracking_ap007_done_ap008_authorized_u01_u05_resolved",
   "source_snapshot": "a67e8b291614f8afdac7c8d38ba51bcc8926d695",
@@ -3667,7 +3667,8 @@
       "AP-005",
       "AP-006",
       "AP-008",
-      "AP-009"
+      "AP-009",
+      "AP-010"
     ],
     "claim_authority": "A pushed draft pull request plus the matching story tracking block is the remote coordination claim; a local JSON edit alone is not atomic.",
     "fixed_branch_exception": "Arena sessions use their assigned arena/<session>-m5-agent-studio branch instead of renaming to the proposed ap-XXX-short-slug convention.",
@@ -3773,6 +3774,15 @@
         "mode": "single_story",
         "scope": "Authorize AP-009 (Add source-backed safe search, reading and repository inspection) only: public HTTPS GET research against the U03 standard public allowlist (github.com, codeload.github.com, api.github.com, en.wikipedia.org, pypi.org, registry.npmjs.org) with an injected testable fetch boundary; explicit claim/source/contradiction records with provenance and retrieval dates; read-only, budget-bounded repository inspection; hostile-source/redirect/DNS-bypass/oversize-download tests; no live network in default tests; AP I/O confined to ~/M5_AP_Workspace; no activation; no production caller wiring; hosted inference excluded; AP-010 through AP-032 remain unauthorized.",
         "source": "Owner instruction in the AP-009 session, verbatim: 'merge and continue with AP-009 - approved'. Recorded in issue #332 (https://github.com/pankajtiwarics27/m5-agent-studio/issues/332). The 2026-11-17 ledger note 'Future stories AP-009 and later are NOT authorized' predates this approval; it is superseded for AP-009 only."
+      },
+      {
+        "authorized_at": "2026-11-20",
+        "stories": [
+          "AP-010"
+        ],
+        "mode": "single_story",
+        "scope": "Authorize AP-010 (Qualify a controlled browser worker and human takeover) only: a governed browser-worker contract with per-project isolated profiles, human takeover and resume, grant and nested download/navigation budget confinement, refusal of private/link-local/metadata targets and popups, and stop/restart recovery; a driver bridge over the repository's own pinned @sparticuz/chromium and puppeteer-core tooling (no external CDN); real-browser evidence through a local fixture server. No activation, no production caller wiring, no accounts or personal profiles, no download transfer, no I/O outside ~/M5_AP_Workspace. AP-011 through AP-032 remain unauthorized.",
+        "source": "Owner instruction in this branch's session, verbatim: 'Continue with next, I approve it', followed by the correction 'use puppeteer or use-browser, other sessions are doing it' after this session wrongly reported that no real browser could be obtained."
       }
     ]
   }
