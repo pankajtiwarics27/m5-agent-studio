@@ -309,6 +309,22 @@ def _excerpt(body: bytes, limit: int) -> str:
     return text
 
 
+def _json_object(body: bytes) -> dict[str, Any] | None:
+    """Parse a JSON object from the retained body, or None.
+
+    Deliberately independent of ``Content-Type`` (untrusted, and adapters must
+    not silently degrade when a provider omits it). The body is already bounded
+    by the per-source byte cap, so this can never read an unbounded payload.
+    """
+    if not body:
+        return None
+    try:
+        value = json.loads(body.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError):
+        return None
+    return value if isinstance(value, dict) else None
+
+
 _HTTP_PUBDATE = [
     "date",
     "last-modified",
@@ -353,6 +369,9 @@ class SourceRecord:
     publication_date: str | None
     byte_count: int
     reason: str | None
+    #: Reported body length before the per-source cap was applied. Equal to
+    #: ``byte_count`` when nothing was dropped, so truncation is never silent.
+    upstream_byte_count: int | None = None
 
     @property
     def is_failure(self) -> bool:
@@ -375,7 +394,13 @@ class SourceRecord:
             "publication_date": self.publication_date,
             "byte_count": self.byte_count,
             "reason": self.reason,
+            "upstream_byte_count": self.upstream_byte_count,
         }
+
+
+def _no_body(record: SourceRecord) -> tuple[SourceRecord, bytes]:
+    """Bundle a record that produced no retained body (refused/failed fetch)."""
+    return record, b""
 
 
 def _source_id(url: str, retrieved_at: str) -> str:
@@ -392,6 +417,33 @@ def guarded_fetch(
     clock: Callable[[], str] = _now_iso,
 ) -> SourceRecord:
     """Fetch one source through policy gates; records refusals instead of raising."""
+    record, _ = guarded_fetch_with_body(
+        fetcher,
+        request,
+        budget=budget,
+        dns_resolver=dns_resolver,
+        allowlist=allowlist,
+        clock=clock,
+    )
+    return record
+
+
+def guarded_fetch_with_body(
+    fetcher: Fetcher,
+    request: FetchRequest,
+    *,
+    budget: SourceBudget = SourceBudget(),
+    dns_resolver: Callable[[str], Sequence[str]] | None = None,
+    allowlist: Iterable[str] = PUBLIC_READ_ALLOWLIST,
+    clock: Callable[[], str] = _now_iso,
+) -> tuple[SourceRecord, bytes]:
+    """As :func:`guarded_fetch`, also returning the retained (byte-capped) body.
+
+    Adapters need the body to parse provider payloads. It is the single body
+    that was hashed into the record, so a parsed result can always be traced to
+    the exact bytes the record describes — and it is already bounded by the
+    per-source cap, so no adapter can hold an unbounded payload.
+    """
     retrieved = clock()
     try:
         host, path, port = _parse_http_url(request.url)
@@ -402,7 +454,7 @@ def guarded_fetch(
         )
     except ResearchContractError as exc:
         refusal_reason = str(exc)
-        return SourceRecord(
+        return _no_body(SourceRecord(
             source_id=_source_id(getattr(request, "url", "invalid"), retrieved),
             url=getattr(request, "url", "invalid"),
             final_url=None,
@@ -414,7 +466,7 @@ def guarded_fetch(
             publication_date=None,
             byte_count=0,
             reason=refusal_reason,
-        )
+        ))
 
     try:
         response = fetcher(
@@ -426,7 +478,7 @@ def guarded_fetch(
             )
         )
     except Exception as exc:
-        return SourceRecord(
+        return _no_body(SourceRecord(
             source_id=_source_id(request.url, retrieved),
             url=request.url,
             final_url=None,
@@ -438,7 +490,7 @@ def guarded_fetch(
             publication_date=None,
             byte_count=0,
             reason=f"fetcher error: {exc}",
-        )
+        ))
 
     try:
         final = validate_redirect_chain(
@@ -455,7 +507,7 @@ def guarded_fetch(
                 "fetcher's reported final_url does not match the validated redirect chain."
             )
     except ResearchContractError as exc:
-        return SourceRecord(
+        return _no_body(SourceRecord(
             source_id=_source_id(request.url, retrieved),
             url=request.url,
             final_url=response.final_url,
@@ -467,10 +519,11 @@ def guarded_fetch(
             publication_date=None,
             byte_count=0,
             reason=str(exc),
-        )
+        ))
 
     body = response.body
-    byte_count = len(body)
+    upstream_byte_count = len(body)
+    byte_count = upstream_byte_count
     status: str = "ok"
     reason: str | None = None
     if byte_count > budget.max_bytes_per_source:
@@ -496,7 +549,8 @@ def guarded_fetch(
         publication_date=_publication_date_from_headers(response.headers),
         byte_count=len(body),
         reason=reason,
-    )
+        upstream_byte_count=upstream_byte_count,
+    ), body
 
 
 # ---------------------------------------------------------------------------
@@ -844,10 +898,11 @@ def github_search_repositories(
 ) -> tuple[SourceRecord, tuple[dict[str, Any], ...]]:
     """Search public repositories via api.github.com (no auth, zero spend).
 
-    Returns (search_source_record, repositories). The excerpt is the ONLY part
-    of the response consumed locally (bounded by the excerpt budget); when a
-    response is larger than the excerpt budget the record is marked ``partial``
-    and no repositories are listed — it is never silently refetched nor faked.
+    Returns (search_source_record, repositories). The payload is parsed from
+    the retained body, which is the same byte-capped body that was hashed into
+    the source record — never from the human-readable excerpt. A payload that
+    cannot be parsed leaves the record ``partial`` with **no** repositories
+    listed: the adapter never fabricates results and never silently refetches.
     """
     from urllib.parse import quote_plus
 
@@ -861,19 +916,17 @@ def github_search_repositories(
         "https://api.github.com/search/repositories"
         f"?q={quote_plus(query)}&per_page={limit}&sort=updated"
     )
-    record = guarded_fetch(
+    record, body = guarded_fetch_with_body(
         fetcher,
         FetchRequest(url=raw),
+        budget=record_bundle.budget,
         dns_resolver=dns_resolver,
         clock=clock,
     )
 
     payload = None
-    if record.retrieval_status == "ok" and record.excerpt is not None:
-        try:
-            payload = json.loads(record.excerpt)
-        except Exception:
-            payload = None
+    if record.retrieval_status == "ok" and record.http_status is not None and record.http_status < 400:
+        payload = _json_object(body)
 
     repos: list[dict[str, Any]] = []
     if isinstance(payload, dict) and isinstance(payload.get("items"), list):
@@ -908,7 +961,7 @@ def github_search_repositories(
             excerpt=record.excerpt,
             publication_date=record.publication_date,
             byte_count=record.byte_count,
-            reason="search response could not be parsed as JSON from the captured excerpt; no repositories listed.",
+            reason="search response could not be parsed as a JSON object; no repositories listed.",
         )
 
     record_bundle.add_source(record)
@@ -933,9 +986,10 @@ def wikipedia_raw_article(
         "https://en.wikipedia.org/w/index.php"
         f"?title={quote(title)}&action=raw"
     )
-    record = guarded_fetch(
+    record, _ = guarded_fetch_with_body(
         fetcher,
         FetchRequest(url=raw),
+        budget=(bundle.budget if bundle is not None else SourceBudget()),
         dns_resolver=dns_resolver,
         clock=clock,
     )
@@ -961,6 +1015,7 @@ __all__ = [
     "validate_public_url",
     "validate_redirect_chain",
     "guarded_fetch",
+    "guarded_fetch_with_body",
     "inspect_repository",
     "github_search_repositories",
     "wikipedia_raw_article",

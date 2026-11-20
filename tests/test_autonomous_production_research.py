@@ -236,6 +236,29 @@ def test_oversize_body_is_marked_partial_with_reason():
     assert "truncated" in (record.reason or "")
 
 
+def test_truncated_source_record_reports_upstream_and_retained_bytes():
+    body = b"x" * 4096
+    url = "https://github.com/owner/repo"
+    fetcher = _fetcher_from({url: _ok_response(url, body=body)})
+    record = guarded_fetch(
+        fetcher,
+        FetchRequest(url=url, max_body_bytes=4096),
+        budget=SourceBudget(max_bytes_per_source=100),
+        clock=lambda: FIXED_CLOCK,
+    )
+    assert record.retrieval_status == "partial"
+    assert record.byte_count == 100
+    assert record.upstream_byte_count == 4096
+    assert record.content_sha256 is not None
+
+
+def test_untruncated_source_record_has_equal_byte_counts():
+    url = "https://github.com/owner/repo"
+    fetcher = _fetcher_from({url: _ok_response(url, body=b"payload")})
+    record = guarded_fetch(fetcher, FetchRequest(url=url), clock=lambda: FIXED_CLOCK)
+    assert record.byte_count == record.upstream_byte_count == len(b"payload")
+
+
 def test_http_500_is_failed_and_marks_bundle_incomplete():
     bundle = ResearchBundle()
     fetcher = _fetcher_from(
@@ -397,6 +420,87 @@ def test_github_search_bad_json_is_partial_and_lists_no_repos():
     )
     assert record.retrieval_status == "partial"
     assert "no repositories listed" in (record.reason or "")
+    assert repos == ()
+
+
+def _realistic_search_payload(count: int) -> bytes:
+    """A payload shaped like a real api.github.com search response.
+
+    Deliberately larger than the excerpt budget: this is the regression guard
+    for adapters that tried to parse the excerpt instead of the retained body.
+    """
+    items = [
+        {
+            "id": index,
+            "full_name": f"acme/repo-{index}",
+            "html_url": f"https://github.com/acme/repo-{index}",
+            "updated_at": "2026-11-01T00:00:00Z",
+            "stargazers_count": 10 * index,
+            "forks_count": 3,
+            "language": "Python",
+            "topics": ["alpha", "beta", "gamma"],
+            "owner": {"login": "acme", "html_url": "https://github.com/acme"},
+            "description": (
+                "A reasonably long description of what this repository actually does, "
+                "which real API responses always include. "
+            )
+            * 2,
+        }
+        for index in range(count)
+    ]
+    return json.dumps({"total_count": count, "items": items}).encode()
+
+
+def test_github_search_parses_payload_larger_than_the_excerpt_budget():
+    body = _realistic_search_payload(10)
+    url = "https://api.github.com/search/repositories?q=demo&per_page=10&sort=updated"
+    fetcher = _fetcher_from({url: _ok_response(url, body=body)})
+    record, repos = github_search_repositories(
+        "demo", bundle=ResearchBundle(), fetcher=fetcher, limit=10, clock=lambda: FIXED_CLOCK
+    )
+    assert len(body) > SourceBudget().max_excerpt_chars
+    assert len(record.excerpt or "") <= SourceBudget().max_excerpt_chars + 1  # + ellipsis
+    assert record.retrieval_status == "ok"
+    assert len(repos) == 10
+    assert [r["full_name"] for r in repos][:2] == ["acme/repo-0", "acme/repo-1"]
+
+
+def test_github_search_parsing_does_not_depend_on_content_type():
+    body = _repo_body()
+    url = "https://api.github.com/search/repositories?q=demo&per_page=5&sort=updated"
+    # No Content-Type header at all: the adapter must still behave.
+    fetcher = _fetcher_from({url: _ok_response(url, body=body, headers={})})
+    record, repos = github_search_repositories(
+        "demo", bundle=ResearchBundle(), fetcher=fetcher, limit=5, clock=lambda: FIXED_CLOCK
+    )
+    assert record.retrieval_status == "ok"
+    assert len(repos) == 1
+
+
+def test_github_search_on_source_cap_parses_nothing_and_says_so():
+    url = "https://api.github.com/search/repositories?q=demo&per_page=10&sort=updated"
+    fetcher = _fetcher_from({url: _ok_response(url, body=_realistic_search_payload(50))})
+    bundle = ResearchBundle(budget=SourceBudget(max_bytes_per_source=1024))
+    record, repos = github_search_repositories(
+        "demo", bundle=bundle, fetcher=fetcher, limit=10, clock=lambda: FIXED_CLOCK
+    )
+    # The adapter must honour the bundle budget rather than the 512 KiB default.
+    assert record.byte_count <= 1024
+    assert record.upstream_byte_count is not None
+    assert record.upstream_byte_count > record.byte_count
+    assert record.retrieval_status == "partial"
+    assert "truncated" in (record.reason or "")
+    # A truncated JSON payload cannot parse, so no result set may be presented.
+    assert repos == ()
+
+
+def test_github_search_json_array_payload_is_partial_with_no_repos():
+    url = "https://api.github.com/search/repositories?q=demo&per_page=1&sort=updated"
+    fetcher = _fetcher_from({url: _ok_response(url, body=b'[1, 2, 3]')})
+    record, repos = github_search_repositories(
+        "demo", bundle=ResearchBundle(), fetcher=fetcher, limit=1, clock=lambda: FIXED_CLOCK
+    )
+    assert record.retrieval_status == "partial"
     assert repos == ()
 
 

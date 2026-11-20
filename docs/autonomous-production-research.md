@@ -45,8 +45,16 @@ capability is used. AP-010 and later remain unauthorized.
   (after the validated redirect chain), retrieval time, `http_status`,
   `content_sha256`, a bounded excerpt, a **publication date only when the
   source carries one** (e.g. `Last-Modified`), byte counts and a
-  `retrieval_status` (`ok`/`partial`/`failed`/`refused`). Failed sources are
-  kept on the bundle and listed in `incomplete_reasons()`.
+  `retrieval_status` (`ok`/`partial`/`failed`/`refused`), plus the
+  pre-cap `upstream_byte_count` so a truncated response is never mistaken for
+  a complete one. Failed sources are kept on the bundle and listed in
+  `incomplete_reasons()`.
+- **Adapters parse the retained body, not the excerpt.** Provider JSON is
+  parsed from the byte-capped body that was hashed into the source record
+  (`guarded_fetch_with_body`), so a large-but-valid search response is never
+  silently reduced to "no results"; an unparseable or truncated payload leaves
+  the record `partial` with **no** results rather than fabricated ones. Both
+  adapters honour the caller's `SourceBudget` instead of the module default.
 - **Claims, contradictions, gaps are data, not prose.** `add_claim` with no
   supporting source marks the claim `unsupported`;
   `record_contradiction` needs ≥2 sources and marks the claim `contradicted`;
