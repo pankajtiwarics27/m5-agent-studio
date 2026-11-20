@@ -1,6 +1,7 @@
 # AP-009 — Source-backed safe search, reading and repository inspection
 
-**Status:** implemented as an offline contract module; **not activated**, **not wired
+**Status:** delivered and merged (PR #333, `8d8995a`; story recorded `done` by its
+completion record). It is an offline contract module: **not activated**, **not wired
 into the running Studio**, and **not a production guarantee**. This page records
 what the module decides and what it does not decide.
 
@@ -87,9 +88,24 @@ capability is used. AP-010 and later remain unauthorized.
 
 ## Evidence and limitations
 
-The recording of this delivery (exact head, test runs, ledger state) lives in
-the story's claim/delivery commit and the completion-record PR that follows
-this story's merge. No qualification of any installed runtime has been run;
+PR #333 merged as `8d8995a` at final head `f171e43`: implementation `1574ae7`,
+a review fix `f171e43`, and ledger coordination `eff6a74`. The exact-head CI run
+was green (27 pass, 0 fail, `CLEAN`), and the full suite on a complete clone gave
+5609 passed / 32 skipped / 0 failed. The completion record records the story
+`done` with merged delivery evidence.
+
+Two adapter defects were found by self-review **after** the first implementation
+and fixed inside the same story before merge:
+
+1. the search adapter parsed JSON from the human-readable excerpt (capped at
+   4000 characters) instead of the retained body, so a realistic
+   `api.github.com` response — roughly 4.6–5.7 KB — was reported `ok` with **zero
+   repositories**;
+2. the adapters ignored the caller's `SourceBudget` and fetched at the 512 KiB
+   module default.
+
+Both are now covered by regression tests, and truncation is explicit through
+`upstream_byte_count`. No qualification of any installed runtime has been run;
 no claim is made about the M5 host; `runtime_activation_authorized` stays
 `false` everywhere; ADR-0040–0045 remain `not-reviewed`.
 

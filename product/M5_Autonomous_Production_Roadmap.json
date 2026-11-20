@@ -1781,7 +1781,7 @@
       "title": "Add source-backed safe search, reading and repository inspection",
       "priority": "P1",
       "optional": false,
-      "status": "in_review",
+      "status": "done",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-003",
@@ -1836,11 +1836,11 @@
         "owner": "arena/0ed4460e-m5-agent-studio",
         "branch": "arena/0ed4460e-m5-agent-studio",
         "base_sha": "394e1f4844632397dd46f547a14d154ae1473507",
-        "head_sha": "1574ae7da5ba1b1c074f37a181f5681ee768537e",
+        "head_sha": "f171e43472cb0050d5ce2fd9ed34ef2dfca7b8fa",
         "claimed_at": "2026-11-18T05:21:32Z",
-        "heartbeat_at": "2026-11-18T08:40:00Z",
+        "heartbeat_at": "2026-11-20T16:20:00Z",
         "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/333",
-        "delivery_status": "pr_open",
+        "delivery_status": "merged",
         "acceptance_evidence": [
           "AC1 every source records URL, retrieval date, publication date if known, and supporting excerpts/provenance: SourceRecord carries url, final_url (after the validated redirect chain), retrieved_at, http_status, content_sha256, a bounded excerpt, byte_count and publication_date; publication_date is derived only from source-supplied evidence (Date/Last-Modified) and stays None otherwise. Tests: test_ok_fetch_records_provenance_and_publication_date, test_missing_publication_date_stays_none, test_bundle_to_dict_is_json_serializable_and_honest.",
           "AC2 unsupported facts, missing dates and contradictions remain explicit: add_claim without a supporting source stays 'unsupported'; record_contradiction requires >=2 sources and marks the claim 'contradicted' without reconciling; failed/partial/refused sources stay on the bundle and are listed by incomplete_reason(). Tests: test_claim_without_supporting_source_is_unsupported, test_contradiction_requires_two_sources_and_marks_claim, test_http_500_is_failed_and_marks_bundle_incomplete.",
@@ -1852,12 +1852,13 @@
           "Self-review defect fix (post-delivery, same story): the first delivery parsed GitHub search JSON from the human-readable excerpt, which is capped at 4000 characters, so a valid 5.7 KB response returned zero repositories as an ordinary result; adapters now parse the retained byte-capped body via guarded_fetch_with_body, which is the same body hashed into the record. The same review found adapters ignoring the caller's SourceBudget and fetching at the 512 KiB default; they now pass bundle.budget through. Truncation is explicit through a new upstream_byte_count field. Regression tests: test_github_search_parses_payload_larger_than_the_excerpt_budget, test_github_search_parsing_does_not_depend_on_content_type, test_github_search_on_source_cap_parses_nothing_and_says_so, test_github_search_json_array_payload_is_partial_with_no_repos, test_truncated_source_record_reports_upstream_and_retained_bytes, test_untruncated_source_record_has_equal_byte_counts."
         ],
         "tests_executed": [
+          "Completion record: PR #333 merged as 8d8995a04bed1e9e6f5c5e08535f2a1b3c409421 at 2026-11-20T16:10:47Z, carrying final head f171e43472cb0050d5ce2fd9ed34ef2dfca7b8fa (implementation 1574ae7da5ba1b1c074f37a181f5681ee768537e, review fix f171e43472cb0050d5ce2fd9ed34ef2dfca7b8fa, ledger coordination eff6a74). CI at the exact merged head: 27 pass, 0 fail, mergeStateStatus CLEAN. Full suite on a complete clone at that head: 5609 passed, 32 skipped, 0 failed.",
           "Author-run at the review-fix head (Linux, Python 3.11): tests/test_autonomous_production_research.py 63 passed offline — every network call injected via a fake fetcher and every DNS answer supplied by a callable; no socket is opened.",
           "Author-run full suite at the review-fix head: 5597 passed, 33 skipped plus 5 test_baseline/test_uiv2_release_review failures that are shallow-clone artifacts (BASELINE_COMMIT 7904892d759bb66b817bb17b6f4f377874bd6e25 absent); after git fetch --unshallow those 24 tests pass, i.e. 5602 passed / 33 skipped / 0 failed on a complete clone.",
           "Author-run static/docs gates at the review-fix head: ruff clean; mypy clean over 79 source files; scripts/validate_docs.py passed (301 files); scripts/validate_governance.py passed (7 files); scripts/ci_test_shard.py --validate passed (232 modules); autonomous_production_decisions.py reported valid: true."
         ],
         "blockers": [],
-        "handoff": "AP-009 is implemented and pushed for its authorized scope on PR #333 (head 1574ae7da5ba1b1c074f37a181f5681ee768537e, delivery pr_open, story in_review); it is not merged and not activated. The module autonomous_production_research.py is an offline contract layer with no production importer: nothing in the Studio, Harness, dormancy or UI paths calls it, no live network call is made by importing it, and the six-host U03 allowlist is a module constant, not a live grant. runtime_activation_authorized stays false, ADR-0040-0045 stay not-reviewed, no promotion flag changed, AP-008 remains untouched on its own parallel PR #329, and AP-010 through AP-032 remain unauthorized. This record does not claim qualification of any installed runtime or of the M5 host. If this PR merges, a separate completion record must move AP-009 to done with merged delivery evidence; this PR itself claims no completion.",
+        "handoff": "AP-009 is done for its authorized scope. PR #333 final head f171e43472cb0050d5ce2fd9ed34ef2dfca7b8fa merged as 8d8995a04bed1e9e6f5c5e08535f2a1b3c409421 on 2026-11-20; this separate completion record moves the story to done with merged delivery evidence. The delivered module autonomous_production_research.py is an offline contract layer with no production importer: no Studio, Harness, dormancy or UI path calls it, importing it opens no socket, and the six-host U03 allowlist is a module constant rather than a live grant. Two adapter defects were found and fixed inside this story before merge (search parsed the 4000-char excerpt instead of the retained body, returning zero repositories for realistic payloads; adapters ignored the caller's SourceBudget), with six regression tests. Nothing is activated: runtime_activation_authorized remains false, no ADR changed review status, no promotion flag changed, no account/credential/spend/publishing path was added, and no I/O occurs outside ~/M5_AP_Workspace. AP-008 remains a separate story on its own parallel PR #329 and is untouched here. AP-010 and later remain unauthorized and require their own owner authorization, dependency evidence and branch/PR.",
         "authorization_record": {
           "authorization": "normal_story_authorization — owner-approved single story (AP-009 only)",
           "owner_instruction": "In the 2026-11-17/18 session that led here, the repository owner wrote, verbatim: 'merge and continue with AP-009 - approved'. The instruction referred to merging AP decision-recording PR #331 (merged 2026-11-18T03:47:08Z as 394e1f4) and continuing with AP-009.",
@@ -1865,7 +1866,8 @@
           "recorded_state_on_main": "origin/main at 394e1f4 (merge of PR #331) records revision 1.3: U01-U05 resolved 2026-11-17 (issue #330), AP-007 done (PR #328 completion record), AP-008 authorized and claimed by PR #329, AP-009 not_started and unclaimed, with U03/U04 (its only blocked-by-decisions) resolved. Dependencies AP-003, AP-004, AP-006, AP-007 are all done.",
           "claim_timing": "First claim on branch arena/0ed4460e-m5-agent-studio, based on 394e1f4. An earlier session (arena/2655f148-m5-agent-studio) prepared the identical claim and delivery locally, but that branch's remote was blocked after its PR #331 merged and the workspace was restarted on this branch; no AP-009 commit ever reached origin. This is the first pushed AP-009 claim. Read-only checks 2026-11-18 found no other AP-009 claim or PR; the parallel AP-008 session (arena/63f06456-m5-agent-studio, PR #329) owns only AP-008.",
           "scope_limit": "AP-009 only: source-backed safe search, reading and read-only repository inspection behind U03/U04 limits. AP-010 through AP-032 remain unauthorized. Offline/default build: no live network in default tests; no account, credential, browser profile or folder outside ~/M5_AP_Workspace; no activation; nothing claimed complete without the repository completion convention; no production caller wired into the running Studio without its own authorization."
-        }
+        },
+        "completion_pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/334"
       },
       "implementation_prompt": "Implement AP-009: Add source-backed safe search, reading and repository inspection. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
