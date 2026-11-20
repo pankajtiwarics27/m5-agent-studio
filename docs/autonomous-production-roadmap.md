@@ -13,7 +13,7 @@
 
 **Precedence:** repository `AGENTS.md`, accepted security decisions, existing program ownership and signed approvals remain binding. This program does not replace the AS, M5 runtime, UIUX/UIV2, or LC ledgers, and does not reopen their completed stories. Reconcile overlapping work in AP-001. Drafting this roadmap does not grant automatic execution authority to its stories or to downloaded tools.
 
-## Revision 1.4 — AP-009 delivery starts (2026-11-18; AP-009 only)
+## Revision 1.4 — AP-009 delivered and recorded done (2026-11-20; AP-009 only)
 
 The repository owner wrote, 2026-11-18: "merge and continue with AP-009 -
 approved" (referring to merging PR #331 and starting AP-009). The merge landed
@@ -27,7 +27,9 @@ provenance and retrieval dates, read-only budget-bounded repository
 inspection, capped downloads and hostile-source/redirect/DNS-bypass test
 coverage. It is not activated, not wired into any production caller, and
 grants no account, credential, spend or external action; nothing outside
-`~/M5_AP_Workspace` is touched. See
+`~/M5_AP_Workspace` is touched. It merged as PR #333 (`8d8995a`, final head
+`f171e43`) and this record marks AP-009 `done` for that scope only; AP-010 and
+later still await their own owner authorization. See
 [the AP-009 research boundary](autonomous-production-research.md).
 
 ## Revision 1.3 — owner resolves U01–U05 (2026-11-17; takes precedence for those decisions)
