@@ -130,10 +130,56 @@ def test_personal_profiles_are_refused(path):
         assert_not_personal_profile(path)
 
 
-def test_profile_outside_workspace_and_home_is_refused(tmp_path: Path, monkeypatch):
-    monkeypatch.setattr(bw.Path, "home", classmethod(lambda cls: Path("/home/user")))
+def test_profile_outside_workspace_but_harmless_is_allowed(tmp_path: Path):
+    """A caller-owned ephemeral root is not a personal profile.
+
+    The rule is name-based against personal application/config roots, so an
+    isolated profile in an ordinary directory is permitted; the profile is still
+    per-session and destroyed on stop. See the workspace docs for why the check
+    is not "anything under $HOME".
+    """
+    assert_not_personal_profile("/tmp/some-run/profiles/sess-1")
+
+
+def test_ephemeral_temp_root_under_home_is_allowed(monkeypatch):
+    """CI runs with HOME=/home/runner and its tmp under /home/runner/work/_temp.
+
+    A profile under the system temp directory is legitimate scratch space and
+    must not be refused merely because HOME contains it. This is the exact
+    condition that made every real-browser test fail in CI while passing
+    locally, where tmp_path lives outside HOME.
+    """
+    fake_home = Path("/home/runner")
+    monkeypatch.setattr(bw.Path, "home", classmethod(lambda cls: fake_home))
+    assert_not_personal_profile("/home/runner/work/_temp/m5-browser/tmp/profiles/sess-1")
+
+
+def test_temp_exception_does_not_admit_personal_dirs(monkeypatch):
+    """The temp exception must not weaken the personal-profile refusal."""
+    monkeypatch.setattr(bw.Path, "home", classmethod(lambda cls: Path("/home/runner")))
+    with pytest.raises(PolicyViolation, match="personal browser profile"):
+        assert_not_personal_profile("/home/runner/.config/google-chrome/Default")
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/home/operator/.config/google-chrome/Default",
+        "/home/operator/.local/share/chromium/Default",
+        "/home/operator/.mozilla/firefox/abc.default",
+        "/home/operator/Library/Application Support/Google/Chrome",
+        "/home/operator/AppData/Local/Google/Chrome/User Data",
+    ],
+)
+def test_personal_application_roots_are_refused(path, monkeypatch):
+    monkeypatch.setattr(bw.Path, "home", classmethod(lambda cls: Path("/home/operator")))
     with pytest.raises(PolicyViolation):
-        assert_not_personal_profile("/home/user/Documents/browser-profile")
+        assert_not_personal_profile(path)
+
+
+def test_workspace_inside_home_is_allowed(monkeypatch):
+    monkeypatch.setattr(bw.Path, "home", classmethod(lambda cls: Path("/home/operator")))
+    assert_not_personal_profile("/home/operator/M5_AP_Workspace/browser/profiles/sess-1")
 
 
 def test_two_sessions_never_share_a_profile(tmp_path: Path):

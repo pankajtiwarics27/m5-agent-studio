@@ -44,6 +44,7 @@ import hashlib
 import ipaddress
 import json
 import re
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Mapping, Protocol, Sequence
@@ -339,14 +340,28 @@ def assert_not_personal_profile(path: Path | str) -> Path:
                 f"refusing to use a personal browser profile path ({marker!r}); "
                 "AP-010 requires a dedicated isolated profile."
             )
-    home = str(Path.home()).replace("\\", "/").lower()
-    if normalized.startswith(home) and not normalized.startswith(
-        str(WORKSPACE_ROOT).replace("\\", "/").lower()
-    ):
-        # Inside the real home but outside the AP workspace: not ours to touch.
-        if "/m5_ap_workspace" not in normalized:
+    # Personal application/config roots are never ours, whatever the path
+    # prefix: a browser profile there is a real person's logged-in browser. This
+    # is deliberately a name-based rule rather than "anything under $HOME",
+    # because a legitimate isolated profile can live under a temp root that a CI
+    # runner places inside $HOME (GitHub Actions: HOME=/home/runner, tmp under
+    # /home/runner/work/_temp). Refusing those protects nothing and breaks the
+    # runner's own scratch space.
+    home = str(Path.home()).replace("\\", "/").lower().rstrip("/")
+    personal_roots = (
+        f"{home}/.config",
+        f"{home}/.local/share",
+        f"{home}/library/application support",
+        f"{home}/appdata",
+        f"{home}/.mozilla",
+        f"{home}/snap",
+        f"{home}/.var/app",
+    )
+    for root in personal_roots:
+        if normalized == root or normalized.startswith(root + "/"):
             raise PolicyViolation(
-                "browser profiles must live inside ~/M5_AP_Workspace (U04)."
+                "refusing to use a personal application data location "
+                f"({root}); AP-010 requires a dedicated isolated profile."
             )
     return Path(raw)
 
@@ -910,7 +925,6 @@ class BridgeDriver:
         """Run a task plan through the real browser and return the bridge report."""
         import os
         import subprocess
-        import tempfile
 
         if not Path(self.chrome).exists():
             raise BrowserWorkerError(f"chromium not found at {self.chrome}")
