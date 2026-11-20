@@ -1877,7 +1877,7 @@
       "title": "Qualify a controlled browser worker and human takeover",
       "priority": "P1",
       "optional": false,
-      "status": "not_started",
+      "status": "in_progress",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-007",
@@ -1926,18 +1926,25 @@
         "Push/PR state; owner/independent approvals where required"
       ],
       "tracking": {
-        "owner": null,
-        "branch": null,
-        "base_sha": null,
+        "owner": "arena/76d45cdf-m5-agent-studio",
+        "branch": "arena/76d45cdf-m5-agent-studio",
+        "base_sha": "379b42b7fffe9a23105ef901cea4c6254fd66081",
         "head_sha": null,
-        "claimed_at": null,
-        "heartbeat_at": null,
+        "claimed_at": "2026-11-20T17:05:00Z",
+        "heartbeat_at": "2026-11-20T17:05:00Z",
         "pr_url": null,
-        "delivery_status": "not_pushed",
+        "delivery_status": "delivery_pending",
         "acceptance_evidence": [],
         "tests_executed": [],
         "blockers": [],
-        "handoff": null
+        "handoff": null,
+        "authorization_record": {
+          "authorization": "normal_story_authorization — owner-approved single story (AP-010 only)",
+          "owner_instruction": "In the session on this branch, the repository owner wrote, verbatim: 'Continue with next, I approve it'. On 2026-11-20 the owner also corrected a wrong assumption by this session and directed, verbatim: 'use puppeteer or use-browser, other sessions are doing it'. AP-008 was already claimed by a parallel session (open PR #329), so the next dependency-ready single story is AP-010: dependencies AP-007 and AP-009 are both done on main (AP-009 merged 2026-11-20 as 8d8995a, completion record 379b42b), and its decision gates U04 and U06 are resolved (2026-11-17, issue #330).",
+          "selection_evidence": "Checked in full before claiming. AP-008 is not_started in the ledger but is claimed by the parallel session on branch arena/63f06456-m5-agent-studio with open PR #329 — that PR touches only UI/UX docs and UIUX product records, so AP-010 work does not conflict, and AP-008 is not taken here. AP-010 is the next story by phase and number whose dependencies are all done and whose blocked_by_decisions list is empty. AP-011 is also dependency-ready but follows AP-010 in the recorded order and shares its phase.",
+          "browser_availability_correction": "An earlier statement in this session that a real browser could not be obtained was WRONG and is withdrawn. The repository's own locked tooling supplies one without any external CDN: npm ci --prefix tests/browser --ignore-scripts installs @sparticuz/chromium 153.0.0 (the Chromium binary ships inside the npm tarball) and puppeteer-core 25.16.0; the bundled al2023.tar.br provides the shared libraries. Verified on this branch: Chromium 153.0.8010.0 launches, renders and screenshots, and the repository's own tests/test_screenshot_capture_browser.py passes 35/35 against it. Real-browser evidence is therefore obtainable here and no deliverable is waived.",
+          "scope_limit": "AP-010 only: a narrow governed browser-worker interface, browser adapter bake-off against a deterministic baseline, dedicated isolated profiles, takeover, grant/budget confinement, private-network and popup refusal, and stop/restart recovery, with real-browser evidence produced by the pinned Chromium above. AP-011 and later remain unauthorized. No activation: runtime_activation_authorized stays false, no production caller is wired, no account or credential is used, no personal profile is touched, no I/O outside ~/M5_AP_Workspace, zero spend."
+        }
       },
       "implementation_prompt": "Implement AP-010: Qualify a controlled browser worker and human takeover. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
