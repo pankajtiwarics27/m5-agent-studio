@@ -1,6 +1,6 @@
 # M5 Agent Studio — Autonomous Production Product Roadmap
 
-**Revision:** 1.5 • **Prepared:** 2026-11-08 • **Status:** owner-requested product specification and proposed execution program; not evidence of implementation, independent security acceptance, or authorization to bypass existing gates.
+**Revision:** 1.6 • **Prepared:** 2026-11-08 • **Status:** owner-requested product specification and proposed execution program; not evidence of implementation, independent security acceptance, or authorization to bypass existing gates.
 
 **Audience:** any implementation agent or human entering without this conversation. Read this document, the companion story ledger, and the agent prompt before proposing changes.
 
@@ -12,6 +12,21 @@
 **Source snapshot inspected:** `pankajtiwarics27/m5-agent-studio` main at `a67e8b291614f8afdac7c8d38ba51bcc8926d695`. Inspection covered repository guidance, module contracts and selected runtime-status documents; not a full code/security audit, installed-runtime qualification, or fresh end-to-end execution. Refresh against current main before implementing.
 
 **Precedence:** repository `AGENTS.md`, accepted security decisions, existing program ownership and signed approvals remain binding. This program does not replace the AS, M5 runtime, UIUX/UIV2, or LC ledgers, and does not reopen their completed stories. Reconcile overlapping work in AP-001. Drafting this roadmap does not grant automatic execution authority to its stories or to downloaded tools.
+
+## Revision 1.6 — AP-011 capability discovery delivered (2026-11-21; AP-011 only)
+
+The owner approved AP-011 after this session reported it dependency-ready but
+unauthorized; its dependency AP-009 is done and it has no decision blockers. The
+delivery adds `autonomous_production_discovery.py`: a capability-gap classifier
+that separates missing facts, method, model capability, context, tool and
+hardware gaps and can conclude that no new dependency is needed; a candidate
+registry recording source revision, maintenance, license, install hooks,
+resource cost, egress and privileges; and a license/permission assessment that
+blocks unlicensed or incompatible candidates for the affected reuse. Popularity,
+stars and MCP annotations never establish trust. The module has no install,
+execute, download or activation verb, and every proposal states that discovery
+grants nothing. AP-012 and later remain unauthorized. See
+[capability discovery](autonomous-production-discovery.md).
 
 ## Revision 1.5 — AP-010 browser worker delivered and recorded done (2026-11-21; AP-010 only)
 

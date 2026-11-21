@@ -461,6 +461,9 @@
     ],
     "scripts/browser_worker_bridge.mjs": [
       "security.execution"
+    ],
+    "autonomous_production_discovery.py": [
+      "autonomous.production"
     ]
   }
 }
