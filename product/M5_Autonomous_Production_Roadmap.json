@@ -2068,7 +2068,7 @@
       "title": "Run disposable capability experiments with receipts",
       "priority": "P1",
       "optional": false,
-      "status": "not_started",
+      "status": "in_progress",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-007",
@@ -2124,18 +2124,25 @@
         "Push/PR state; owner/independent approvals where required"
       ],
       "tracking": {
-        "owner": null,
-        "branch": null,
-        "base_sha": null,
+        "owner": "arena/d3693dd5-m5-agent-studio",
+        "branch": "arena/d3693dd5-m5-agent-studio",
+        "base_sha": "4ca24c32f3a419c8cc499159e55b48381921ffa9",
         "head_sha": null,
-        "claimed_at": null,
-        "heartbeat_at": null,
+        "claimed_at": "2026-11-21T16:30:00Z",
+        "heartbeat_at": "2026-11-21T16:30:00Z",
         "pr_url": null,
-        "delivery_status": "not_pushed",
+        "delivery_status": "delivery_pending",
         "acceptance_evidence": [],
         "tests_executed": [],
         "blockers": [],
-        "handoff": null
+        "handoff": null,
+        "authorization_record": {
+          "authorization": "normal_story_authorization — owner-approved single story (AP-012 only)",
+          "owner_instruction": "On this branch the repository owner wrote, verbatim: 'continue', after this session stated AP-012 had both dependencies done and asked for authorization; when asked how the lab gate should treat missing qualification the owner replied, verbatim: 'AP-012 should be considered once dependency is ready. Start with prerequisite then move to next. I don't have full context of stories. Better to take these decisions autonomously towards best way to complete story with quality output'. That is an explicit delegation of the qualification-reading decision to this session, taken together with the standing bans on activation and on fabricated completion evidence.",
+          "selection_evidence": "Checked before claiming. AP-012 was not_started with tracking not_pushed and every dependency done on main: AP-007, AP-010 (merged e2bf81c, completion 8892197) and AP-011 (merged c1476e7, completion 4ca24c3). Its blocked_by_decisions list is empty and U02/U04/U06 are all resolved. AP-008 remains claimed by the parallel session on open PR #329 (UI/UX files only) and is not taken here. AP-013 depends on AP-012 and follows it.",
+          "qualification_decision": "AC5 blocks a trial when qualification is unavailable, and product/M5_Autonomous_Production_Operating_Envelope.json records measured_inventory.status as not_measured while U02 is resolved only as an owner statement explicitly described as not a measurement. The story is therefore delivered with a FAIL-CLOSED GATE: the lab, grants, isolation constraints, receipts, quarantine and cleanup are built and tested, but TRIAL ADMISSION refuses while inventory is not_measured or observed_unqualified. No waiver path was added, because a per-trial waiver would let the not_measured host run experiments while AC5 requires unavailability to block; the gate opens without code change once an operator runs the collection recipe and records a qualified inventory. No host fallback exists: the Linux sandbox is never substituted for the owner host.",
+          "scope_limit": "AP-012 only: a disposable experiment lab inside ~/M5_AP_Workspace with explicit experiment/network/resource grants, untrusted-candidate isolation constraints, install-hook and binary inspection, per-trial receipts recording exact versions/effects/checks/cost/cleanup, and quarantine/revoke/cleanup paths. No activation, no production caller wiring, no host mounts, no production credentials, no privileged runtime sockets, no global promotion, no spend, no network beyond the U03 allowlist. AP-013 and later remain unauthorized."
+        }
       },
       "implementation_prompt": "Implement AP-012: Run disposable capability experiments with receipts. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
