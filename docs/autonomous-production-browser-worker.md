@@ -1,8 +1,9 @@
 # AP-010 — Controlled browser worker, isolation and human takeover
 
-**Status:** delivered on PR #335 as a governed contract module plus a
-real-browser bridge; **not activated**, **not wired into any production
-caller**, and **not a production guarantee**. This page records what the worker
+**Status:** delivered and merged (PR #335, `e2bf81c`; story recorded `done` by
+its completion record). It is a governed contract module plus a real-browser
+bridge: **not activated**, **not wired into any production caller**, and **not a
+production guarantee**. This page records what the worker
 decides, what it proves with a real browser, and what it does not decide.
 
 ## Story and owner scope

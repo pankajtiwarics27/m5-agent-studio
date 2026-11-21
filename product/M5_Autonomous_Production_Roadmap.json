@@ -1877,7 +1877,7 @@
       "title": "Qualify a controlled browser worker and human takeover",
       "priority": "P1",
       "optional": false,
-      "status": "in_review",
+      "status": "done",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-007",
@@ -1929,11 +1929,11 @@
         "owner": "arena/76d45cdf-m5-agent-studio",
         "branch": "arena/76d45cdf-m5-agent-studio",
         "base_sha": "379b42b7fffe9a23105ef901cea4c6254fd66081",
-        "head_sha": "4ded50f82ac654836d13774cdfaea0e3ed3697e7",
+        "head_sha": "28c05635ccbbf8bcf479f05933005f2c712be705",
         "claimed_at": "2026-11-20T17:05:00Z",
-        "heartbeat_at": "2026-11-20T19:05:00Z",
+        "heartbeat_at": "2026-11-21T15:05:00Z",
         "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/335",
-        "delivery_status": "pr_open",
+        "delivery_status": "merged",
         "acceptance_evidence": [
           "AC1 candidate versus deterministic baseline on the same tasks: BakeOffHarness runs identical TaskScripts through a baseline and a candidate driver under one SessionPolicy and compares only policy-visible outcomes (executed, refused, failures, bytes), so a candidate cannot win by exceeding the grant. Tests: test_bakeoff_reports_equivalence_when_both_drivers_agree, test_bakeoff_exposes_divergence_when_the_candidate_fails, test_bakeoff_counts_refusals_identically_and_never_widens_policy. Real browser: test_real_two_runs_are_deterministic. No scored Browser Use vs Playwright winner is claimed; that needs hosted/credentialed environments U03 excludes.",
           "AC2 isolated profile per project, no personal-profile reuse: allocate_profile mints a fresh profile per session; assert_not_personal_profile refuses personal application/config roots by name and every known browser user-data marker. Tests: test_profile_is_allocated_inside_the_workspace, the test_personal_profiles_are_refused parametrisation, test_personal_application_roots_are_refused, test_two_sessions_never_share_a_profile, test_ephemeral_temp_root_under_home_is_allowed. Real browser: test_real_profile_is_isolated_and_removed.",
@@ -1944,6 +1944,7 @@
           "Deliverables: browser adapter bake-off (BakeOffHarness plus the real-driver determinism run), dedicated session and takeover controls (BrowserSession, SessionPolicy, ProfileRecord), and real-browser cancellation/privacy evidence (tests/test_browser_worker_real.py against the pinned Chromium)."
         ],
         "tests_executed": [
+          "Completion record: PR #335 merged as e2bf81cbde2af7af486004f390b7f499f7ee50ba at 2026-11-21T14:59:08Z carrying final head 28c05635ccbbf8bcf479f05933005f2c712be705. The exact-head CI run was green (27 pass, 0 fail, CLEAN) including the browser safety job with M5_REQUIRE_BROWSER_TESTS=1.",
           "Author-run at e41ced4, then re-run after the CI fix at 4ded50f (Linux x86_64, Python 3.11.2) with the pinned Chromium: full suite 5708 passed, 1 skipped, 0 failed with M5_REQUIRE_BROWSER_TESTS=1 so the real-browser tests are required rather than skipped.",
           "Offline contract suite: tests/test_browser_worker.py 70 passed, no browser needed (injected drivers and resolvers only).",
           "Real-browser evidence: tests/test_browser_worker_real.py 6 passed against @sparticuz/chromium 153.0.8010.0 and puppeteer-core 25.16.0, installed with npm ci --prefix tests/browser --ignore-scripts (the Chromium binary ships inside the npm tarball, so the blocked Chrome-for-Testing CDN is not used).",
@@ -1951,14 +1952,15 @@
           "Gates: ruff clean; mypy clean over 80 source files; validate_docs (302 files); validate_governance (7 files); ci_test_shard.py --validate (234 modules, 84/75/75); scoped-test map valid (both new modules mapped); uiv2_accessibility_adversarial --check 120/120, 0 findings; uiv2_performance_safety --check 21/21, 11 captures, 0 findings; uiv2_release_review --check 7/7 local, 2200/2200 visual, 0 findings; autonomous_production_decisions.py valid true."
         ],
         "blockers": [],
-        "handoff": "AP-010 is implemented and pushed for its authorized scope on PR #335 (head 4ded50f82ac654836d13774cdfaea0e3ed3697e7, delivery pr_open, story in_review); it is not merged and not activated. browser_worker.py is a contract layer with no production importer; scripts/browser_worker_bridge.mjs performs only admitted work. SessionPolicy refuses activation_authorized=True, no account, credential or personal profile is touched, the bridge transfers no download bytes, and no I/O leaves ~/M5_AP_Workspace. Real-browser evidence runs in CI's browser job with M5_REQUIRE_BROWSER_TESTS=1 so it cannot silently skip. AP-008 remains untouched on parallel PR #329 and AP-011+ remain unauthorized. A separate completion record is required if this PR merges; this PR claims no completion.",
+        "handoff": "AP-010 is done for its authorized scope. PR #335 final head 28c05635ccbbf8bcf479f05933005f2c712be705 merged as e2bf81cbde2af7af486004f390b7f499f7ee50ba on 2026-11-21; this separate completion record moves the story to done with merged delivery evidence. browser_worker.py is a contract layer with no production importer; the bridge performs only admitted work. Nothing is activated (SessionPolicy refuses activation_authorized=True), no ADR or promotion flag changed, no account, credential or personal profile is used, the bridge transfers no download bytes, and no I/O leaves ~/M5_AP_Workspace. Real-browser evidence runs in CI's browser job with M5_REQUIRE_BROWSER_TESTS=1 so it cannot silently skip. Seven defects were found and fixed before merge, six by tests or self-review and one (the profile guard refusing GitHub Actions' own scratch directory) only by CI; all are recorded rather than hidden. No scored Browser Use versus Playwright winner is claimed, because that needs hosted/credentialed environments U03 still excludes. AP-008 remains its own story on the parallel PR #329 and is untouched here. AP-011 and later remain unauthorized.",
         "authorization_record": {
           "authorization": "normal_story_authorization — owner-approved single story (AP-010 only)",
           "owner_instruction": "In the session on this branch, the repository owner wrote, verbatim: 'Continue with next, I approve it'. On 2026-11-20 the owner also corrected a wrong assumption by this session and directed, verbatim: 'use puppeteer or use-browser, other sessions are doing it'. AP-008 was already claimed by a parallel session (open PR #329), so the next dependency-ready single story is AP-010: dependencies AP-007 and AP-009 are both done on main (AP-009 merged 2026-11-20 as 8d8995a, completion record 379b42b), and its decision gates U04 and U06 are resolved (2026-11-17, issue #330).",
           "selection_evidence": "Checked in full before claiming. AP-008 is not_started in the ledger but is claimed by the parallel session on branch arena/63f06456-m5-agent-studio with open PR #329 — that PR touches only UI/UX docs and UIUX product records, so AP-010 work does not conflict, and AP-008 is not taken here. AP-010 is the next story by phase and number whose dependencies are all done and whose blocked_by_decisions list is empty. AP-011 is also dependency-ready but follows AP-010 in the recorded order and shares its phase.",
           "browser_availability_correction": "An earlier statement in this session that a real browser could not be obtained was WRONG and is withdrawn. The repository's own locked tooling supplies one without any external CDN: npm ci --prefix tests/browser --ignore-scripts installs @sparticuz/chromium 153.0.0 (the Chromium binary ships inside the npm tarball) and puppeteer-core 25.16.0; the bundled al2023.tar.br provides the shared libraries. Verified on this branch: Chromium 153.0.8010.0 launches, renders and screenshots, and the repository's own tests/test_screenshot_capture_browser.py passes 35/35 against it. Real-browser evidence is therefore obtainable here and no deliverable is waived.",
           "scope_limit": "AP-010 only: a narrow governed browser-worker interface, browser adapter bake-off against a deterministic baseline, dedicated isolated profiles, takeover, grant/budget confinement, private-network and popup refusal, and stop/restart recovery, with real-browser evidence produced by the pinned Chromium above. AP-011 and later remain unauthorized. No activation: runtime_activation_authorized stays false, no production caller is wired, no account or credential is used, no personal profile is touched, no I/O outside ~/M5_AP_Workspace, zero spend."
-        }
+        },
+        "completion_pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/336"
       },
       "implementation_prompt": "Implement AP-010: Qualify a controlled browser worker and human takeover. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
