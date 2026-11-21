@@ -1,8 +1,9 @@
 # AP-011 — Discover and inspect capability candidates without activation
 
-**Status:** delivered as an offline proposal module; **not activated**, **not
-wired into any production caller**, and **not a production guarantee**. It has
-no ability to install, download or run anything. This page records what it
+**Status:** delivered and merged (PR #337, `c1476e7`; story recorded `done` by
+its completion record). It is an offline proposal module: **not activated**,
+**not wired into any production caller**, and **not a production guarantee**. It
+has no ability to install, download or run anything. This page records what it
 decides and what it refuses to decide.
 
 ## Story and owner scope

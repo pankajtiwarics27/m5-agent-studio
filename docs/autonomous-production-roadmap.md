@@ -13,7 +13,7 @@
 
 **Precedence:** repository `AGENTS.md`, accepted security decisions, existing program ownership and signed approvals remain binding. This program does not replace the AS, M5 runtime, UIUX/UIV2, or LC ledgers, and does not reopen their completed stories. Reconcile overlapping work in AP-001. Drafting this roadmap does not grant automatic execution authority to its stories or to downloaded tools.
 
-## Revision 1.6 — AP-011 capability discovery delivered (2026-11-21; AP-011 only)
+## Revision 1.6 — AP-011 capability discovery delivered and recorded done (2026-11-21; AP-011 only)
 
 The owner approved AP-011 after this session reported it dependency-ready but
 unauthorized; its dependency AP-009 is done and it has no decision blockers. The
@@ -25,7 +25,9 @@ resource cost, egress and privileges; and a license/permission assessment that
 blocks unlicensed or incompatible candidates for the affected reuse. Popularity,
 stars and MCP annotations never establish trust. The module has no install,
 execute, download or activation verb, and every proposal states that discovery
-grants nothing. AP-012 and later remain unauthorized. See
+grants nothing. It merged as PR #337 (`c1476e7`, final head `ab37bec`) and this record marks
+AP-011 `done` for that scope only. AP-012 now has both dependencies (AP-010 and
+AP-011) done but remains unauthorized and needs its own owner authorization. See
 [capability discovery](autonomous-production-discovery.md).
 
 ## Revision 1.5 — AP-010 browser worker delivered and recorded done (2026-11-21; AP-010 only)
