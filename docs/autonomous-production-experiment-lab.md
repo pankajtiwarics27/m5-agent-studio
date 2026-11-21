@@ -1,6 +1,7 @@
 # AP-012 — Run disposable capability experiments with receipts
 
-**Status:** in review. It is a fail-closed experiment lab: **not activated**,
+**Status:** delivered and merged (PR #339, `00b07f9`; story recorded `done` by
+its completion record). It is a fail-closed experiment lab: **not activated**,
 **not wired into any production caller**, **not executing anything by itself**,
 and **not a production guarantee**. The lab decides whether a trial may run and
 what must be recorded; a caller-supplied `TrialRunner` does the executing. Under

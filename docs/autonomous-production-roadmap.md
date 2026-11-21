@@ -1,6 +1,6 @@
 # M5 Agent Studio — Autonomous Production Product Roadmap
 
-**Revision:** 1.7 • **Prepared:** 2026-11-08 • **Status:** owner-requested product specification and proposed execution program; not evidence of implementation, independent security acceptance, or authorization to bypass existing gates.
+**Revision:** 1.8 • **Prepared:** 2026-11-08 • **Status:** owner-requested product specification and proposed execution program; not evidence of implementation, independent security acceptance, or authorization to bypass existing gates.
 
 **Audience:** any implementation agent or human entering without this conversation. Read this document, the companion story ledger, and the agent prompt before proposing changes.
 
@@ -12,6 +12,23 @@
 **Source snapshot inspected:** `pankajtiwarics27/m5-agent-studio` main at `a67e8b291614f8afdac7c8d38ba51bcc8926d695`. Inspection covered repository guidance, module contracts and selected runtime-status documents; not a full code/security audit, installed-runtime qualification, or fresh end-to-end execution. Refresh against current main before implementing.
 
 **Precedence:** repository `AGENTS.md`, accepted security decisions, existing program ownership and signed approvals remain binding. This program does not replace the AS, M5 runtime, UIUX/UIV2, or LC ledgers, and does not reopen their completed stories. Reconcile overlapping work in AP-001. Drafting this roadmap does not grant automatic execution authority to its stories or to downloaded tools.
+
+## Revision 1.8 — AP-012 recorded done (2026-11-21; AP-012 only)
+
+PR #339 merged as `00b07f90257f5481d31db1babe750ff8aca9c96f` at 2026-11-21T16:24:29Z
+carrying final head `5fc5921`; the exact-head CI was green (27 pass, 0 fail, CLEAN)
+and the author's full suite was 5799 passed, 39 skipped, 0 failed, with the skips
+confined to the pinned-Chromium browser tests this shell cannot export. This
+record marks AP-012 `done` for that scope only.
+
+The delivered state is the one Revision 1.7 described, unchanged: the lab refuses
+every trial admission while `measured_inventory` is `not_measured`. Recording the
+story done does **not** move that gate, qualify the host, or authorize an
+experiment — the next act on this line is an **operator** act (run the collection
+recipe, record a qualified inventory naming a record and a host fingerprint), and
+the code already accepts it without modification. Nothing is activated;
+`runtime_activation_authorized` remains `false`; ADR-0040–0045 remain
+`not-reviewed`; AP-013 through AP-032 remain unauthorized and unclaimed.
 
 ## Revision 1.7 — AP-012 disposable experiment lab delivered, gate closed on qualification (2026-11-21; AP-012 only)
 
