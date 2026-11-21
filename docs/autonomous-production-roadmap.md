@@ -13,7 +13,7 @@
 
 **Precedence:** repository `AGENTS.md`, accepted security decisions, existing program ownership and signed approvals remain binding. This program does not replace the AS, M5 runtime, UIUX/UIV2, or LC ledgers, and does not reopen their completed stories. Reconcile overlapping work in AP-001. Drafting this roadmap does not grant automatic execution authority to its stories or to downloaded tools.
 
-## Revision 1.5 — AP-010 browser worker delivered (2026-11-20; AP-010 only)
+## Revision 1.5 — AP-010 browser worker delivered and recorded done (2026-11-21; AP-010 only)
 
 The owner approved the next dependency-ready story on this branch and directed
 the session to use the repository's puppeteer tooling. AP-010's dependencies
@@ -25,7 +25,9 @@ takeover, hostile-page and popup refusal, and stop/restart recovery — plus
 Chromium with no external CDN, and real-browser evidence in
 `tests/test_browser_worker_real.py`. Nothing is activated, no production caller
 is wired, no account or personal profile is used, and no download bytes move.
-AP-011 and later remain unauthorized. See
+It merged as PR #335 (`e2bf81c`, final head `28c0563`) and this record marks
+AP-010 `done` for that scope only; AP-011 and later still await their own owner
+authorization. See
 [the governed browser worker](autonomous-production-browser-worker.md).
 
 ## Revision 1.4 — AP-009 delivered and recorded done (2026-11-20; AP-009 only)
