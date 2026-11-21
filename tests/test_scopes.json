@@ -464,6 +464,11 @@
     ],
     "autonomous_production_discovery.py": [
       "autonomous.production"
+    ],
+    "autonomous_production_lab.py": [
+      "autonomous.production",
+      "security.execution",
+      "security.network"
     ]
   }
 }
