@@ -1,6 +1,6 @@
 # M5 Agent Studio — Autonomous Production Product Roadmap
 
-**Revision:** 1.4 • **Prepared:** 2026-11-08 • **Status:** owner-requested product specification and proposed execution program; not evidence of implementation, independent security acceptance, or authorization to bypass existing gates.
+**Revision:** 1.5 • **Prepared:** 2026-11-08 • **Status:** owner-requested product specification and proposed execution program; not evidence of implementation, independent security acceptance, or authorization to bypass existing gates.
 
 **Audience:** any implementation agent or human entering without this conversation. Read this document, the companion story ledger, and the agent prompt before proposing changes.
 
@@ -12,6 +12,21 @@
 **Source snapshot inspected:** `pankajtiwarics27/m5-agent-studio` main at `a67e8b291614f8afdac7c8d38ba51bcc8926d695`. Inspection covered repository guidance, module contracts and selected runtime-status documents; not a full code/security audit, installed-runtime qualification, or fresh end-to-end execution. Refresh against current main before implementing.
 
 **Precedence:** repository `AGENTS.md`, accepted security decisions, existing program ownership and signed approvals remain binding. This program does not replace the AS, M5 runtime, UIUX/UIV2, or LC ledgers, and does not reopen their completed stories. Reconcile overlapping work in AP-001. Drafting this roadmap does not grant automatic execution authority to its stories or to downloaded tools.
+
+## Revision 1.5 — AP-010 browser worker delivered (2026-11-20; AP-010 only)
+
+The owner approved the next dependency-ready story on this branch and directed
+the session to use the repository's puppeteer tooling. AP-010's dependencies
+(AP-007, AP-009) are done and its decision gates (U04, U06) are resolved, so it
+was claimed here. The delivery adds `browser_worker.py` — a governed contract
+for isolated per-project profiles, grant and nested-budget confinement, human
+takeover, hostile-page and popup refusal, and stop/restart recovery — plus
+`scripts/browser_worker_bridge.mjs`, which drives the repository's pinned
+Chromium with no external CDN, and real-browser evidence in
+`tests/test_browser_worker_real.py`. Nothing is activated, no production caller
+is wired, no account or personal profile is used, and no download bytes move.
+AP-011 and later remain unauthorized. See
+[the governed browser worker](autonomous-production-browser-worker.md).
 
 ## Revision 1.4 — AP-009 delivered and recorded done (2026-11-20; AP-009 only)
 

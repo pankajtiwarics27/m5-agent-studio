@@ -124,6 +124,7 @@
     "security.execution": [
       "test_action_admission_gate.py",
       "test_audit_log.py",
+      "test_browser_worker*.py",
       "test_durable_intent_ledger.py",
       "test_execution_*.py",
       "test_failure_injection.py",
@@ -137,13 +138,13 @@
       "test_scoped_grants.py",
       "test_security_*.py",
       "test_session_trust.py",
-      "test_threat_model.py",
-      "test_skill_execution_containment.py",
       "test_single_agent_vertical_slice.py",
+      "test_skill_execution_containment.py",
+      "test_threat_model.py",
       "test_trusted_transformations.py",
+      "test_uiv2_performance_safety.py",
       "test_worker_leases_and_fencing.py",
-      "test_workspace_*.py",
-      "test_uiv2_performance_safety.py"
+      "test_workspace_*.py"
     ],
     "security.network": [
       "test_pinned_transport.py",
@@ -454,6 +455,12 @@
     ],
     "tests/ci_test_shards.json": [
       "quality.docs-ci"
+    ],
+    "browser_worker.py": [
+      "security.execution"
+    ],
+    "scripts/browser_worker_bridge.mjs": [
+      "security.execution"
     ]
   }
 }
