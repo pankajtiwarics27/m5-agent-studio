@@ -6,7 +6,7 @@
   "source_sha256": {
     "static/index.html": "452405a8a941792f03a71d6153eee8d7820154186b28f32c380c36b7cd6f397c",
     "scripts/uiv2_performance_safety_walk.mjs": "db65e34744d881132250aba25da39f6d239adcf43c407ac4ebaf85f840070643",
-    ".github/workflows/ci.yml": "b26cad82030e81d2a1af9dced13a3dc14fc877935ea8db53a5c4fbd82556f403"
+    ".github/workflows/ci.yml": "2f20e8a186cae2ef9e5c88be5634508b0e1562afcfe5aed6e599022719a98ae1"
   },
   "thresholds": {
     "render_window": 300,

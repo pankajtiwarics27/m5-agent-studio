@@ -26,9 +26,9 @@
       645.0
     ],
     "module_counts": [
-      83,
+      85,
       75,
-      74
+      75
     ],
     "node_counts": [
       1528,
@@ -147,7 +147,9 @@
       "tests/test_action_admission_gate.py",
       "tests/test_adr_process.py",
       "tests/test_api_provider_contracts.py",
+      "tests/test_autonomous_production_research.py",
       "tests/test_baseline.py",
+      "tests/test_browser_worker.py",
       "tests/test_capability_negotiation.py",
       "tests/test_chat_composer.py",
       "tests/test_chat_handoff.py",
@@ -308,6 +310,7 @@
     "3": [
       "tests/test_audit_log.py",
       "tests/test_benchmark_import.py",
+      "tests/test_browser_worker_real.py",
       "tests/test_chat_context.py",
       "tests/test_chat_persona.py",
       "tests/test_checkout_store_isolation.py",

@@ -3,9 +3,9 @@
   "document_type": "proposed_autonomous_production_execution_ledger",
   "product": "M5 Agent Studio",
   "program": "AP",
-  "revision": "1.2",
+  "revision": "1.5",
   "prepared_date": "2026-11-08",
-  "lifecycle": "registered_tracking_ap007_done_ap008_authorized",
+  "lifecycle": "registered_tracking_ap007_done_ap008_authorized_u01_u05_resolved",
   "source_snapshot": "a67e8b291614f8afdac7c8d38ba51bcc8926d695",
   "source_repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "specification": "docs/autonomous-production-roadmap.md",
@@ -211,13 +211,7 @@
         "R40",
         "R41"
       ],
-      "blocked_by_decisions": [
-        "U01",
-        "U02",
-        "U03",
-        "U04",
-        "U05"
-      ],
+      "blocked_by_decisions": [],
       "implementation_rules": [
         "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
         "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
@@ -495,10 +489,7 @@
         "R07",
         "R25"
       ],
-      "blocked_by_decisions": [
-        "U03",
-        "U04"
-      ],
+      "blocked_by_decisions": [],
       "implementation_rules": [
         "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
         "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
@@ -1799,7 +1790,7 @@
       "title": "Add source-backed safe search, reading and repository inspection",
       "priority": "P1",
       "optional": false,
-      "status": "not_started",
+      "status": "done",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-003",
@@ -1834,10 +1825,7 @@
         "R23",
         "R40"
       ],
-      "blocked_by_decisions": [
-        "U03",
-        "U04"
-      ],
+      "blocked_by_decisions": [],
       "implementation_rules": [
         "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
         "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
@@ -1854,18 +1842,41 @@
         "Push/PR state; owner/independent approvals where required"
       ],
       "tracking": {
-        "owner": null,
-        "branch": null,
-        "base_sha": null,
-        "head_sha": null,
-        "claimed_at": null,
-        "heartbeat_at": null,
-        "pr_url": null,
-        "delivery_status": "not_pushed",
-        "acceptance_evidence": [],
-        "tests_executed": [],
+        "owner": "arena/0ed4460e-m5-agent-studio",
+        "branch": "arena/0ed4460e-m5-agent-studio",
+        "base_sha": "394e1f4844632397dd46f547a14d154ae1473507",
+        "head_sha": "f171e43472cb0050d5ce2fd9ed34ef2dfca7b8fa",
+        "claimed_at": "2026-11-18T05:21:32Z",
+        "heartbeat_at": "2026-11-20T16:20:00Z",
+        "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/333",
+        "delivery_status": "merged",
+        "acceptance_evidence": [
+          "AC1 every source records URL, retrieval date, publication date if known, and supporting excerpts/provenance: SourceRecord carries url, final_url (after the validated redirect chain), retrieved_at, http_status, content_sha256, a bounded excerpt, byte_count and publication_date; publication_date is derived only from source-supplied evidence (Date/Last-Modified) and stays None otherwise. Tests: test_ok_fetch_records_provenance_and_publication_date, test_missing_publication_date_stays_none, test_bundle_to_dict_is_json_serializable_and_honest.",
+          "AC2 unsupported facts, missing dates and contradictions remain explicit: add_claim without a supporting source stays 'unsupported'; record_contradiction requires >=2 sources and marks the claim 'contradicted' without reconciling; failed/partial/refused sources stay on the bundle and are listed by incomplete_reason(). Tests: test_claim_without_supporting_source_is_unsupported, test_contradiction_requires_two_sources_and_marks_claim, test_http_500_is_failed_and_marks_bundle_incomplete.",
+          "AC3 private/loopback/link-local/metadata access and redirect/DNS bypasses are blocked at the network boundary: PUBLIC_READ_ALLOWLIST is exactly the six U03 hosts; https only, port 443 only, userinfo refused; blocked v4/v6 ranges including 169.254.169.254, CGNAT, documentation, benchmark, multicast, reserved and IPv4-mapped v6; allowlisted hosts are DNS-checked and fail closed when any answer is blocked; redirects are validated hop-by-hop with a cap and a fetcher final_url that disagrees with the chain is refused. Tests: the is_blocked_ip parametrisation, test_allowlisted_host_resolving_to_private_dns_is_refused, test_redirect_crossing_to_private_ip_is_refused, test_redirect_crossing_allowlist_is_refused, test_redirect_chain_length_cap, test_final_url_mismatch_with_chain_is_refused, test_literal_metadata_host_is_refused.",
+          "AC4 external instructions cannot expand grants or trigger installation: the module holds no installation, activation, account, spend or publishing path; fetched content is handled only as bounded text bytes/excerpts and never interpreted; the allowlist is a module constant that no fetched input can widen. Tests: test_allowlist_contains_exactly_the_u03_standard_public_set, test_non_allowlist_host_is_refused, test_http_scheme_is_refused, test_url_with_userinfo_is_refused, test_non_443_port_is_refused.",
+          "AC5 repository inspection is read-only and budget-respecting: inspect_repository refuses symlinks and never writes, enforces max_files / max_file_bytes / max_total_bytes, records sha256 per regular file and sets truncated when a cap stops the walk. Tests: test_repo_inspection_is_read_only_and_bounded (before/after tree equality), test_repo_inspection_refuses_symlinks_outside_root, test_repo_inspection_enforces_per_file_and_total_budgets, test_repo_inspection_per_file_cap.",
+          "AC6 provider failure yields honest incomplete research, never invented citations: fetcher exceptions and HTTP 5xx become failed SourceRecords; a failed provider leaves claims unsupported and the bundle incomplete with reasons; adapters never fabricate results from an unparseable payload. Tests: test_fetcher_exception_is_failed_not_raised, test_provider_failure_never_invents_a_citation, test_github_search_bad_json_is_partial_and_lists_no_repos, test_dns_resolver_failure_refuses_not_raises.",
+          "Deliverables: search/read adapters (github_search_repositories via api.github.com, wikipedia_raw_article via en.wikipedia.org, both over the injected boundary), claim/source and contradiction records, and hostile-source/redirect/download coverage (oversize-body truncation, non-UTF8 replacement decoding, redirect and DNS bypasses, HTTP 5xx).",
+          "Self-review defect fix (post-delivery, same story): the first delivery parsed GitHub search JSON from the human-readable excerpt, which is capped at 4000 characters, so a valid 5.7 KB response returned zero repositories as an ordinary result; adapters now parse the retained byte-capped body via guarded_fetch_with_body, which is the same body hashed into the record. The same review found adapters ignoring the caller's SourceBudget and fetching at the 512 KiB default; they now pass bundle.budget through. Truncation is explicit through a new upstream_byte_count field. Regression tests: test_github_search_parses_payload_larger_than_the_excerpt_budget, test_github_search_parsing_does_not_depend_on_content_type, test_github_search_on_source_cap_parses_nothing_and_says_so, test_github_search_json_array_payload_is_partial_with_no_repos, test_truncated_source_record_reports_upstream_and_retained_bytes, test_untruncated_source_record_has_equal_byte_counts."
+        ],
+        "tests_executed": [
+          "Completion record: PR #333 merged as 8d8995a04bed1e9e6f5c5e08535f2a1b3c409421 at 2026-11-20T16:10:47Z, carrying final head f171e43472cb0050d5ce2fd9ed34ef2dfca7b8fa (implementation 1574ae7da5ba1b1c074f37a181f5681ee768537e, review fix f171e43472cb0050d5ce2fd9ed34ef2dfca7b8fa, ledger coordination eff6a74). CI at the exact merged head: 27 pass, 0 fail, mergeStateStatus CLEAN. Full suite on a complete clone at that head: 5609 passed, 32 skipped, 0 failed.",
+          "Author-run at the review-fix head (Linux, Python 3.11): tests/test_autonomous_production_research.py 63 passed offline — every network call injected via a fake fetcher and every DNS answer supplied by a callable; no socket is opened.",
+          "Author-run full suite at the review-fix head: 5597 passed, 33 skipped plus 5 test_baseline/test_uiv2_release_review failures that are shallow-clone artifacts (BASELINE_COMMIT 7904892d759bb66b817bb17b6f4f377874bd6e25 absent); after git fetch --unshallow those 24 tests pass, i.e. 5602 passed / 33 skipped / 0 failed on a complete clone.",
+          "Author-run static/docs gates at the review-fix head: ruff clean; mypy clean over 79 source files; scripts/validate_docs.py passed (301 files); scripts/validate_governance.py passed (7 files); scripts/ci_test_shard.py --validate passed (232 modules); autonomous_production_decisions.py reported valid: true."
+        ],
         "blockers": [],
-        "handoff": null
+        "handoff": "AP-009 is done for its authorized scope. PR #333 final head f171e43472cb0050d5ce2fd9ed34ef2dfca7b8fa merged as 8d8995a04bed1e9e6f5c5e08535f2a1b3c409421 on 2026-11-20; this separate completion record moves the story to done with merged delivery evidence. The delivered module autonomous_production_research.py is an offline contract layer with no production importer: no Studio, Harness, dormancy or UI path calls it, importing it opens no socket, and the six-host U03 allowlist is a module constant rather than a live grant. Two adapter defects were found and fixed inside this story before merge (search parsed the 4000-char excerpt instead of the retained body, returning zero repositories for realistic payloads; adapters ignored the caller's SourceBudget), with six regression tests. Nothing is activated: runtime_activation_authorized remains false, no ADR changed review status, no promotion flag changed, no account/credential/spend/publishing path was added, and no I/O occurs outside ~/M5_AP_Workspace. AP-008 remains a separate story on its own parallel PR #329 and is untouched here. AP-010 and later remain unauthorized and require their own owner authorization, dependency evidence and branch/PR.",
+        "authorization_record": {
+          "authorization": "normal_story_authorization — owner-approved single story (AP-009 only)",
+          "owner_instruction": "In the 2026-11-17/18 session that led here, the repository owner wrote, verbatim: 'merge and continue with AP-009 - approved'. The instruction referred to merging AP decision-recording PR #331 (merged 2026-11-18T03:47:08Z as 394e1f4) and continuing with AP-009.",
+          "recorded_issue": "Issue #332 records the claim and scope.",
+          "recorded_state_on_main": "origin/main at 394e1f4 (merge of PR #331) records revision 1.3: U01-U05 resolved 2026-11-17 (issue #330), AP-007 done (PR #328 completion record), AP-008 authorized and claimed by PR #329, AP-009 not_started and unclaimed, with U03/U04 (its only blocked-by-decisions) resolved. Dependencies AP-003, AP-004, AP-006, AP-007 are all done.",
+          "claim_timing": "First claim on branch arena/0ed4460e-m5-agent-studio, based on 394e1f4. An earlier session (arena/2655f148-m5-agent-studio) prepared the identical claim and delivery locally, but that branch's remote was blocked after its PR #331 merged and the workspace was restarted on this branch; no AP-009 commit ever reached origin. This is the first pushed AP-009 claim. Read-only checks 2026-11-18 found no other AP-009 claim or PR; the parallel AP-008 session (arena/63f06456-m5-agent-studio, PR #329) owns only AP-008.",
+          "scope_limit": "AP-009 only: source-backed safe search, reading and read-only repository inspection behind U03/U04 limits. AP-010 through AP-032 remain unauthorized. Offline/default build: no live network in default tests; no account, credential, browser profile or folder outside ~/M5_AP_Workspace; no activation; nothing claimed complete without the repository completion convention; no production caller wired into the running Studio without its own authorization."
+        },
+        "completion_pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/334"
       },
       "implementation_prompt": "Implement AP-009: Add source-backed safe search, reading and repository inspection. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
@@ -1875,7 +1886,7 @@
       "title": "Qualify a controlled browser worker and human takeover",
       "priority": "P1",
       "optional": false,
-      "status": "not_started",
+      "status": "done",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-007",
@@ -1907,9 +1918,7 @@
         "R06",
         "R38"
       ],
-      "blocked_by_decisions": [
-        "U04"
-      ],
+      "blocked_by_decisions": [],
       "implementation_rules": [
         "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
         "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
@@ -1926,18 +1935,41 @@
         "Push/PR state; owner/independent approvals where required"
       ],
       "tracking": {
-        "owner": null,
-        "branch": null,
-        "base_sha": null,
-        "head_sha": null,
-        "claimed_at": null,
-        "heartbeat_at": null,
-        "pr_url": null,
-        "delivery_status": "not_pushed",
-        "acceptance_evidence": [],
-        "tests_executed": [],
+        "owner": "arena/76d45cdf-m5-agent-studio",
+        "branch": "arena/76d45cdf-m5-agent-studio",
+        "base_sha": "379b42b7fffe9a23105ef901cea4c6254fd66081",
+        "head_sha": "28c05635ccbbf8bcf479f05933005f2c712be705",
+        "claimed_at": "2026-11-20T17:05:00Z",
+        "heartbeat_at": "2026-11-21T15:05:00Z",
+        "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/335",
+        "delivery_status": "merged",
+        "acceptance_evidence": [
+          "AC1 candidate versus deterministic baseline on the same tasks: BakeOffHarness runs identical TaskScripts through a baseline and a candidate driver under one SessionPolicy and compares only policy-visible outcomes (executed, refused, failures, bytes), so a candidate cannot win by exceeding the grant. Tests: test_bakeoff_reports_equivalence_when_both_drivers_agree, test_bakeoff_exposes_divergence_when_the_candidate_fails, test_bakeoff_counts_refusals_identically_and_never_widens_policy. Real browser: test_real_two_runs_are_deterministic. No scored Browser Use vs Playwright winner is claimed; that needs hosted/credentialed environments U03 excludes.",
+          "AC2 isolated profile per project, no personal-profile reuse: allocate_profile mints a fresh profile per session; assert_not_personal_profile refuses personal application/config roots by name and every known browser user-data marker. Tests: test_profile_is_allocated_inside_the_workspace, the test_personal_profiles_are_refused parametrisation, test_personal_application_roots_are_refused, test_two_sessions_never_share_a_profile, test_ephemeral_temp_root_under_home_is_allowed. Real browser: test_real_profile_is_isolated_and_removed.",
+          "AC3 navigation/download/tool activity within grants and nested budgets: every BrowserAction is admitted before the driver sees it; origins, navigation count and downloads are explicit grants; a download must declare its size; the per-download cap and the session's nested byte budget both apply; a driver writing past the cap is a violation. Tests: test_navigation_outside_granted_origin_is_refused, test_navigation_budget_is_enforced_before_the_driver_sees_it, test_downloads_are_off_by_default, test_download_requires_a_declared_size, test_download_respects_nested_byte_budget, test_per_download_cap_is_enforced, test_driver_writing_more_than_the_cap_is_a_violation, test_refused_action_never_reaches_the_driver. Real browser: test_real_navigation_click_type_and_screenshot.",
+          "AC4 authenticated takeover pauses conflicting agent actions and resumes safely: take_over suspends all agent actions, resume requires the same identified human, double takeover and foreign resume raise, and actions during takeover are denied naming the holder. Tests: test_takeover_suspends_agent_actions, test_resume_by_the_same_human_restores_control, test_a_different_human_cannot_resume, test_double_takeover_is_refused, test_resume_without_takeover_is_refused, test_takeover_requires_an_identified_human. Real browser: test_real_takeover_then_stop.",
+          "AC5 hostile pages, private-network attempts and unexpected popups cannot obtain added authority: private/link-local/metadata targets are refused even when a grant names them; loopback passes only for an explicitly granted local origin; file:, javascript: and chrome: are refused; popups are denied by default and constrained to the opener origin and off private space when granted; in the real browser a popup is recorded, closed, and the surviving surface list proves it never became a window. Tests: test_private_network_navigation_is_refused, test_file_and_javascript_schemes_are_refused, test_url_with_userinfo_is_refused, test_popups_are_refused_by_default, test_popup_to_other_origin_is_refused_even_when_granted, test_popup_to_private_network_is_refused, test_private_targets_are_detected. Real browser: test_real_popup_is_refused_and_closed, test_real_private_target_is_refused_before_dispatch.",
+          "AC6 stop/restart closes or recovers owned browser jobs and session state without secret leakage: stop fences the session, closes the driver even when it throws, destroys the owned profile, and is idempotent; a fenced session refuses to dispatch; recovery requires a fresh profile and a new policy and restores no prior budget; secret-shaped journal fields are redacted on write and on serialisation. Tests: test_stop_fences_the_session_and_closes_the_driver, test_stop_destroys_the_owned_profile, test_stop_is_idempotent, test_driver_failure_on_stop_still_fences, test_stopped_session_cannot_be_revived_in_place, test_recovery_needs_a_fresh_profile_and_never_restores_authority, test_recovery_of_a_live_session_is_refused, test_journal_redacts_secret_shaped_fields.",
+          "Deliverables: browser adapter bake-off (BakeOffHarness plus the real-driver determinism run), dedicated session and takeover controls (BrowserSession, SessionPolicy, ProfileRecord), and real-browser cancellation/privacy evidence (tests/test_browser_worker_real.py against the pinned Chromium)."
+        ],
+        "tests_executed": [
+          "Completion record: PR #335 merged as e2bf81cbde2af7af486004f390b7f499f7ee50ba at 2026-11-21T14:59:08Z carrying final head 28c05635ccbbf8bcf479f05933005f2c712be705. The exact-head CI run was green (27 pass, 0 fail, CLEAN) including the browser safety job with M5_REQUIRE_BROWSER_TESTS=1.",
+          "Author-run at e41ced4, then re-run after the CI fix at 4ded50f (Linux x86_64, Python 3.11.2) with the pinned Chromium: full suite 5708 passed, 1 skipped, 0 failed with M5_REQUIRE_BROWSER_TESTS=1 so the real-browser tests are required rather than skipped.",
+          "Offline contract suite: tests/test_browser_worker.py 70 passed, no browser needed (injected drivers and resolvers only).",
+          "Real-browser evidence: tests/test_browser_worker_real.py 6 passed against @sparticuz/chromium 153.0.8010.0 and puppeteer-core 25.16.0, installed with npm ci --prefix tests/browser --ignore-scripts (the Chromium binary ships inside the npm tarball, so the blocked Chrome-for-Testing CDN is not used).",
+          "CI on PR #335 at 4ded50f: 27 pass, 0 fail, mergeStateStatus CLEAN.",
+          "Gates: ruff clean; mypy clean over 80 source files; validate_docs (302 files); validate_governance (7 files); ci_test_shard.py --validate (234 modules, 84/75/75); scoped-test map valid (both new modules mapped); uiv2_accessibility_adversarial --check 120/120, 0 findings; uiv2_performance_safety --check 21/21, 11 captures, 0 findings; uiv2_release_review --check 7/7 local, 2200/2200 visual, 0 findings; autonomous_production_decisions.py valid true."
+        ],
         "blockers": [],
-        "handoff": null
+        "handoff": "AP-010 is done for its authorized scope. PR #335 final head 28c05635ccbbf8bcf479f05933005f2c712be705 merged as e2bf81cbde2af7af486004f390b7f499f7ee50ba on 2026-11-21; this separate completion record moves the story to done with merged delivery evidence. browser_worker.py is a contract layer with no production importer; the bridge performs only admitted work. Nothing is activated (SessionPolicy refuses activation_authorized=True), no ADR or promotion flag changed, no account, credential or personal profile is used, the bridge transfers no download bytes, and no I/O leaves ~/M5_AP_Workspace. Real-browser evidence runs in CI's browser job with M5_REQUIRE_BROWSER_TESTS=1 so it cannot silently skip. Seven defects were found and fixed before merge, six by tests or self-review and one (the profile guard refusing GitHub Actions' own scratch directory) only by CI; all are recorded rather than hidden. No scored Browser Use versus Playwright winner is claimed, because that needs hosted/credentialed environments U03 still excludes. AP-008 remains its own story on the parallel PR #329 and is untouched here. AP-011 and later remain unauthorized.",
+        "authorization_record": {
+          "authorization": "normal_story_authorization — owner-approved single story (AP-010 only)",
+          "owner_instruction": "In the session on this branch, the repository owner wrote, verbatim: 'Continue with next, I approve it'. On 2026-11-20 the owner also corrected a wrong assumption by this session and directed, verbatim: 'use puppeteer or use-browser, other sessions are doing it'. AP-008 was already claimed by a parallel session (open PR #329), so the next dependency-ready single story is AP-010: dependencies AP-007 and AP-009 are both done on main (AP-009 merged 2026-11-20 as 8d8995a, completion record 379b42b), and its decision gates U04 and U06 are resolved (2026-11-17, issue #330).",
+          "selection_evidence": "Checked in full before claiming. AP-008 is not_started in the ledger but is claimed by the parallel session on branch arena/63f06456-m5-agent-studio with open PR #329 — that PR touches only UI/UX docs and UIUX product records, so AP-010 work does not conflict, and AP-008 is not taken here. AP-010 is the next story by phase and number whose dependencies are all done and whose blocked_by_decisions list is empty. AP-011 is also dependency-ready but follows AP-010 in the recorded order and shares its phase.",
+          "browser_availability_correction": "An earlier statement in this session that a real browser could not be obtained was WRONG and is withdrawn. The repository's own locked tooling supplies one without any external CDN: npm ci --prefix tests/browser --ignore-scripts installs @sparticuz/chromium 153.0.0 (the Chromium binary ships inside the npm tarball) and puppeteer-core 25.16.0; the bundled al2023.tar.br provides the shared libraries. Verified on this branch: Chromium 153.0.8010.0 launches, renders and screenshots, and the repository's own tests/test_screenshot_capture_browser.py passes 35/35 against it. Real-browser evidence is therefore obtainable here and no deliverable is waived.",
+          "scope_limit": "AP-010 only: a narrow governed browser-worker interface, browser adapter bake-off against a deterministic baseline, dedicated isolated profiles, takeover, grant/budget confinement, private-network and popup refusal, and stop/restart recovery, with real-browser evidence produced by the pinned Chromium above. AP-011 and later remain unauthorized. No activation: runtime_activation_authorized stays false, no production caller is wired, no account or credential is used, no personal profile is touched, no I/O outside ~/M5_AP_Workspace, zero spend."
+        },
+        "completion_pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/336"
       },
       "implementation_prompt": "Implement AP-010: Qualify a controlled browser worker and human takeover. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
@@ -2063,10 +2095,7 @@
         "R13",
         "R32"
       ],
-      "blocked_by_decisions": [
-        "U02",
-        "U04"
-      ],
+      "blocked_by_decisions": [],
       "implementation_rules": [
         "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
         "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
@@ -2145,10 +2174,7 @@
         "R40",
         "R41"
       ],
-      "blocked_by_decisions": [
-        "U02",
-        "U03"
-      ],
+      "blocked_by_decisions": [],
       "implementation_rules": [
         "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
         "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
@@ -2226,10 +2252,7 @@
         "R40",
         "R41"
       ],
-      "blocked_by_decisions": [
-        "U02",
-        "U03"
-      ],
+      "blocked_by_decisions": [],
       "implementation_rules": [
         "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
         "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
@@ -2760,12 +2783,7 @@
         "R21",
         "R38"
       ],
-      "blocked_by_decisions": [
-        "U01",
-        "U02",
-        "U03",
-        "U04"
-      ],
+      "blocked_by_decisions": [],
       "implementation_rules": [
         "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
         "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
@@ -2836,9 +2854,7 @@
         "R21",
         "R38"
       ],
-      "blocked_by_decisions": [
-        "U01"
-      ],
+      "blocked_by_decisions": [],
       "implementation_rules": [
         "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
         "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
@@ -2919,12 +2935,7 @@
         "R31",
         "R39"
       ],
-      "blocked_by_decisions": [
-        "U01",
-        "U02",
-        "U03",
-        "U04"
-      ],
+      "blocked_by_decisions": [],
       "implementation_rules": [
         "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
         "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
@@ -2999,10 +3010,7 @@
         "R33",
         "R39"
       ],
-      "blocked_by_decisions": [
-        "U01",
-        "U03"
-      ],
+      "blocked_by_decisions": [],
       "implementation_rules": [
         "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
         "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
@@ -3162,12 +3170,7 @@
         "R40",
         "R41"
       ],
-      "blocked_by_decisions": [
-        "U02",
-        "U03",
-        "U04",
-        "U05"
-      ],
+      "blocked_by_decisions": [],
       "implementation_rules": [
         "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
         "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
@@ -3319,9 +3322,7 @@
         "R27",
         "R32"
       ],
-      "blocked_by_decisions": [
-        "U05"
-      ],
+      "blocked_by_decisions": [],
       "implementation_rules": [
         "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
         "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
@@ -3395,10 +3396,7 @@
         "R08",
         "R25"
       ],
-      "blocked_by_decisions": [
-        "U03",
-        "U04"
-      ],
+      "blocked_by_decisions": [],
       "implementation_rules": [
         "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
         "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
@@ -3470,11 +3468,7 @@
         "R04",
         "R07"
       ],
-      "blocked_by_decisions": [
-        "U01",
-        "U02",
-        "U04"
-      ],
+      "blocked_by_decisions": [],
       "implementation_rules": [
         "Read current producer/authority/executor/consumer paths; module existence is not integration proof.",
         "Document alternatives, affected surfaces, pinned tests, risks and rollback before edits.",
@@ -3678,7 +3672,7 @@
     "external_non_inference_services": "separate explicit decision; network research is not hosted inference; do not assume hosted speech/image/video generation is approved"
   },
   "revision_precedence": {
-    "policy": "Revision 1.2 overrides earlier blanket hosted-media exclusions. Local inference is default; explicitly granted external cloud/media capabilities are feasible. No silent fallback. External reasoning-model use requires a separate policy decision.",
+    "policy": "Revision 1.3 (2026-11-17): the 2026-11-17 owner session resolved U01, U02, U03, U04 and U05 (see the operating envelope register and docs/autonomous-production-operating-envelope.md); their blocker lists are removed in this same revision. Revision 1.2 remains binding for unchanged content: Revision 1.2 overrides earlier blanket hosted-media exclusions. Local inference is default; explicitly granted external cloud/media capabilities are feasible. No silent fallback. External reasoning-model use requires a separate policy decision. No resolution activates anything; AP-009 and later stories still require their normal story authorization. Owner selections for U01-U05 are recorded verbatim in issue #330.",
     "ux_direction": "docs/autonomous-production-ux-direction.md",
     "approval_scope": "Concept direction only; no implementation, screenshot, security or release acceptance."
   },
@@ -3697,7 +3691,9 @@
       "AP-004",
       "AP-005",
       "AP-006",
-      "AP-008"
+      "AP-008",
+      "AP-009",
+      "AP-010"
     ],
     "claim_authority": "A pushed draft pull request plus the matching story tracking block is the remote coordination claim; a local JSON edit alone is not atomic.",
     "fixed_branch_exception": "Arena sessions use their assigned arena/<session>-m5-agent-studio branch instead of renaming to the proposed ap-XXX-short-slug convention.",
@@ -3794,6 +3790,24 @@
         "mode": "owner_resolution_then_sequential_stories",
         "scope": "Resolve U06 (owner override of the fresh target-host qualification requirement; AP-007-F2/F3 accepted as the refusal foundation). Authorize: (a) recording the resolution in the AP ledger and operating envelope; (b) implementing and recording AP-007's remainder (host-observer seam; completion record) on arena/0efd4d99-m5-agent-studio; (c) AP-008 (Expose clean mission controls and artifact-first status) to start only after AP-007 is recorded done, one story per branch/PR. Activation order retained: contained execution -> browser worker -> native lifecycle, each step with its own recorded evidence; everything not yet activated remains refused. runtime_activation_authorized stays false; no acceptance is recorded; installed-runtime qualification has not been run. AP-008's own implementation is not started by this recording. Future stories AP-009 and later are NOT authorized.",
         "source": "Owner instruction to the AP relay session (2026-11-17, in reply to the session's blocker report, issue #322): 'take required steps to unblock AP program and complete it asap'; in the recorded questions the owner selected: 'Record U06 without a fresh run - my decision overrides my earlier answer 2' (u06_qualification), 'Accept F2+F3 as the refusal foundation' (refusal_foundation), 'Record U06, finish AP-007, then start AP-008' (authorization_next) and 'Merge when the gate is green' (landing_rule). The selections are recorded verbatim in this entry; the questions and every offered option are recorded in issue #322's thread and in the session record."
+      },
+      {
+        "authorized_at": "2026-11-18",
+        "stories": [
+          "AP-009"
+        ],
+        "mode": "single_story",
+        "scope": "Authorize AP-009 (Add source-backed safe search, reading and repository inspection) only: public HTTPS GET research against the U03 standard public allowlist (github.com, codeload.github.com, api.github.com, en.wikipedia.org, pypi.org, registry.npmjs.org) with an injected testable fetch boundary; explicit claim/source/contradiction records with provenance and retrieval dates; read-only, budget-bounded repository inspection; hostile-source/redirect/DNS-bypass/oversize-download tests; no live network in default tests; AP I/O confined to ~/M5_AP_Workspace; no activation; no production caller wiring; hosted inference excluded; AP-010 through AP-032 remain unauthorized.",
+        "source": "Owner instruction in the AP-009 session, verbatim: 'merge and continue with AP-009 - approved'. Recorded in issue #332 (https://github.com/pankajtiwarics27/m5-agent-studio/issues/332). The 2026-11-17 ledger note 'Future stories AP-009 and later are NOT authorized' predates this approval; it is superseded for AP-009 only."
+      },
+      {
+        "authorized_at": "2026-11-20",
+        "stories": [
+          "AP-010"
+        ],
+        "mode": "single_story",
+        "scope": "Authorize AP-010 (Qualify a controlled browser worker and human takeover) only: a governed browser-worker contract with per-project isolated profiles, human takeover and resume, grant and nested download/navigation budget confinement, refusal of private/link-local/metadata targets and popups, and stop/restart recovery; a driver bridge over the repository's own pinned @sparticuz/chromium and puppeteer-core tooling (no external CDN); real-browser evidence through a local fixture server. No activation, no production caller wiring, no accounts or personal profiles, no download transfer, no I/O outside ~/M5_AP_Workspace. AP-011 through AP-032 remain unauthorized.",
+        "source": "Owner instruction in this branch's session, verbatim: 'Continue with next, I approve it', followed by the correction 'use puppeteer or use-browser, other sessions are doing it' after this session wrongly reported that no real browser could be obtained."
       }
     ]
   }
