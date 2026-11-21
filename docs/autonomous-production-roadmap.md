@@ -1,6 +1,6 @@
 # M5 Agent Studio — Autonomous Production Product Roadmap
 
-**Revision:** 1.6 • **Prepared:** 2026-11-08 • **Status:** owner-requested product specification and proposed execution program; not evidence of implementation, independent security acceptance, or authorization to bypass existing gates.
+**Revision:** 1.7 • **Prepared:** 2026-11-08 • **Status:** owner-requested product specification and proposed execution program; not evidence of implementation, independent security acceptance, or authorization to bypass existing gates.
 
 **Audience:** any implementation agent or human entering without this conversation. Read this document, the companion story ledger, and the agent prompt before proposing changes.
 
@@ -12,6 +12,36 @@
 **Source snapshot inspected:** `pankajtiwarics27/m5-agent-studio` main at `a67e8b291614f8afdac7c8d38ba51bcc8926d695`. Inspection covered repository guidance, module contracts and selected runtime-status documents; not a full code/security audit, installed-runtime qualification, or fresh end-to-end execution. Refresh against current main before implementing.
 
 **Precedence:** repository `AGENTS.md`, accepted security decisions, existing program ownership and signed approvals remain binding. This program does not replace the AS, M5 runtime, UIUX/UIV2, or LC ledgers, and does not reopen their completed stories. Reconcile overlapping work in AP-001. Drafting this roadmap does not grant automatic execution authority to its stories or to downloaded tools.
+
+## Revision 1.7 — AP-012 disposable experiment lab delivered, gate closed on qualification (2026-11-21; AP-012 only)
+
+The owner authorized AP-012 with `continue` and delegated the story-level
+decisions to the session; its dependencies AP-007, AP-010 and AP-011 are done and
+its decision gates U02, U04 and U06 are resolved. The delivery adds
+`autonomous_production_lab.py`: an experiment lifecycle that admits a trial only
+against an explicit install + execution grant, refuses host mounts, privileged
+runtime sockets, production credentials and credential-shaped environment entries
+at `TrialSpec` construction, requires every install hook, custom loader and binary
+to be inspected before admission, and writes a receipt for every outcome —
+versions, effects, checks, cost, cleanup — including refusals.
+
+The one decision this revision records rather than buries: **the gate is closed.**
+AC5 blocks a trial when qualification is *unavailable*, `measured_inventory` is
+`not_measured`, and U02 is resolved only as an owner statement the envelope
+explicitly says is not a measurement. Treating it as qualification, or adding a
+per-trial waiver, would have let an unmeasured host run exactly the experiments
+the criterion forbids, so neither was done. Under the shipped inventory the lab
+refuses every trial admission with an auditable receipt; the gate opens with no
+code change once an operator runs the collection recipe and records a qualified
+inventory with both a record and a host fingerprint.
+
+Nothing is activated: execution is injected by the caller as a `TrialRunner`, so
+the module installs nothing and starts no process; no production caller imports
+it; `runtime_activation_authorized` stays `false`; ADR-0040–0045 stay
+`not-reviewed`; no host fallback exists and the Linux sandbox is never
+substituted for the owner host. AP-013 onward remain unauthorized and need their
+own owner authorization. See
+[the experiment lab](autonomous-production-experiment-lab.md).
 
 ## Revision 1.6 — AP-011 capability discovery delivered and recorded done (2026-11-21; AP-011 only)
 

@@ -167,6 +167,7 @@ measurements without trusting them).
 · [`autonomous-production-research.md`](autonomous-production-research.md) (AP-009 source-backed safe search, reading and repository inspection; offline contract module; not activated)
 · [`autonomous-production-browser-worker.md`](autonomous-production-browser-worker.md) (AP-010 governed browser worker: per-project isolation, takeover, grant confinement, hostile-page refusal and recovery; real-browser evidence; not activated)
 · [`autonomous-production-discovery.md`](autonomous-production-discovery.md) (AP-011 capability-gap classification, candidate proposals and license assessment; offline, no install or activation authority)
+· [`autonomous-production-experiment-lab.md`](autonomous-production-experiment-lab.md) (AP-012 disposable experiment lab: fail-closed host qualification, grant-gated trial admission, containment refusals, trial receipts and quarantine; nothing executes in the module; not activated)
 · [`bounded-mission-execution.md`](bounded-mission-execution.md) (AP-007 offline fail-closed subset: mission stop with measured cleanup latency, late-result fence, bounded limits, isolation requirement and recovery report; U06 resolved 2026-11-17 by owner decision, no production caller, nothing activated)
 · [`../M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md`](../M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md) (AP claim, evidence and handoff protocol)
 · [`uiux-2-0-program.md`](uiux-2-0-program.md) (UI/UX phases, gates and evidence bar)
