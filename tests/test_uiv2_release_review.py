@@ -28,6 +28,13 @@ continuity walk (15/15 with its six captures) and the approved cross-tab walk (4
 that head (`af860cc`, all four jobs). The assertions were never edited while parked and pass
 unchanged; the module is live again.
 
+AP-008 evidence bootstrap: a draft-only CI run may assert that the historical
+review is blocked solely on current source binding while producing real same-head
+implementation evidence. It is not release approval. The environment flag is
+set only for draft pull requests; ready PRs and all other events require the
+strict current-source review and successful CI. Historical measurements remain
+pinned independently, and fresh measurements live in separate records.
+
 UNPARKED AGAIN 2026-09-11 -> 2026-11-09. P7-PARK-02 parked these assertions while the
 UIV2-P7-07 header fold made the committed release evidence stale. The unblock condition
 was met: ``main`` went green at merge commit ``6aca516``, a commit that already contains
@@ -211,6 +218,23 @@ def test_ci_evidence_contains_every_required_successful_job(payload: dict) -> No
     assert ci["headSha"] == payload["pinned_release"]["implementation_head"]
     assert {row["name"] for row in ci["jobs"]} == contract.REQUIRED_CI_JOBS
     assert all(row["conclusion"] == "success" and row["status"] == "completed" for row in ci["jobs"])
+
+
+def test_bootstrap_stage_is_disclosed_and_cannot_be_relabelled_as_push(payload: dict) -> None:
+    ci = payload["critical_ci"]
+    assert ci["evidence_stage"] == "draft-bootstrap"
+    assert ci["event"] == "pull_request"
+    rendered = contract.render_doc(payload)
+    assert "not the strict ready-PR gate, a final full-CI result, or an approval" in rendered
+    wrong = copy.deepcopy(evidence())
+    wrong["ci"]["event"] = "push"
+    assert any("pull-request" in item for item in contract.validate_evidence(wrong))
+    wrong = copy.deepcopy(evidence())
+    wrong["ci"]["evidence_stage"] = "unknown"
+    assert any("stage" in item for item in contract.validate_evidence(wrong))
+    historical = ROOT / "product" / "M5_2_0_UIUX_V2_Release_Evidence.json"
+    assert contract.EVIDENCE_PATH != historical
+    assert contract.sha256(historical) == "b2661fb1e45272e1d29874f404c7c645bd98f207b7af4f41ebe5ee8b0f5da732"
 
 
 def test_issue_185_cannot_close_from_the_historical_scope(payload: dict) -> None:
