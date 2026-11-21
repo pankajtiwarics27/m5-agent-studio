@@ -1970,7 +1970,7 @@
       "title": "Discover and inspect capability candidates without activation",
       "priority": "P1",
       "optional": false,
-      "status": "in_progress",
+      "status": "in_review",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-009"
@@ -2029,15 +2029,28 @@
         "owner": "arena/bcd19d94-m5-agent-studio",
         "branch": "arena/bcd19d94-m5-agent-studio",
         "base_sha": "88921979ef6b0d80c5d30cc396352453caca8807",
-        "head_sha": null,
+        "head_sha": "1faa04d503c6beb7b50f4148e6c8a666464ad841",
         "claimed_at": "2026-11-21T15:30:00Z",
-        "heartbeat_at": "2026-11-21T15:30:00Z",
-        "pr_url": null,
-        "delivery_status": "delivery_pending",
-        "acceptance_evidence": [],
-        "tests_executed": [],
+        "heartbeat_at": "2026-11-21T16:20:00Z",
+        "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/337",
+        "delivery_status": "pr_open",
+        "acceptance_evidence": [
+          "AC1 missing facts, method, model capability, context, tool and hardware are distinguished: classify_gap maps six distinct signals to six distinct GapKind values, reports the cheapest applicable explanation when several are present, refuses unrecognised signals, and marks only model/tool/hardware gaps as needing a new dependency. Tests: the test_each_signal_maps_to_its_own_kind parametrisation, test_missing_facts_is_never_treated_as_a_dependency_problem, test_cheapest_explanation_wins_when_several_signals_are_present, test_unknown_signal_is_refused.",
+          "AC2 discovery can conclude that no new dependency is needed: empty signals return NO_GAP; a registry with NO_GAP refuses to register candidates rather than inventing a dependency; a gap whose remedy is collecting evidence or changing method recommends no_new_dependency even with candidates registered; a gap with no viable candidate reports BLOCKED without inventing one. Tests: test_no_signals_means_no_gap, test_registry_without_gap_cannot_register_candidates, test_registry_without_gap_recommends_no_new_dependency, test_a_gap_that_needs_no_dependency_recommends_none_even_with_candidates, test_hardware_gap_with_no_candidates_reports_blocked_without_inventing_one.",
+          "AC3 candidates record source revision, maintenance, license, install hooks, resource cost, egress and privileges: CapabilityCandidate requires all six surfaces plus identity fields; unknown maintenance reports None rather than assuming health; archived candidates flag stale; install-time network access blocks; install hooks and out-of-allowlist egress are flagged. Tests: test_candidate_records_the_full_surface, the test_candidate_requires_its_identity_fields parametrisation, test_unknown_maintenance_is_unknown_not_optimistic, test_archived_candidate_is_flagged_stale, test_install_hooks_are_recorded_and_warned_about, test_network_at_install_time_blocks_the_candidate, test_egress_outside_the_allowlist_is_flagged_and_blocked_for_reuse.",
+          "AC4 directory stars and MCP annotations never establish trust: popularity is stored as an untrusted claim, establish_trust raises when stars, download counts or MCP annotations are offered as evidence, a trust basis without named evidence is refused, and every serialised candidate states popularity_establishes_trust false. Tests: test_popularity_never_establishes_trust, test_stars_as_evidence_are_rejected, test_mcp_annotation_as_evidence_is_rejected, test_download_counts_are_rejected_as_evidence, test_verified_evidence_establishes_trust, test_a_trust_basis_without_evidence_is_refused.",
+          "AC5 unlicensed or incompatible candidates are blocked for the affected reuse rather than installed: unlicensed ('nobody said') and unknown ('not reviewed') are distinct statuses that both block; copyleft stays usable internally while blocking redistribution, bundling and (for AGPL) network service; a blocked candidate cannot hide an acceptable one; the registry has no install path at all. Tests: test_missing_license_is_unlicensed_and_blocks_every_reuse, test_unreviewed_license_is_unknown_and_blocks, test_copyleft_allows_internal_use_but_blocks_redistribution, test_agpl_blocks_network_service_reuse, test_a_blocked_candidate_does_not_hide_an_acceptable_one, test_unlicensed_candidate_is_blocked_and_never_registered_as_usable.",
+          "AC6 discovery has no execution or production activation authority: Assessment refuses to construct with any authorizes_execution/activation/installation flag set, the registry exposes no install/execute/run/download/activate/enable/apply verb and a test enforces that absence, and every proposal states discovery_grants all false. Tests: test_assessment_refuses_to_grant_anything, test_registry_has_no_install_execute_or_download_verb, test_proposal_states_that_discovery_grants_nothing.",
+          "Deliverables: capability-gap classifier (classify_gap + GapKind), candidate registry/proposal schema (CapabilityCandidate, CandidateRegistry, render_proposal with a stable digest), and license/permission/dependency assessment (assess_license, assess_candidate)."
+        ],
+        "tests_executed": [
+          "Author-run at 1faa04d503c6beb7b50f4148e6c8a666464ad841 (Linux x86_64, Python 3.11.2): tests/test_autonomous_production_discovery.py 68 passed offline — no network, no install, no execution.",
+          "Author-run full suite at the same head: 5747 passed, 38 skipped, 0 failed. The skips are the pinned-Chromium tests (AP-010's real-browser evidence) because this shell did not export STUDIO_SCREENSHOT_CHROME/STUDIO_PUPPETEER_CORE; CI provisions them and runs those tests rather than skipping.",
+          "CI on PR #337 at 1faa04d: 30 pass, 0 fail, mergeStateStatus CLEAN.",
+          "Gates: ruff clean; mypy clean over 81 source files; validate_docs (303 files); validate_governance (7 files); ci_test_shard.py --validate (235 modules, 85/75/75); scoped-test map valid; autonomous_production_decisions.py valid true."
+        ],
         "blockers": [],
-        "handoff": null,
+        "handoff": "AP-011 is implemented and pushed for its authorized scope on PR #337 (head 1faa04d503c6beb7b50f4148e6c8a666464ad841, delivery pr_open, story in_review); it is not merged and not activated. autonomous_production_discovery.py has no production importer and no install, download, execute or activate verb; Assessment refuses any authorizes_* flag and every proposal states discovery_grants all false. It records what a caller supplies: it does not fetch, verify upstream reality or audit security, and network-backed evidence would need a story with an egress grant. AP-008 remains untouched on parallel PR #329; AP-012 depends on AP-010 and AP-011 and remains unauthorized. A separate completion record is required if this PR merges; this PR claims no completion.",
         "authorization_record": {
           "authorization": "normal_story_authorization — owner-approved single story (AP-011 only)",
           "owner_instruction": "In this branch's session the repository owner wrote, verbatim: 'approved', following the previous turn's statement that AP-011 was dependency-ready but needed explicit authorization, and after approving AP-010 the same way ('Continue with next, I approve it' / 'continue').",
