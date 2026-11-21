@@ -2068,7 +2068,7 @@
       "title": "Run disposable capability experiments with receipts",
       "priority": "P1",
       "optional": false,
-      "status": "in_progress",
+      "status": "in_review",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-007",
@@ -2127,10 +2127,10 @@
         "owner": "arena/d3693dd5-m5-agent-studio",
         "branch": "arena/d3693dd5-m5-agent-studio",
         "base_sha": "4ca24c32f3a419c8cc499159e55b48381921ffa9",
-        "head_sha": null,
+        "head_sha": "011388f450081d48cfdd8a59441ffd6a8f38f349",
         "claimed_at": "2026-11-21T16:30:00Z",
-        "heartbeat_at": "2026-11-21T16:30:00Z",
-        "pr_url": null,
+        "heartbeat_at": "2026-11-21T18:10:00Z",
+        "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/339",
         "delivery_status": "pr_open",
         "acceptance_evidence": [
           "AC1 install and execution require the applicable experiment/network/resource grants: admit() requires allow_install AND allow_code_execution, every grant boolean defaults false, an expired grant admits nothing, and a network grant is only valid when it names its hosts (named hosts without a network grant are rejected as contradictory). Tests: test_trial_needs_an_explicit_install_grant, test_trial_needs_an_explicit_execution_grant, test_expired_grant_admits_nothing, test_network_grant_must_name_its_hosts, test_hosts_without_a_network_grant_are_contradictory, test_negative_budgets_are_refused, test_a_grant_without_a_resource_budget_admits_nothing, test_admission_answer_does_not_depend_on_call_order.",
