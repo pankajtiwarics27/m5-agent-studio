@@ -51,8 +51,8 @@
           "artifact": "product/M5_2_0_UIUX_Control_Inventory.json",
           "totals": {
             "panes": 6,
-            "markup_controls": 273,
-            "pane_controls": 110,
+            "markup_controls": 276,
+            "pane_controls": 113,
             "chrome_controls": 163,
             "script_rendered_controls": 74,
             "script_rendered_by_function": {
@@ -107,9 +107,9 @@
         {
           "artifact": "product/M5_2_0_UIUX_Route_Map.json",
           "totals": {
-            "fetch_call_sites": 71,
-            "resolved_urls": 79,
-            "exact_matches": 77,
+            "fetch_call_sites": 72,
+            "resolved_urls": 80,
+            "exact_matches": 78,
             "dynamic_matches": 2,
             "dynamic_method_matches": 0,
             "forwarded_call_sites": 1,
@@ -126,7 +126,7 @@
             "resolved_from": {
               "assignment": 1,
               "forwarded": 1,
-              "literal": 69
+              "literal": 70
             }
           }
         }
@@ -214,9 +214,9 @@
           "totals": {
             "panes": 6,
             "preserved_capabilities": 21,
-            "markup_controls": 273,
+            "markup_controls": 276,
             "chrome_controls": 163,
-            "pane_controls": 110,
+            "pane_controls": 113,
             "script_rendered_controls": 74,
             "routes": 121,
             "routes_with_resolved_or_possible_caller": 74,
@@ -226,7 +226,7 @@
             "route_map_unresolved_caller_edges": 0,
             "route_map_unresolved_method_edges": 0,
             "state_changing_routes_traced": 50,
-            "pane_routes_reached": 42,
+            "pane_routes_reached": 43,
             "pane_routes_excluded": 34,
             "route_walk_depth": 2,
             "screenshots_captured": 6,
@@ -251,7 +251,7 @@
           "totals": {
             "tokens": 58,
             "groups": 8,
-            "references": 1645,
+            "references": 1650,
             "theme_overrides": 20,
             "density_overrides": 5,
             "contrast_pairs": 28,
@@ -324,12 +324,12 @@
           "artifact": "product/M5_2_0_UIUX_Presentations.json",
           "totals": {
             "kinds": 3,
-            "surfaces": 19,
-            "containers": 9,
-            "wired_containers": 9,
+            "surfaces": 20,
+            "containers": 10,
+            "wired_containers": 10,
             "by_kind": {
               "empty": 3,
-              "error": 9,
+              "error": 10,
               "recovery": 7
             },
             "remaining_raw_writers": 2,
@@ -821,7 +821,7 @@
         {
           "artifact": "product/M5_2_0_UIUX_Polish.json",
           "totals": {
-            "radius_rules": 144,
+            "radius_rules": 145,
             "motion_rules": 18,
             "press_rules": 2,
             "hover_rules": 36,
@@ -1147,7 +1147,7 @@
   "inventory": {
     "tabs": 6,
     "routes": 121,
-    "markup_controls": 273,
+    "markup_controls": 276,
     "chrome_controls": 163,
     "script_rendered_controls": 74,
     "capabilities": 21,

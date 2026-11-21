@@ -15,7 +15,7 @@ Measured runtime accessibility and recovery evidence, not a screen-reader certif
 
 **120/120 checks passed; 62 captures; 0 failures.**
 
-Run Git head: `7e3c6d4086ef66ab87f2b45026bcd1d1b31f0dfb`; dirty worktree during evidence capture: `false`.
+Run Git head: `fbef4f365ee74bdaf6e35f9ce3f2d40a88b1f499`; dirty worktree during evidence capture: `true`.
 
 Local after evidence: `/tmp/uiv2-28-adversarial-after/capture-manifest.json` and its 62 PNGs. Original baselines are `/tmp/uiv2-28-before-a11y.log`, `/tmp/uiv2-28-before-responsive.log`, and `/tmp/uiv2-28-contrast-before.json`; these `/tmp` paths are review evidence, not release inputs.
 

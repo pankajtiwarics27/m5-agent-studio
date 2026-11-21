@@ -45,30 +45,30 @@ through `setStatus()`, so the state, the tone and the label cannot disagree.
 
 | Element | Tone | Announced | Line |
 |---|---|---|---|
-| (unnamed) | `ok` | no | 2497 |
-| `#dockerStateBadge` | `neutral` | no | 2544 |
-| `#sdlcProgressBadge` | `neutral` | no | 3205 |
-| `#startReadinessPill` | `neutral` | yes | 3332 |
-| `#startRecentSummary` | `neutral` | yes | 3360 |
-| `#onboardingSummary` | `neutral` | yes | 3378 |
-| `#startHealthSummary` | `neutral` | yes | 3419 |
-| `#startWorkspaceSummary` | `neutral` | yes | 3439 |
-| `#harnessActiveStatusBadge` | `info` | yes | 3496 |
-| `#hallStatusBadge` | `info` | yes | 3670 |
-| `#councilReadinessCount` | `neutral` | no | 3684 |
-| `#pipelineWorkspaceState` | `info` | no | 3844 |
-| (unnamed) | `warn` | no | 7389 |
-| (unnamed) | `warn` | no | 7487 |
-| (unnamed) | `neutral` | no | 11492 |
-| (unnamed) | `busy` | no | 11493 |
-| (unnamed) | `ok` | no | 11494 |
-| (unnamed) | `warn` | no | 11495 |
-| (unnamed) | `warn` | no | 11496 |
-| (unnamed) | `warn` | no | 11497 |
-| (unnamed) | `danger` | no | 11498 |
-| (unnamed) | `warn` | no | 11499 |
-| (unnamed) | `warn` | no | 11500 |
-| (unnamed) | `neutral` | no | 11501 |
+| (unnamed) | `ok` | no | 2503 |
+| `#dockerStateBadge` | `neutral` | no | 2550 |
+| `#sdlcProgressBadge` | `neutral` | no | 3211 |
+| `#startReadinessPill` | `neutral` | yes | 3338 |
+| `#startRecentSummary` | `neutral` | yes | 3366 |
+| `#onboardingSummary` | `neutral` | yes | 3384 |
+| `#startHealthSummary` | `neutral` | yes | 3425 |
+| `#startWorkspaceSummary` | `neutral` | yes | 3445 |
+| `#harnessActiveStatusBadge` | `info` | yes | 3502 |
+| `#hallStatusBadge` | `info` | yes | 3691 |
+| `#councilReadinessCount` | `neutral` | no | 3705 |
+| `#pipelineWorkspaceState` | `info` | no | 3865 |
+| (unnamed) | `warn` | no | 7410 |
+| (unnamed) | `warn` | no | 7508 |
+| (unnamed) | `neutral` | no | 11513 |
+| (unnamed) | `busy` | no | 11514 |
+| (unnamed) | `ok` | no | 11515 |
+| (unnamed) | `warn` | no | 11516 |
+| (unnamed) | `warn` | no | 11517 |
+| (unnamed) | `warn` | no | 11518 |
+| (unnamed) | `danger` | no | 11519 |
+| (unnamed) | `warn` | no | 11520 |
+| (unnamed) | `warn` | no | 11521 |
+| (unnamed) | `neutral` | no | 11522 |
 
 ## Writers
 

@@ -138,6 +138,7 @@
       ]
     },
     "unfitted_modules": [
+      "tests/test_harness_ap008_recovery.py",
       "tests/test_mission_authority_envelope.py"
     ]
   },
@@ -164,6 +165,7 @@
       "tests/test_edit_rollback.py",
       "tests/test_evidence_lessons.py",
       "tests/test_hardware_validation.py",
+      "tests/test_harness_ap008_recovery.py",
       "tests/test_harness_recovery.py",
       "tests/test_harness_settings.py",
       "tests/test_history_privacy.py",

@@ -1708,7 +1708,7 @@
       "title": "Expose clean mission controls and artifact-first status",
       "priority": "P0",
       "optional": false,
-      "status": "not_started",
+      "status": "in_progress",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-005",
@@ -1760,18 +1760,27 @@
         "Push/PR state; owner/independent approvals where required"
       ],
       "tracking": {
-        "owner": null,
-        "branch": null,
-        "base_sha": null,
-        "head_sha": null,
-        "claimed_at": null,
-        "heartbeat_at": null,
-        "pr_url": null,
-        "delivery_status": "not_pushed",
+        "owner": "arena/63f06456-m5-agent-studio",
+        "branch": "arena/63f06456-m5-agent-studio",
+        "base_sha": "c4d289c66ac9c9ec10c5ccbf8489e8d15ed5fd84",
+        "head_sha": "6bc387f7bf469e12ff9ffb04cef0dd12f7eeeb0a",
+        "claimed_at": "2026-11-17T15:40:27Z",
+        "heartbeat_at": "2026-11-18T06:06:57Z",
+        "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/329",
+        "delivery_status": "pr_open",
         "acceptance_evidence": [],
-        "tests_executed": [],
-        "blockers": [],
-        "handoff": null
+        "tests_executed": [
+          "Claim head 7d37a49: scoped docs-ledger 44 passed; prior Harness baseline 120 passed (one warning).",
+          "Candidate worktree: AP-008 and Harness focused regressions 121 passed (one warning); added AP-008 and CI-shard tests 7 passed; Chromium recovery walk 28/28 including 503 retry, keyboard focus and draft guard; cross-tab structural check 2200/2200 across 48 captures; UIV2-28 and UIV2-29 browser walks passed; UIV2-29 backend gate 308 tests and 16 isolation checks (isolation unqualified, blocked).",
+          "Scoped selector escalated to full suite: 5520 passed, 27 failed, 32 skipped, one warning in 975.37 seconds before generator and shard corrections; later focused checks are not a full rerun. See PR for outstanding source-bound UIV2 release gate failures and exact commands.",
+          "AP-008 workspace review slice at candidate worktree: 124 passed across tests/test_harness_ap008_recovery.py, test_harness_recovery.py, test_harness_timeline.py, test_harness_evidence.py, test_task_events.py, test_harness_approval_ui.py and test_task_layout.py (one Starlette warning); Chromium recovery walk 33 passed including inert text injection, keyboard, 320/390px themes and CSS 200% zoom. No owner or security review implied.",
+          "AP-008 CI repair candidate: 160 passed across harness settings, AP-008 recovery, start readiness/command center, tokens, polish and UIUX 2.0 release gate (one Starlette warning); approved cross-tab structural browser check 2200/2200 across 48 captures; Harness recovery walk 33/33. UIV2 source-bound evidence remains deliberately untouched and its gate remains blocked."
+        ],
+        "blockers": [
+          "Implementation is partial: artifact-first project surface, isolated preview, complete error/draft preservation and AP-008 accessibility/reconnect evidence are not complete.",
+          "UIV2 release-review evidence is source-stale and its historical metric-summary checks conflict with newly measured UIV2-29 metrics; no separate UIUX tracking ledger was edited. Exact-head implementation CI and actual owner visual review remain pending."
+        ],
+        "handoff": "AP-008 in progress, draft PR #329. Partial Harness change makes snapshot failures visible with keyboard retry, fences overlapping snapshot responses, prevents recovery continue from overwriting a draft, and stops marking failed-session stages all complete. Existing routes and authorization remain unchanged. Browser and tests cover only this slice; artifact-first workspace, inert/isolated previews, comprehensive draft, stale, reconnect, permission and other states remain unfinished. Generated evidence refresh is partial: current UIV2 release evidence and historical metric-summary gates are blocked, do not alter separate UIUX ledger or self-sign review. See PR for exact tests and remaining work. No runtime activation, production mission caller, isolation acceptance, live dispatch or qualification. Current slice adds a disclosed session workspace preview using existing Git diff and snapshot routes. Untrusted diff is rendered as text, not HTML; unavailable sources are explicit. Drafts remain in the composer until a durable turn-start event, unless the reader has edited it; failures do not claim a request never reached the server. HTTP and non-Git diff states are not reported as clean. This is not a complete project/artifact/version or sources UI, full AP-008 acceptance or security signoff; original red UIV2 gate remains separately blocked and its files were not changed in this slice. CI repair hides workspace disclosure on the new-session welcome screen (no workspace exists yet), preserving its approved composer geometry; resizes the retained composer after a run; regenerates stale UIUX 2.0 source inventories. The separate UIV2 evidence and historical assertions remain unchanged and red pending owner decision; exact-head CI not yet known."
       },
       "implementation_prompt": "Implement AP-008: Expose clean mission controls and artifact-first status. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
