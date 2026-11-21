@@ -40,6 +40,7 @@ from __future__ import annotations
 import copy
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -70,10 +71,34 @@ def roadmap() -> dict:
     return contract.read_json(contract.ROADMAP_PATH)
 
 
+def draft_bootstrap_pending(payload: dict) -> bool:
+    """Only CI's explicit draft bootstrap may accept this one pending condition.
+
+    This is not release approval: strict checks remain mandatory on ready PRs,
+    main and manual runs. All other findings still fail during the bootstrap.
+    """
+    if os.environ.get("UIV2_DRAFT_EVIDENCE_BOOTSTRAP") != "1":
+        return False
+    if payload["pinned_release"]["current_browser_sources"]:
+        return False
+    assert payload["findings"] == [{
+        "check": "release-evidence",
+        "detail": "release evidence is stale for its declared browser-source scope",
+    }]
+    recorded = evidence()
+    original_hashes = contract.evidence_source_hashes_at_commit(recorded["visual"]["git"]["head"])
+    assert contract.validate_evidence(recorded, hashes=original_hashes) == []
+    assert payload["decision"]["uiux_v2_handoff"] == "blocked"
+    assert payload["pinned_release"]["post_handoff_evidence"] == "pending-clean-implementation-and-ci"
+    return True
+
+
 def test_contract_is_ready_without_overturning_production_security_block(payload: dict) -> None:
-    assert payload["findings"] == []
+    pending = draft_bootstrap_pending(payload)
+    if not pending:
+        assert payload["findings"] == []
     assert payload["decision"] == {
-        "uiux_v2_handoff": "ready",
+        "uiux_v2_handoff": "blocked" if pending else "ready",
         "production_security_release": "release-blocked",
         "scope": "merge/handoff of the 30-story UI/UX V2 program only; tagging/publishing a production release remains under scripts/security_release_gate.py and scripts/release.py",
     }
@@ -84,13 +109,37 @@ def test_contract_is_ready_without_overturning_production_security_block(payload
     assert payload["totals"]["ci_jobs"] == 4
 
 
+def test_bootstrap_is_draft_only_and_rejects_other_findings(payload: dict, monkeypatch: pytest.MonkeyPatch) -> None:
+    workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    assert "UIV2_DRAFT_EVIDENCE_BOOTSTRAP: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft && '1' || '0' }}" in workflow
+    monkeypatch.delenv("UIV2_DRAFT_EVIDENCE_BOOTSTRAP", raising=False)
+    assert draft_bootstrap_pending(payload) is False
+    monkeypatch.setenv("UIV2_DRAFT_EVIDENCE_BOOTSTRAP", "1")
+    if not payload["pinned_release"]["current_browser_sources"]:
+        assert draft_bootstrap_pending(payload) is True
+        bad = copy.deepcopy(payload)
+        bad["findings"].append({"check": "other", "detail": "failure"})
+        with pytest.raises(AssertionError):
+            draft_bootstrap_pending(bad)
+        bad = copy.deepcopy(payload)
+        bad["decision"]["uiux_v2_handoff"] = "ready"
+        with pytest.raises(AssertionError):
+            draft_bootstrap_pending(bad)
+
+
 def test_committed_contract_and_handoff_are_exactly_generated(payload: dict) -> None:
-    assert contract.JSON_PATH.read_text(encoding="utf-8") == contract.dumps(payload)
-    assert contract.DOC_PATH.read_text(encoding="utf-8") == contract.render_doc(payload)
+    pending = draft_bootstrap_pending(payload)
+    if not pending:
+        assert contract.JSON_PATH.read_text(encoding="utf-8") == contract.dumps(payload)
+        assert contract.DOC_PATH.read_text(encoding="utf-8") == contract.render_doc(payload)
     result = subprocess.run(
         [sys.executable, str(SCRIPT), "--check"], cwd=ROOT, capture_output=True, text=True, timeout=600, check=False,
     )
-    assert result.returncode == 0, result.stdout + result.stderr
+    if pending:
+        assert result.returncode != 0
+        assert "stale, incomplete or blocked" in result.stderr
+    else:
+        assert result.returncode == 0, result.stdout + result.stderr
 
 
 def test_release_is_pinned_to_clean_full_sha_and_current_browser_sources(payload: dict) -> None:
@@ -101,6 +150,11 @@ def test_release_is_pinned_to_clean_full_sha_and_current_browser_sources(payload
     if recorded["review_scope"] == contract.REVIEW_SCOPE_INTEGRATED:
         expected = contract.evidence_source_hashes_at_commit(contract.UIV2_30_INTEGRATED_HEAD)
         assert pinned["implementation_head"] == contract.UIV2_30_INTEGRATED_HEAD
+        assert pinned["current_browser_sources"] is False
+        assert pinned["post_handoff_evidence"] == "pending-clean-implementation-and-ci"
+    elif draft_bootstrap_pending(payload):
+        assert recorded["review_scope"] == contract.REVIEW_SCOPE_CURRENT
+        expected = contract.evidence_source_hashes_at_commit(pinned["implementation_head"])
         assert pinned["current_browser_sources"] is False
         assert pinned["post_handoff_evidence"] == "pending-clean-implementation-and-ci"
     else:
@@ -161,7 +215,7 @@ def test_ci_evidence_contains_every_required_successful_job(payload: dict) -> No
 
 def test_issue_185_cannot_close_from_the_historical_scope(payload: dict) -> None:
     correction = next(row for row in payload["corrections"] if row["id"] == "issue-185-harness-view-cache-wording")
-    if evidence()["review_scope"] == contract.REVIEW_SCOPE_INTEGRATED:
+    if evidence()["review_scope"] == contract.REVIEW_SCOPE_INTEGRATED or draft_bootstrap_pending(payload):
         assert correction["status"] == "implementation-complete-evidence-refresh-pending"
         assert "must not be closed" in correction["detail"]
         assert "**Post-handoff #185 evidence is still pending.**" in contract.render_doc(payload)
