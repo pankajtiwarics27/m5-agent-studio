@@ -26,7 +26,7 @@
       645.0
     ],
     "module_counts": [
-      84,
+      85,
       75,
       75
     ],
@@ -146,6 +146,7 @@
       "tests/test_action_admission_gate.py",
       "tests/test_adr_process.py",
       "tests/test_api_provider_contracts.py",
+      "tests/test_autonomous_production_discovery.py",
       "tests/test_autonomous_production_research.py",
       "tests/test_baseline.py",
       "tests/test_browser_worker.py",

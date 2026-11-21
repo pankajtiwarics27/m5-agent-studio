@@ -3,7 +3,7 @@
   "document_type": "proposed_autonomous_production_execution_ledger",
   "product": "M5 Agent Studio",
   "program": "AP",
-  "revision": "1.5",
+  "revision": "1.6",
   "prepared_date": "2026-11-08",
   "lifecycle": "registered_tracking_ap007_done_ap008_authorized_u01_u05_resolved",
   "source_snapshot": "a67e8b291614f8afdac7c8d38ba51bcc8926d695",
@@ -3690,7 +3690,8 @@
       "AP-006",
       "AP-008",
       "AP-009",
-      "AP-010"
+      "AP-010",
+      "AP-011"
     ],
     "claim_authority": "A pushed draft pull request plus the matching story tracking block is the remote coordination claim; a local JSON edit alone is not atomic.",
     "fixed_branch_exception": "Arena sessions use their assigned arena/<session>-m5-agent-studio branch instead of renaming to the proposed ap-XXX-short-slug convention.",
@@ -3805,6 +3806,15 @@
         "mode": "single_story",
         "scope": "Authorize AP-010 (Qualify a controlled browser worker and human takeover) only: a governed browser-worker contract with per-project isolated profiles, human takeover and resume, grant and nested download/navigation budget confinement, refusal of private/link-local/metadata targets and popups, and stop/restart recovery; a driver bridge over the repository's own pinned @sparticuz/chromium and puppeteer-core tooling (no external CDN); real-browser evidence through a local fixture server. No activation, no production caller wiring, no accounts or personal profiles, no download transfer, no I/O outside ~/M5_AP_Workspace. AP-011 through AP-032 remain unauthorized.",
         "source": "Owner instruction in this branch's session, verbatim: 'Continue with next, I approve it', followed by the correction 'use puppeteer or use-browser, other sessions are doing it' after this session wrongly reported that no real browser could be obtained."
+      },
+      {
+        "authorized_at": "2026-11-21",
+        "stories": [
+          "AP-011"
+        ],
+        "mode": "single_story",
+        "scope": "Authorize AP-011 (Discover and inspect capability candidates without activation) only: capability-gap classification distinguishing missing facts, method, model capability, context, tool and hardware; a candidate registry/proposal schema recording source revision, maintenance, license, install hooks, resource cost, egress and privileges; and a license/permission/dependency assessment that blocks unlicensed or incompatible candidates for the affected reuse. Discovery has no execution, installation, download or activation authority; no network, account, spend or I/O outside ~/M5_AP_Workspace; no activation. AP-012 through AP-032 remain unauthorized.",
+        "source": "Owner instruction in this branch's session, verbatim: 'approved', in response to this session stating AP-011 was dependency-ready but required explicit authorization."
       }
     ]
   }
