@@ -1970,7 +1970,7 @@
       "title": "Discover and inspect capability candidates without activation",
       "priority": "P1",
       "optional": false,
-      "status": "in_review",
+      "status": "done",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-009"
@@ -2029,11 +2029,11 @@
         "owner": "arena/bcd19d94-m5-agent-studio",
         "branch": "arena/bcd19d94-m5-agent-studio",
         "base_sha": "88921979ef6b0d80c5d30cc396352453caca8807",
-        "head_sha": "1faa04d503c6beb7b50f4148e6c8a666464ad841",
+        "head_sha": "ab37bec6621953b6ae6b5243d255d47eb43b4260",
         "claimed_at": "2026-11-21T15:30:00Z",
-        "heartbeat_at": "2026-11-21T16:20:00Z",
+        "heartbeat_at": "2026-11-21T15:50:00Z",
         "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/337",
-        "delivery_status": "pr_open",
+        "delivery_status": "merged",
         "acceptance_evidence": [
           "AC1 missing facts, method, model capability, context, tool and hardware are distinguished: classify_gap maps six distinct signals to six distinct GapKind values, reports the cheapest applicable explanation when several are present, refuses unrecognised signals, and marks only model/tool/hardware gaps as needing a new dependency. Tests: the test_each_signal_maps_to_its_own_kind parametrisation, test_missing_facts_is_never_treated_as_a_dependency_problem, test_cheapest_explanation_wins_when_several_signals_are_present, test_unknown_signal_is_refused.",
           "AC2 discovery can conclude that no new dependency is needed: empty signals return NO_GAP; a registry with NO_GAP refuses to register candidates rather than inventing a dependency; a gap whose remedy is collecting evidence or changing method recommends no_new_dependency even with candidates registered; a gap with no viable candidate reports BLOCKED without inventing one. Tests: test_no_signals_means_no_gap, test_registry_without_gap_cannot_register_candidates, test_registry_without_gap_recommends_no_new_dependency, test_a_gap_that_needs_no_dependency_recommends_none_even_with_candidates, test_hardware_gap_with_no_candidates_reports_blocked_without_inventing_one.",
@@ -2044,19 +2044,21 @@
           "Deliverables: capability-gap classifier (classify_gap + GapKind), candidate registry/proposal schema (CapabilityCandidate, CandidateRegistry, render_proposal with a stable digest), and license/permission/dependency assessment (assess_license, assess_candidate)."
         ],
         "tests_executed": [
+          "Completion record: PR #337 merged as c1476e7cd9cafc98594cbefb125dd76e34fad7dd at 2026-11-21T15:45:20Z carrying final head ab37bec6621953b6ae6b5243d255d47eb43b4260. The exact-head CI run was green (27 pass, 0 fail, CLEAN), including the pinned-Chromium browser job.",
           "Author-run at 1faa04d503c6beb7b50f4148e6c8a666464ad841 (Linux x86_64, Python 3.11.2): tests/test_autonomous_production_discovery.py 68 passed offline — no network, no install, no execution.",
           "Author-run full suite at the same head: 5747 passed, 38 skipped, 0 failed. The skips are the pinned-Chromium tests (AP-010's real-browser evidence) because this shell did not export STUDIO_SCREENSHOT_CHROME/STUDIO_PUPPETEER_CORE; CI provisions them and runs those tests rather than skipping.",
           "CI on PR #337 at 1faa04d: 30 pass, 0 fail, mergeStateStatus CLEAN.",
           "Gates: ruff clean; mypy clean over 81 source files; validate_docs (303 files); validate_governance (7 files); ci_test_shard.py --validate (235 modules, 85/75/75); scoped-test map valid; autonomous_production_decisions.py valid true."
         ],
         "blockers": [],
-        "handoff": "AP-011 is implemented and pushed for its authorized scope on PR #337 (head 1faa04d503c6beb7b50f4148e6c8a666464ad841, delivery pr_open, story in_review); it is not merged and not activated. autonomous_production_discovery.py has no production importer and no install, download, execute or activate verb; Assessment refuses any authorizes_* flag and every proposal states discovery_grants all false. It records what a caller supplies: it does not fetch, verify upstream reality or audit security, and network-backed evidence would need a story with an egress grant. AP-008 remains untouched on parallel PR #329; AP-012 depends on AP-010 and AP-011 and remains unauthorized. A separate completion record is required if this PR merges; this PR claims no completion.",
+        "handoff": "AP-011 is done for its authorized scope. PR #337 final head ab37bec6621953b6ae6b5243d255d47eb43b4260 merged as c1476e7cd9cafc98594cbefb125dd76e34fad7dd on 2026-11-21; this separate completion record moves the story to done with merged delivery evidence. autonomous_production_discovery.py has no production importer and no install, download, execute or activate verb; Assessment refuses any authorizes_* flag and every proposal states discovery_grants all false. It records supplied evidence only: it does not fetch or verify upstream reality, is not a security audit, and adoption of any candidate needs its own authorization. No activation, network, account, spend, install or I/O outside ~/M5_AP_Workspace was added. AP-008 remains its own story on the parallel PR #329 and is untouched. AP-012 depends on AP-010 and AP-011, both now done, but remains unauthorized and needs its own owner authorization, dependency evidence and branch/PR.",
         "authorization_record": {
           "authorization": "normal_story_authorization — owner-approved single story (AP-011 only)",
           "owner_instruction": "In this branch's session the repository owner wrote, verbatim: 'approved', following the previous turn's statement that AP-011 was dependency-ready but needed explicit authorization, and after approving AP-010 the same way ('Continue with next, I approve it' / 'continue').",
           "selection_evidence": "Checked before claiming. AP-011 status was not_started with tracking not_pushed, its only dependency AP-009 is done on main (8d8995a, completion 379b42b), and its blocked_by_decisions list is empty. AP-008 is still claimed by the parallel session on open PR #329 (UI/UX files only) and is not taken here. AP-012 depends on AP-010 and AP-011 and follows AP-011 in the recorded order, so AP-011 is the next story.",
           "scope_limit": "AP-011 only: a capability-gap classifier that distinguishes missing facts, method, model capability, context, tool and hardware gaps and can conclude that no new dependency is needed; a candidate registry/proposal schema recording source revision, maintenance, license, install hooks, resource cost, egress and privileges; and a license/permission/dependency assessment that blocks unlicensed or incompatible candidates for the affected reuse. Discovery has no execution, installation or activation authority. AP-012 and later remain unauthorized. No activation, no install, no network, no account, no spend, no I/O outside ~/M5_AP_Workspace."
-        }
+        },
+        "completion_pr_url": "PENDING"
       },
       "implementation_prompt": "Implement AP-011: Discover and inspect capability candidates without activation. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
