@@ -1,6 +1,7 @@
 # AP-013 — Measured model capability and compatibility profiles
 
-**Status:** delivered for the AP-013 scope; **offline and advisory only**. It
+**Status:** delivered and merged (PR #341, `0d6c3d1`; story recorded `done` by
+its completion record); **offline and advisory only**. It
 **does not load a model, start a runtime, download anything, reserve hardware or
 estimate a price**, and no production caller imports it. It is **not
 activated**, and it is **not a production guarantee**.
