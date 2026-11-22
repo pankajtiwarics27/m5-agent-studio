@@ -2167,7 +2167,7 @@
       "title": "Build measured model capability and compatibility profiles",
       "priority": "P1",
       "optional": false,
-      "status": "in_progress",
+      "status": "in_review",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-003",
@@ -2228,10 +2228,10 @@
         "owner": "arena/51ec4705-m5-agent-studio",
         "branch": "arena/51ec4705-m5-agent-studio",
         "base_sha": "a8ad07b64e6db0117191faf082c49be55f5ba690",
-        "head_sha": null,
+        "head_sha": "cd5276f101b92612d8d5f2429f0dc8f320a8f36d",
         "claimed_at": "2026-11-21T17:00:00Z",
-        "heartbeat_at": "2026-11-21T17:00:00Z",
-        "pr_url": null,
+        "heartbeat_at": "2026-11-21T19:10:00Z",
+        "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/341",
         "delivery_status": "pr_open",
         "acceptance_evidence": [
           "AC1 profiles include runtime/checkpoint/quantisation/template/context/tool/vision support and measurement provenance: ConfigurationIdentity requires model id, checkpoint digest and revision, runtime and runtime version, quantisation, template, context length and a hardware fingerprint, and its digest changes with each; CompatibilityClaim records runtime/architecture feature support (tools, vision, schema) as supported/unsupported/unknown; every measurement carries provenance. A profile refuses a measurement belonging to a different configuration. Tests: test_identity_records_runtime_checkpoint_quantization_template_and_context, test_identity_digest_changes_with_quantization, test_identity_digest_changes_with_template, test_identity_digest_changes_with_runtime_version, test_identity_digest_changes_with_hardware, test_profile_carries_measurement_provenance, test_a_measurement_from_another_configuration_is_refused, test_runtime_feature_support_is_three_valued.",
