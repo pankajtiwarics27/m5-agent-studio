@@ -1,6 +1,6 @@
 # M5 Agent Studio — Autonomous Production Product Roadmap
 
-**Revision:** 1.8 • **Prepared:** 2026-11-08 • **Status:** owner-requested product specification and proposed execution program; not evidence of implementation, independent security acceptance, or authorization to bypass existing gates.
+**Revision:** 1.9 • **Prepared:** 2026-11-08 • **Status:** owner-requested product specification and proposed execution program; not evidence of implementation, independent security acceptance, or authorization to bypass existing gates.
 
 **Audience:** any implementation agent or human entering without this conversation. Read this document, the companion story ledger, and the agent prompt before proposing changes.
 
@@ -12,6 +12,31 @@
 **Source snapshot inspected:** `pankajtiwarics27/m5-agent-studio` main at `a67e8b291614f8afdac7c8d38ba51bcc8926d695`. Inspection covered repository guidance, module contracts and selected runtime-status documents; not a full code/security audit, installed-runtime qualification, or fresh end-to-end execution. Refresh against current main before implementing.
 
 **Precedence:** repository `AGENTS.md`, accepted security decisions, existing program ownership and signed approvals remain binding. This program does not replace the AS, M5 runtime, UIUX/UIV2, or LC ledgers, and does not reopen their completed stories. Reconcile overlapping work in AP-001. Drafting this roadmap does not grant automatic execution authority to its stories or to downloaded tools.
+
+## Revision 1.9 — AP-013 measured capability profiles delivered (2026-11-21; AP-013 only)
+
+The owner said `sure continue` after this session reported AP-012 merged and
+recorded done, and AP-013 is the earliest story whose dependencies (AP-003,
+AP-004, AP-011) are all done with no decision blockers; AP-008 is claimed by a
+separate session on PR #329 and is not touched here. The delivery adds
+`model_capability_profiles.py`: capability records pinned to an exact
+configuration (checkpoint digest and revision, quantisation, runtime and version,
+template, context, hardware fingerprint) so a measurement cannot migrate between
+builds; companions, installed disk, readiness and residency tracked separately
+from capability; the five task kinds measured apart and refused to pool; model
+cards and imported benchmarks recorded as claims that carry no value and never
+qualify; unknown capabilities refused explicitly with bounded, expiring operator
+overrides that degrade rather than allow; Mistral/TwIL/Qwen/Gemma role
+suggestions kept untested until a confident local measurement supports them, and
+then scoped to that configuration; and dense-vs-MoE comparison on resident
+memory, active computation and measured quality, with expert-as-agent claims
+refused without a verified runtime capability.
+
+It is offline and advisory: it loads no model, starts no runtime, downloads
+nothing and wires no production caller. Nothing is activated;
+`runtime_activation_authorized` remains `false`; ADR-0040–0045 remain
+`not-reviewed`; AP-014 onward remain unauthorized and unclaimed. See
+[measured capability profiles](model-capability-profiles.md).
 
 ## Revision 1.8 — AP-012 recorded done (2026-11-21; AP-012 only)
 
