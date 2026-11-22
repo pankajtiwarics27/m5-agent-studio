@@ -3,16 +3,16 @@
   "document_type": "proposed_autonomous_production_execution_ledger",
   "product": "M5 Agent Studio",
   "program": "AP",
-  "revision": "1.5",
+  "revision": "1.8",
   "prepared_date": "2026-11-08",
-  "lifecycle": "registered_tracking_ap007_done_ap008_authorized_u01_u05_resolved",
+  "lifecycle": "registered_tracking_ap012_done_ap013_unauthorized_u01_u05_resolved",
   "source_snapshot": "a67e8b291614f8afdac7c8d38ba51bcc8926d695",
   "source_repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "specification": "docs/autonomous-production-roadmap.md",
   "agent_prompt": "M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md",
   "authority": {
     "precedence": "AGENTS.md, existing security/approval rules and owning program ledgers remain binding.",
-    "scope": "AP-001 through AP-006 are delivered. AP-007’s offline fail-closed subset and AP-007-F1/F2/F3 are landed; the repository owner resolved U06 on 2026-11-17, explicitly waived the fresh target-host run and accepted AP-007-F2/F3 as the refusal foundation. AP-007-R1’s server-observed host fingerprint seam landed through PR #327 (final head 047378a48bde7e810fc80681d9d25febff22f190, merge 6e357c4681b29b803b713d2f142979d9510fe78f); this separate completion record marks AP-007 done for that authorized scope. Nothing is activated: runtime_activation_authorized remains false; no production caller, IsolationAcceptance or live dispatch exists; installed-runtime qualification has NOT been run; the 2026-10-31 M5-P3-01 record remains the only machine evidence, with the owner-accepted gap explicit. AP-008 is the owner-authorized next story only after AP-007 is recorded done; it remains not_started and unclaimed here and needs its own fresh branch/PR. AP-009 through AP-032, runtime activation and real external actions remain unauthorized.",
+    "scope": "AP-001 through AP-006 are delivered. AP-007’s offline fail-closed subset and AP-007-F1/F2/F3 are landed; the repository owner resolved U06 on 2026-11-17, explicitly waived the fresh target-host run and accepted AP-007-F2/F3 as the refusal foundation. AP-007-R1’s server-observed host fingerprint seam landed through PR #327 (final head 047378a48bde7e810fc80681d9d25febff22f190, merge 6e357c4681b29b803b713d2f142979d9510fe78f); this separate completion record marks AP-007 done for that authorized scope. Nothing is activated: runtime_activation_authorized remains false; no production caller, IsolationAcceptance or live dispatch exists; installed-runtime qualification has NOT been run; the 2026-10-31 M5-P3-01 record remains the only machine evidence, with the owner-accepted gap explicit. AP-008 is the owner-authorized next story only after AP-007 is recorded done; it remains not_started and unclaimed here and needs its own fresh branch/PR. AP-009 through AP-032, runtime activation and real external actions remain unauthorized. Revision 1.7 reconciliation, so this paragraph is not read as current authorization state: the owner has since authorized AP-009, AP-010, AP-011 and AP-012 one story at a time, each with its own branch and PR, and program_registration.authorized_downstream_stories is the current list. AP-012 is delivered on its branch as a fail-closed experiment lab whose admission gate refuses while measured_inventory is not_measured. That delivery activates nothing: runtime_activation_authorized remains false, no production caller imports the module, no host fallback exists, installed-runtime qualification has still NOT been run, and AP-013 through AP-032, runtime activation and real external actions remain unauthorized and unclaimed.",
     "registration_gate": "AP-001 through AP-006 are delivered and recorded. AP-007’s offline subset, follow-ups, U06 resolution and authorized R1 observer seam are recorded. This separate completion record sets AP-007 to done after PR #327 and its exact-head and exact-main gates passed. The owner’s existing decision authorizes AP-008 only after AP-007 is recorded done; upon this record’s merge AP-008 is the next authorized single story, remains not_started, and must use its own fresh branch and PR. AP-009 onwards still requires separate explicit owner authorization. runtime_activation_authorized remains false until an activation step is recorded with its own evidence.",
     "other_ledgers": "Do not alter AS/M5/UIUX/UIV2/LC tracking without the owning protocol.",
     "approval": "Agents cannot fabricate owner, screenshot, independent security or release approval."
@@ -1979,7 +1979,7 @@
       "title": "Discover and inspect capability candidates without activation",
       "priority": "P1",
       "optional": false,
-      "status": "not_started",
+      "status": "done",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-009"
@@ -2035,18 +2035,39 @@
         "Push/PR state; owner/independent approvals where required"
       ],
       "tracking": {
-        "owner": null,
-        "branch": null,
-        "base_sha": null,
-        "head_sha": null,
-        "claimed_at": null,
-        "heartbeat_at": null,
-        "pr_url": null,
-        "delivery_status": "not_pushed",
-        "acceptance_evidence": [],
-        "tests_executed": [],
+        "owner": "arena/bcd19d94-m5-agent-studio",
+        "branch": "arena/bcd19d94-m5-agent-studio",
+        "base_sha": "88921979ef6b0d80c5d30cc396352453caca8807",
+        "head_sha": "ab37bec6621953b6ae6b5243d255d47eb43b4260",
+        "claimed_at": "2026-11-21T15:30:00Z",
+        "heartbeat_at": "2026-11-21T15:50:00Z",
+        "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/337",
+        "delivery_status": "merged",
+        "acceptance_evidence": [
+          "AC1 missing facts, method, model capability, context, tool and hardware are distinguished: classify_gap maps six distinct signals to six distinct GapKind values, reports the cheapest applicable explanation when several are present, refuses unrecognised signals, and marks only model/tool/hardware gaps as needing a new dependency. Tests: the test_each_signal_maps_to_its_own_kind parametrisation, test_missing_facts_is_never_treated_as_a_dependency_problem, test_cheapest_explanation_wins_when_several_signals_are_present, test_unknown_signal_is_refused.",
+          "AC2 discovery can conclude that no new dependency is needed: empty signals return NO_GAP; a registry with NO_GAP refuses to register candidates rather than inventing a dependency; a gap whose remedy is collecting evidence or changing method recommends no_new_dependency even with candidates registered; a gap with no viable candidate reports BLOCKED without inventing one. Tests: test_no_signals_means_no_gap, test_registry_without_gap_cannot_register_candidates, test_registry_without_gap_recommends_no_new_dependency, test_a_gap_that_needs_no_dependency_recommends_none_even_with_candidates, test_hardware_gap_with_no_candidates_reports_blocked_without_inventing_one.",
+          "AC3 candidates record source revision, maintenance, license, install hooks, resource cost, egress and privileges: CapabilityCandidate requires all six surfaces plus identity fields; unknown maintenance reports None rather than assuming health; archived candidates flag stale; install-time network access blocks; install hooks and out-of-allowlist egress are flagged. Tests: test_candidate_records_the_full_surface, the test_candidate_requires_its_identity_fields parametrisation, test_unknown_maintenance_is_unknown_not_optimistic, test_archived_candidate_is_flagged_stale, test_install_hooks_are_recorded_and_warned_about, test_network_at_install_time_blocks_the_candidate, test_egress_outside_the_allowlist_is_flagged_and_blocked_for_reuse.",
+          "AC4 directory stars and MCP annotations never establish trust: popularity is stored as an untrusted claim, establish_trust raises when stars, download counts or MCP annotations are offered as evidence, a trust basis without named evidence is refused, and every serialised candidate states popularity_establishes_trust false. Tests: test_popularity_never_establishes_trust, test_stars_as_evidence_are_rejected, test_mcp_annotation_as_evidence_is_rejected, test_download_counts_are_rejected_as_evidence, test_verified_evidence_establishes_trust, test_a_trust_basis_without_evidence_is_refused.",
+          "AC5 unlicensed or incompatible candidates are blocked for the affected reuse rather than installed: unlicensed ('nobody said') and unknown ('not reviewed') are distinct statuses that both block; copyleft stays usable internally while blocking redistribution, bundling and (for AGPL) network service; a blocked candidate cannot hide an acceptable one; the registry has no install path at all. Tests: test_missing_license_is_unlicensed_and_blocks_every_reuse, test_unreviewed_license_is_unknown_and_blocks, test_copyleft_allows_internal_use_but_blocks_redistribution, test_agpl_blocks_network_service_reuse, test_a_blocked_candidate_does_not_hide_an_acceptable_one, test_unlicensed_candidate_is_blocked_and_never_registered_as_usable.",
+          "AC6 discovery has no execution or production activation authority: Assessment refuses to construct with any authorizes_execution/activation/installation flag set, the registry exposes no install/execute/run/download/activate/enable/apply verb and a test enforces that absence, and every proposal states discovery_grants all false. Tests: test_assessment_refuses_to_grant_anything, test_registry_has_no_install_execute_or_download_verb, test_proposal_states_that_discovery_grants_nothing.",
+          "Deliverables: capability-gap classifier (classify_gap + GapKind), candidate registry/proposal schema (CapabilityCandidate, CandidateRegistry, render_proposal with a stable digest), and license/permission/dependency assessment (assess_license, assess_candidate)."
+        ],
+        "tests_executed": [
+          "Completion record: PR #337 merged as c1476e7cd9cafc98594cbefb125dd76e34fad7dd at 2026-11-21T15:45:20Z carrying final head ab37bec6621953b6ae6b5243d255d47eb43b4260. The exact-head CI run was green (27 pass, 0 fail, CLEAN), including the pinned-Chromium browser job.",
+          "Author-run at 1faa04d503c6beb7b50f4148e6c8a666464ad841 (Linux x86_64, Python 3.11.2): tests/test_autonomous_production_discovery.py 68 passed offline — no network, no install, no execution.",
+          "Author-run full suite at the same head: 5747 passed, 38 skipped, 0 failed. The skips are the pinned-Chromium tests (AP-010's real-browser evidence) because this shell did not export STUDIO_SCREENSHOT_CHROME/STUDIO_PUPPETEER_CORE; CI provisions them and runs those tests rather than skipping.",
+          "CI on PR #337 at 1faa04d: 30 pass, 0 fail, mergeStateStatus CLEAN.",
+          "Gates: ruff clean; mypy clean over 81 source files; validate_docs (303 files); validate_governance (7 files); ci_test_shard.py --validate (235 modules, 85/75/75); scoped-test map valid; autonomous_production_decisions.py valid true."
+        ],
         "blockers": [],
-        "handoff": null
+        "handoff": "AP-011 is done for its authorized scope. PR #337 final head ab37bec6621953b6ae6b5243d255d47eb43b4260 merged as c1476e7cd9cafc98594cbefb125dd76e34fad7dd on 2026-11-21; this separate completion record moves the story to done with merged delivery evidence. autonomous_production_discovery.py has no production importer and no install, download, execute or activate verb; Assessment refuses any authorizes_* flag and every proposal states discovery_grants all false. It records supplied evidence only: it does not fetch or verify upstream reality, is not a security audit, and adoption of any candidate needs its own authorization. No activation, network, account, spend, install or I/O outside ~/M5_AP_Workspace was added. AP-008 remains its own story on the parallel PR #329 and is untouched. AP-012 depends on AP-010 and AP-011, both now done, but remains unauthorized and needs its own owner authorization, dependency evidence and branch/PR.",
+        "authorization_record": {
+          "authorization": "normal_story_authorization — owner-approved single story (AP-011 only)",
+          "owner_instruction": "In this branch's session the repository owner wrote, verbatim: 'approved', following the previous turn's statement that AP-011 was dependency-ready but needed explicit authorization, and after approving AP-010 the same way ('Continue with next, I approve it' / 'continue').",
+          "selection_evidence": "Checked before claiming. AP-011 status was not_started with tracking not_pushed, its only dependency AP-009 is done on main (8d8995a, completion 379b42b), and its blocked_by_decisions list is empty. AP-008 is still claimed by the parallel session on open PR #329 (UI/UX files only) and is not taken here. AP-012 depends on AP-010 and AP-011 and follows AP-011 in the recorded order, so AP-011 is the next story.",
+          "scope_limit": "AP-011 only: a capability-gap classifier that distinguishes missing facts, method, model capability, context, tool and hardware gaps and can conclude that no new dependency is needed; a candidate registry/proposal schema recording source revision, maintenance, license, install hooks, resource cost, egress and privileges; and a license/permission/dependency assessment that blocks unlicensed or incompatible candidates for the affected reuse. Discovery has no execution, installation or activation authority. AP-012 and later remain unauthorized. No activation, no install, no network, no account, no spend, no I/O outside ~/M5_AP_Workspace."
+        },
+        "completion_pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/338"
       },
       "implementation_prompt": "Implement AP-011: Discover and inspect capability candidates without activation. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
@@ -2056,7 +2077,7 @@
       "title": "Run disposable capability experiments with receipts",
       "priority": "P1",
       "optional": false,
-      "status": "not_started",
+      "status": "done",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-007",
@@ -2112,18 +2133,40 @@
         "Push/PR state; owner/independent approvals where required"
       ],
       "tracking": {
-        "owner": null,
-        "branch": null,
-        "base_sha": null,
-        "head_sha": null,
-        "claimed_at": null,
-        "heartbeat_at": null,
-        "pr_url": null,
-        "delivery_status": "not_pushed",
-        "acceptance_evidence": [],
-        "tests_executed": [],
+        "owner": "arena/d3693dd5-m5-agent-studio",
+        "branch": "arena/d3693dd5-m5-agent-studio",
+        "base_sha": "4ca24c32f3a419c8cc499159e55b48381921ffa9",
+        "head_sha": "5fc5921b629e02ad3ed37d95de0a2ca7722ea1fa",
+        "claimed_at": "2026-11-21T16:30:00Z",
+        "heartbeat_at": "2026-11-21T18:30:00Z",
+        "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/339",
+        "delivery_status": "merged",
+        "acceptance_evidence": [
+          "AC1 install and execution require the applicable experiment/network/resource grants: admit() requires allow_install AND allow_code_execution, every grant boolean defaults false, an expired grant admits nothing, and a network grant is only valid when it names its hosts (named hosts without a network grant are rejected as contradictory). Tests: test_trial_needs_an_explicit_install_grant, test_trial_needs_an_explicit_execution_grant, test_expired_grant_admits_nothing, test_network_grant_must_name_its_hosts, test_hosts_without_a_network_grant_are_contradictory, test_negative_budgets_are_refused, test_a_grant_without_a_resource_budget_admits_nothing, test_admission_answer_does_not_depend_on_call_order.",
+          "AC2 untrusted candidates get no host mounts, production credentials or privileged runtime sockets: TrialSpec refuses to construct with host mounts (checked against sensitive roots and their sub-paths, so /etc/ssl/private fails), privileged runtime sockets (docker/containerd/podman), uses_production_credentials, or credential-shaped environment keys; containment is a construction-time refusal. Tests: the test_host_mounts_are_refused parametrisation, test_a_subpath_of_a_sensitive_root_is_also_refused, test_production_credentials_are_refused, the test_privileged_runtime_sockets_are_refused parametrisation, the test_credential_shaped_environment_keys_are_refused parametrisation, test_ordinary_environment_keys_are_allowed.",
+          "AC3 install hooks, custom loaders and binaries are inspected and constrained; uninspected surface blocks: inspect_candidate() returns a blocking finding for every hook, loader and binary absent from the inspected set and a blocking provenance finding for a missing or malformed digest; admit_with_inspection admits only when nothing blocks. Tests: test_uninspected_hooks_block_the_trial, test_inspecting_the_surface_allows_the_trial, test_missing_digest_is_a_blocking_provenance_finding, test_inspection_records_each_surface_item, test_bad_digest_format_is_refused.",
+          "AC4 every trial records exact versions, effects, checks, cost and cleanup outcome: TrialReceipt carries versions, commands, effects, checks, cost, the findings that admitted it and the cleanup outcome; 'completed' requires cleanup.succeeded; a run that failed or failed to clean up is 'failed'; a crashing runner yields a failed receipt with the error rather than an exception; the lab removes its own scratch directory and records it; receipts carry does_not_prove and a stable digest. Tests: test_completed_trial_records_versions_effects_checks_cost_and_cleanup, test_a_failed_trial_is_not_a_completed_trial, test_a_trial_with_failed_cleanup_is_failed_even_if_the_run_succeeded, test_a_crashing_runner_is_a_failed_trial_with_the_error_recorded, test_the_lab_removes_its_own_scratch_directory, test_receipt_states_what_it_does_not_prove, test_a_completed_receipt_requires_successful_cleanup, test_a_receipt_that_ran_must_record_when_it_finished, test_receipt_digest_is_stable.",
+          "AC5 failure OR unavailable qualification blocks the trial; no host fallback: only QualificationState.QUALIFIED admits, a qualified host must name both a qualification record and a fingerprint, not_measured forbids observation fields, and both not_measured and observed_unqualified refuse; a refusal is an auditable receipt (admission 'refused' with a reason) and the runner is never called; no type carries a host_fallback/allow_unqualified/skip_qualification/force parameter. measured_inventory is not_measured on main, so the shipped configuration refuses every trial. Tests: test_not_measured_host_admits_nothing, test_observed_but_unqualified_host_admits_nothing, test_qualified_host_admits_trials, test_a_qualified_host_must_name_its_record_and_fingerprint, test_not_measured_cannot_carry_observations, test_refused_trial_on_unmeasured_host_is_recorded_not_run, test_the_real_shipped_gate_refuses_with_the_current_inventory, test_there_is_no_host_fallback_parameter.",
+          "AC6 successful task-local use does not silently become global capability or policy: a completed trial leaves Lab.promotions empty and every receipt states grants_global_capability false; record_promotion accepts only a completed trial and requires owner_approved, and the record it writes is scope 'task-local'; render_receipts states lab_grants false for production_activation, global_capability and host_fallback. Tests: test_a_successful_trial_does_not_promote_itself, test_promotion_requires_owner_approval, test_only_a_completed_trial_can_be_promoted, test_recorded_promotion_names_the_owner_and_scope, test_rendered_receipts_are_json_with_sorted_keys.",
+          "Deliverables beyond the six criteria: the environment/lifecycle (Lab.admit/run_trial with a disposable per-trial scratch directory that is removed), quarantine/revoke (quarantine writes a marker citing the receipt digest, is_quarantined reads it, quarantining a receipt-less trial is refused), and deterministic receipts (sorted-key JSON, trailing newline, stable digest) are covered by test_quarantine_records_a_marker_and_cites_the_receipt, test_quarantine_of_an_unknown_trial_is_refused, test_receipt_redacts_credential_shaped_content_at_serialisation, test_running_without_a_runner_is_a_configuration_error, test_bad_trial_id_is_refused, test_missing_task_id_is_refused, test_unknown_qualification_status_is_refused."
+        ],
+        "tests_executed": [
+          "Completion record: PR #339 merged as 00b07f90257f5481d31db1babe750ff8aca9c96f at 2026-11-21T16:24:29Z, carrying delivery head 5fc5921b629e02ad3ed37d95de0a2ca7722ea1fa. CI on that exact head was green: 27 pass, 0 fail, 7 skipped (path-selected jobs), mergeStateStatus CLEAN.",
+          "Author-run (Linux x86_64, Python 3.11.2): tests/test_autonomous_production_lab.py 58 passed, offline — every trial uses an injected FakeRunner, so nothing installs, downloads or starts a process.",
+          "Author-run: tests/test_ci_test_shard.py and tests/test_scoped_tests.py 20 passed after the new module was registered in the shard manifest (86/75/75) and test scopes.",
+          "Gates run locally: ruff check clean over the tree; ruff format applied to both new files; mypy clean over autonomous_production_lab.py and tests/test_autonomous_production_lab.py; python autonomous_production_decisions.py valid true with inventory_status not_measured; scripts/validate_docs.py passed (304 files); scripts/validate_governance.py passed.",
+          "NOT run: no host qualification, no installed-runtime check, no real experiment trial. measured_inventory is not_measured, so the lab refuses admission by design and no trial evidence exists. None is claimed."
+        ],
         "blockers": [],
-        "handoff": null
+        "handoff": "AP-012 is done for its authorized scope. PR #339 final head 5fc5921b629e02ad3ed37d95de0a2ca7722ea1fa merged as 00b07f90257f5481d31db1babe750ff8aca9c96f. The lab admits, refuses, records and cleans up, and executes nothing itself: execution is injected as a TrialRunner, so no process starts and nothing is installed. The delivery deliberately does not include a host qualification. Under the shipped inventory (measured_inventory not_measured) every trial admission is refused with an auditable receipt, which is what AC5 requires when qualification is unavailable; no waiver path and no host fallback exists. The gate opens with no code change once an operator runs the collection recipe in docs/autonomous-production-operating-envelope.md and records a qualified inventory naming both a record and a host fingerprint — that is the next act on this story line and it is an operator act, not an agent one. Nothing is activated: runtime_activation_authorized stays false, ADR-0040-0045 stay not-reviewed, no production caller imports the module, no network beyond the U03 allowlist, no spend. AP-013 onward remain unauthorized and need fresh owner words.",
+        "authorization_record": {
+          "authorization": "normal_story_authorization — owner-approved single story (AP-012 only)",
+          "owner_instruction": "On this branch the repository owner wrote, verbatim: 'continue', after this session stated AP-012 had both dependencies done and asked for authorization; when asked how the lab gate should treat missing qualification the owner replied, verbatim: 'AP-012 should be considered once dependency is ready. Start with prerequisite then move to next. I don't have full context of stories. Better to take these decisions autonomously towards best way to complete story with quality output'. That is an explicit delegation of the qualification-reading decision to this session, taken together with the standing bans on activation and on fabricated completion evidence.",
+          "selection_evidence": "Checked before claiming. AP-012 was not_started with tracking not_pushed and every dependency done on main: AP-007, AP-010 (merged e2bf81c, completion 8892197) and AP-011 (merged c1476e7, completion 4ca24c3). Its blocked_by_decisions list is empty and U02/U04/U06 are all resolved. AP-008 remains claimed by the parallel session on open PR #329 (UI/UX files only) and is not taken here. AP-013 depends on AP-012 and follows it.",
+          "qualification_decision": "AC5 blocks a trial when qualification is unavailable, and product/M5_Autonomous_Production_Operating_Envelope.json records measured_inventory.status as not_measured while U02 is resolved only as an owner statement explicitly described as not a measurement. The story is therefore delivered with a FAIL-CLOSED GATE: the lab, grants, isolation constraints, receipts, quarantine and cleanup are built and tested, but TRIAL ADMISSION refuses while inventory is not_measured or observed_unqualified. No waiver path was added, because a per-trial waiver would let the not_measured host run experiments while AC5 requires unavailability to block; the gate opens without code change once an operator runs the collection recipe and records a qualified inventory. No host fallback exists: the Linux sandbox is never substituted for the owner host.",
+          "scope_limit": "AP-012 only: a disposable experiment lab inside ~/M5_AP_Workspace with explicit experiment/network/resource grants, untrusted-candidate isolation constraints, install-hook and binary inspection, per-trial receipts recording exact versions/effects/checks/cost/cleanup, and quarantine/revoke/cleanup paths. No activation, no production caller wiring, no host mounts, no production credentials, no privileged runtime sockets, no global promotion, no spend, no network beyond the U03 allowlist. AP-013 and later remain unauthorized."
+        },
+        "completion_pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/340"
       },
       "implementation_prompt": "Implement AP-012: Run disposable capability experiments with receipts. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
@@ -3693,7 +3736,9 @@
       "AP-006",
       "AP-008",
       "AP-009",
-      "AP-010"
+      "AP-010",
+      "AP-011",
+      "AP-012"
     ],
     "claim_authority": "A pushed draft pull request plus the matching story tracking block is the remote coordination claim; a local JSON edit alone is not atomic.",
     "fixed_branch_exception": "Arena sessions use their assigned arena/<session>-m5-agent-studio branch instead of renaming to the proposed ap-XXX-short-slug convention.",
@@ -3808,6 +3853,24 @@
         "mode": "single_story",
         "scope": "Authorize AP-010 (Qualify a controlled browser worker and human takeover) only: a governed browser-worker contract with per-project isolated profiles, human takeover and resume, grant and nested download/navigation budget confinement, refusal of private/link-local/metadata targets and popups, and stop/restart recovery; a driver bridge over the repository's own pinned @sparticuz/chromium and puppeteer-core tooling (no external CDN); real-browser evidence through a local fixture server. No activation, no production caller wiring, no accounts or personal profiles, no download transfer, no I/O outside ~/M5_AP_Workspace. AP-011 through AP-032 remain unauthorized.",
         "source": "Owner instruction in this branch's session, verbatim: 'Continue with next, I approve it', followed by the correction 'use puppeteer or use-browser, other sessions are doing it' after this session wrongly reported that no real browser could be obtained."
+      },
+      {
+        "authorized_at": "2026-11-21",
+        "stories": [
+          "AP-011"
+        ],
+        "mode": "single_story",
+        "scope": "Authorize AP-011 (Discover and inspect capability candidates without activation) only: capability-gap classification distinguishing missing facts, method, model capability, context, tool and hardware; a candidate registry/proposal schema recording source revision, maintenance, license, install hooks, resource cost, egress and privileges; and a license/permission/dependency assessment that blocks unlicensed or incompatible candidates for the affected reuse. Discovery has no execution, installation, download or activation authority; no network, account, spend or I/O outside ~/M5_AP_Workspace; no activation. AP-012 through AP-032 remain unauthorized.",
+        "source": "Owner instruction in this branch's session, verbatim: 'approved', in response to this session stating AP-011 was dependency-ready but required explicit authorization."
+      },
+      {
+        "authorized_at": "2026-11-21",
+        "stories": [
+          "AP-012"
+        ],
+        "mode": "single_story",
+        "scope": "Authorize AP-012 (Run disposable capability experiments with receipts) only: an experiment environment/lifecycle, pinned install and artifact receipts, and quarantine/revoke/cleanup paths, subject to a fail-closed host qualification gate. The lab holds no execution authority of its own: execution is injected by the caller as a TrialRunner, so the module installs nothing and starts no process. No activation, no production caller, no host fallback, no account, spend or network beyond the U03 allowlist, no I/O outside ~/M5_AP_Workspace. Under measured_inventory not_measured the lab refuses every trial admission. AP-013 through AP-032 remain unauthorized.",
+        "source": "Owner instruction in this branch's session, verbatim: 'continue', together with the standing delegation 'AP-012 should be considered once dependency is ready. Start with prerequisite then move to next. I don't have full context of stories. Better to take these decisions autonomously towards best way to complete story with quality output'."
       }
     ]
   }
