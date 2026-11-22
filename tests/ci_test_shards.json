@@ -26,7 +26,7 @@
       645.0
     ],
     "module_counts": [
-      86,
+      87,
       75,
       75
     ],
@@ -173,6 +173,7 @@
       "tests/test_mcp_client.py",
       "tests/test_mcp_tools.py",
       "tests/test_mission_authority_envelope.py",
+      "tests/test_model_capability_profiles.py",
       "tests/test_model_comparison.py",
       "tests/test_model_updates.py",
       "tests/test_native_transition_driver.py",
