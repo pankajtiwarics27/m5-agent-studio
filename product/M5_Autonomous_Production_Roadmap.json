@@ -3,9 +3,9 @@
   "document_type": "proposed_autonomous_production_execution_ledger",
   "product": "M5 Agent Studio",
   "program": "AP",
-  "revision": "1.9",
+  "revision": "2.0",
   "prepared_date": "2026-11-08",
-  "lifecycle": "registered_tracking_ap013_delivered_ap014_unauthorized_u01_u05_resolved",
+  "lifecycle": "registered_tracking_ap013_done_ap014_unauthorized_u01_u05_resolved",
   "source_snapshot": "a67e8b291614f8afdac7c8d38ba51bcc8926d695",
   "source_repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "specification": "docs/autonomous-production-roadmap.md",
@@ -2167,7 +2167,7 @@
       "title": "Build measured model capability and compatibility profiles",
       "priority": "P1",
       "optional": false,
-      "status": "in_review",
+      "status": "done",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-003",
@@ -2228,11 +2228,11 @@
         "owner": "arena/51ec4705-m5-agent-studio",
         "branch": "arena/51ec4705-m5-agent-studio",
         "base_sha": "a8ad07b64e6db0117191faf082c49be55f5ba690",
-        "head_sha": "cd5276f101b92612d8d5f2429f0dc8f320a8f36d",
+        "head_sha": "10653610fb7dfda61e91ebb7d574e5f5480cccdf",
         "claimed_at": "2026-11-21T17:00:00Z",
-        "heartbeat_at": "2026-11-21T19:10:00Z",
+        "heartbeat_at": "2026-11-22T01:45:00Z",
         "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/341",
-        "delivery_status": "pr_open",
+        "delivery_status": "merged",
         "acceptance_evidence": [
           "AC1 profiles include runtime/checkpoint/quantisation/template/context/tool/vision support and measurement provenance: ConfigurationIdentity requires model id, checkpoint digest and revision, runtime and runtime version, quantisation, template, context length and a hardware fingerprint, and its digest changes with each; CompatibilityClaim records runtime/architecture feature support (tools, vision, schema) as supported/unsupported/unknown; every measurement carries provenance. A profile refuses a measurement belonging to a different configuration. Tests: test_identity_records_runtime_checkpoint_quantization_template_and_context, test_identity_digest_changes_with_quantization, test_identity_digest_changes_with_template, test_identity_digest_changes_with_runtime_version, test_identity_digest_changes_with_hardware, test_profile_carries_measurement_provenance, test_a_measurement_from_another_configuration_is_refused, test_runtime_feature_support_is_three_valued.",
           "AC2 separate model companions/artifacts, installed disk inventory, readiness and residency: ModelCompanion is a separate artifact with its own digest, size and optional checkpoint binding; InstalledFootprint counts weights, companions and KV-cache separately; Readiness is ready/not_installed/incompatible/unknown and unknown is not ready; ResidencyState is a timestamped observation with resident bytes. Tests: test_companion_is_separate_from_the_checkpoint, test_a_missing_companion_makes_a_configuration_unready, test_a_companion_bound_to_another_checkpoint_is_incompatible, test_installed_footprint_counts_only_present_companions, test_readiness_unknown_is_not_ready, test_readiness_ready_requires_verified_runtime_support, test_unsupported_runtime_architecture_is_incompatible, test_residency_is_an_observation_with_a_timestamp, test_a_resident_model_must_report_its_bytes, test_installed_and_loaded_are_independent.",
@@ -2245,19 +2245,21 @@
           "Reviewability: render_profiles is deterministic sorted-key JSON with a trailing newline, a qualification_rules block (claims_are_qualification false, unknown_means_refused true, measurements_migrate_between_configurations false, low_active_parameters_establish_low_memory false) and a three-line does_not_prove block; profiles carry stable digests. Tests: test_rendered_profiles_are_deterministic_json, test_rendered_profiles_state_what_they_do_not_prove, test_profile_digest_is_stable_and_configuration_specific, test_no_module_verb_starts_a_runtime_or_downloads, test_unknown_task_kind_is_refused_everywhere."
         ],
         "tests_executed": [
+          "Completion record: PR #341 merged as 0d6c3d171b914879658feec6b37819b3ad8b3c77 at 2026-11-22T01:38:03Z, carrying delivery head 10653610fb7dfda61e91ebb7d574e5f5480cccdf. CI on that exact head was green: 27 pass, 0 fail, 7 path-selected skips, mergeStateStatus CLEAN.",
           "Author-run (Linux x86_64, Python 3.11.2): tests/test_model_capability_profiles.py 86 passed, fully offline — no model load, no runtime start, no download, probes supplied as plain values.",
           "Author-run: tests/test_ci_test_shard.py and tests/test_scoped_tests.py 20 passed after the module was registered in the shard manifest (87/75/75) and test scopes.",
           "Gates run locally: ruff check clean over the tree; ruff format applied to both new files; mypy clean over the module and its tests; python autonomous_production_decisions.py valid true with inventory_status not_measured; scripts/validate_docs.py passed; scripts/validate_governance.py passed.",
           "NOT run: no model was loaded, no runtime started, no benchmark imported and no capability measured on any host. Every measurement in the tests is a synthetic probe value; none is presented as evidence about an installed model."
         ],
         "blockers": [],
-        "handoff": "AP-013 is delivered for its authorized scope as an offline, advisory capability-profile module. It pins every record to one exact configuration and refuses measurement migration, keeps companions/disk/readiness/residency apart from capability, measures the five task kinds separately, treats model cards and imported benchmarks as claims that never qualify, fails explicitly on unknown capabilities with bounded expiring overrides, keeps the four family role suggestions untested until a local measurement supports them, and refuses to read low MoE active parameters as low memory or to turn MoE experts into agents. It loads no model, starts no runtime, downloads nothing, prices nothing and wires no production caller. Nothing is activated: runtime_activation_authorized stays false, ADR-0040-0045 stay not-reviewed. No model capability has been measured on any host; that requires a qualified runtime and AP-014 onward remain unauthorized.",
+        "handoff": "AP-013 is done for its authorized scope. PR #341 final head 10653610fb7dfda61e91ebb7d574e5f5480cccdf merged as 0d6c3d171b914879658feec6b37819b3ad8b3c77. The module pins every capability record to one exact configuration and refuses measurement migration, keeps companions/disk/readiness/residency apart from capability, measures the five task kinds separately, treats model cards and imported benchmarks as claims that never qualify, fails explicitly on unknown capabilities with bounded expiring overrides, keeps the four family role suggestions untested until a local measurement supports them, and refuses to read low MoE active parameters as low memory or to turn MoE experts into agents. It loads no model, starts no runtime, downloads nothing, prices nothing and wires no production caller. Nothing is activated: runtime_activation_authorized stays false, ADR-0040-0045 stay not-reviewed. No model capability has been measured on any host - that needs a qualified runtime, which the operating envelope still records as not_measured. AP-014 (routing and scheduling, which depends on this story) onward remain unauthorized and need fresh owner words.",
         "authorization_record": {
           "authorization": "normal_story_authorization — owner-approved single story (AP-013 only)",
           "owner_instruction": "On this branch the repository owner wrote, verbatim: 'sure continue', after this session reported AP-012 merged and recorded done and stated that AP-013 onward needed fresh owner words.",
           "selection_evidence": "AP-013 is the earliest AP story whose dependencies are all done (AP-003, AP-004 and AP-011 are recorded done/merged on main at a8ad07b) and whose blocked_by_decisions list is empty. AP-008 is dependency-ready but is claimed by a separate session on arena/63f06456-m5-agent-studio (PR #329, open); it is not touched here. AP-014 is not ready: it depends on AP-013. AP-030 is ready but is an optional P3 story with a lower priority than AP-013's P1 and no owner instruction preferring it.",
           "scope_limit": "AP-013 only: measured model capability and compatibility profiles with provenance, companions/disk/readiness/residency separated from capability, per-task-kind measurement, refusal of model-card and imported-benchmark claims as local qualification, explicit unknown capabilities with bounded manual overrides, and dense/MoE comparison on total resident memory and active computation. Offline and advisory only: the module starts no runtime, loads no model, downloads nothing and wires no production caller. No activation, no spend, no network, no I/O outside ~/M5_AP_Workspace. AP-014 onward remain unauthorized."
-        }
+        },
+        "completion_pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/342"
       },
       "implementation_prompt": "Implement AP-013: Build measured model capability and compatibility profiles. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },

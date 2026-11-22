@@ -1,6 +1,6 @@
 # M5 Agent Studio — Autonomous Production Product Roadmap
 
-**Revision:** 1.9 • **Prepared:** 2026-11-08 • **Status:** owner-requested product specification and proposed execution program; not evidence of implementation, independent security acceptance, or authorization to bypass existing gates.
+**Revision:** 2.0 • **Prepared:** 2026-11-08 • **Status:** owner-requested product specification and proposed execution program; not evidence of implementation, independent security acceptance, or authorization to bypass existing gates.
 
 **Audience:** any implementation agent or human entering without this conversation. Read this document, the companion story ledger, and the agent prompt before proposing changes.
 
@@ -12,6 +12,23 @@
 **Source snapshot inspected:** `pankajtiwarics27/m5-agent-studio` main at `a67e8b291614f8afdac7c8d38ba51bcc8926d695`. Inspection covered repository guidance, module contracts and selected runtime-status documents; not a full code/security audit, installed-runtime qualification, or fresh end-to-end execution. Refresh against current main before implementing.
 
 **Precedence:** repository `AGENTS.md`, accepted security decisions, existing program ownership and signed approvals remain binding. This program does not replace the AS, M5 runtime, UIUX/UIV2, or LC ledgers, and does not reopen their completed stories. Reconcile overlapping work in AP-001. Drafting this roadmap does not grant automatic execution authority to its stories or to downloaded tools.
+
+## Revision 2.0 — AP-013 recorded done (2026-11-22; AP-013 only)
+
+PR #341 merged as `0d6c3d171b914879658feec6b37819b3ad8b3c77` at 2026-11-22T01:38:03Z
+carrying final head `1065361`; the exact-head CI was green (27 pass, 0 fail,
+CLEAN) and the author's full suite was 5891 passed, 38 skipped, 0 failed, with
+the skips confined to the pinned-Chromium browser tests this shell cannot export.
+This record marks AP-013 `done` for that scope only.
+
+Recorded done is not measured capability. The module is a contract for what a
+measurement means and what it refuses to mean; **no model capability has been
+measured on any host**, because the operating envelope still records
+`measured_inventory: not_measured` and no qualified runtime exists. Nothing is
+activated; `runtime_activation_authorized` remains `false`; ADR-0040–0045 remain
+`not-reviewed`. AP-014 (policy-aware routing and resource-safe scheduling), which
+depends on this story, and AP-015 through AP-032 remain unauthorized and
+unclaimed.
 
 ## Revision 1.9 — AP-013 measured capability profiles delivered (2026-11-21; AP-013 only)
 
