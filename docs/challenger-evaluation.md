@@ -1,6 +1,7 @@
 # AP-016 — Reproducible challenger and workflow evaluations
 
-**Status:** delivered for the AP-016 scope; **offline and advisory only**. It
+**Status:** delivered and merged (PR #347, `e462b60`; story recorded `done` by
+its completion record); **offline and advisory only**. It
 **runs no model, workflow, provider or network** and wires no production caller.
 It is **not activated** and **not a production guarantee**.
 
