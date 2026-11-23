@@ -2551,6 +2551,7 @@
         ],
         "tests_executed": [
           "Author-run (Linux x86_64, Python 3.11.2): tests/test_challenger_evaluation.py 54 passed, fully offline - no model, workflow or provider executed; every run and score synthetic.",
+          "Author-run full suite after merging main (post-conflict-resolution head): 6078 passed, 38 skipped, 1 warning in 1379.09s. The 38 skips are pre-existing opt-in gates (pinned Chromium, live container runtime, browser screenshot captures); none is a new skip introduced by AP-016.",
           "Author-run: tests/test_ci_test_shard.py and tests/test_scoped_tests.py 20 passed after the module was registered in the shard manifest (88/77/75) and the test module mapped in test scopes (its name matches no existing glob, as with AP-015).",
           "Merged main (1a26bf3, which carries the separate AP-008 delivery from PR #329) to resolve a shard-manifest conflict; the resolution keeps main's test_harness_ap008_recovery.py in shard 1 and the challenger module in shard 2, with balance.module_counts recomputed from the shard lists.",
           "Gates run locally: ruff check clean over the tree; ruff format applied to both new files; mypy clean over 86 source files; python autonomous_production_decisions.py valid true with inventory_status not_measured; scripts/validate_docs.py passed; scripts/validate_governance.py passed.",
