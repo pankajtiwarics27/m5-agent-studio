@@ -1,7 +1,8 @@
 # AP-030 — Optional guest-desktop capability
 
-**Status:** delivered for the AP-030 scope; **offline and advisory only, and the
-adapter ships disabled.** It **launches no virtual machine, desktop session,
+**Status:** delivered and merged (PR #353, `618537f`; story recorded `done` by
+its completion record); **offline and advisory only, and the adapter ships
+disabled.** It **launches no virtual machine, desktop session,
 service or provider**, drives nothing on the host, and wires no production
 caller. It is **not activated** and **not qualified**.
 
