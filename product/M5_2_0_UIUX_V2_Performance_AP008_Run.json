@@ -1,0 +1,472 @@
+{
+  "story": "UIV2-29",
+  "git": {
+    "head": "41b47edae6323c3c287ac37d351e954e964a8a16",
+    "dirty": true
+  },
+  "source_sha256": {
+    "static/index.html": "dad4fff7a3e0e6e8d837c7718eeed96671e30d3a3ba8cb6af3b424a96cd7ec80",
+    "scripts/uiv2_performance_safety_walk.mjs": "db65e34744d881132250aba25da39f6d239adcf43c407ac4ebaf85f840070643"
+  },
+  "generated_at": "2026-11-23T09:14:21.046Z",
+  "environment": {
+    "node": "v22.22.3",
+    "platform": "linux",
+    "arch": "x64",
+    "cpu_count": 2,
+    "cpu_model": "Intel(R) Xeon(R) Processor @ 2.60GHz",
+    "chrome_version": "HeadlessChrome/153.0.8010.0",
+    "chrome_headless": true,
+    "python": "Python 3.11.2",
+    "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36",
+    "fixture": "council_readiness_seed.py; real loopback app and SSE provider",
+    "memory_method": "CDP Performance.getMetrics after HeapProfiler.collectGarbage",
+    "layout_method": "PerformanceObserver layout-shift plus shell getBoundingClientRect before/after"
+  },
+  "method": {
+    "slow_sse": "0.35s/word paced real provider",
+    "fast_sse": "0.004s/word real provider; production schedule/render wrappers",
+    "harness_stress": "two 12,000-event cycles at 100 events/frame plus 10-event timing frames",
+    "external_requests": "blocked except the isolated loopback fixture"
+  },
+  "thresholds": {
+    "render_window": 300,
+    "cache_limit": 5000,
+    "frame_budget_ms": 4,
+    "heap_plateau_bytes": 8388608,
+    "heap_baseline_bytes": 16777216,
+    "dom_plateau_nodes": 64,
+    "layout_shift_budget": 0.01,
+    "min_fast_sse_per_second": 50
+  },
+  "totals": {
+    "checks": 21,
+    "passed": 21,
+    "failed": 0,
+    "captures": 11
+  },
+  "metrics": {
+    "chat": {
+      "slow": {
+        "model": "Qwen3.8-27B-oQ4e-mtp",
+        "partial_chars": 11,
+        "complete_chars": 335
+      },
+      "fast": {
+        "model": "Gemma-4-21B-REAP-4bit",
+        "elapsed_ms": 339.30000000004657,
+        "renders": 19,
+        "schedules": 58,
+        "model_tokens": 58,
+        "sse_per_second": 170.94,
+        "complete_chars": 330
+      }
+    },
+    "harness": {
+      "memory": {
+        "baseline": {
+          "Nodes": 8585,
+          "Documents": 2,
+          "JSEventListeners": 339,
+          "JSHeapUsedSize": 3400288,
+          "JSHeapTotalSize": 3932160,
+          "LayoutCount": 1,
+          "RecalcStyleCount": 3
+        },
+        "after_cycle_1": {
+          "Nodes": 8585,
+          "Documents": 2,
+          "JSEventListeners": 339,
+          "JSHeapUsedSize": 3345748,
+          "JSHeapTotalSize": 3641344,
+          "LayoutCount": 123,
+          "RecalcStyleCount": 245
+        },
+        "after_cycle_2": {
+          "Nodes": 8585,
+          "Documents": 2,
+          "JSEventListeners": 339,
+          "JSHeapUsedSize": 3342448,
+          "JSHeapTotalSize": 3641344,
+          "LayoutCount": 245,
+          "RecalcStyleCount": 487
+        },
+        "cycle_1": {
+          "elapsed_ms": 4102.699999999953,
+          "cursor": 18000,
+          "cached": 5000,
+          "cards": 300,
+          "nodes": 1147,
+          "last": 18000
+        },
+        "cycle_2": {
+          "elapsed_ms": 4014.0999999998603,
+          "cursor": 30000,
+          "cached": 5000,
+          "cards": 300,
+          "nodes": 1147,
+          "last": 30000
+        },
+        "collection": "CDP HeapProfiler.collectGarbage before every Performance.getMetrics sample"
+      },
+      "steady": {
+        "calls": 20,
+        "mean_ms": 2.174999999976717,
+        "p95_ms": 2.7999999998137355,
+        "max_ms": 3.5,
+        "cards": 300
+      }
+    },
+    "layout": [
+      {
+        "viewport": "1640x900",
+        "theme": "light",
+        "cls_total": 0.1521,
+        "cls_internal_stream": 0.1521,
+        "cls_external_shell": 0,
+        "shifts": 6,
+        "overflow": 0,
+        "max_geometry_delta": 0,
+        "cards": 300,
+        "cursor": 30302
+      },
+      {
+        "viewport": "1640x900",
+        "theme": "dark",
+        "cls_total": 0.2449,
+        "cls_internal_stream": 0.2449,
+        "cls_external_shell": 0,
+        "shifts": 10,
+        "overflow": 0,
+        "max_geometry_delta": 0,
+        "cards": 300,
+        "cursor": 30402
+      },
+      {
+        "viewport": "1440x900",
+        "theme": "light",
+        "cls_total": 0.19059,
+        "cls_internal_stream": 0.19059,
+        "cls_external_shell": 0,
+        "shifts": 6,
+        "overflow": 0,
+        "max_geometry_delta": 0,
+        "cards": 300,
+        "cursor": 30502
+      },
+      {
+        "viewport": "1440x900",
+        "theme": "dark",
+        "cls_total": 0.31766,
+        "cls_internal_stream": 0.31766,
+        "cls_external_shell": 0,
+        "shifts": 10,
+        "overflow": 0,
+        "max_geometry_delta": 0,
+        "cards": 300,
+        "cursor": 30602
+      },
+      {
+        "viewport": "1280x800",
+        "theme": "light",
+        "cls_total": 0.17168,
+        "cls_internal_stream": 0.17168,
+        "cls_external_shell": 0,
+        "shifts": 6,
+        "overflow": 0,
+        "max_geometry_delta": 0,
+        "cards": 300,
+        "cursor": 30702
+      },
+      {
+        "viewport": "1280x800",
+        "theme": "dark",
+        "cls_total": 0.28614,
+        "cls_internal_stream": 0.28614,
+        "cls_external_shell": 0,
+        "shifts": 10,
+        "overflow": 0,
+        "max_geometry_delta": 0,
+        "cards": 300,
+        "cursor": 30802
+      },
+      {
+        "viewport": "390x844",
+        "theme": "light",
+        "cls_total": 0.65698,
+        "cls_internal_stream": 0.65698,
+        "cls_external_shell": 0,
+        "shifts": 7,
+        "overflow": 0,
+        "max_geometry_delta": 0,
+        "cards": 300,
+        "cursor": 30902
+      },
+      {
+        "viewport": "390x844",
+        "theme": "dark",
+        "cls_total": 0.93855,
+        "cls_internal_stream": 0.93855,
+        "cls_external_shell": 0,
+        "shifts": 10,
+        "overflow": 0,
+        "max_geometry_delta": 0,
+        "cards": 300,
+        "cursor": 31002
+      }
+    ]
+  },
+  "checks": [
+    {
+      "group": "browser",
+      "step": "anonymous approval execution is refused and an authenticated unknown approval cannot execute",
+      "passed": true,
+      "detail": "anonymous=401 authenticated-unknown=404"
+    },
+    {
+      "group": "sse",
+      "step": "a real paced SSE reply keeps its complete text and reaches complete",
+      "passed": true,
+      "detail": "model=Qwen3.8-27B-oQ4e-mtp chars=335 messages=2 full_reply_matches=true tail=deduplicates on the message key it already carries."
+    },
+    {
+      "group": "sse",
+      "step": "the loading capture is a real partial reply and differs from completion",
+      "passed": true,
+      "detail": "partial=11 complete=335 distinct_pngs=true"
+    },
+    {
+      "group": "sse",
+      "step": "high-frequency SSE tokens are coalesced without losing the final reply",
+      "passed": true,
+      "detail": "schedules=58 renders=19 model_tokens=58 chars=330 full_reply_matches=true"
+    },
+    {
+      "group": "sse",
+      "step": "the measured fast fixture actually exceeds fifty scheduled SSE updates per second",
+      "passed": true,
+      "detail": "rate=170.9/s elapsed=339.3ms schedules=58"
+    },
+    {
+      "group": "dom-memory",
+      "step": "ordered snapshots are incremental while duplicates, invalid and out-of-order records retain merge semantics",
+      "passed": true,
+      "detail": "{\"stableRead\":true,\"stableAppend\":true,\"outOfOrder\":true,\"pruned\":true,\"reset\":true}"
+    },
+    {
+      "group": "dom-memory",
+      "step": "30,000 events leave a 5,000-event cache and an advancing authoritative cursor",
+      "passed": true,
+      "detail": "cached=5000 cursor=30000 last=30000"
+    },
+    {
+      "group": "dom-memory",
+      "step": "the rendered trajectory remains a 300-card bounded DOM after both 12,000-event cycles",
+      "passed": true,
+      "detail": "cycle1=300/1147 cycle2=300/1147 (cards/nodes)"
+    },
+    {
+      "group": "dom-memory",
+      "step": "post-GC document nodes plateau instead of growing with the event count",
+      "passed": true,
+      "detail": "baseline=8585 cycle1=8585 cycle2=8585 delta=0"
+    },
+    {
+      "group": "dom-memory",
+      "step": "post-GC JS heap remains within the declared repeated-cycle plateau budgets",
+      "passed": true,
+      "detail": "baseline=3400288 cycle1=3345748 cycle2=3342448 cycle_delta=-3300 baseline_delta=-57840"
+    },
+    {
+      "group": "dom-memory",
+      "step": "a full-window append preserves the reader offset and an open retained disclosure",
+      "passed": true,
+      "detail": "{\"before\":480,\"after\":456,\"leavingHeight\":24.5,\"details\":1,\"stillOpen\":true,\"atBottom\":false,\"drift\":0.5}"
+    },
+    {
+      "group": "dom-memory",
+      "step": "ten-event frames retain the existing four-millisecond full-window budget",
+      "passed": true,
+      "detail": "{\"calls\":20,\"mean_ms\":2.174999999976717,\"p95_ms\":2.7999999998137355,\"max_ms\":3.5,\"cards\":300}"
+    },
+    {
+      "group": "layout",
+      "step": "1640x900 light: streaming shifts neither shell geometry nor the page",
+      "passed": true,
+      "detail": "{\"cls_total\":0.1521,\"cls_internal_stream\":0.1521,\"cls_external_shell\":0,\"shifts\":6,\"overflow\":0,\"max_geometry_delta\":0,\"cards\":300,\"cursor\":30302}",
+      "viewport": "1640x900",
+      "theme": "light",
+      "pane": "harness"
+    },
+    {
+      "group": "layout",
+      "step": "1640x900 dark: streaming shifts neither shell geometry nor the page",
+      "passed": true,
+      "detail": "{\"cls_total\":0.2449,\"cls_internal_stream\":0.2449,\"cls_external_shell\":0,\"shifts\":10,\"overflow\":0,\"max_geometry_delta\":0,\"cards\":300,\"cursor\":30402}",
+      "viewport": "1640x900",
+      "theme": "dark",
+      "pane": "harness"
+    },
+    {
+      "group": "layout",
+      "step": "1440x900 light: streaming shifts neither shell geometry nor the page",
+      "passed": true,
+      "detail": "{\"cls_total\":0.19059,\"cls_internal_stream\":0.19059,\"cls_external_shell\":0,\"shifts\":6,\"overflow\":0,\"max_geometry_delta\":0,\"cards\":300,\"cursor\":30502}",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "harness"
+    },
+    {
+      "group": "layout",
+      "step": "1440x900 dark: streaming shifts neither shell geometry nor the page",
+      "passed": true,
+      "detail": "{\"cls_total\":0.31766,\"cls_internal_stream\":0.31766,\"cls_external_shell\":0,\"shifts\":10,\"overflow\":0,\"max_geometry_delta\":0,\"cards\":300,\"cursor\":30602}",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "harness"
+    },
+    {
+      "group": "layout",
+      "step": "1280x800 light: streaming shifts neither shell geometry nor the page",
+      "passed": true,
+      "detail": "{\"cls_total\":0.17168,\"cls_internal_stream\":0.17168,\"cls_external_shell\":0,\"shifts\":6,\"overflow\":0,\"max_geometry_delta\":0,\"cards\":300,\"cursor\":30702}",
+      "viewport": "1280x800",
+      "theme": "light",
+      "pane": "harness"
+    },
+    {
+      "group": "layout",
+      "step": "1280x800 dark: streaming shifts neither shell geometry nor the page",
+      "passed": true,
+      "detail": "{\"cls_total\":0.28614,\"cls_internal_stream\":0.28614,\"cls_external_shell\":0,\"shifts\":10,\"overflow\":0,\"max_geometry_delta\":0,\"cards\":300,\"cursor\":30802}",
+      "viewport": "1280x800",
+      "theme": "dark",
+      "pane": "harness"
+    },
+    {
+      "group": "layout",
+      "step": "390x844 light: streaming shifts neither shell geometry nor the page",
+      "passed": true,
+      "detail": "{\"cls_total\":0.65698,\"cls_internal_stream\":0.65698,\"cls_external_shell\":0,\"shifts\":7,\"overflow\":0,\"max_geometry_delta\":0,\"cards\":300,\"cursor\":30902}",
+      "viewport": "390x844",
+      "theme": "light",
+      "pane": "harness"
+    },
+    {
+      "group": "layout",
+      "step": "390x844 dark: streaming shifts neither shell geometry nor the page",
+      "passed": true,
+      "detail": "{\"cls_total\":0.93855,\"cls_internal_stream\":0.93855,\"cls_external_shell\":0,\"shifts\":10,\"overflow\":0,\"max_geometry_delta\":0,\"cards\":300,\"cursor\":31002}",
+      "viewport": "390x844",
+      "theme": "dark",
+      "pane": "harness"
+    },
+    {
+      "group": "browser",
+      "step": "no page error or outbound request occurred",
+      "passed": true,
+      "detail": "errors=none outbound=none"
+    }
+  ],
+  "captures": [
+    {
+      "path": "chat-midstream.png",
+      "sha256": "bdd326dcc9a3bfa18cd8cbf781c1844209403ea090093dc96597ed4ef0ab949e",
+      "group": "sse",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "chat",
+      "state": "loading"
+    },
+    {
+      "path": "chat-complete.png",
+      "sha256": "213bcd89aa389aead5214136a348536e226a49d2ebde2a4382599075cb27a2b7",
+      "group": "sse",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "chat",
+      "state": "populated"
+    },
+    {
+      "path": "chat-high-frequency-complete.png",
+      "sha256": "7aa3a6d500a90d987e94a7addc1959e30bdd8012d19c655c9bb8f52764105576",
+      "group": "sse",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "chat",
+      "state": "populated"
+    },
+    {
+      "path": "layout/light/1640x900-harness.png",
+      "sha256": "db4d809dabd7d5a1d69dffcf3945eb81baaacf059b3a9b78ac867b0a5f0832b7",
+      "group": "layout",
+      "viewport": "1640x900",
+      "theme": "light",
+      "pane": "harness",
+      "state": "long-content"
+    },
+    {
+      "path": "layout/dark/1640x900-harness.png",
+      "sha256": "6c5021c9909155476c496c818ccc7c6fb8c836a5b4634f323d2687e517592ba9",
+      "group": "layout",
+      "viewport": "1640x900",
+      "theme": "dark",
+      "pane": "harness",
+      "state": "long-content"
+    },
+    {
+      "path": "layout/light/1440x900-harness.png",
+      "sha256": "5f5982d6bfb06d2794154f715a03f4223082e8174be8f6c76cf6047f86cc7097",
+      "group": "layout",
+      "viewport": "1440x900",
+      "theme": "light",
+      "pane": "harness",
+      "state": "long-content"
+    },
+    {
+      "path": "layout/dark/1440x900-harness.png",
+      "sha256": "d037903448b77dac1c63d48f27d875baaff00312ef988a07ea28de18c62af5f8",
+      "group": "layout",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "pane": "harness",
+      "state": "long-content"
+    },
+    {
+      "path": "layout/light/1280x800-harness.png",
+      "sha256": "f558721821e1470db0d2680b2a1a58950f622d96e6e33c3cd1a1c0393a778be6",
+      "group": "layout",
+      "viewport": "1280x800",
+      "theme": "light",
+      "pane": "harness",
+      "state": "long-content"
+    },
+    {
+      "path": "layout/dark/1280x800-harness.png",
+      "sha256": "458845df6bb66f0b7e7365b2dae17b29f4180b1230c60cf94830795848ca871c",
+      "group": "layout",
+      "viewport": "1280x800",
+      "theme": "dark",
+      "pane": "harness",
+      "state": "long-content"
+    },
+    {
+      "path": "layout/light/390x844-harness.png",
+      "sha256": "f0a674c3eeb00708d9538981ab4db1fb0b3dc4fcea8d028d60d5b74af9891bec",
+      "group": "layout",
+      "viewport": "390x844",
+      "theme": "light",
+      "pane": "harness",
+      "state": "long-content"
+    },
+    {
+      "path": "layout/dark/390x844-harness.png",
+      "sha256": "874bf4d50c59e78cb88c5a05fb7cf313c561299bd738b3946a78a1b1380a5177",
+      "group": "layout",
+      "viewport": "390x844",
+      "theme": "dark",
+      "pane": "harness",
+      "state": "long-content"
+    }
+  ]
+}

@@ -26,11 +26,11 @@
     "approved_inputs": null,
     "current_inputs": {
       "ledger_content_sha256": "cb04b1bdf0ec9be6b39d2233496d9e9e53ffb91b0f92397824c9964af333b85f",
-      "source_manifest_sha256": "babb237087efbc225b74d8e506bcdf8f78df525554d49895a9edf1a1fe06dfa1",
-      "control_inventory_sha256": "17684f9f3f6f3cc3b50d77ffdad460fade3787e5ba01df3a53a2f4c0e5306c00",
-      "route_map_sha256": "de9c5290d6a3b2aee6c3364b3eba22231a754c30216aca39c686d98b0bb025b9",
-      "authorization_trace_sha256": "c46a7a8f49ac973cc1b6851edacdc95d48990a71edc9a6557c688092a7a31cae",
-      "frontend_sha256": "397c3ae069fe281d8150485e1b88e73c7970de8a1ac07841c6790f7fe685da0f",
+      "source_manifest_sha256": "6add7f561420a29dd7a298e93a9c13753b7a982f6302e399e53acd409e9c0022",
+      "control_inventory_sha256": "098042c19c9287fc1360b06d7c2c93116858db330752eb77c247b093b21b6234",
+      "route_map_sha256": "e4f66880a23811f1f11c2bc5e657e45702748a8c196d1404df8212470dfeabc2",
+      "authorization_trace_sha256": "c5d624ac8dc4783f24b409f101ef0ee83f6669a06ab32e88db4b7d62c9b42ea8",
+      "frontend_sha256": "dad4fff7a3e0e6e8d837c7718eeed96671e30d3a3ba8cb6af3b424a96cd7ec80",
       "screenshot_manifest_sha256": "b488bf453ae260b6564ae592f0455e3d70cff3121dca1e7c823c7abb270b44d3",
       "screenshot_index_sha256": "16b0620ca1d02a1b181ad15b3a2b0c6aae9e7aa539654d27ed80d9147189634e",
       "generator_sha256": "6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65",
@@ -40,11 +40,11 @@
   },
   "inputs": {
     "ledger_sha256": "96f9ca873e9d2105935e73c8df6a807095e6b11e4ab48a4d64926941e1ccd28a",
-    "source_manifest_sha256": "babb237087efbc225b74d8e506bcdf8f78df525554d49895a9edf1a1fe06dfa1",
-    "control_inventory_sha256": "17684f9f3f6f3cc3b50d77ffdad460fade3787e5ba01df3a53a2f4c0e5306c00",
-    "route_map_sha256": "de9c5290d6a3b2aee6c3364b3eba22231a754c30216aca39c686d98b0bb025b9",
-    "authorization_trace_sha256": "c46a7a8f49ac973cc1b6851edacdc95d48990a71edc9a6557c688092a7a31cae",
-    "frontend_sha256": "397c3ae069fe281d8150485e1b88e73c7970de8a1ac07841c6790f7fe685da0f"
+    "source_manifest_sha256": "6add7f561420a29dd7a298e93a9c13753b7a982f6302e399e53acd409e9c0022",
+    "control_inventory_sha256": "098042c19c9287fc1360b06d7c2c93116858db330752eb77c247b093b21b6234",
+    "route_map_sha256": "e4f66880a23811f1f11c2bc5e657e45702748a8c196d1404df8212470dfeabc2",
+    "authorization_trace_sha256": "c5d624ac8dc4783f24b409f101ef0ee83f6669a06ab32e88db4b7d62c9b42ea8",
+    "frontend_sha256": "dad4fff7a3e0e6e8d837c7718eeed96671e30d3a3ba8cb6af3b424a96cd7ec80"
   },
   "approval_request": [
     {
@@ -55,12 +55,12 @@
     {
       "id": 2,
       "ask": "Accept the control inventory as the list of controls that must stay reachable",
-      "evidence": "273 markup controls (163 chrome, 110 panes) plus 74 rendered by script"
+      "evidence": "276 markup controls (163 chrome, 113 panes) plus 74 rendered by script"
     },
     {
       "id": 3,
       "ask": "Review route candidates and preserve confirmed browser-reachable routes and their gates",
-      "evidence": "121 routes exist; 74 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 50 state-changing candidates; the lexical scan is not exhaustive"
+      "evidence": "121 routes exist; 75 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 50 state-changing candidates; the lexical scan is not exhaustive"
     },
     {
       "id": 4,
@@ -76,19 +76,19 @@
   "totals": {
     "panes": 6,
     "preserved_capabilities": 21,
-    "markup_controls": 273,
+    "markup_controls": 276,
     "chrome_controls": 163,
-    "pane_controls": 110,
+    "pane_controls": 113,
     "script_rendered_controls": 74,
     "routes": 121,
-    "routes_with_resolved_or_possible_caller": 74,
-    "routes_no_caller_observed": 47,
+    "routes_with_resolved_or_possible_caller": 75,
+    "routes_no_caller_observed": 46,
     "routes_unknown_frontend_caller": 0,
     "route_map_unresolved_call_sites": 0,
     "route_map_unresolved_caller_edges": 0,
     "route_map_unresolved_method_edges": 0,
     "state_changing_routes_traced": 50,
-    "pane_routes_reached": 42,
+    "pane_routes_reached": 44,
     "pane_routes_excluded": 34,
     "route_walk_depth": 2,
     "screenshots_captured": 6,
@@ -444,12 +444,12 @@
           "must_preserve": "existing endpoint, permission semantics, durable state and error behavior"
         }
       ],
-      "control_count": 35,
+      "control_count": 38,
       "counts": {
-        "button": 19,
+        "button": 21,
         "input": 3,
         "select": 9,
-        "summary": 3,
+        "summary": 4,
         "textarea": 1
       },
       "controls": [
@@ -473,6 +473,27 @@
           "text": null,
           "onclick": null,
           "handler": null
+        },
+        {
+          "tag": "summary",
+          "id": null,
+          "text": "Files, progress & resources",
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "text": "Refresh workspace review",
+          "onclick": "refreshHarnessWorkspaceReview()",
+          "handler": "refreshHarnessWorkspaceReview"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "text": "Verification & artifacts",
+          "onclick": "openHarnessEvidenceModal()",
+          "handler": "openHarnessEvidenceModal"
         },
         {
           "tag": "button",
@@ -705,8 +726,10 @@
         "harnessResyncFromSnapshot",
         "jumpToLatestHarnessEvent",
         "openContextModal",
+        "openHarnessEvidenceModal",
         "openHarnessGrants",
         "openPathPicker",
+        "refreshHarnessWorkspaceReview",
         "replayHarnessLog",
         "resolveHarnessApproval",
         "saveWorkspaceDirectory",
@@ -761,6 +784,17 @@
         },
         {
           "method": "GET",
+          "path": "/api/harness/sessions/{session_id}/diff",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "refreshHarnessWorkspaceReview",
+          "via": [
+            "refreshHarnessWorkspaceReview"
+          ]
+        },
+        {
+          "method": "GET",
           "path": "/api/harness/sessions/{session_id}/events",
           "certainty": "certain",
           "state_changing": false,
@@ -808,6 +842,18 @@
             "executeHarnessSelectedWorkflow",
             "openSdlcModal",
             "refreshSdlcBoard"
+          ]
+        },
+        {
+          "method": "GET",
+          "path": "/api/harness/sessions/{session_id}/snapshots",
+          "certainty": "certain",
+          "state_changing": false,
+          "gates": [],
+          "handler": "refreshHarnessWorkspaceSnapshots",
+          "via": [
+            "refreshHarnessWorkspaceReview",
+            "refreshHarnessWorkspaceSnapshots"
           ]
         },
         {

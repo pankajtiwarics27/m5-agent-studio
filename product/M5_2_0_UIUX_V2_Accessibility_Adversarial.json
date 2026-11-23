@@ -5,7 +5,7 @@
   "statement": "Measured runtime accessibility and recovery evidence, not a screen-reader certification or a cosmetic-only completion.",
   "execution_policy": {
     "contract_is_not_run_evidence": true,
-    "run_manifest": "product/M5_2_0_UIUX_V2_Accessibility_Adversarial_Run.json",
+    "run_manifest": "product/M5_2_0_UIUX_V2_Accessibility_AP008_Run.json",
     "browser_ci_job": "Browser safety regressions",
     "external_requests": "blocked except the isolated loopback fixture",
     "screen_reader_scope": "DOM names, roles, tab order and focus are asserted; this is not a claim of NVDA/JAWS/VoiceOver certification"
@@ -17,11 +17,11 @@
     "zoom_factor": 2
   },
   "source_sha256": {
-    "static/index.html": "397c3ae069fe281d8150485e1b88e73c7970de8a1ac07841c6790f7fe685da0f",
+    "static/index.html": "dad4fff7a3e0e6e8d837c7718eeed96671e30d3a3ba8cb6af3b424a96cd7ec80",
     "scripts/uiv2_accessibility_adversarial_walk.mjs": "831d65473af6d28d3e77294420fa49130addb5c02d132b433d0141ded525e0c7",
     "scripts/a11y_walk.mjs": "191400491161725465f2f87acd78456e75be08938e29cfcef99d733ea9037c7d",
     "scripts/responsive_walk.mjs": "f39b774a33f1122458c5435d8e566c57e30cba64834239091a26034b1cd40cbd",
-    ".github/workflows/ci.yml": "2f20e8a186cae2ef9e5c88be5634508b0e1562afcfe5aed6e599022719a98ae1"
+    ".github/workflows/ci.yml": "5cfa40910db094bc97f59d77a134933f0cc0f996423b7e2d31b3403a5352515c"
   },
   "matrix": {
     "panes": [
@@ -607,7 +607,7 @@
     "required": "all 21 rows, every source-mapped control/route/test/walk, no API/session/workspace/authorization/sandbox/ledger/fencing/model-memory regression"
   },
   "evidence": {
-    "run": "product/M5_2_0_UIUX_V2_Accessibility_Adversarial_Run.json",
+    "run": "product/M5_2_0_UIUX_V2_Accessibility_AP008_Run.json",
     "status": "passed",
     "totals": {
       "checks": 120,
@@ -616,8 +616,8 @@
       "captures": 62
     },
     "git": {
-      "head": "7e3c6d4086ef66ab87f2b45026bcd1d1b31f0dfb",
-      "dirty": false
+      "head": "41b47edae6323c3c287ac37d351e954e964a8a16",
+      "dirty": true
     },
     "validation_errors": []
   },

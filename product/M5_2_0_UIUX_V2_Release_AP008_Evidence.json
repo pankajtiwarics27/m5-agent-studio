@@ -1,0 +1,198 @@
+{
+  "schema_version": 1,
+  "document_type": "m5_uiv2_release_evidence",
+  "story": "UIV2-30",
+  "review_scope": "current-browser-sources",
+  "recorded_at": "2026-11-23T09:29:00.949934+00:00",
+  "source_sha256": {
+    "static/index.html": "dad4fff7a3e0e6e8d837c7718eeed96671e30d3a3ba8cb6af3b424a96cd7ec80",
+    "scripts/compare_continuity_walk.mjs": "a9165a4dc8b9f74a1c643114a0ffe2fb319e18eb2730e6cede2d92c222fc7b4d",
+    "scripts/uiux_v2_cross_tab_reference_walk.mjs": "f84f40cbd9007909f272f851dcee94d45d9e2ef5b7e1eb0d9e5da3c26e5cb81a"
+  },
+  "compare": {
+    "run": "ap008-workspace-validation/snapshot-slice/compare.json",
+    "run_sha256": "71db6c8d31bb2acb213cb680145784b87336f52f0735897861de79b3596d62c1",
+    "script": "scripts/compare_continuity_walk.mjs",
+    "checks": 15,
+    "passed": 15,
+    "failed": 0,
+    "captures": [
+      {
+        "path": "compare-record-forgotten.png",
+        "sha256": "74c7533c116807725e8aa35b873cad2649d2c9f3a59fe5ac8156a47e20e29ba4",
+        "bytes": 15664
+      },
+      {
+        "path": "compare-record-light.png",
+        "sha256": "864c1b9db12f1cc21744a26604aa482c2376b5f465cfde8ded7ae29dcd936e37",
+        "bytes": 40376
+      },
+      {
+        "path": "compare-record-live.png",
+        "sha256": "fdbe8c0a24684637a591353d8e24ff62c2025331f0b782d41d169b973a06146b",
+        "bytes": 65079
+      },
+      {
+        "path": "compare-record-narrow.png",
+        "sha256": "980ab29b0b29be1ae248d4c9dbbdf3c61796aa69f07ed2b5553fe16f201f5f8c",
+        "bytes": 60661
+      },
+      {
+        "path": "compare-record-restored.png",
+        "sha256": "8d2d1260c70d83b8276484bbf37b671c41830261d1a69fee2137f87e4b02c04f",
+        "bytes": 49499
+      },
+      {
+        "path": "compare-record-server.png",
+        "sha256": "fa348c73e7446920a87873a5fa9b8426a1db9d72c65aa28721e6756a0744980a",
+        "bytes": 17110
+      }
+    ]
+  },
+  "visual": {
+    "run": "ap008-workspace-validation/snapshot-slice/exact-head-visual/check-manifest.json",
+    "manifest_sha256": "34948762dc36f6fd64d02b5b3c6d13bc3c14876dd2f83b8d9ec7ae910332c54d",
+    "git": {
+      "head": "4ac96da075783e750708ff9c560ede0ac7eaea8a",
+      "dirty": false
+    },
+    "contract_sha256": "caf0e5543c6e644eae4a12a6db0ed38a169ad361a96af75cdb04cbfa0f4c2435",
+    "wireframe_sha256": "f1232a0ea81fccbfb343f6f16d8f8878edbcc20a478a96dbea8b45a44cba8a17",
+    "approval": {
+      "status": "approved-check",
+      "reference": "user:Arena review 2026-11-09 \"approved the re-captured phone Hall baseline; re-capture the two 390x844 hall captures\"",
+      "candidate": {
+        "manifest": "/home/runner/work/_temp/candidate/candidate-manifest.json",
+        "manifest_sha256": "e69a16a6a2b1c5711a77c1798b956ef67f418a46f9b835af96c6a99a6a778bea",
+        "git_head": "3bea54dd9572e9ee710f1d2b758b46dedd2f4677"
+      }
+    },
+    "matrix": {
+      "panes": [
+        "start",
+        "harness",
+        "hall",
+        "council",
+        "debate",
+        "chat"
+      ],
+      "viewports": [
+        "1640x900",
+        "1440x900",
+        "1280x800",
+        "390x844"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "keys": [
+        "light/1640x900/start",
+        "light/1640x900/harness",
+        "light/1640x900/hall",
+        "light/1640x900/council",
+        "light/1640x900/debate",
+        "light/1640x900/chat",
+        "light/1440x900/start",
+        "light/1440x900/harness",
+        "light/1440x900/hall",
+        "light/1440x900/council",
+        "light/1440x900/debate",
+        "light/1440x900/chat",
+        "light/1280x800/start",
+        "light/1280x800/harness",
+        "light/1280x800/hall",
+        "light/1280x800/council",
+        "light/1280x800/debate",
+        "light/1280x800/chat",
+        "light/390x844/start",
+        "light/390x844/harness",
+        "light/390x844/hall",
+        "light/390x844/council",
+        "light/390x844/debate",
+        "light/390x844/chat",
+        "dark/1640x900/start",
+        "dark/1640x900/harness",
+        "dark/1640x900/hall",
+        "dark/1640x900/council",
+        "dark/1640x900/debate",
+        "dark/1640x900/chat",
+        "dark/1440x900/start",
+        "dark/1440x900/harness",
+        "dark/1440x900/hall",
+        "dark/1440x900/council",
+        "dark/1440x900/debate",
+        "dark/1440x900/chat",
+        "dark/1280x800/start",
+        "dark/1280x800/harness",
+        "dark/1280x800/hall",
+        "dark/1280x800/council",
+        "dark/1280x800/debate",
+        "dark/1280x800/chat",
+        "dark/390x844/start",
+        "dark/390x844/harness",
+        "dark/390x844/hall",
+        "dark/390x844/council",
+        "dark/390x844/debate",
+        "dark/390x844/chat"
+      ],
+      "live_captures": 48,
+      "reference_captures": 48,
+      "annotated_comparisons": 48,
+      "total_pngs_per_run": 144,
+      "device_scale_factor": 1,
+      "pixel_policy": "measure and annotate; no pixel pass/fail tolerance"
+    },
+    "checks": {
+      "total": 2200,
+      "passed": 2200,
+      "failed": 0
+    },
+    "capture_records": 48,
+    "browser": {
+      "version": "HeadlessChrome/153.0.8010.0",
+      "fonts": {
+        "OpenSans-Regular.ttf": "c53aceea2dcf5b4098099c0c4d0a061d17e178a049317b42a422b1a9f7f8eb59",
+        "OpenSans-Bold.ttf": "27da758f4dcac9a65abe914c13b463b42982b9909bc65713424099f4810bd1e6",
+        "OpenSans-Italic.ttf": "93bc1bb6abf4e6b7c75d7131714061d5b57cc478abcabe4cb3519bb38fb917aa"
+      }
+    },
+    "external_provider_calls": false
+  },
+  "ci": {
+    "headSha": "4ac96da075783e750708ff9c560ede0ac7eaea8a",
+    "status": "completed",
+    "conclusion": "success",
+    "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45145969442",
+    "evidence_stage": "draft-bootstrap",
+    "event": "pull_request",
+    "createdAt": "2026-11-23T09:19:26Z",
+    "updatedAt": "2026-11-23T09:25:47Z",
+    "jobs": [
+      {
+        "name": "Browser safety regressions",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45145969442/job/137596884917"
+      },
+      {
+        "name": "test (3.12)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45145969442/job/137598372414"
+      },
+      {
+        "name": "test (3.13)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45145969442/job/137598372502"
+      },
+      {
+        "name": "test (3.11)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45145969442/job/137598372518"
+      }
+    ]
+  }
+}

@@ -217,6 +217,13 @@ def test_long_conclusion_uses_the_real_api_and_survives_reread(
         assert reread.json()["conclusion_text"].endswith("uiv2-28-conclusion-end.")
 
 
+def test_ap008_run_is_separate_from_preserved_historical_evidence() -> None:
+    historical = ROOT / "product" / "M5_2_0_UIUX_V2_Accessibility_Adversarial_Run.json"
+    assert contract.RUN_PATH != historical
+    assert contract.sha256(historical) == "3784ef220be8eaf1c01fa24f66db8958b72f77e2d5b2eb7f6fccebbe93e0e87b"
+    assert contract.validate_run(run_payload()) == []
+
+
 def test_committed_contract_names_actual_execution_not_screen_reader_certification() -> None:
     payload = json.loads(contract.JSON_PATH.read_text(encoding="utf-8"))
     policy = payload["execution_policy"]

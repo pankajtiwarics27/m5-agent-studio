@@ -10,16 +10,16 @@ The first decision covers only merge/handoff of the UI/UX V2 program. It is not 
 
 | Field | Verified value |
 | --- | --- |
-| Implementation HEAD | `af860cc879f2ba0b1378b42e8d3801a21fad2cce` (dirty=`false`) |
-| Frontend SHA-256 | `397c3ae069fe281d8150485e1b88e73c7970de8a1ac07841c6790f7fe685da0f` |
+| Implementation HEAD | `4ac96da075783e750708ff9c560ede0ac7eaea8a` (dirty=`false`) |
+| Frontend SHA-256 | `dad4fff7a3e0e6e8d837c7718eeed96671e30d3a3ba8cb6af3b424a96cd7ec80` |
 | Evidence scope | `current-browser-sources`; current-browser-sources=`true` |
 | Post-handoff #185 evidence | `current` |
 | Roadmap at generation | 30/30 done, 0 in progress, 0 blocked |
-| Critical CI | [`af860cc879f2ba0b1378b42e8d3801a21fad2cce`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42683511615) — success |
+| Implementation CI | [`4ac96da075783e750708ff9c560ede0ac7eaea8a`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45145969442) — success (draft-bootstrap) |
 | Local executed checks | 7/7 exit 0 |
 | Production release | `release-blocked`; release_ready=`false` |
 
-The imported implementation HEAD and critical CI HEAD must match. A later evidence/tracker commit may differ only as the recorded handoff revision; executable browser sources remain pinned by SHA-256 and final PR CI must pass separately. The source digests are also read back from the implementation commit, so a JSON-only relabeling cannot make an old run current.
+The imported implementation HEAD and CI HEAD must match. A draft-bootstrap run explicitly permits only the pending release-evidence condition; it is not the strict ready-PR gate, a final full-CI result, or an approval. Final PR CI must pass separately with bootstrap disabled. Executable browser sources remain pinned by SHA-256 and are also read back from the implementation commit, so a JSON-only relabeling cannot make an old run current.
 
 Post-handoff #185 has current clean implementation and matching CI evidence.
 
@@ -39,21 +39,21 @@ Post-handoff #185 has current clean implementation and matching CI evidence.
 
 | Evidence | Actual result | Binding |
 | --- | --- | --- |
-| Approved structural matrix | 2200/2200 checks; 48 variants / 144 PNGs | manifest `d0e31010db932fc477b32b5bcd34e648d468dc9f9407903d01511daa7bf41415` |
+| Approved structural matrix | 2200/2200 checks; 48 variants / 144 PNGs | manifest `34948762dc36f6fd64d02b5b3c6d13bc3c14876dd2f83b8d9ec7ae910332c54d` |
 | Human approval | approved-check | `user:Arena review 2026-11-09 "approved the re-captured phone Hall baseline; re-capture the two 390x844 hall captures"` |
-| Compare restore/export continuity | 15/15 checks; six PNGs | run `eb9c6c51f40314092e5dff75380d00d4f008e49bd1c2b54ff2e5c8f3bc9d5f21` |
+| Compare restore/export continuity | 15/15 checks; six PNGs | run `71db6c8d31bb2acb213cb680145784b87336f52f0735897861de79b3596d62c1` |
 | Browser / fonts | HeadlessChrome/153.0.8010.0 | three font digests recorded in the release evidence |
 
-Local review manifests: `.uiv2-evidence/check-manifest.json` and `.uiv2-evidence/compare.json`. PNGs are not committed; their hashes, source digests and actual outcomes are. Approval is structural fidelity, not pixel identity or self-certification.
+Local review manifests: `ap008-workspace-validation/snapshot-slice/exact-head-visual/check-manifest.json` and `ap008-workspace-validation/snapshot-slice/compare.json`. PNGs are not committed; their hashes, source digests and actual outcomes are. Approval is structural fidelity, not pixel identity or self-certification.
 
 ### Compare captures
 
-- `compare-record-forgotten.png` — `9b34fa80499cba163142a30ccc9d920b6788eceea1205d3b79c5c199cd36d4cc` (22488 bytes)
-- `compare-record-light.png` — `b2dea2eed26389eeeec0bb39b9f03b13c19968b15bb5fb72d58c56750a5e26d8` (66134 bytes)
-- `compare-record-live.png` — `1fcc384f71756326989f3a3bad703c3fa3ebbaa7a09c0fc47199d2c535dd7367` (102106 bytes)
-- `compare-record-narrow.png` — `88556b7a1655efc81cd930f96ec157944b7c25ae0fa1605aab0db0fde7146bed` (78641 bytes)
-- `compare-record-restored.png` — `48d728f03eadc81c3dabae76a877f93c10369a761c6fa91522c2484f39b84a83` (76871 bytes)
-- `compare-record-server.png` — `786608f89dcda456992aad095380bfd837e7c0202887cba121a0cae01edad24f` (24417 bytes)
+- `compare-record-forgotten.png` — `74c7533c116807725e8aa35b873cad2649d2c9f3a59fe5ac8156a47e20e29ba4` (15664 bytes)
+- `compare-record-light.png` — `864c1b9db12f1cc21744a26604aa482c2376b5f465cfde8ded7ae29dcd936e37` (40376 bytes)
+- `compare-record-live.png` — `fdbe8c0a24684637a591353d8e24ff62c2025331f0b782d41d169b973a06146b` (65079 bytes)
+- `compare-record-narrow.png` — `980ab29b0b29be1ae248d4c9dbbdf3c61796aa69f07ed2b5553fe16f201f5f8c` (60661 bytes)
+- `compare-record-restored.png` — `8d2d1260c70d83b8276484bbf37b671c41830261d1a69fee2137f87e4b02c04f` (49499 bytes)
+- `compare-record-server.png` — `fa348c73e7446920a87873a5fa9b8426a1db9d72c65aa28721e6756a0744980a` (17110 bytes)
 
 ## Critical checks that actually ran
 
@@ -67,12 +67,12 @@ Local review manifests: `.uiv2-evidence/check-manifest.json` and `.uiv2-evidence
 | documentation-links | `python3 scripts/validate_docs.py` | 0 |
 | production-security-gate | `python3 scripts/security_release_gate.py --json` | 0 |
 
-CI jobs in the imported merged-release run:
+CI jobs in the imported implementation run (see its stage above):
 
-- **Browser safety regressions** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42683511615/job/129384848762))
-- **test (3.12)** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42683511615/job/129384849338))
-- **test (3.11)** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42683511615/job/129384849393))
-- **test (3.13)** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/42683511615/job/129384849706))
+- **Browser safety regressions** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45145969442/job/137596884917))
+- **test (3.12)** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45145969442/job/137598372414))
+- **test (3.13)** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45145969442/job/137598372502))
+- **test (3.11)** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45145969442/job/137598372518))
 
 The older 40-story UI/UX gate remains separately owned by `scripts/uiux_release_gate.py`; this review requires its committed 37/37 checks and 7/7 gates and also runs it during final verification. It does not pretend that artifact generation is a full browser or three-interpreter test run.
 
@@ -82,10 +82,10 @@ Environment: `linux` / `x64`, 2 CPUs, `HeadlessChrome/153.0.8010.0`; disposable 
 
 | Metric | Actual | Gate/scope |
 | --- | ---: | --- |
-| Fast real SSE | 58 schedules in 334.9ms = 173.19/s | at least 50/s, complete reply retained |
-| Full-window frame | mean 1.83ms; p95 2.40ms; max 2.60ms | unchanged mean ≤4ms |
-| Post-GC nodes | 8544 → 8544 → 8544 | no repeated-cycle growth beyond the declared budget |
-| Post-GC JS heap | 3399592 → 3356304 → 3359700 bytes | repeated-cycle plateau, not zero allocation |
+| Fast real SSE | 58 schedules in 366.6ms = 158.21/s | at least 50/s, complete reply retained |
+| Full-window frame | mean 1.52ms; p95 2.00ms; max 2.00ms | unchanged mean ≤4ms |
+| Post-GC nodes | 8548 → 8548 → 8548 | no repeated-cycle growth beyond the declared budget |
+| Post-GC JS heap | 3398220 → 3354876 → 3360016 bytes | repeated-cycle plateau, not zero allocation |
 | Backend safety | 308 tests; 16 isolation checks | zero failures |
 | Local container isolation | unqualified; blocked (fail closed) | live probes not requested; not advertised as qualified |
 
