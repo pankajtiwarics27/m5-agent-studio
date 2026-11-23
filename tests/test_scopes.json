@@ -473,6 +473,10 @@
     "model_capability_profiles.py": [
       "models.providers",
       "ui.pipeline"
+    ],
+    "routing_decision_records.py": [
+      "models.providers",
+      "security.execution"
     ]
   }
 }

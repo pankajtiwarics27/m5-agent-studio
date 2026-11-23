@@ -1,6 +1,6 @@
 # M5 Agent Studio — Autonomous Production Product Roadmap
 
-**Revision:** 2.0 • **Prepared:** 2026-11-08 • **Status:** owner-requested product specification and proposed execution program; not evidence of implementation, independent security acceptance, or authorization to bypass existing gates.
+**Revision:** 2.1 • **Prepared:** 2026-11-08 • **Status:** owner-requested product specification and proposed execution program; not evidence of implementation, independent security acceptance, or authorization to bypass existing gates.
 
 **Audience:** any implementation agent or human entering without this conversation. Read this document, the companion story ledger, and the agent prompt before proposing changes.
 
@@ -12,6 +12,30 @@
 **Source snapshot inspected:** `pankajtiwarics27/m5-agent-studio` main at `a67e8b291614f8afdac7c8d38ba51bcc8926d695`. Inspection covered repository guidance, module contracts and selected runtime-status documents; not a full code/security audit, installed-runtime qualification, or fresh end-to-end execution. Refresh against current main before implementing.
 
 **Precedence:** repository `AGENTS.md`, accepted security decisions, existing program ownership and signed approvals remain binding. This program does not replace the AS, M5 runtime, UIUX/UIV2, or LC ledgers, and does not reopen their completed stories. Reconcile overlapping work in AP-001. Drafting this roadmap does not grant automatic execution authority to its stories or to downloaded tools.
+
+## Revision 2.1 — AP-014 routing and resource-safe scheduling delivered (2026-11-22; AP-014 only)
+
+The owner said `continue` after this session reported AP-013 merged and recorded
+done. AP-014's dependencies (AP-004, AP-007, AP-013) are done with no decision
+blockers; AP-008 is claimed by a separate session on PR #329 and AP-030 is an
+optional P3 story, so neither is taken here. The delivery adds
+`routing_decision_records.py`: five ordered gates (compatibility, measured
+quality, grants, residency, resource fit) where **every** gate is recorded —
+`not_reached` for the gates a block prevented — and `unknown` blocks; a hosted
+candidate refused at construction with no hosted fallback anywhere in the module;
+a scoped limitation naming the local shortfall when nothing local qualifies; a
+strictly sequential schedule that unloads before every load and refuses
+simultaneous residency; memory accounting that keeps charged and observed bytes
+apart so uncertainty stays charged and a finished unload is not treated as proof
+of idleness; a decision record that names every rejection and every manual
+override, with overrides barred from bypassing a gate; and baseline comparison on
+quality, latency, switches and cost as separate metrics.
+
+It dispatches nothing: no model is loaded, no runtime started, no inference
+issued, no provider contacted, no production caller wired. Nothing is activated;
+`runtime_activation_authorized` remains `false`; ADR-0040–0045 remain
+`not-reviewed`; AP-015 onward remain unauthorized and unclaimed. See
+[routing decision records](routing-decision-records.md).
 
 ## Revision 2.0 — AP-013 recorded done (2026-11-22; AP-013 only)
 
