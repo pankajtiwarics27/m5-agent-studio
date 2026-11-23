@@ -301,6 +301,28 @@ async function run(args) {
       await page.evaluate((id) => selectHarnessSession(id), args.verifiedSessionId);
       await sleep(args.settleMs * 12);
 
+      // AP-008: contract requirements come from the selected session's real
+      // snapshot and remain legible in phone layouts; they are not a verdict.
+      for (const [theme, width] of [["light", 390], ["dark", 320]]) {
+        await page.setViewport({width, height:844, deviceScaleFactor:1});
+        const details = await page.evaluate(async (id, theme) => {
+          applyTheme(theme);
+          document.getElementById('harnessWorkspaceReview').open = true;
+          await refreshHarnessWorkspaceReview();
+          const response = await fetch(`/api/harness/sessions/${encodeURIComponent(id)}/state`);
+          const data = await response.json();
+          const node = document.getElementById('harnessWorkspaceContractFiles');
+          return {session:data.session_id, required:data.verification_spec?.required_files, modified:data.verification_spec?.required_modified_files, text:node.textContent, width:document.documentElement.scrollWidth, viewport:window.innerWidth};
+        }, args.verifiedSessionId, theme);
+        record(`session file requirements stay truthful at ${width}px in ${theme}`, details.session === args.verifiedSessionId && details.required.includes('tests/test_total.py') && details.modified.includes('src/total.py') && details.text.includes('tests/test_total.py') && details.text.includes('src/total.py') && /not proof/.test(details.text) && details.width <= details.viewport + 1, JSON.stringify(details));
+        if (theme === 'light') await shoot(page, 'workspace-contract-mobile');
+        await page.focus('#harnessWorkspaceReview summary');
+        await page.keyboard.press('Enter');
+        record(`workspace contract disclosure closes with keyboard at ${width}px`, await page.evaluate(() => !document.getElementById('harnessWorkspaceReview').open && document.activeElement.tagName === 'SUMMARY'), 'summary focus');
+      }
+      await page.setViewport({width:1440, height:900, deviceScaleFactor:1});
+      await page.evaluate(() => applyTheme('light'));
+
       // ── A verdict is a card that states what it rests on ─────────────────
       const verified = await readCard(page, "verified");
       record(

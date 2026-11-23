@@ -89,53 +89,47 @@
       "id": "hallStatusBadge",
       "tone": "info",
       "live": true,
-      "line": 3692
+      "line": 3693
     },
     {
       "id": "councilReadinessCount",
       "tone": "neutral",
       "live": false,
-      "line": 3706
+      "line": 3707
     },
     {
       "id": "pipelineWorkspaceState",
       "tone": "info",
       "live": false,
-      "line": 3866
+      "line": 3867
     },
     {
       "id": null,
       "tone": "warn",
       "live": false,
-      "line": 7411
+      "line": 7412
     },
     {
       "id": null,
       "tone": "warn",
       "live": false,
-      "line": 7509
+      "line": 7510
     },
     {
       "id": null,
       "tone": "neutral",
       "live": false,
-      "line": 11514
+      "line": 11515
     },
     {
       "id": null,
       "tone": "busy",
       "live": false,
-      "line": 11515
-    },
-    {
-      "id": null,
-      "tone": "ok",
-      "live": false,
       "line": 11516
     },
     {
       "id": null,
-      "tone": "warn",
+      "tone": "ok",
       "live": false,
       "line": 11517
     },
@@ -153,13 +147,13 @@
     },
     {
       "id": null,
-      "tone": "danger",
+      "tone": "warn",
       "live": false,
       "line": 11520
     },
     {
       "id": null,
-      "tone": "warn",
+      "tone": "danger",
       "live": false,
       "line": 11521
     },
@@ -171,9 +165,15 @@
     },
     {
       "id": null,
-      "tone": "neutral",
+      "tone": "warn",
       "live": false,
       "line": 11523
+    },
+    {
+      "id": null,
+      "tone": "neutral",
+      "live": false,
+      "line": 11524
     }
   ],
   "state_matrix": [

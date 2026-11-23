@@ -7440,6 +7440,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
             <summary>Files, progress &amp; resources</summary>
             <div class="harness-workspace-review-body">
               <p id="harnessWorkspaceProgress" role="status">Select a session to see its recorded progress.</p>
+              <p id="harnessWorkspaceContractFiles" role="status">Select a session to see its verification file requirements.</p>
               <p id="harnessWorkspaceVersions" role="status" aria-live="polite">Open this section to inspect recorded workspace snapshots.</p>
               <p id="harnessWorkspaceDiffState" role="status" aria-live="polite">Open this section to inspect workspace changes.</p>
               <pre id="harnessWorkspaceDiffPreview" aria-label="Inert text preview of workspace changes" hidden></pre>
@@ -17968,6 +17969,23 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     node.textContent = `${stale ? "Last known (may be stale): " : "Recorded: "}${parts.join(" · ")}`;
   }
 
+  function renderHarnessWorkspaceContractFiles() {
+    const node = document.getElementById("harnessWorkspaceContractFiles");
+    if (!node) return;
+    const state = harnessSnapshot;
+    if (!activeHarnessId) { node.textContent = "Select a session to see its verification file requirements."; return; }
+    if (!state || state.session_id !== activeHarnessId) { node.textContent = "Verification file requirements are unavailable; the task snapshot could not be confirmed."; return; }
+    const stale = document.querySelector("#harnessSnapshotState .presentation");
+    const prefix = stale ? "Last known contract (may be stale): " : "Verification contract: ";
+    const spec = state.verification_spec;
+    if (spec === null) { node.textContent = `${prefix}no contract recorded.`; return; }
+    if (!spec || typeof spec !== "object" || !Array.isArray(spec.required_files) || !Array.isArray(spec.required_modified_files) || [...spec.required_files, ...spec.required_modified_files].some(path => typeof path !== "string")) {
+      node.textContent = `${prefix}file requirements unavailable (invalid contract).`; return;
+    }
+    const describe = paths => paths.length ? `${paths.slice(0, 20).join(", ")}${paths.length > 20 ? `, … (${paths.length} total)` : ""}` : "none declared";
+    node.textContent = `${prefix}required files: ${describe(spec.required_files)} · required modified files: ${describe(spec.required_modified_files)}. These are requirements, not proof that files exist or were modified.`;
+  }
+
   function resetHarnessWorkspaceReview() {
     harnessWorkspaceReviewSerial += 1;
     const status = document.getElementById("harnessWorkspaceDiffState");
@@ -17977,6 +17995,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     if (status) status.textContent = activeHarnessId ? "Open or refresh to inspect workspace changes." : "No session selected; workspace changes are unavailable.";
     if (preview) { preview.textContent = ""; preview.hidden = true; }
     renderHarnessWorkspaceProgress();
+    renderHarnessWorkspaceContractFiles();
     const panel = document.getElementById("harnessWorkspaceReview");
     if (activeHarnessId && panel && panel.open) refreshHarnessWorkspaceReview();
   }
@@ -18013,6 +18032,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     const sessionId = activeHarnessId;
     const readSerial = ++harnessWorkspaceReviewSerial;
     renderHarnessWorkspaceProgress();
+    renderHarnessWorkspaceContractFiles();
     refreshHarnessWorkspaceSnapshots(sessionId, readSerial);
     preview.textContent = "";
     preview.hidden = true;
@@ -18041,6 +18061,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
   function applyHarnessSnapshotState(state) {
     if (!state) return;
     renderHarnessWorkspaceProgress();
+    renderHarnessWorkspaceContractFiles();
     const badge = document.getElementById("harnessActiveStatusBadge");
     const b = harnessStatusBadge(state);
     if (badge) setStatus(badge, b.cls, b.label);
@@ -18073,6 +18094,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     });
     if (hadFocus && panel) panel.querySelector("button")?.focus();
     renderHarnessWorkspaceProgress();
+    renderHarnessWorkspaceContractFiles();
     return panel;
   }
 

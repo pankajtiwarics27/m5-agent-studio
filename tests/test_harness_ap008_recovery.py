@@ -301,3 +301,32 @@ def test_real_git_diff_returns_redacted_text_for_tracked_and_untracked(tmp_path)
     assert secret not in diff["diff"] and diff["diff"].count("[REDACTED]") >= 2
     assert ".env" not in diff["diff"]
     assert len(diff["diff"]) <= 50_000
+
+
+def test_contract_file_disclosure_is_session_scoped_stale_aware_and_inert():
+    html = HTML.read_text(encoding="utf-8")
+    start = html.index('  function renderHarnessWorkspaceContractFiles() {')
+    end = html.index('  function resetHarnessWorkspaceReview()', start)
+    script = r'''
+const assert = require('node:assert/strict');
+let activeHarnessId='one', harnessSnapshot=null, stale=false;
+const node={textContent:''};
+let document={getElementById(){return node},querySelector(){return stale ? {} : null}};
+''' + html[start:end] + r'''
+renderHarnessWorkspaceContractFiles(); assert.match(node.textContent,/unavailable/);
+harnessSnapshot={session_id:'two', verification_spec:{required_files:['other'],required_modified_files:[]}};
+renderHarnessWorkspaceContractFiles(); assert.doesNotMatch(node.textContent,/other/);
+harnessSnapshot={session_id:'one', verification_spec:null}; renderHarnessWorkspaceContractFiles();
+assert.match(node.textContent,/no contract recorded/);
+harnessSnapshot.verification_spec={required_files:['<img src=x onerror=alert(1)>'],required_modified_files:['src/a.py']};
+renderHarnessWorkspaceContractFiles(); assert.match(node.textContent,/<img/); assert.equal(node.innerHTML,undefined);
+assert.match(node.textContent,/not proof/); assert.match(node.textContent,/src\/a.py/);
+stale=true; renderHarnessWorkspaceContractFiles(); assert.match(node.textContent,/may be stale/);
+harnessSnapshot.verification_spec={required_files:[],required_modified_files:[]};
+renderHarnessWorkspaceContractFiles(); assert.match(node.textContent,/none declared/);
+harnessSnapshot.verification_spec={required_files:['ok'],required_modified_files:[42]};
+renderHarnessWorkspaceContractFiles(); assert.match(node.textContent,/invalid contract/);
+activeHarnessId=null; renderHarnessWorkspaceContractFiles(); assert.match(node.textContent,/Select a session/);
+'''
+    result = subprocess.run(["node", "-"], input=script, text=True, capture_output=True, cwd=ROOT, check=False)
+    assert result.returncode == 0, result.stderr
