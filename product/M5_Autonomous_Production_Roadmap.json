@@ -3,9 +3,9 @@
   "document_type": "proposed_autonomous_production_execution_ledger",
   "product": "M5 Agent Studio",
   "program": "AP",
-  "revision": "2.3",
+  "revision": "2.4",
   "prepared_date": "2026-11-08",
-  "lifecycle": "registered_tracking_ap015_delivered_ap016_unauthorized_u01_u05_resolved",
+  "lifecycle": "registered_tracking_ap015_done_ap016_unauthorized_u01_u05_resolved",
   "source_snapshot": "a67e8b291614f8afdac7c8d38ba51bcc8926d695",
   "source_repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "specification": "docs/autonomous-production-roadmap.md",
@@ -2369,7 +2369,7 @@
       "title": "Preserve context, preferences and artifact continuity",
       "priority": "P1",
       "optional": false,
-      "status": "in_review",
+      "status": "done",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-005",
@@ -2430,9 +2430,9 @@
         "base_sha": "b55a14ab30db7af64eee258287ac2530bdf93c12",
         "head_sha": "534cb6a34a9e0acdb92579360826427e7962cdfc",
         "claimed_at": "2026-11-23T06:10:00Z",
-        "heartbeat_at": "2026-11-23T06:45:00Z",
+        "heartbeat_at": "2026-11-23T09:00:00Z",
         "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/345",
-        "delivery_status": "pr_open",
+        "delivery_status": "merged",
         "acceptance_evidence": [
           "AC1 required brief, unresolved failures, current artifacts, approvals and authority survive or are explicitly reconstructed: ContinuationState accounts for six required kinds; every element is survived or reconstructed, a reconstruction must name its source, a lost critical element refuses continuation, and a required kind that was never accounted for also refuses - absence is not survival. Tests: test_the_six_required_kinds_are_named, test_a_complete_checklist_allows_continuation, test_a_lost_critical_element_refuses_continuation, test_a_lost_non_critical_element_does_not_refuse, test_a_kind_that_was_never_accounted_for_refuses_continuation, test_a_reconstruction_must_name_its_source, test_a_survived_element_cannot_claim_a_reconstruction_source, test_continuity_is_not_a_score, test_unresolved_failures_are_part_of_the_checklist.",
           "AC2 no silent truncation of required input to force fit: the module delegates fitting to context_reassembly and audits its result against the indices the work requires, separating 'truncated' from 'safe' so a successful fit that discarded required content is caught and refused. Tests: test_a_fit_that_dropped_required_input_is_unsafe, test_refusing_an_unsafe_fit_names_the_dropped_element, test_a_fit_that_dropped_only_optional_turns_is_safe, test_truncation_and_safety_are_different_questions, test_the_audit_names_the_reassembly_contract_it_delegates_to.",
@@ -2443,19 +2443,21 @@
           "Reviewability: render_continuity is deterministic sorted-key JSON with a trailing newline and a continuity_rules block stating every boundary (readability is not continuity, silent truncation not permitted, recall does not upgrade trust, cross-project recall not permitted, kv_cache_portable false) plus a three-line does_not_prove block; states carry stable digests. Tests: test_rendered_continuity_is_deterministic_json, test_rendered_continuity_states_the_boundaries, test_state_digest_is_stable, test_unknown_required_kind_is_refused, test_a_malformed_digest_is_refused, test_an_unknown_continuity_status_is_refused, test_no_module_verb_loads_a_model_or_starts_a_runtime."
         ],
         "tests_executed": [
+          "Completion record: PR #345 merged as 3daa89aa1d4de6c99e39aad6232b7aa18ac7b1e1 at 2026-11-23T08:54:07Z, carrying delivery head 534cb6a34a9e0acdb92579360826427e7962cdfc. CI on that exact head was green: 27 pass, 0 fail, 7 path-selected skips, mergeStateStatus CLEAN.",
           "Author-run (Linux x86_64, Python 3.11.2): tests/test_continuation_contracts.py 59 passed, fully offline - no model loaded, no runtime started, no private store read, no handoff executed.",
           "Author-run: tests/test_ci_test_shard.py and tests/test_scoped_tests.py 20 passed after the module was registered in the shard manifest (88/76/75) and the test module mapped in test scopes (its name is not covered by an existing glob).",
           "Gates run locally: ruff check clean over the tree; ruff format applied to both new files; mypy clean over 85 source files; python autonomous_production_decisions.py valid true with inventory_status not_measured; scripts/validate_docs.py passed; scripts/validate_governance.py passed.",
           "NOT run: no compression, retrieval or handoff was executed against a live model; no context was fitted by a real tokenizer; no private store was opened. Every checklist, probe and recall filter in the tests is synthetic, and none is presented as evidence about a running system."
         ],
         "blockers": [],
-        "handoff": "AP-015 is delivered for its authorized scope as an offline continuation-contract module. Continuity is a six-kind checklist that can fail: every element survives or is reconstructed with a named source, a lost critical element or an unaccounted required kind refuses continuation, and continuity is explicitly not a score. Fitting is delegated to context_reassembly and audited separately, so a successful fit that dropped required input is caught. Probes must test decisions, artifacts, approvals, authority, failures or preferences - a readability probe is refused - and coverage is reported rather than assumed. Recall keeps provenance unchanged, refuses to let retrieved text instruct unless trusted and verified, and excludes cross-project and over-ceiling items with a stated reason. Handoff lists portable state and asserts kv_cache_portable false. Nothing is activated: no model loaded, no runtime started, no private store read, no handoff executed, runtime_activation_authorized stays false, ADR-0040-0045 stay not-reviewed. No real compression, retrieval or handoff has been tested on qualified hardware, which the operating envelope still records as not_measured. AP-016 onward remain unauthorized and need fresh owner words.",
+        "handoff": "AP-015 is done for its authorized scope. PR #345 final head 534cb6a34a9e0acdb92579360826427e7962cdfc merged as 3daa89aa1d4de6c99e39aad6232b7aa18ac7b1e1. Continuity is a six-kind checklist that can fail: every element survives or is reconstructed with a named source, a lost critical element or an unaccounted required kind refuses continuation, and continuity is explicitly not a score. Fitting is delegated to context_reassembly and audited separately, so a successful fit that dropped required input is caught. Probes must test decisions, artifacts, approvals, authority, failures or preferences; a readability probe is refused and bank coverage is reported. Recall keeps provenance unchanged, will not let retrieved text instruct unless trusted and verified, and excludes cross-project and over-ceiling items with a reason. Handoff lists portable state and asserts kv_cache_portable false. Nothing is activated: no model loaded, no runtime started, no private store read, no handoff executed, runtime_activation_authorized stays false, ADR-0040-0045 stay not-reviewed. No real compression, retrieval or handoff has been tested on qualified hardware, which the operating envelope still records as not_measured. AP-016 onward remain unauthorized and need fresh owner words.",
         "authorization_record": {
           "authorization": "normal_story_authorization — owner-approved single story (AP-015 only)",
           "owner_instruction": "On this branch the repository owner wrote, verbatim: 'continue', after this session reported AP-014 merged and recorded done and stated that AP-015 onward needed fresh owner words.",
           "selection_evidence": "AP-015 is the earliest AP story whose dependencies are all done (AP-005, AP-006 and AP-014 are recorded done/merged on main at b55a14a) with an empty blocked_by_decisions list. AP-008 is claimed by a separate session on arena/63f06456-m5-agent-studio (PR #329, open) and is not touched here. AP-030 is an optional P3 story below AP-015's P1 priority with no owner instruction preferring it.",
           "scope_limit": "AP-015 only: context selection and reassembly integration, a continuation probe bank, and privacy and project-isolation tests. The module records continuity by digest rather than by content, delegates fitting to the existing context_reassembly contract instead of restating it, and refuses to continue when a required brief, approval, authority or unresolved failure is neither survived nor explicitly reconstructed. It loads no model, starts no runtime, reads no private store and wires no production caller. No activation, no spend, no network, no I/O outside ~/M5_AP_Workspace. AP-016 onward remain unauthorized."
-        }
+        },
+        "completion_pr_url": null
       },
       "implementation_prompt": "Implement AP-015: Preserve context, preferences and artifact continuity. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },

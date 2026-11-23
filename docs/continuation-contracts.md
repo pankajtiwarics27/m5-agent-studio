@@ -1,6 +1,7 @@
 # AP-015 — Preserve context, preferences and artifact continuity
 
-**Status:** delivered for the AP-015 scope; **offline and advisory only**. It
+**Status:** delivered and merged (PR #345, `3daa89a`; story recorded `done` by
+its completion record); **offline and advisory only**. It
 **loads no model, starts no runtime, reads no private store and wires no
 production caller**. It is **not activated** and **not a production guarantee**.
 
