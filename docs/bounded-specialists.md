@@ -1,6 +1,7 @@
 # AP-017 — Bounded specialists and versioned handoffs
 
-**Status:** delivered for the AP-017 scope; **offline and advisory only**. It
+**Status:** delivered and merged (PR #351, `02c53e6`; story recorded `done` by
+its completion record); **offline and advisory only**. It
 **runs no model, starts no runtime, calls no provider or network** and wires no
 production caller. It is **not activated** and **not a production guarantee**.
 

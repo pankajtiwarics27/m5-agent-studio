@@ -1,6 +1,6 @@
 # M5 Agent Studio — Autonomous Production Product Roadmap
 
-**Revision:** 2.7 • **Prepared:** 2026-11-08 • **Status:** owner-requested product specification and proposed execution program; not evidence of implementation, independent security acceptance, or authorization to bypass existing gates.
+**Revision:** 2.8 • **Prepared:** 2026-11-08 • **Status:** owner-requested product specification and proposed execution program; not evidence of implementation, independent security acceptance, or authorization to bypass existing gates.
 
 **Audience:** any implementation agent or human entering without this conversation. Read this document, the companion story ledger, and the agent prompt before proposing changes.
 
@@ -12,6 +12,22 @@
 **Source snapshot inspected:** `pankajtiwarics27/m5-agent-studio` main at `a67e8b291614f8afdac7c8d38ba51bcc8926d695`. Inspection covered repository guidance, module contracts and selected runtime-status documents; not a full code/security audit, installed-runtime qualification, or fresh end-to-end execution. Refresh against current main before implementing.
 
 **Precedence:** repository `AGENTS.md`, accepted security decisions, existing program ownership and signed approvals remain binding. This program does not replace the AS, M5 runtime, UIUX/UIV2, or LC ledgers, and does not reopen their completed stories. Reconcile overlapping work in AP-001. Drafting this roadmap does not grant automatic execution authority to its stories or to downloaded tools.
+
+## Revision 2.8 — AP-017 recorded done (2026-11-23; AP-017 only)
+
+PR #351 merged as `02c53e6282e36a38d04d9fcb8875b6cc36543a97` at
+2026-11-23T12:52:01Z carrying final head `f7fd2fe`; the exact-head CI was green
+(27 pass, 0 fail, CLEAN) and the author's full suite was 6161 passed, 38 skipped,
+0 failed, with the skips confined to the pinned-Chromium and live-runtime gates
+this shell cannot export. This record marks AP-017 `done` for that scope only.
+
+What this record deliberately does not claim: **no specialist team was
+dispatched against a real model, runtime or worktree, and no team-versus-baseline
+benchmark was executed.** The module is a contract for what a bounded team is and
+what it refuses to accept as one; every task, artifact, join and score in its
+tests is synthetic. Nothing is activated; `runtime_activation_authorized` remains
+`false`; ADR-0040–0045 remain `not-reviewed`; AP-018 through AP-032 remain
+unauthorized and unclaimed, and AP-018 additionally remains blocked on AP-008.
 
 ## Revision 2.7 — AP-017 bounded specialists delivered (2026-11-23; AP-017 only)
 

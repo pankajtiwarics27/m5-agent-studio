@@ -3,9 +3,9 @@
   "document_type": "proposed_autonomous_production_execution_ledger",
   "product": "M5 Agent Studio",
   "program": "AP",
-  "revision": "2.7",
+  "revision": "2.8",
   "prepared_date": "2026-11-08",
-  "lifecycle": "registered_tracking_ap017_in_review_ap018_unauthorized_u01_u05_resolved",
+  "lifecycle": "registered_tracking_ap017_done_ap018_unauthorized_u01_u05_resolved",
   "source_snapshot": "a67e8b291614f8afdac7c8d38ba51bcc8926d695",
   "source_repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "specification": "docs/autonomous-production-roadmap.md",
@@ -2576,7 +2576,7 @@
       "title": "Integrate bounded specialists and versioned handoffs",
       "priority": "P1",
       "optional": false,
-      "status": "in_review",
+      "status": "done",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-005",
@@ -2640,9 +2640,9 @@
         "base_sha": "79441cc47434fa35251ae2db95048c35d7f1bd30",
         "head_sha": "64f64140850a7df7885c3e046417e15949f9f6d2",
         "claimed_at": "2026-11-23T12:20:00Z",
-        "heartbeat_at": "2026-11-23T13:30:00Z",
+        "heartbeat_at": "2026-11-23T13:00:00Z",
         "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/351",
-        "delivery_status": "pr_open",
+        "delivery_status": "merged",
         "acceptance_evidence": [
           "AC1 authority and remaining budget are strict parent subsets: SpecialistTask checks the child policy against the parent policy, every tool against the parent's tools, every write scope against a parent scope via scoped_grants.scope_subsumes, and each budget dimension (steps, tool calls, tokens, elapsed) for *strict* inferiority - equal is refused because a child holding the parent's whole remainder leaves nothing to join under. assemble_team then re-checks the team's combined reservation against the parent. Tests: test_a_bounded_task_accepts_a_strict_subset, test_a_child_policy_above_the_parent_is_refused, test_a_child_may_narrow_the_parent_policy, test_an_unknown_policy_is_refused, test_a_tool_the_parent_lacks_is_refused, test_a_write_scope_outside_the_parent_is_refused, test_a_sibling_prefix_is_not_a_parent_scope, test_equal_budget_is_not_a_strict_subset, test_an_over_budget_step_count_is_refused, test_elapsed_budget_must_be_a_strict_subset, test_parent_bounds_reject_negative_remaining_budget, test_parent_bounds_reject_negative_remaining_time, test_team_reservations_must_leave_the_parent_something, test_a_team_whose_reservations_fit_is_accepted.",
           "AC2 workers use versioned input/output artifacts and cannot overwrite conflicting scopes: every handoff names at least one HandoffArtifact carrying a version digest (bound from artifact_lineage identity via bind_artifact_identity), duplicate inputs are refused, write scopes must sit inside the parent scope, and overlapping claims are refused using child_delegation.child_scopes_overlap so the conflict definition is not restated. A task declaring write scopes without a claim is refused. Tests: test_a_handoff_requires_a_versioned_input, test_an_artifact_version_must_be_a_digest, test_duplicate_handoff_inputs_are_refused, test_two_versions_of_one_artifact_are_distinguishable, test_the_handoff_digest_changes_with_the_input_version, test_overlapping_write_claims_are_refused, test_a_nested_scope_conflict_is_detected, test_disjoint_write_claims_are_accepted, test_a_claim_conflicting_with_an_existing_claim_is_refused, test_a_claim_outside_the_parent_scope_is_refused, test_an_empty_claim_is_refused, test_a_write_scope_without_a_claim_is_refused, test_a_claim_for_an_unknown_task_is_refused, test_duplicate_task_ids_are_refused.",
@@ -2653,6 +2653,7 @@
           "Reviewability: render_team is deterministic sorted-key JSON with a trailing newline, a specialist_rules block stating every boundary and a three-line does_not_prove block; teams and ledgers carry stable digests. Tests: test_the_rendered_team_is_deterministic_json, test_the_rendered_team_states_the_boundaries, test_the_rendered_team_does_not_overclaim, test_the_rendered_team_carries_its_joins, test_the_team_digest_is_stable, test_the_team_digest_changes_when_a_scope_changes, test_the_artifact_binding_uses_the_lineage_identity, test_no_module_verb_runs_a_workflow_or_contacts_a_provider."
         ],
         "tests_executed": [
+          "Completion record: PR #351 merged as 02c53e6282e36a38d04d9fcb8875b6cc36543a97 at 2026-11-23T12:52:01Z, carrying final head f7fd2febc05119243b94516e45f1b64fca84980c. CI on that exact head was green: 27 pass, 0 fail, 7 path-selected skips, mergeStateStatus CLEAN.",
           "Author-run (Linux x86_64, Python 3.11.2): tests/test_bounded_specialists.py 83 passed, fully offline - no model loaded, no runtime started, no provider or network contacted, no production path exercised; every task, artifact, join and score is synthetic.",
           "Author-run full suite on the delivery head: 6161 passed, 38 skipped, 1 warning in 1376.22s. The 38 skips are the pre-existing opt-in gates (pinned Chromium, live container runtime, browser screenshot captures); none is a new skip introduced by AP-017.",
           "Author-run: tests/test_ci_test_shard.py and tests/test_scoped_tests.py 20 passed after the module was registered in the shard manifest (89/78/75) and the test module mapped in test scopes; scripts/run_scoped_tests.py --check-map reports a valid map over 242 modules in 15 areas.",
@@ -2660,13 +2661,14 @@
           "NOT run: no specialist team was dispatched against a real model, runtime or worktree; no join was reconciled from a live process; no team-versus-baseline benchmark was executed. The topology decision consumes caller-supplied challenger_evaluation results and measure_metrics output, and every number in the tests is synthetic - none is presented as a measurement of a running system."
         ],
         "blockers": [],
-        "handoff": null,
+        "handoff": "AP-017 is done for its authorized scope. PR #351 final head f7fd2febc05119243b94516e45f1b64fca84980c merged as 02c53e6282e36a38d04d9fcb8875b6cc36543a97. Specialist authority and budget are strict parent subsets, checked per task and again for the team's combined reservation. Handoffs carry versioned artifact identities, and write scopes must sit inside a parent scope and may not overlap another worker's, using the repository's own grant matcher. Dispatch and join transitions are recorded, bounded, and reconciled after a restart by failing open tasks closed with a stated reason; a join carries the settled output forward. A reviewer receives a brief with evidence, cannot review its own builder, and cannot hold a write scope or mutating tool. Logical parallelism is declared separately from concurrent local inference. A team topology is retained only on a trustworthy, measured trade-off and defaults to a single agent. Nothing is activated: no team was dispatched against a real model, runtime or worktree, runtime_activation_authorized stays false, ADR-0040-0045 stay not-reviewed. No team-versus-baseline benchmark has been executed, which the operating envelope still records as not_measured. AP-018 onward remain unauthorized and need fresh owner words; AP-018 also remains blocked on AP-008.",
         "authorization_record": {
           "authorization": "normal_story_authorization — owner-approved single story (AP-017 only)",
           "owner_instruction": "On this session's branch the repository owner wrote, verbatim: 'sure go ahead', after this session reported AP-016 merged and recorded done and stated that AP-017 onward needed fresh owner words.",
           "selection_evidence": "AP-017 is the earliest AP story whose dependencies are all recorded done/merged on main at 79441cc (AP-005, AP-006, AP-007, AP-014, AP-015 and AP-016) with an empty blocked_by_decisions list. AP-018, the next P4 story, depends on AP-008, which a separate session still holds in_progress, so it is not dependency-ready here. AP-030 is an optional P3 story that no owner instruction prefers.",
           "scope_limit": "AP-017 only: typed specialist tasks and joins, scoped-write ownership, and team-versus-baseline evidence above the existing child_delegation, artifact_lineage and execution_budget contracts. Composes those seams rather than restating or bypassing them; adds no second coordinator, no scheduler, no fleet default and no production caller. Runs no model, starts no runtime and makes no network call. No activation, no spend, no I/O outside ~/M5_AP_Workspace. AP-018 onward remain unauthorized."
-        }
+        },
+        "completion_pr_url": null
       },
       "implementation_prompt": "Implement AP-017: Integrate bounded specialists and versioned handoffs. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
