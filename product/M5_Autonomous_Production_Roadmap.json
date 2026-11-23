@@ -3,9 +3,9 @@
   "document_type": "proposed_autonomous_production_execution_ledger",
   "product": "M5 Agent Studio",
   "program": "AP",
-  "revision": "3.0",
+  "revision": "3.1",
   "prepared_date": "2026-11-08",
-  "lifecycle": "registered_tracking_ap030_done_ap018_blocked_ap008_u01_u05_resolved",
+  "lifecycle": "registered_tracking_ap030_done_ap008_claim_reconciled_ap018_blocked_u01_u05_resolved",
   "source_snapshot": "a67e8b291614f8afdac7c8d38ba51bcc8926d695",
   "source_repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "specification": "docs/autonomous-production-roadmap.md",
@@ -1806,7 +1806,15 @@
             ],
             "handoff": "AP-008 in progress, draft PR #329. Partial Harness change makes snapshot failures visible with keyboard retry, fences overlapping snapshot responses, prevents recovery continue from overwriting a draft, and stops marking failed-session stages all complete. Existing routes and authorization remain unchanged. Browser and tests cover only this slice; artifact-first workspace, inert/isolated previews, comprehensive draft, stale, reconnect, permission and other states remain unfinished. Generated evidence refresh is partial: current UIV2 release evidence and historical metric-summary gates are blocked, do not alter separate UIUX ledger or self-sign review. See PR for exact tests and remaining work. No runtime activation, production mission caller, isolation acceptance, live dispatch or qualification. Current slice adds a disclosed session workspace preview using existing Git diff and snapshot routes. Untrusted diff is rendered as text, not HTML; unavailable sources are explicit. Drafts remain in the composer until a durable turn-start event, unless the reader has edited it; failures do not claim a request never reached the server. HTTP and non-Git diff states are not reported as clean. This is not a complete project/artifact/version or sources UI, full AP-008 acceptance or security signoff; original red UIV2 gate remains separately blocked and its files were not changed in this slice. CI repair hides workspace disclosure on the new-session welcome screen (no workspace exists yet), preserving its approved composer geometry; resizes the retained composer after a run; regenerates stale UIUX 2.0 source inventories. The separate UIV2 evidence and historical assertions remain unchanged and red pending owner decision; exact-head CI not yet known."
           }
-        ]
+        ],
+        "claim_reconciliation": {
+          "reconciled_at": "2026-11-23T14:55:00Z",
+          "reconciled_by_branch": "arena/b43b3563-m5-agent-studio",
+          "source": "AP-008 remote coordination claim pushed at 003f088c83db5a41d4d9b737bb7d7d2b75c4c95f on branch arena/833f4126-m5-agent-studio (PR #348)",
+          "what_changed": "owner, branch, heartbeat_at and pr_url only. The claim on main still named branch arena/63f06456-m5-agent-studio and PR #329, which merged at 2026-11-23T09:44:12Z, and carried a heartbeat from 2026-11-18. The live claim moved to arena/833f4126-m5-agent-studio when PR #348 was opened at 2026-11-23T11:06:49Z.",
+          "what_did_not_change": "status stays in_progress; acceptance_evidence, tests_executed, blockers, handoff and every AP-008 code, UI and generated artifact remain owned by the holding session and were not edited. No takeover was performed and no claim was superseded.",
+          "ownership": "the story remains owned by arena/833f4126-m5-agent-studio"
+        }
       },
       "implementation_prompt": "Implement AP-008: Expose clean mission controls and artifact-first status. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },

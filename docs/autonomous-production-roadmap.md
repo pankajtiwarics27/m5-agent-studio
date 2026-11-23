@@ -1,6 +1,6 @@
 # M5 Agent Studio — Autonomous Production Product Roadmap
 
-**Revision:** 3.0 • **Prepared:** 2026-11-08 • **Status:** owner-requested product specification and proposed execution program; not evidence of implementation, independent security acceptance, or authorization to bypass existing gates.
+**Revision:** 3.1 • **Prepared:** 2026-11-08 • **Status:** owner-requested product specification and proposed execution program; not evidence of implementation, independent security acceptance, or authorization to bypass existing gates.
 
 **Audience:** any implementation agent or human entering without this conversation. Read this document, the companion story ledger, and the agent prompt before proposing changes.
 
@@ -12,6 +12,28 @@
 **Source snapshot inspected:** `pankajtiwarics27/m5-agent-studio` main at `a67e8b291614f8afdac7c8d38ba51bcc8926d695`. Inspection covered repository guidance, module contracts and selected runtime-status documents; not a full code/security audit, installed-runtime qualification, or fresh end-to-end execution. Refresh against current main before implementing.
 
 **Precedence:** repository `AGENTS.md`, accepted security decisions, existing program ownership and signed approvals remain binding. This program does not replace the AS, M5 runtime, UIUX/UIV2, or LC ledgers, and does not reopen their completed stories. Reconcile overlapping work in AP-001. Drafting this roadmap does not grant automatic execution authority to its stories or to downloaded tools.
+
+## Revision 3.1 — AP-008 claim coordinates reconciled (2026-11-23; no status change)
+
+`main` described an AP-008 claim that no longer existed: it still named branch
+`arena/63f06456-m5-agent-studio` and **PR #329**, which merged at
+2026-11-23T09:44:12Z, with a heartbeat from 2026-11-18. The live claim moved to
+`arena/833f4126-m5-agent-studio` when **PR #348** opened at
+2026-11-23T11:06:49Z. Any session reading the ledger — this one included —
+therefore concluded the story had been abandoned when it was in fact active.
+
+This record corrects **only** `owner`, `branch`, `pr_url` and `heartbeat_at`, and
+adds a `claim_reconciliation` block naming the source. It deliberately changes
+nothing else: `status` stays `in_progress`, and the acceptance evidence, tests,
+blockers, handoff, code, UI routes and generated artifacts remain owned by the
+holding session.
+
+No takeover was performed and no claim was superseded. The program's
+`stale_claim_rule` requires remote-activity inspection and recorded reason before
+superseding a claim; AP-008's branch had pushed a commit two minutes before this
+review began and its CI was green, so it was neither stale nor failing.
+`runtime_activation_authorized` remains `false`; AP-018 onward remain
+unauthorized and dependent on this story completing.
 
 ## Revision 3.0 — AP-030 recorded done (2026-11-23; AP-030 only)
 
