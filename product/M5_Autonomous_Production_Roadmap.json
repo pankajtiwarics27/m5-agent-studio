@@ -2668,7 +2668,7 @@
           "selection_evidence": "AP-017 is the earliest AP story whose dependencies are all recorded done/merged on main at 79441cc (AP-005, AP-006, AP-007, AP-014, AP-015 and AP-016) with an empty blocked_by_decisions list. AP-018, the next P4 story, depends on AP-008, which a separate session still holds in_progress, so it is not dependency-ready here. AP-030 is an optional P3 story that no owner instruction prefers.",
           "scope_limit": "AP-017 only: typed specialist tasks and joins, scoped-write ownership, and team-versus-baseline evidence above the existing child_delegation, artifact_lineage and execution_budget contracts. Composes those seams rather than restating or bypassing them; adds no second coordinator, no scheduler, no fleet default and no production caller. Runs no model, starts no runtime and makes no network call. No activation, no spend, no I/O outside ~/M5_AP_Workspace. AP-018 onward remain unauthorized."
         },
-        "completion_pr_url": null
+        "completion_pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/352"
       },
       "implementation_prompt": "Implement AP-017: Integrate bounded specialists and versioned handoffs. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
