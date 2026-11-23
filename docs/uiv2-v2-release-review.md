@@ -10,12 +10,12 @@ The first decision covers only merge/handoff of the UI/UX V2 program. It is not 
 
 | Field | Verified value |
 | --- | --- |
-| Implementation HEAD | `7654fdea1b0de9949a88ef2e2c7c5b85485d1752` (dirty=`false`) |
-| Frontend SHA-256 | `7b67793c700722a927bd3f54e3b47f911895cfe35a0f754713810c86f21096e0` |
+| Implementation HEAD | `003f088c83db5a41d4d9b737bb7d7d2b75c4c95f` (dirty=`false`) |
+| Frontend SHA-256 | `e84a8e7e4310e35be7b189c606d0d3e9638182d6f46fc0af9a331a5306373d68` |
 | Evidence scope | `current-browser-sources`; current-browser-sources=`true` |
 | Post-handoff #185 evidence | `current` |
 | Roadmap at generation | 30/30 done, 0 in progress, 0 blocked |
-| Implementation CI | [`7654fdea1b0de9949a88ef2e2c7c5b85485d1752`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45184333095) — success (draft-bootstrap) |
+| Implementation CI | [`003f088c83db5a41d4d9b737bb7d7d2b75c4c95f`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45198508051) — success (draft-bootstrap) |
 | Local executed checks | 7/7 exit 0 |
 | Production release | `release-blocked`; release_ready=`false` |
 
@@ -39,20 +39,20 @@ Post-handoff #185 has current clean implementation and matching CI evidence.
 
 | Evidence | Actual result | Binding |
 | --- | --- | --- |
-| Approved structural matrix | 2200/2200 checks; 48 variants / 144 PNGs | manifest `d938ee3ff81686c09f42f9fbbe6ba3a10d9331d1de6d13ea1de32a58a31ed245` |
+| Approved structural matrix | 2200/2200 checks; 48 variants / 144 PNGs | manifest `6d7d43307b0dade8c06c76ab445aec6fd16a249d05fa515343359a4673541fdb` |
 | Human approval | approved-check | `user:Arena review 2026-11-09 "approved the re-captured phone Hall baseline; re-capture the two 390x844 hall captures"` |
-| Compare restore/export continuity | 15/15 checks; six PNGs | run `a854cec7cc10a6209cc2378f38467dcaedd6cb77c39a800cbbdbde562df31d2b` |
+| Compare restore/export continuity | 15/15 checks; six PNGs | run `6bf21521a62c437cc2aca5ee4f7a1171d72a679b5767181736af7734b3208e43` |
 | Browser / fonts | HeadlessChrome/153.0.8010.0 | three font digests recorded in the release evidence |
 
-Local review manifests: `ap008-continuation-evidence/overlay-escape/exact-visual/check-manifest.json` and `ap008-continuation-evidence/overlay-escape/compare.json`. PNGs are not committed; their hashes, source digests and actual outcomes are. Approval is structural fidelity, not pixel identity or self-certification.
+Local review manifests: `ap008-continuation-evidence/checkpoint-refs/exact-visual/check-manifest.json` and `ap008-continuation-evidence/checkpoint-refs/compare.json`. PNGs are not committed; their hashes, source digests and actual outcomes are. Approval is structural fidelity, not pixel identity or self-certification.
 
 ### Compare captures
 
 - `compare-record-forgotten.png` — `74c7533c116807725e8aa35b873cad2649d2c9f3a59fe5ac8156a47e20e29ba4` (15664 bytes)
-- `compare-record-light.png` — `4b40aac3fc971e2a37db99665e47efd7d6d58702e7a6949e753659c308dad214` (40134 bytes)
-- `compare-record-live.png` — `5110e8d14790003997bda8bdf047eb7e833045246a38826694163643c348f0f2` (65382 bytes)
+- `compare-record-light.png` — `31f602388c58b6fc4e5712cd8062aa89dcf1e9be074187aaf2fee660cf734518` (40171 bytes)
+- `compare-record-live.png` — `0a569e6dd74571db4deaeaa4cddd5ead9dd7260b698ee8c87d6877aa6217c470` (65145 bytes)
 - `compare-record-narrow.png` — `980ab29b0b29be1ae248d4c9dbbdf3c61796aa69f07ed2b5553fe16f201f5f8c` (60661 bytes)
-- `compare-record-restored.png` — `e6a6465a5a6cc694e4828bb185f9778b3ff3f138fa6846db5c442f62e21c4148` (49545 bytes)
+- `compare-record-restored.png` — `096d82d1f5fd890b026695cd9e66aeab4cf345fd36b6c115cd7eb37b05c23cdf` (49354 bytes)
 - `compare-record-server.png` — `fa348c73e7446920a87873a5fa9b8426a1db9d72c65aa28721e6756a0744980a` (17110 bytes)
 
 ## Critical checks that actually ran
@@ -69,10 +69,10 @@ Local review manifests: `ap008-continuation-evidence/overlay-escape/exact-visual
 
 CI jobs in the imported implementation run (see its stage above):
 
-- **Browser safety regressions** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45184333095/job/137727782565))
-- **test (3.13)** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45184333095/job/137729642680))
-- **test (3.11)** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45184333095/job/137729642797))
-- **test (3.12)** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45184333095/job/137729643105))
+- **Browser safety regressions** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45198508051/job/137777265004))
+- **test (3.12)** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45198508051/job/137779463033))
+- **test (3.13)** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45198508051/job/137779463215))
+- **test (3.11)** — success ([job](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45198508051/job/137779463327))
 
 The older 40-story UI/UX gate remains separately owned by `scripts/uiux_release_gate.py`; this review requires its committed 37/37 checks and 7/7 gates and also runs it during final verification. It does not pretend that artifact generation is a full browser or three-interpreter test run.
 

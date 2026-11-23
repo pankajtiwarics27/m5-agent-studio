@@ -12,13 +12,13 @@
     "scope": "merge/handoff of the 30-story UI/UX V2 program only; tagging/publishing a production release remains under scripts/security_release_gate.py and scripts/release.py"
   },
   "pinned_release": {
-    "implementation_head": "7654fdea1b0de9949a88ef2e2c7c5b85485d1752",
+    "implementation_head": "003f088c83db5a41d4d9b737bb7d7d2b75c4c95f",
     "dirty": false,
-    "static_sha256": "7b67793c700722a927bd3f54e3b47f911895cfe35a0f754713810c86f21096e0",
+    "static_sha256": "e84a8e7e4310e35be7b189c606d0d3e9638182d6f46fc0af9a331a5306373d68",
     "review_scope": "current-browser-sources",
     "current_browser_sources": true,
     "post_handoff_evidence": "current",
-    "evidence_recorded_at": "2026-11-23T13:35:45.486286+00:00",
+    "evidence_recorded_at": "2026-11-23T14:57:10.715789+00:00",
     "note": "The evidence commit may contain only later release docs/tracker changes; executable browser sources are bound by digest and verified inside the implementation commit."
   },
   "program_state": {
@@ -30,38 +30,38 @@
     "percent_complete": 100
   },
   "critical_ci": {
-    "headSha": "7654fdea1b0de9949a88ef2e2c7c5b85485d1752",
+    "headSha": "003f088c83db5a41d4d9b737bb7d7d2b75c4c95f",
     "status": "completed",
     "conclusion": "success",
-    "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45184333095",
+    "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45198508051",
     "evidence_stage": "draft-bootstrap",
     "event": "pull_request",
-    "createdAt": "2026-11-23T13:28:51Z",
-    "updatedAt": "2026-11-23T13:35:32Z",
+    "createdAt": "2026-11-23T14:50:22Z",
+    "updatedAt": "2026-11-23T14:56:54Z",
     "jobs": [
       {
         "name": "Browser safety regressions",
         "status": "completed",
         "conclusion": "success",
-        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45184333095/job/137727782565"
-      },
-      {
-        "name": "test (3.13)",
-        "status": "completed",
-        "conclusion": "success",
-        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45184333095/job/137729642680"
-      },
-      {
-        "name": "test (3.11)",
-        "status": "completed",
-        "conclusion": "success",
-        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45184333095/job/137729642797"
+        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45198508051/job/137777265004"
       },
       {
         "name": "test (3.12)",
         "status": "completed",
         "conclusion": "success",
-        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45184333095/job/137729643105"
+        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45198508051/job/137779463033"
+      },
+      {
+        "name": "test (3.13)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45198508051/job/137779463215"
+      },
+      {
+        "name": "test (3.11)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45198508051/job/137779463327"
       }
     ]
   },
@@ -119,10 +119,10 @@
     "container_isolation_qualified": true
   },
   "visual_evidence": {
-    "run": "ap008-continuation-evidence/overlay-escape/exact-visual/check-manifest.json",
-    "manifest_sha256": "d938ee3ff81686c09f42f9fbbe6ba3a10d9331d1de6d13ea1de32a58a31ed245",
+    "run": "ap008-continuation-evidence/checkpoint-refs/exact-visual/check-manifest.json",
+    "manifest_sha256": "6d7d43307b0dade8c06c76ab445aec6fd16a249d05fa515343359a4673541fdb",
     "git": {
-      "head": "7654fdea1b0de9949a88ef2e2c7c5b85485d1752",
+      "head": "003f088c83db5a41d4d9b737bb7d7d2b75c4c95f",
       "dirty": false
     },
     "contract_sha256": "caf0e5543c6e644eae4a12a6db0ed38a169ad361a96af75cdb04cbfa0f4c2435",
@@ -229,8 +229,8 @@
     "external_provider_calls": false
   },
   "compare_recovery": {
-    "run": "ap008-continuation-evidence/overlay-escape/compare.json",
-    "run_sha256": "a854cec7cc10a6209cc2378f38467dcaedd6cb77c39a800cbbdbde562df31d2b",
+    "run": "ap008-continuation-evidence/checkpoint-refs/compare.json",
+    "run_sha256": "6bf21521a62c437cc2aca5ee4f7a1171d72a679b5767181736af7734b3208e43",
     "script": "scripts/compare_continuity_walk.mjs",
     "checks": 15,
     "passed": 15,
@@ -243,13 +243,13 @@
       },
       {
         "path": "compare-record-light.png",
-        "sha256": "4b40aac3fc971e2a37db99665e47efd7d6d58702e7a6949e753659c308dad214",
-        "bytes": 40134
+        "sha256": "31f602388c58b6fc4e5712cd8062aa89dcf1e9be074187aaf2fee660cf734518",
+        "bytes": 40171
       },
       {
         "path": "compare-record-live.png",
-        "sha256": "5110e8d14790003997bda8bdf047eb7e833045246a38826694163643c348f0f2",
-        "bytes": 65382
+        "sha256": "0a569e6dd74571db4deaeaa4cddd5ead9dd7260b698ee8c87d6877aa6217c470",
+        "bytes": 65145
       },
       {
         "path": "compare-record-narrow.png",
@@ -258,8 +258,8 @@
       },
       {
         "path": "compare-record-restored.png",
-        "sha256": "e6a6465a5a6cc694e4828bb185f9778b3ff3f138fa6846db5c442f62e21c4148",
-        "bytes": 49545
+        "sha256": "096d82d1f5fd890b026695cd9e66aeab4cf345fd36b6c115cd7eb37b05c23cdf",
+        "bytes": 49354
       },
       {
         "path": "compare-record-server.png",
