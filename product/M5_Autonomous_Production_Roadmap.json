@@ -3672,7 +3672,7 @@
           "selection_evidence": "AP-030 is the only story in the ledger whose dependencies are all done (AP-010 and AP-012) and that is not blocked by a decision: every other unstarted story depends on AP-008, which the separate session still holds in_progress with a fresh draft at PR #348, or on AP-018/AP-019 downstream of it. AP-030 therefore is the only dependency-ready story, and it is optional, which is exactly why the owner was asked rather than assumed.",
           "scope_limit": "AP-030 only, capped at the offline contract: a desktop-capability bake-off record, platform qualification gating, the host/guest boundary for files, clipboard, accounts, egress and screenshots, and a no-host-fallback rule, plus published maturity and limitations. The adapter has no executor, runs no VM, service or provider, and stays disabled and not-qualified because no real guest was observed in this environment. No activation, no spend, no network, no I/O outside ~/M5_AP_Workspace. AP-018 onward remain unauthorized."
         },
-        "completion_pr_url": null
+        "completion_pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/354"
       },
       "implementation_prompt": "Implement AP-030: Evaluate optional guest-desktop capability. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
