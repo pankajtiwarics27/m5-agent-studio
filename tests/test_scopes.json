@@ -9,6 +9,7 @@
     "ui.harness": [
       "test_action_admission_gate.py",
       "test_artifact_lineage.py",
+      "test_bounded_specialists.py",
       "test_child_delegation.py",
       "test_durable_*.py",
       "test_edit_*.py",
@@ -125,6 +126,7 @@
     "security.execution": [
       "test_action_admission_gate.py",
       "test_audit_log.py",
+      "test_bounded_specialists.py",
       "test_browser_worker*.py",
       "test_durable_intent_ledger.py",
       "test_execution_*.py",
@@ -231,37 +233,75 @@
     "poetry.lock"
   ],
   "source_areas": {
-    "native_inference_scheduler.py": [
+    "autonomous_production_decisions.py": [
+      "autonomous.production",
+      "security.execution",
+      "security.network"
+    ],
+    "autonomous_production_discovery.py": [
+      "autonomous.production"
+    ],
+    "autonomous_production_evaluation.py": [
+      "autonomous.production",
+      "ui.pipeline",
+      "ui.compare",
+      "storage.history",
+      "security.execution"
+    ],
+    "autonomous_production_lab.py": [
+      "autonomous.production",
+      "security.execution",
+      "security.network"
+    ],
+    "bounded_specialists.py": [
+      "security.execution",
+      "ui.harness",
+      "models.providers",
+      "quality.docs-ci"
+    ],
+    "browser_worker.py": [
+      "security.execution"
+    ],
+    "challenger_evaluation.py": [
+      "quality.docs-ci",
+      "models.providers"
+    ],
+    "comparison_board.py": [
+      "ui.compare",
+      "storage.history"
+    ],
+    "context_reassembly.py": [
+      "ui.chat",
+      "storage.history"
+    ],
+    "context_store.py": [
+      "ui.chat",
+      "storage.history"
+    ],
+    "continuation_contracts.py": [
       "models.providers",
       "storage.history",
       "security.execution"
     ],
-    "native_transition_driver.py": [
-      "models.providers",
+    "edit_rollback.py": [
+      "ui.harness",
+      "security.execution"
+    ],
+    "edit_transactions.py": [
+      "ui.harness",
+      "security.execution"
+    ],
+    "execution_profiles.py": [
+      "ui.harness",
+      "security.execution"
+    ],
+    "execution_spine.py": [
+      "ui.harness",
+      "security.execution"
+    ],
+    "history_privacy.py": [
       "storage.history",
-      "security.execution"
-    ],
-    "native_dispatch_executor.py": [
-      "models.providers",
-      "storage.history",
-      "security.execution"
-    ],
-    "scripts/runtime_dispatch_inventory.py": [
-      "models.providers",
-      "security.execution"
-    ],
-    "runtime_dispatch_boundary.py": [
-      "models.providers",
-      "security.execution"
-    ],
-    "request_fit.py": [
-      "models.providers",
-      "security.execution"
-    ],
-    "request_fit_admission.py": [
-      "models.providers",
-      "storage.history",
-      "security.execution"
+      "ui.compare"
     ],
     "lmstudio_lifecycle.py": [
       "models.providers",
@@ -270,6 +310,49 @@
     ],
     "lmstudio_protocol.py": [
       "models.providers",
+      "security.execution"
+    ],
+    "local_provider_adapters.py": [
+      "models.providers"
+    ],
+    "mcp_client.py": [
+      "security.execution",
+      "models.providers"
+    ],
+    "model_admission.py": [
+      "models.providers",
+      "ui.council"
+    ],
+    "model_capability_profiles.py": [
+      "models.providers",
+      "ui.pipeline"
+    ],
+    "model_discovery.py": [
+      "models.providers"
+    ],
+    "model_lifecycle_coordinator.py": [
+      "models.providers",
+      "storage.history"
+    ],
+    "moneyprinter_mcp.py": [
+      "models.providers"
+    ],
+    "moneyprinter_tool.py": [
+      "models.providers"
+    ],
+    "native_dispatch_executor.py": [
+      "models.providers",
+      "storage.history",
+      "security.execution"
+    ],
+    "native_inference_scheduler.py": [
+      "models.providers",
+      "storage.history",
+      "security.execution"
+    ],
+    "native_transition_driver.py": [
+      "models.providers",
+      "storage.history",
       "security.execution"
     ],
     "ollama_lifecycle.py": [
@@ -286,58 +369,48 @@
       "storage.history",
       "security.execution"
     ],
-    "shared_memory_admission.py": [
+    "onboarding_preflight.py": [
+      "ui.start"
+    ],
+    "private_network_gateway.py": [
+      "security.network"
+    ],
+    "product/M5_Autonomous_Production_Roadmap.json": [
+      "quality.docs-ledger"
+    ],
+    "provider_switching.py": [
+      "models.providers"
+    ],
+    "release_manager.py": [
+      "quality.docs-ci"
+    ],
+    "request_fit.py": [
+      "models.providers",
+      "security.execution"
+    ],
+    "request_fit_admission.py": [
       "models.providers",
       "storage.history",
       "security.execution"
     ],
-    "model_lifecycle_coordinator.py": [
+    "resource_admission.py": [
+      "ui.council"
+    ],
+    "routing_decision_records.py": [
       "models.providers",
-      "storage.history"
-    ],
-    "scripts/check_lifecycle_feasibility.py": [
-      "models.providers"
-    ],
-    "workspace_paths.py": [
-      "ui.harness",
       "security.execution"
     ],
-    "onboarding_preflight.py": [
-      "ui.start"
+    "routing_policy.py": [
+      "models.providers",
+      "security.network"
     ],
-    "workflow_state.py": [
-      "ui.harness"
-    ],
-    "workflow_checkpoints.py": [
-      "ui.harness",
-      "ui.pipeline"
-    ],
-    "workflow_orchestration.py": [
-      "ui.harness",
-      "ui.pipeline"
-    ],
-    "workflow_tracing.py": [
-      "ui.harness",
-      "ui.pipeline"
-    ],
-    "task_events.py": [
-      "ui.harness"
+    "runtime_dispatch_boundary.py": [
+      "models.providers",
+      "security.execution"
     ],
     "runtime_persistence.py": [
       "ui.harness",
       "storage.history"
-    ],
-    "history_privacy.py": [
-      "storage.history",
-      "ui.compare"
-    ],
-    "execution_spine.py": [
-      "ui.harness",
-      "security.execution"
-    ],
-    "execution_profiles.py": [
-      "ui.harness",
-      "security.execution"
     ],
     "sandbox_boundary.py": [
       "security.execution"
@@ -346,72 +419,38 @@
       "ui.harness",
       "security.execution"
     ],
-    "side_effect_ledger.py": [
-      "ui.harness",
-      "security.execution",
-      "storage.history"
+    "scripts/browser_worker_bridge.mjs": [
+      "security.execution"
     ],
-    "mcp_client.py": [
-      "security.execution",
+    "scripts/check_lifecycle_feasibility.py": [
       "models.providers"
     ],
-    "private_network_gateway.py": [
-      "security.network"
+    "scripts/ci_execution_plan.py": [
+      "quality.docs-ci"
     ],
-    "routing_policy.py": [
+    "scripts/ci_test_shard.py": [
+      "quality.docs-ci"
+    ],
+    "scripts/runtime_dispatch_inventory.py": [
       "models.providers",
-      "security.network"
-    ],
-    "provider_switching.py": [
-      "models.providers"
-    ],
-    "local_provider_adapters.py": [
-      "models.providers"
-    ],
-    "model_admission.py": [
-      "models.providers",
-      "ui.council"
-    ],
-    "resource_admission.py": [
-      "ui.council"
-    ],
-    "comparison_board.py": [
-      "ui.compare",
-      "storage.history"
-    ],
-    "context_store.py": [
-      "ui.chat",
-      "storage.history"
-    ],
-    "context_reassembly.py": [
-      "ui.chat",
-      "storage.history"
-    ],
-    "edit_transactions.py": [
-      "ui.harness",
       "security.execution"
     ],
-    "edit_rollback.py": [
-      "ui.harness",
-      "security.execution"
-    ],
-    "workspace_snapshots.py": [
-      "ui.harness",
-      "security.execution"
-    ],
-    "workspace_quarantine.py": [
-      "ui.harness",
-      "security.execution"
+    "scripts/verify_test_identity.py": [
+      "quality.docs-ci"
     ],
     "security_release_gate.py": [
       "security.execution",
       "quality.docs-ci"
     ],
-    "release_manager.py": [
-      "quality.docs-ci"
+    "shared_memory_admission.py": [
+      "models.providers",
+      "storage.history",
+      "security.execution"
     ],
-    "supply_chain.py": [
-      "quality.docs-ci"
+    "side_effect_ledger.py": [
+      "ui.harness",
+      "security.execution",
+      "storage.history"
     ],
     "static/index.html": [
       "ui.start",
@@ -422,72 +461,41 @@
       "ui.chat",
       "ui.shared"
     ],
-    "moneyprinter_tool.py": [
-      "models.providers"
-    ],
-    "model_discovery.py": [
-      "models.providers"
-    ],
-    "moneyprinter_mcp.py": [
-      "models.providers"
-    ],
-    "autonomous_production_decisions.py": [
-      "autonomous.production",
-      "security.execution",
-      "security.network"
-    ],
-    "autonomous_production_evaluation.py": [
-      "autonomous.production",
-      "ui.pipeline",
-      "ui.compare",
-      "storage.history",
-      "security.execution"
-    ],
-    "product/M5_Autonomous_Production_Roadmap.json": [
-      "quality.docs-ledger"
-    ],
-    "scripts/ci_execution_plan.py": [
+    "supply_chain.py": [
       "quality.docs-ci"
     ],
-    "scripts/ci_test_shard.py": [
-      "quality.docs-ci"
-    ],
-    "scripts/verify_test_identity.py": [
-      "quality.docs-ci"
+    "task_events.py": [
+      "ui.harness"
     ],
     "tests/ci_test_shards.json": [
       "quality.docs-ci"
     ],
-    "browser_worker.py": [
-      "security.execution"
-    ],
-    "scripts/browser_worker_bridge.mjs": [
-      "security.execution"
-    ],
-    "autonomous_production_discovery.py": [
-      "autonomous.production"
-    ],
-    "autonomous_production_lab.py": [
-      "autonomous.production",
-      "security.execution",
-      "security.network"
-    ],
-    "model_capability_profiles.py": [
-      "models.providers",
+    "workflow_checkpoints.py": [
+      "ui.harness",
       "ui.pipeline"
     ],
-    "routing_decision_records.py": [
-      "models.providers",
+    "workflow_orchestration.py": [
+      "ui.harness",
+      "ui.pipeline"
+    ],
+    "workflow_state.py": [
+      "ui.harness"
+    ],
+    "workflow_tracing.py": [
+      "ui.harness",
+      "ui.pipeline"
+    ],
+    "workspace_paths.py": [
+      "ui.harness",
       "security.execution"
     ],
-    "continuation_contracts.py": [
-      "models.providers",
-      "storage.history",
+    "workspace_quarantine.py": [
+      "ui.harness",
       "security.execution"
     ],
-    "challenger_evaluation.py": [
-      "quality.docs-ci",
-      "models.providers"
+    "workspace_snapshots.py": [
+      "ui.harness",
+      "security.execution"
     ]
   }
 }
