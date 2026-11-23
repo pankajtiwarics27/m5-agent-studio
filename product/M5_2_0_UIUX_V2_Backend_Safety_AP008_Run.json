@@ -1,13 +1,13 @@
 {
   "story": "UIV2-29",
   "kind": "backend-safety-run",
-  "generated_at": "2026-11-23T12:56:04.461041+00:00",
+  "generated_at": "2026-11-23T13:28:21.874741+00:00",
   "git": {
-    "head": "a012b4e946bb8f596f6b9a4ab9ae491e3c7ac263",
+    "head": "76f4cac4734075fc944de9c86358beb970753e20",
     "dirty": true
   },
   "source_sha256": {
-    "static/index.html": "7cc5eb9ae45854f586006cc67e4c0b788fd9b9bd96b51f2e3f6c8e88cda3e5a8",
+    "static/index.html": "7b67793c700722a927bd3f54e3b47f911895cfe35a0f754713810c86f21096e0",
     "app.py": "bb3e3e2e15ed147317395311ee67ce1f6addf23560776436a1c76ddeb4681ac5",
     "task_events.py": "59ab9597bed3a497de995cf775354c5b6dff57a4009c19e232e33d0f6b8d31d7",
     "scoped_grants.py": "3af45959f61e939caa595066e5cede83ced72372c8e487262f9e35645e593ae0",
@@ -73,7 +73,7 @@
       "    from starlette.testclient import TestClient as TestClient  # noqa",
       "",
       "-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html",
-      "308 passed, 1 warning in 81.55s (0:01:21)"
+      "308 passed, 1 warning in 83.29s (0:01:23)"
     ]
   },
   "isolation": {
@@ -99,7 +99,7 @@
       "  [PASS] no new privileges — --security-opt=no-new-privileges",
       "  [PASS] no implicit image pull — --pull=never",
       "  [PASS] resource limits — --pids-limit=128 --memory=2g --cpus=2",
-      "  [PASS] single workspace bind mount — type=bind,source=/tmp/m5-isolation-smoke-yhistfzs,target=/workspace",
+      "  [PASS] single workspace bind mount — type=bind,source=/tmp/m5-isolation-smoke-xeh07tk7,target=/workspace",
       "",
       "== 3. Skill-code execution gates (app._run_skill_script) ==",
       "  [PASS] default-off skill-code denial — PermissionError",
@@ -155,7 +155,7 @@
       "scripts/isolation_smoke.py"
     ]
   },
-  "duration_seconds": 83.155,
+  "duration_seconds": 85.005,
   "totals": {
     "test_modules": 13,
     "tests_passed": 308,

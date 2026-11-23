@@ -470,6 +470,21 @@ async function run(args) {
         return {cleared, text:document.getElementById('harnessEvidenceModal').textContent};
       });
       record('overlapping evidence refresh clears and rejects a late response', overlap.cleared && !overlap.text.includes('STALE SESSION SECRET') && /Completion verified/.test(overlap.text), `cleared=${overlap.cleared}`);
+      await page.evaluate(() => {
+        window._evidenceOriginalFetch = window.fetch;
+        window.fetch = (url, options) => String(url).endsWith('/task') ? new Promise(resolve => {window._releaseEvidenceRead = resolve;}) : window._evidenceOriginalFetch(url, options);
+        window._pendingEvidenceRead = refreshHarnessEvidence();
+      });
+      await page.keyboard.press('Escape');
+      const closed = await page.evaluate(async () => {
+        window.fetch = window._evidenceOriginalFetch;
+        window._releaseEvidenceRead(new Response(JSON.stringify({task:{title:'CLOSED SECRET'}}), {status:200,headers:{'Content-Type':'application/json'}}));
+        await window._pendingEvidenceRead;
+        return {open:document.getElementById('harnessEvidenceModal').classList.contains('open'), text:document.getElementById('harnessEvidenceModal').textContent, meta:document.getElementById('harnessEvidenceMeta').textContent};
+      });
+      record('Escape invalidates a delayed evidence read', !closed.open && !closed.meta.trim() && !closed.text.includes('CLOSED SECRET'), JSON.stringify(closed));
+      await page.evaluate(() => openHarnessEvidenceModal());
+      await page.waitForFunction(() => /Completion verified/.test(document.getElementById('harnessEvidenceVerdict').textContent));
 
       // ── A rejection is drawn as one ──────────────────────────────────────
       await page.evaluate(() => closeHarnessEvidenceModal());

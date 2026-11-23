@@ -8201,6 +8201,9 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
   }
 
   function closeOverlay(id) {
+    // Escape and the shared overlay API must fence evidence reads just like the
+    // modal's close button; a hidden modal must not accept a late response.
+    if (id === "harnessEvidenceModal" || (id === undefined && overlayStack[overlayStack.length - 1]?.id === "harnessEvidenceModal")) invalidateHarnessEvidence();
     let index = -1;
     if (id === undefined) index = overlayStack.length - 1;
     else for (let i = overlayStack.length - 1; i >= 0; i -= 1) if (overlayStack[i].id === id) { index = i; break; }
@@ -19424,7 +19427,6 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
   }
 
   function closeHarnessEvidenceModal() {
-    invalidateHarnessEvidence();
     closeOverlay("harnessEvidenceModal");
   }
 
