@@ -2535,7 +2535,7 @@
         "owner": "arena/c9b61b55-m5-agent-studio",
         "branch": "arena/c9b61b55-m5-agent-studio",
         "base_sha": "984e70af59b22e0043848e22c5deadc65525ae01",
-        "head_sha": "63ff58c92edc1d34b9ca0475872af1dcef5e6b2b",
+        "head_sha": "33667f9276c9edc75f5e1a681f4d5ba6c10f4fa5",
         "claimed_at": "2026-11-23T09:20:00Z",
         "heartbeat_at": "2026-11-23T12:10:00Z",
         "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/347",
@@ -2550,10 +2550,10 @@
           "Reviewability: render_report is deterministic sorted-key JSON with a trailing newline and an evaluation_rules block stating every boundary (self-grading, unevidenced scores, scorer-failure-as-zero, hidden budget differences, omitted failures and unverified promotion all false) plus a three-line does_not_prove block; reports carry stable digests. Tests: test_the_rendered_report_is_deterministic_json, test_the_rendered_report_states_every_boundary, test_report_digest_is_stable, test_no_module_verb_runs_a_workflow_or_contacts_a_provider."
         ],
         "tests_executed": [
-          "Completion record: PR #347 merged as e462b600fab42b233eba5c04e4c8c82bfdcc5708 at 2026-11-23T12:04:44Z, carrying delivery head 33667f9276c9edc75f5e1a681f4d5ba6c10f4fa5. CI on that exact head was green: 27 pass, 0 fail, 7 path-selected skips, mergeStateStatus CLEAN.",
+          "Completion record: PR #347 merged as e462b600fab42b233eba5c04e4c8c82bfdcc5708 at 2026-11-23T12:04:44Z, carrying final head 33667f9276c9edc75f5e1a681f4d5ba6c10f4fa5 (the delivery PR's last commit, which records the post-merge full-suite result). CI on that exact head was green: 27 pass, 0 fail, 7 path-selected skips, mergeStateStatus CLEAN.",
           "Author-run (Linux x86_64, Python 3.11.2): tests/test_challenger_evaluation.py 54 passed, fully offline - no model, workflow or provider executed; every run and score synthetic.",
           "Author-run full suite after merging main (post-conflict-resolution head): 6078 passed, 38 skipped, 1 warning in 1379.09s. The 38 skips are pre-existing opt-in gates (pinned Chromium, live container runtime, browser screenshot captures); none is a new skip introduced by AP-016.",
-          "Author-run: tests/test_ci_test_shard.py and tests/test_scoped_tests.py 20 passed after the module was registered in the shard manifest (88/77/75) and the test module mapped in test scopes (its name matches no existing glob, as with AP-015).",
+          "Author-run: tests/test_ci_test_shard.py and tests/test_scoped_tests.py 20 passed after the module was registered in the shard manifest (88/77/75 at registration, 89/77/75 after merging main's separate AP-008 test module) and the test module mapped in test scopes (its name matches no existing glob, as with AP-015). balance.module_counts is recomputed from the shard lists so the two cannot drift.",
           "Merged main (1a26bf3, which carries the separate AP-008 delivery from PR #329) to resolve a shard-manifest conflict; the resolution keeps main's test_harness_ap008_recovery.py in shard 1 and the challenger module in shard 2, with balance.module_counts recomputed from the shard lists.",
           "Gates run locally: ruff check clean over the tree; ruff format applied to both new files; mypy clean over 86 source files; python autonomous_production_decisions.py valid true with inventory_status not_measured; scripts/validate_docs.py passed; scripts/validate_governance.py passed.",
           "NOT run: no evaluation was executed against a real model, workflow or team; no rubric scored real output; no held-out dataset was touched. Every run record, score and budget in the tests is synthetic, and none is presented as evidence about a running system."
