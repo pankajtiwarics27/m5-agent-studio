@@ -14395,6 +14395,12 @@ def _harness_session_state_snapshot(session_id: str) -> dict[str, Any]:
         "workspace_baseline": baseline_summary,
         "latest_checkpoint": latest_ckpt.to_dict() if latest_ckpt is not None else None,
         "checkpoint_integrity_error": integrity_error,
+        # A checkpoint that failed its own integrity check cannot define a version.
+        "session_artifact_versions": (
+            _session_artifact_versions(latest_ckpt.evidence_refs, session_id=session_id)
+            if latest_ckpt is not None and not integrity_error
+            else []
+        ),
         "checkpoints": [ck.to_dict() for ck in sm.checkpoints.list_checkpoints(session_id, verify_integrity=False)],
         "milestones": [_serialize_task_record(ms) for ms in milestones],
         "transitions": [_serialize_transition_record(tr) for tr in sm.store.list_transitions(session_id)],
@@ -14660,6 +14666,73 @@ def _containment_summary_or_none(session_id: str) -> dict[str, Any]:
         }
 
 
+def _session_artifact_versions(
+    refs: Sequence[workflow_checkpoints.EvidenceRef] | Sequence[dict[str, Any]],
+    *,
+    session_id: str,
+) -> list[dict[str, Any]]:
+    """Derive a version record for each artifact this session's checkpoint recorded.
+
+    AP-008 asks "which version of which artifact did this session leave behind". The
+    process-wide lineage registry cannot answer that -- it is global and says nothing
+    about a session -- and a workspace snapshot is a different fact again, so neither
+    may be substituted here.
+
+    What shapes this function is what a checkpoint actually records: a kind, a
+    reference id, a content digest and a summary. It does not record the producer,
+    the producer's configuration, or the versions of the inputs the artifact was
+    built from. ``artifact_lineage.artifact_identity_sha256`` derives a full identity
+    from exactly those axes, so calling it here with the missing axes filled in --
+    the reference path passed as a "producer", a placeholder "input" -- would mint a
+    confident-looking digest built on fabricated provenance. A weaker identity that
+    declares which axes it lacks is the honest alternative, and that is what this
+    returns.
+
+    ``rechecked_against_current_content`` is always false: this reads a recorded
+    pointer and never opens the file it names.
+    """
+    versions: list[dict[str, Any]] = []
+    for ref in refs or ():
+        if isinstance(ref, dict):
+            kind = str(ref.get("kind") or "")
+            raw_sha = ref.get("sha256")
+            ref_id = str(ref.get("ref_id") or "")
+            summary = str(ref.get("summary") or "")
+        else:
+            kind = str(getattr(ref, "kind", "") or "")
+            raw_sha = getattr(ref, "sha256", "")
+            ref_id = str(getattr(ref, "ref_id", "") or "")
+            summary = str(getattr(ref, "summary", "") or "")
+        if kind != "artifact":
+            continue
+        sha = str(raw_sha or "").strip().lower()
+        if not artifact_lineage._al_is_digest(sha):  # noqa: SLF001 - reusing the module's own check
+            # A reference with no usable digest is a pointer, not a version.
+            continue
+        try:
+            identity = artifact_lineage.artifact_identity_sha256(sha)
+        except (artifact_lineage.ArtifactLineageError, ValueError):
+            continue
+        versions.append(
+            {
+                "artifact_id": ref_id,
+                "content_sha256": sha,
+                "identity_sha256": identity,
+                "identity_basis": "content_only",
+                "identity_axes_recorded": ["content_sha256"],
+                "identity_axes_absent": ["producer", "producer_version", "config", "inputs"],
+                "session_id": session_id,
+                "summary": summary,
+                "contributes_a_verified_version": True,
+                "rechecked_against_current_content": False,
+                "is_global_lineage": False,
+                "is_workspace_snapshot": False,
+            }
+        )
+    versions.sort(key=lambda version: (version["artifact_id"], version["identity_sha256"]))
+    return versions
+
+
 def _artifact_lineage_summary_or_none() -> dict[str, Any]:
     """Read-only artifact lineage view (M5-P5-02); corruption is reported, not hidden."""
     try:
@@ -14776,6 +14849,11 @@ async def api_get_harness_task_state(session_id: str) -> JSONResponse:
             "routing_experiments": _routing_experiments_summary_or_none(),
             "latest_checkpoint": latest_ckpt.to_dict() if latest_ckpt is not None else None,
             "checkpoint_integrity_error": integrity_error,
+            "session_artifact_versions": (
+                _session_artifact_versions(latest_ckpt.evidence_refs, session_id=session_id)
+                if latest_ckpt is not None and not integrity_error
+                else []
+            ),
             "checkpoints": [ck.to_dict() for ck in checkpoints],
             "milestones": [_serialize_task_record(ms) for ms in milestones],
             "child_subtasks": [_serialize_task_record(sub) for sub in child_subtasks],

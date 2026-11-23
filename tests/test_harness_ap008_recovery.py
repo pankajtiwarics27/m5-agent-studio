@@ -2,6 +2,8 @@
 from pathlib import Path
 import subprocess
 
+import workflow_checkpoints
+
 
 ROOT = Path(__file__).resolve().parents[1]
 HTML = ROOT / "static/index.html"
@@ -395,3 +397,192 @@ assert.ok(!harnessCheckpointReferencesHtml({latest_checkpoint:{task_id:'one',evi
 '''
     result = subprocess.run(["node", "-"], input=script, text=True, capture_output=True, cwd=ROOT, check=False)
     assert result.returncode == 0, result.stderr
+
+
+def test_session_artifact_versions_are_derived_from_the_checkpoint_not_global_lineage():
+    import app as studio
+
+    refs = [
+        workflow_checkpoints.EvidenceRef(kind="artifact", ref_id="src/a.py", sha256="a" * 64, summary="12B"),
+        workflow_checkpoints.EvidenceRef(kind="artifact", ref_id="docs/b.md", sha256="b" * 64),
+        workflow_checkpoints.EvidenceRef(kind="action", ref_id="act-1", sha256="c" * 64),
+        workflow_checkpoints.EvidenceRef(kind="git_diff", ref_id="HEAD", sha256="d" * 64),
+        workflow_checkpoints.EvidenceRef(kind="artifact", ref_id="undigested"),
+        workflow_checkpoints.EvidenceRef(kind="artifact", ref_id="malformed", sha256="not-a-digest"),
+    ]
+    versions = studio._session_artifact_versions(refs, session_id="sess-1")
+
+    # Only artifact references carrying a real digest are versionable.
+    assert [v["artifact_id"] for v in versions] == ["docs/b.md", "src/a.py"]
+    for version in versions:
+        assert version["session_id"] == "sess-1"
+        assert len(version["identity_sha256"]) == 64
+        # The checkpoint records a digest and nothing else about provenance. The
+        # record must say so rather than borrowing confidence from axes it lacks.
+        assert version["identity_basis"] == "content_only"
+        assert version["identity_axes_recorded"] == ["content_sha256"]
+        assert "producer" in version["identity_axes_absent"]
+        assert "inputs" in version["identity_axes_absent"]
+        # The honest fields: a recorded pointer is not a re-read file, and this is
+        # not the process-wide lineage or a workspace snapshot.
+        assert version["rechecked_against_current_content"] is False
+        assert version["is_global_lineage"] is False
+        assert version["is_workspace_snapshot"] is False
+
+
+def test_session_artifact_versions_are_session_scoped_and_deterministic():
+    import app as studio
+
+    ref = workflow_checkpoints.EvidenceRef(kind="artifact", ref_id="src/a.py", sha256="a" * 64)
+    first = studio._session_artifact_versions([ref], session_id="sess-1")
+    second = studio._session_artifact_versions([ref], session_id="sess-1")
+    other = studio._session_artifact_versions([ref], session_id="sess-2")
+
+    assert first == second
+    # The identity is scoped to recorded content only, so the same bytes in two
+    # sessions carry the same identity. The session is reported alongside it rather
+    # than folded in, because a session was never an input to the artifact.
+    assert first[0]["identity_sha256"] == other[0]["identity_sha256"]
+    assert first[0]["session_id"] != other[0]["session_id"]
+    assert first[0]["is_global_lineage"] is False
+    assert first[0]["is_workspace_snapshot"] is False
+
+
+def test_identity_is_not_inflated_with_unrecorded_provenance():
+    import app as studio
+
+    ref = workflow_checkpoints.EvidenceRef(kind="artifact", ref_id="src/a.py", sha256="a" * 64)
+    version = studio._session_artifact_versions([ref], session_id="sess-1")[0]
+
+    # If the reference path had been passed as a producer, the same content from a
+    # different path would look like a different version. It is the same content.
+    other_path = workflow_checkpoints.EvidenceRef(kind="artifact", ref_id="src/copy-of-a.py", sha256="a" * 64)
+    other = studio._session_artifact_versions([other_path], session_id="sess-1")[0]
+    assert version["identity_sha256"] == other["identity_sha256"]
+    assert version["artifact_id"] != other["artifact_id"]
+
+
+def test_identity_ignores_the_reference_path_without_hiding_it():
+    import app as studio
+
+    # The same content recorded under two names is one version, two references.
+    a = workflow_checkpoints.EvidenceRef(kind="artifact", ref_id="a.py", sha256="e" * 64)
+    b = workflow_checkpoints.EvidenceRef(kind="artifact", ref_id="b.py", sha256="e" * 64)
+    versions = studio._session_artifact_versions([b, a], session_id="s")
+    assert [v["artifact_id"] for v in versions] == ["a.py", "b.py"]
+    assert versions[0]["identity_sha256"] == versions[1]["identity_sha256"]
+
+
+def test_session_with_no_versionable_references_yields_nothing_not_a_guess():
+    import app as studio
+
+    refs = [workflow_checkpoints.EvidenceRef(kind="action", ref_id="act-1", sha256="c" * 64)]
+    assert studio._session_artifact_versions(refs, session_id="sess-1") == []
+    assert studio._session_artifact_versions([], session_id="sess-1") == []
+
+
+AUTH_TOKEN = "a" * 40
+
+
+def _harness_client(tmp_path, monkeypatch):
+    import app as studio
+    from fastapi.testclient import TestClient
+
+    ws = tmp_path / "workspace"
+    ws.mkdir(parents=True, exist_ok=True)
+    store = tmp_path / "store"
+    store.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr(studio, "WORKSPACE_ROOT", ws)
+    monkeypatch.setattr(studio, "HARNESS_STORE_DIR", store)
+    monkeypatch.setattr(studio, "DB_PATH", tmp_path / "ap008.db")
+    monkeypatch.setattr(studio, "STUDIO_API_TOKEN", AUTH_TOKEN)
+    monkeypatch.setattr(studio, "STUDIO_AUTH_DISABLED", False)
+    studio.init_db()
+    studio._reset_process_supervisor(None)
+    return studio, TestClient(
+        studio.app,
+        base_url="http://127.0.0.1:8787",
+        headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
+    )
+
+
+def _seed_checkpointed_task(studio, evidence_refs):
+    session = studio.create_harness_session_db(
+        title="AP-008 artifact versions",
+        workspace_dir=str(studio.WORKSPACE_ROOT),
+        use_worktree=False,
+        policy="standard",
+        lead_model="",
+        critic_model="",
+    )
+    sid = session["id"]
+    sm = studio.get_task_state_machine()
+    sm.ensure_root_task(
+        sid,
+        session_id=sid,
+        title="AP-008 artifact versions",
+        workspace_dir=str(studio.WORKSPACE_ROOT),
+        policy="standard",
+    )
+    sm.checkpoints.save_checkpoint(
+        sid,
+        step=1,
+        payload={"note": "artifact written"},
+        evidence_refs=evidence_refs,
+        require_active_epoch=False,
+    )
+    return sid
+
+
+def test_both_surfaces_carry_session_artifact_versions(tmp_path, monkeypatch):
+    studio, client = _harness_client(tmp_path, monkeypatch)
+    sid = _seed_checkpointed_task(
+        studio,
+        [
+            workflow_checkpoints.EvidenceRef(kind="artifact", ref_id="src/a.py", sha256="a" * 64, summary="12B"),
+            workflow_checkpoints.EvidenceRef(kind="action", ref_id="act-1", sha256="c" * 64),
+            workflow_checkpoints.EvidenceRef(kind="artifact", ref_id="undigested"),
+        ],
+    )
+
+    for path in (f"/api/harness/sessions/{sid}/task", f"/api/harness/sessions/{sid}/state"):
+        body = client.get(path).json()
+        versions = body["session_artifact_versions"]
+        # The integrated route, not a private helper: one artifact, and the
+        # reference without a digest is dropped rather than given a version.
+        assert [v["artifact_id"] for v in versions] == ["src/a.py"], path
+        assert versions[0]["session_id"] == sid
+        assert versions[0]["rechecked_against_current_content"] is False
+        assert versions[0]["is_global_lineage"] is False
+        assert versions[0]["is_workspace_snapshot"] is False
+
+    # The pane still keeps the global lineage in its own row; this slice does not
+    # touch the markup, because every source-bound browser capture pins index.html's
+    # digest and re-rendering it would invalidate evidence that cannot be re-made here.
+    html = HTML.read_text(encoding="utf-8")
+    assert "Global lineage (not session-specific)" in html
+
+
+def test_an_integrity_failure_suppresses_versions_instead_of_trusting_them(tmp_path, monkeypatch):
+    studio, client = _harness_client(tmp_path, monkeypatch)
+    sid = _seed_checkpointed_task(
+        studio,
+        [workflow_checkpoints.EvidenceRef(kind="artifact", ref_id="src/a.py", sha256="a" * 64)],
+    )
+    assert client.get(f"/api/harness/sessions/{sid}/task").json()["session_artifact_versions"]
+
+    # Corrupt the stored payload so the digest check fails for real: the runtime
+    # itself must refuse the checkpoint, not a stubbed error string.
+    def _corrupt(conn):
+        conn.execute(
+            "UPDATE runtime_task_checkpoints SET payload_json = ? WHERE task_id = ?",
+            ('{"note":"tampered"}', sid),
+        )
+        conn.commit()
+
+    studio.runtime_persistence.run_write_transaction(studio.STORAGE, studio.DB_PATH, _corrupt)
+
+    body = client.get(f"/api/harness/sessions/{sid}/task").json()
+    assert "integrity" in body["checkpoint_integrity_error"].lower()
+    # A checkpoint that failed its own integrity check cannot define a version.
+    assert body["session_artifact_versions"] == []
