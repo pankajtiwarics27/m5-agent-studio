@@ -3,9 +3,9 @@
   "document_type": "proposed_autonomous_production_execution_ledger",
   "product": "M5 Agent Studio",
   "program": "AP",
-  "revision": "2.1",
+  "revision": "2.2",
   "prepared_date": "2026-11-08",
-  "lifecycle": "registered_tracking_ap014_delivered_ap015_unauthorized_u01_u05_resolved",
+  "lifecycle": "registered_tracking_ap014_done_ap015_unauthorized_u01_u05_resolved",
   "source_snapshot": "a67e8b291614f8afdac7c8d38ba51bcc8926d695",
   "source_repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "specification": "docs/autonomous-production-roadmap.md",
@@ -2269,7 +2269,7 @@
       "title": "Compose policy-aware routing and resource-safe scheduling",
       "priority": "P1",
       "optional": false,
-      "status": "in_review",
+      "status": "done",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-004",
@@ -2331,9 +2331,9 @@
         "base_sha": "bf59c85cf13bff29bbcd7f1cbbcc2265be44e812",
         "head_sha": "98535f3c718396980c8e43a7a10a59d681fcc2a5",
         "claimed_at": "2026-11-22T02:00:00Z",
-        "heartbeat_at": "2026-11-22T03:40:00Z",
+        "heartbeat_at": "2026-11-23T05:50:00Z",
         "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/343",
-        "delivery_status": "pr_open",
+        "delivery_status": "merged",
         "acceptance_evidence": [
           "AC1 compatibility, measured quality, grants and actual resource fit all precede dispatch: GATE_ORDER fixes five gates evaluated in order before any dispatch could occur, each gate function is separately testable, `unknown` blocks rather than passing, and resource fit uses currently free bytes rather than total capacity. Tests: test_the_five_gates_run_in_a_fixed_order, test_a_clean_candidate_passes_every_gate, test_an_unverified_feature_blocks_rather_than_passing, test_an_unsupported_feature_fails_the_compatibility_gate, test_a_required_feature_never_mentioned_is_unknown_not_passed, test_quality_below_the_minimum_fails, test_a_missing_grant_fails_the_grant_gate, test_a_broader_grant_subsumes_a_narrower_requirement, test_resource_fit_uses_free_memory_not_total, test_negative_available_memory_is_refused.",
           "AC1 (continued) every gate is recorded even when a block prevents reaching it: the decision records all five gates per candidate, with not_reached marking the gates never asked, so silence is never mistaken for a pass. Tests: test_the_decision_records_every_gate_even_after_a_block, test_a_candidate_blocked_on_grants_still_reports_that_it_would_fit.",
@@ -2345,19 +2345,21 @@
           "Reviewability: render_decisions is deterministic sorted-key JSON with a trailing newline, a routing_rules block stating every boundary (hosted fallback false, simultaneous residency false, accounting-implies-completion false, override-cannot-bypass false, unknown blocks true) and a three-line does_not_prove block; decisions have stable digests. Tests: test_rendered_decisions_are_deterministic_json, test_rendered_decisions_state_the_boundaries, test_decision_digest_is_stable, test_a_decision_without_candidates_is_refused, test_unknown_stage_is_refused, test_a_gate_failure_must_state_a_reason."
         ],
         "tests_executed": [
+          "Completion record: PR #343 merged as ac9aa3026b5017bd5ab9dae90368d3bb4c1cf5eb at 2026-11-23T05:46:36Z, carrying delivery head 98535f3c718396980c8e43a7a10a59d681fcc2a5. CI on that exact head was green: 27 pass, 0 fail, 7 path-selected skips, mergeStateStatus CLEAN.",
           "Author-run (Linux x86_64, Python 3.11.2): tests/test_routing_decision_records.py 63 passed, fully offline - no model loaded, no runtime started, no inference issued, no provider contacted.",
           "Author-run: tests/test_ci_test_shard.py and tests/test_scoped_tests.py 20 passed after the module was registered in the shard manifest (87/76/75) and test scopes.",
           "Gates run locally: ruff check clean over the tree; ruff format applied to both new files; mypy clean over 84 source files; python autonomous_production_decisions.py valid true with inventory_status not_measured; scripts/validate_docs.py passed; scripts/validate_governance.py passed.",
           "NOT run: no model was loaded, no runtime started, no inference issued and no routing decision was validated against live hardware. Every candidate and measurement in the tests is synthetic; nothing is presented as evidence about an installed model or the M5 host. AC6's comparison is a contract with unit tests, not a measured benchmark result."
         ],
         "blockers": [],
-        "handoff": "AP-014 is delivered for its authorized scope as an offline routing-decision and scheduling module that dispatches nothing. Five gates run in a fixed order before any dispatch could occur and every gate is recorded, with not_reached marking what a block prevented and unknown blocking rather than passing. A hosted candidate cannot be constructed and no hosted fallback exists; when nothing local qualifies the decision reports a scoped limitation naming the shortfall instead. Scheduling is strictly sequential: a switch names its unload and no plan can hold two resident models. Memory accounting keeps charged and observed bytes apart, releases a charge only on a released observation and reports the unevidenced difference without releasing it. Every rejection and override is named, and an override cannot bypass a gate. Nothing is activated: no model loaded, no runtime started, no inference issued, runtime_activation_authorized stays false, ADR-0040-0045 stay not-reviewed. AC6 is a comparison contract with unit tests, not a measured benchmark: no real end-to-end run has been performed on qualified hardware, which the operating envelope still records as not_measured.",
+        "handoff": "AP-014 is done for its authorized scope. PR #343 final head 98535f3c718396980c8e43a7a10a59d681fcc2a5 merged as ac9aa3026b5017bd5ab9dae90368d3bb4c1cf5eb. The module composes routing gates and dispatches nothing. Five gates run in a fixed order before any dispatch could occur and every gate is recorded, with not_reached marking what a block prevented and unknown blocking rather than passing. A hosted candidate cannot be constructed, no hosted fallback exists, and when nothing local qualifies the decision reports a scoped limitation naming the shortfall. Scheduling is strictly sequential: a switch names its unload and no plan can hold two resident models. Memory accounting keeps charged and observed bytes apart, releases a charge only on a released observation, and reports the unevidenced difference without releasing it. Every rejection and override is named, and an override cannot bypass a gate. Nothing is activated: no model loaded, no runtime started, no inference issued, runtime_activation_authorized stays false, ADR-0040-0045 stay not-reviewed. AC6 remains a comparison contract with unit tests, not a measured benchmark: no end-to-end run has happened on qualified hardware, which the operating envelope still records as not_measured. AP-015 onward remain unauthorized and need fresh owner words.",
         "authorization_record": {
           "authorization": "normal_story_authorization — owner-approved single story (AP-014 only)",
           "owner_instruction": "On this branch the repository owner wrote, verbatim: 'continue', after this session reported AP-013 merged and recorded done and stated that AP-014 onward needed fresh owner words.",
           "selection_evidence": "AP-014 is the earliest AP story whose dependencies are all done (AP-004, AP-007 and AP-013 are recorded done/merged on main at bf59c85) with an empty blocked_by_decisions list. AP-008 is dependency-ready but is claimed by a separate session on arena/63f06456-m5-agent-studio (PR #329, open) and is not touched here. AP-030 is dependency-ready but is an optional P3 story below AP-014's P1 priority and there is no owner instruction preferring it.",
           "scope_limit": "AP-014 only: routing evidence and decision records, warm/cold and affinity-aware scheduling, and fit/ownership/fallback tests. The module composes gates (compatibility, measured quality, grants, residency, resource fit) before dispatch and refuses hosted fallback outright with a scoped limitation instead. It dispatches nothing: no model is loaded, no runtime started, no inference issued and no production caller is wired. No activation of native lifecycle, no simultaneous residency, no spend, no network, no I/O outside ~/M5_AP_Workspace. AP-015 onward remain unauthorized."
-        }
+        },
+        "completion_pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/344"
       },
       "implementation_prompt": "Implement AP-014: Compose policy-aware routing and resource-safe scheduling. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },

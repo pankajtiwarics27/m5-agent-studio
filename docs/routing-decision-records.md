@@ -1,6 +1,7 @@
 # AP-014 — Policy-aware routing and resource-safe scheduling
 
-**Status:** delivered for the AP-014 scope; **offline and advisory only**. It
+**Status:** delivered and merged (PR #343, `ac9aa30`; story recorded `done` by
+its completion record); **offline and advisory only**. It
 **dispatches nothing**: no model is loaded, no runtime started, no inference
 issued, no provider contacted, and no production caller imports it. It is **not
 activated** and **not a production guarantee**.
