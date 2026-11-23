@@ -27,7 +27,7 @@
     ],
     "module_counts": [
       89,
-      76,
+      77,
       75
     ],
     "node_counts": [
@@ -240,6 +240,7 @@
       "tests/test_autonomous_production_evaluation.py",
       "tests/test_benchmark_publication.py",
       "tests/test_browser_ci_configuration.py",
+      "tests/test_challenger_evaluation.py",
       "tests/test_chat_layout.py",
       "tests/test_chat_tool_protocol.py",
       "tests/test_ci_execution_plan.py",

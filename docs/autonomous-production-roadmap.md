@@ -1,6 +1,6 @@
 # M5 Agent Studio — Autonomous Production Product Roadmap
 
-**Revision:** 2.4 • **Prepared:** 2026-11-08 • **Status:** owner-requested product specification and proposed execution program; not evidence of implementation, independent security acceptance, or authorization to bypass existing gates.
+**Revision:** 2.5 • **Prepared:** 2026-11-08 • **Status:** owner-requested product specification and proposed execution program; not evidence of implementation, independent security acceptance, or authorization to bypass existing gates.
 
 **Audience:** any implementation agent or human entering without this conversation. Read this document, the companion story ledger, and the agent prompt before proposing changes.
 
@@ -12,6 +12,28 @@
 **Source snapshot inspected:** `pankajtiwarics27/m5-agent-studio` main at `a67e8b291614f8afdac7c8d38ba51bcc8926d695`. Inspection covered repository guidance, module contracts and selected runtime-status documents; not a full code/security audit, installed-runtime qualification, or fresh end-to-end execution. Refresh against current main before implementing.
 
 **Precedence:** repository `AGENTS.md`, accepted security decisions, existing program ownership and signed approvals remain binding. This program does not replace the AS, M5 runtime, UIUX/UIV2, or LC ledgers, and does not reopen their completed stories. Reconcile overlapping work in AP-001. Drafting this roadmap does not grant automatic execution authority to its stories or to downloaded tools.
+
+## Revision 2.5 — AP-016 challenger evaluations delivered (2026-11-23; AP-016 only)
+
+The owner said `sure continue` after this session reported AP-015 merged and
+recorded done. AP-016's dependencies (AP-003, AP-006, AP-013, AP-015) are done
+with no decision blockers; AP-008 is claimed by a separate session on PR #329 and
+AP-030 is optional P3, so neither is taken here. The delivery adds
+`challenger_evaluation.py`: run records pinned to task/config/tool/model/
+environment/toolchain digests with every failure kept and the attempted count
+enforced; disclosed budgets where a difference beyond tolerance refuses the
+comparison; scores that require both a passing deterministic check and
+independent factual or user evidence, with no default score when a scorer fails;
+a design that must include a held-out partition and a no-op incumbent, and a
+report that must include the incumbent as a result; fail-closed handling of
+scorer exceptions, missing evidence and stale source hashes; and variability
+reported as median and spread alongside cost, latency and intervention counts,
+with promotion refused for any unverified score.
+
+It runs no model, workflow or provider and writes no production caller. Nothing
+is activated; `runtime_activation_authorized` remains `false`; ADR-0040–0045
+remain `not-reviewed`; AP-017 onward remain unauthorized and unclaimed. See
+[challenger evaluation](challenger-evaluation.md).
 
 ## Revision 2.4 — AP-015 recorded done (2026-11-23; AP-015 only)
 

@@ -167,6 +167,7 @@
       "test_adr_process.py",
       "test_baseline.py",
       "test_browser_ci_configuration.py",
+      "test_challenger_evaluation.py",
       "test_ci_execution_plan.py",
       "test_ci_test_shard.py",
       "test_demo_*.py",
@@ -174,10 +175,9 @@
       "test_governance.py",
       "test_qualify_environment.py",
       "test_release_manager.py",
-      "test_uiv2_release_review.py",
+      "test_scoped_tests.py",
       "test_security_release_gate.py",
       "test_security_signoff.py",
-      "test_scoped_tests.py",
       "test_subsystem_inventory.py",
       "test_supply_chain.py",
       "test_uiux_authorization_trace.py",
@@ -187,6 +187,7 @@
       "test_uiux_roadmap.py",
       "test_uiux_route_map.py",
       "test_uiux_source_manifest.py",
+      "test_uiv2_release_review.py",
       "test_verify_test_identity.py"
     ],
     "runtime.misc": [
@@ -483,6 +484,10 @@
       "models.providers",
       "storage.history",
       "security.execution"
+    ],
+    "challenger_evaluation.py": [
+      "quality.docs-ci",
+      "models.providers"
     ]
   }
 }
