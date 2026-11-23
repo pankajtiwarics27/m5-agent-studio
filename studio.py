@@ -19583,7 +19583,20 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
       <p class="ev-note">This diff is the worktree as it is now, not a copy frozen at the verdict: a change made after the turn appears here too.</p>`;
   }
 
-  function harnessEvidenceArtifactsHtml(task, report) {
+  function harnessCheckpointReferencesHtml(task, sessionId) {
+    if (task.checkpoint_integrity_error) return `<p class="ev-note">Checkpoint references unavailable: the latest checkpoint failed its integrity check.</p>`;
+    const checkpoint = task.latest_checkpoint;
+    if (checkpoint === null) return `<p class="ev-note">No latest checkpoint recorded; no references to list.</p>`;
+    if (!checkpoint || typeof checkpoint !== "object" || !sessionId || checkpoint.task_id !== sessionId) return `<p class="ev-note">Checkpoint references unavailable: session identity could not be confirmed.</p>`;
+    const refs = checkpoint.evidence_refs;
+    if (!Array.isArray(refs) || refs.some(ref => !ref || typeof ref !== "object" || typeof ref.kind !== "string" || !ref.kind.trim() || typeof ref.ref_id !== "string" || !ref.ref_id.trim() || typeof ref.sha256 !== "string" || typeof ref.summary !== "string")) return `<p class="ev-note">Checkpoint references unavailable: the record is malformed.</p>`;
+    if (!refs.length) return `<p class="ev-note">The latest checkpoint has no evidence references recorded.</p>`;
+    const safe = value => escapeHtml(value.slice(0, 256));
+    const items = refs.slice(0, 20).map(ref => `<li><span class="mono">${safe(ref.kind)} · ${safe(ref.ref_id)}</span>${ref.sha256 ? ` · recorded sha256 <span class="mono">${safe(ref.sha256)}</span>` : " · no digest recorded"}${ref.summary ? ` · ${safe(ref.summary)}` : ""}</li>`).join("");
+    return `<div style="overflow-wrap:anywhere"><div class="ev-subheading">Latest checkpoint references (${escapeHtml(String(refs.length))})</div><ul class="ev-limits">${items}</ul>${refs.length > 20 ? `<p class="ev-note">Showing 20 of ${escapeHtml(String(refs.length))} references.</p>` : ""}<p class="ev-note">These are recorded pointers, not artifact versions or copies. A recorded digest has not been rechecked against current content.</p></div>`;
+  }
+
+  function harnessEvidenceArtifactsHtml(task, report, sessionId) {
     if (!task) {
       return `<div class="ev-heading">What the turn left behind</div>
         <p class="ev-note">The contract read failed, so the checkpoints and the workspace revision this session recorded could not be listed.</p>`;
@@ -19606,12 +19619,12 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     }
     if (lineage && !lineage.error) {
       rows.push({
-        label: "Lineage",
+        label: "Global lineage (not session-specific)",
         value: `revision ${lineage.revision} · ${lineage.artifact_count} artifact(s) · ${lineage.provenance_entry_count} provenance entr(y/ies) · ${lineage.stale_evidence_count || 0} stale evidence`,
         mono: true,
       });
     } else if (lineage && lineage.error) {
-      rows.push({ label: "Lineage", value: `could not be read: ${lineage.error}`, mono: false });
+      rows.push({ label: "Global lineage (not session-specific)", value: `could not be read: ${lineage.error}`, mono: false });
     }
     if (previewRevision) {
       rows.push({
@@ -19626,6 +19639,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     const modified = Array.isArray(report && report.modified_files) ? report.modified_files : [];
     return `<div class="ev-heading">What the turn left behind</div>
       ${harnessEvidenceFactListHtml(rows)}
+      ${harnessCheckpointReferencesHtml(task, sessionId)}
       ${modified.length ? `<div class="ev-files"><div class="ev-subheading">Files the verdict recorded as modified</div>${modified
         .map(path => `<div class="ev-file"><span class="ev-file-path mono">${escapeHtml(String(path))}</span></div>`)
         .join("")}</div>` : ""}
@@ -19647,7 +19661,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
       ["harnessEvidenceSpec", harnessEvidenceSpecHtml(payload.task)],
       ["harnessEvidenceObserved", harnessEvidenceObservedHtml(payload)],
       ["harnessEvidenceChange", harnessEvidenceChangeHtml(payload.diff)],
-      ["harnessEvidenceArtifacts", harnessEvidenceArtifactsHtml(payload.task, payload.report)],
+      ["harnessEvidenceArtifacts", harnessEvidenceArtifactsHtml(payload.task, payload.report, payload.sessionId)],
       ["harnessEvidenceLimits", harnessEvidenceLimitsHtml()],
     ];
     for (const [id, html] of sections) {

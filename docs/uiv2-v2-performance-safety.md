@@ -16,12 +16,12 @@ Environment: `linux` / `x64`, 2 CPUs, Node `v22.22.3`, `Python 3.11.2`, `Headles
 
 | Metric | Actual | Gate |
 | --- | ---: | ---: |
-| Fast real SSE schedules | 58 in 368.4ms (157.4/s) | ≥20 and ≥50/s |
-| Coalesced chat renders | 19 | fewer than 58 schedules, complete text retained |
-| Full-window ten-event frame | mean 2.10ms; nearest-rank p95 3.40ms; max 4.10ms | mean ≤4ms |
+| Fast real SSE schedules | 58 in 386.4ms (150.1/s) | ≥20 and ≥50/s |
+| Coalesced chat renders | 18 | fewer than 58 schedules, complete text retained |
+| Full-window ten-event frame | mean 2.14ms; nearest-rank p95 3.00ms; max 4.30ms | mean ≤4ms |
 | Events / cache / cards | 30,000 / 5,000 / 300 | 5,000 / 300 ceilings |
 | Post-GC document nodes | 8588 → 8588 → 8588 | repeated-cycle growth ≤64 |
-| Post-GC JS heap | 3.24 MiB → 3.19 MiB → 3.21 MiB | cycle growth ≤8 MiB; baseline growth ≤16 MiB |
+| Post-GC JS heap | 3.24 MiB → 3.20 MiB → 3.20 MiB | cycle growth ≤8 MiB; baseline growth ≤16 MiB |
 
 Memory readings use CDP `Performance.getMetrics` immediately after `HeapProfiler.collectGarbage`. They are repeated-cycle plateau checks, not a claim that a browser never allocates during a frame.
 

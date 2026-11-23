@@ -369,3 +369,29 @@ function showToast(){} let fetch;
 '''
     result = subprocess.run(["node", "-"], input=script, text=True, capture_output=True, cwd=ROOT, check=False)
     assert result.returncode == 0, result.stderr
+
+
+def test_checkpoint_evidence_references_are_session_scoped_inert_and_bounded():
+    html = HTML.read_text(encoding="utf-8")
+    start = html.index('  function harnessCheckpointReferencesHtml(')
+    end = html.index('  function harnessEvidenceArtifactsHtml(', start)
+    script = r'''
+const assert = require('node:assert/strict');
+function escapeHtml(s){return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+''' + html[start:end] + r'''
+const ref={kind:'artifact',ref_id:'<img src=x onerror=evil()>',sha256:'abcdef',summary:'<script>evil()</script>'};
+const task={latest_checkpoint:{task_id:'one',evidence_refs:[ref]}};
+const html=harnessCheckpointReferencesHtml(task,'one');
+assert.match(html,/&lt;img/); assert.ok(!html.includes('<img')); assert.ok(!html.includes('<script>'));
+assert.match(html,/recorded sha256/); assert.match(html,/not artifact versions/); assert.match(html,/not been rechecked/);
+assert.match(harnessCheckpointReferencesHtml(task,'two'),/identity could not be confirmed/);
+assert.ok(!harnessCheckpointReferencesHtml(task,'two').includes('abcdef'));
+assert.match(harnessCheckpointReferencesHtml({...task,checkpoint_integrity_error:'corrupt'},'one'),/integrity check/);
+assert.match(harnessCheckpointReferencesHtml({latest_checkpoint:null},'one'),/No latest checkpoint/);
+assert.match(harnessCheckpointReferencesHtml({latest_checkpoint:{task_id:'one',evidence_refs:[]}},'one'),/no evidence references/);
+assert.match(harnessCheckpointReferencesHtml({latest_checkpoint:{task_id:'one',evidence_refs:[{kind:'x'}]}},'one'),/malformed/);
+assert.match(harnessCheckpointReferencesHtml({latest_checkpoint:{task_id:'one',evidence_refs:Array(25).fill(ref)}},'one'),/Showing 20 of 25/);
+assert.ok(!harnessCheckpointReferencesHtml({latest_checkpoint:{task_id:'one',evidence_refs:[{...ref,ref_id:'x'.repeat(1000)}]}},'one').includes('x'.repeat(257)));
+'''
+    result = subprocess.run(["node", "-"], input=script, text=True, capture_output=True, cwd=ROOT, check=False)
+    assert result.returncode == 0, result.stderr

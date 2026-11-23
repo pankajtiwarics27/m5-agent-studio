@@ -438,6 +438,24 @@ async function run(args) {
         /Checkpoints/.test(surface.artifacts) && /seq 1/.test(surface.artifacts) && /Workspace now/.test(surface.artifacts),
         surface.artifacts.slice(0, 200),
       );
+      const checkpointRefs = await page.evaluate(async id => {
+        const response = await fetch(`/api/harness/sessions/${encodeURIComponent(id)}/task`);
+        const task = await response.json();
+        const artifact = task.latest_checkpoint?.evidence_refs?.find(ref => ref.kind === 'artifact' && ref.ref_id === 'src/total.py');
+        const node = document.getElementById('harnessEvidenceArtifacts');
+        return {session:task.latest_checkpoint?.task_id, artifact, text:node.textContent, links:node.querySelectorAll('a').length};
+      }, args.verifiedSessionId);
+      record('latest session checkpoint references are displayed as inert recorded pointers', checkpointRefs.session === args.verifiedSessionId && !!checkpointRefs.artifact?.sha256 && checkpointRefs.text.includes(checkpointRefs.artifact.sha256) && /src\/total\.py/.test(checkpointRefs.text) && /not artifact versions/.test(checkpointRefs.text) && /not been rechecked/.test(checkpointRefs.text) && checkpointRefs.links === 0, JSON.stringify(checkpointRefs));
+      await page.setViewport({width:320,height:800,deviceScaleFactor:1});
+      const referenceWidth = await page.evaluate(() => {
+        const modal = document.querySelector('#harnessEvidenceModal .modal');
+        const refs = document.getElementById('harnessEvidenceArtifacts');
+        return {width:modal.scrollWidth, client:modal.clientWidth, refsWidth:refs.scrollWidth, refsClient:refs.clientWidth};
+      });
+      record('checkpoint reference digests fit a 320px modal', referenceWidth.width <= referenceWidth.client + 1 && referenceWidth.refsWidth <= referenceWidth.refsClient + 1, JSON.stringify(referenceWidth));
+      await page.evaluate(() => document.getElementById('harnessEvidenceArtifacts').scrollIntoView({block:'center'}));
+      await shoot(page, 'checkpoint-references-mobile');
+      await page.setViewport({width:1440,height:900,deviceScaleFactor:1});
       record(
         "the surface states what it does not prove",
         surface.limits.length === 4 && surface.limits.some((line) => /does not re-run/.test(line)),
