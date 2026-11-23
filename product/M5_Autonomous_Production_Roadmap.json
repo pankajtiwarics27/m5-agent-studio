@@ -2535,7 +2535,7 @@
         "owner": "arena/c9b61b55-m5-agent-studio",
         "branch": "arena/c9b61b55-m5-agent-studio",
         "base_sha": "984e70af59b22e0043848e22c5deadc65525ae01",
-        "head_sha": "a499fef56f8cb9c4524c85f4a4805f5f6f06443d",
+        "head_sha": "21e47bb8fa9643b14eaa3836281a911c6153a2e6",
         "claimed_at": "2026-11-23T09:20:00Z",
         "heartbeat_at": "2026-11-23T09:20:00Z",
         "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/347",
@@ -2552,6 +2552,7 @@
         "tests_executed": [
           "Author-run (Linux x86_64, Python 3.11.2): tests/test_challenger_evaluation.py 54 passed, fully offline - no model, workflow or provider executed; every run and score synthetic.",
           "Author-run: tests/test_ci_test_shard.py and tests/test_scoped_tests.py 20 passed after the module was registered in the shard manifest (88/77/75) and the test module mapped in test scopes (its name matches no existing glob, as with AP-015).",
+          "Merged main (1a26bf3, which carries the separate AP-008 delivery from PR #329) to resolve a shard-manifest conflict; the resolution keeps main's test_harness_ap008_recovery.py in shard 1 and the challenger module in shard 2, with balance.module_counts recomputed from the shard lists.",
           "Gates run locally: ruff check clean over the tree; ruff format applied to both new files; mypy clean over 86 source files; python autonomous_production_decisions.py valid true with inventory_status not_measured; scripts/validate_docs.py passed; scripts/validate_governance.py passed.",
           "NOT run: no evaluation was executed against a real model, workflow or team; no rubric scored real output; no held-out dataset was touched. Every run record, score and budget in the tests is synthetic, and none is presented as evidence about a running system."
         ],
