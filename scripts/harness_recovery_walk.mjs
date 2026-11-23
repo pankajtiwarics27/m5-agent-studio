@@ -339,6 +339,94 @@ async function run(args) {
       );
       await shoot(page, "paused-panel");
 
+      // The version disclosure reads the real session snapshot route, not the diff
+      // and not an invented artifact version. Failures must remain independent.
+      const versions = await page.evaluate(async (id) => {
+        document.getElementById('harnessWorkspaceReview').open = true;
+        const response = await fetch(`/api/harness/sessions/${encodeURIComponent(id)}/snapshots`);
+        const data = await response.json();
+        await refreshHarnessWorkspaceReview();
+        await new Promise(resolve => setTimeout(resolve, 400));
+        return {ok:response.ok, data, text:document.getElementById('harnessWorkspaceVersions').textContent};
+      }, args.pausedSessionId);
+      record('workspace snapshots reflect the real session route', versions.ok && versions.data.session_id === args.pausedSessionId && (versions.data.snapshots.length ? versions.text.includes(String(versions.data.latest_snapshot_id)) : /No workspace snapshots/.test(versions.text)), JSON.stringify({count: versions.data.snapshots.length, latest: versions.data.latest_snapshot_id, text: versions.text}));
+      await shoot(page, "workspace-snapshots");
+      const denied = await page.evaluate(async () => {
+        const original = window.fetch;
+        window.fetch = (url, options) => String(url).endsWith('/snapshots') ? Promise.resolve(new Response('', {status:403})) : original(url, options);
+        try { await refreshHarnessWorkspaceReview(); await new Promise(resolve => setTimeout(resolve, 200)); }
+        finally { window.fetch = original; }
+        return document.getElementById('harnessWorkspaceVersions').textContent;
+      });
+      record('snapshot denial is visible without fabricating an empty record', /unavailable.*403/.test(denied), denied);
+
+      // AP-008: preview untrusted content as text only, including at phone widths.
+      for (const [theme, width] of [["light", 390], ["dark", 320]]) {
+        await page.setViewport({ width, height: 844, deviceScaleFactor: 1 });
+        await page.evaluate(async (theme) => {
+          applyTheme(theme);
+          const original = window.fetch;
+          window.fetch = (url, options) => String(url).endsWith('/diff')
+            ? Promise.resolve(new Response(JSON.stringify({is_git:true,status:' M artifact.html',diff:'<img src=x onerror=window.__ap008Injected=1><script>window.__ap008Injected=1</script>'}), {status:200,headers:{'Content-Type':'application/json'}}))
+            : original(url, options);
+          try { document.getElementById('harnessWorkspaceReview').open = true; await refreshHarnessWorkspaceReview(); }
+          finally { window.fetch = original; }
+        }, theme);
+        const preview = await page.evaluate(() => ({
+          text: document.getElementById('harnessWorkspaceDiffPreview').textContent,
+          images: document.querySelectorAll('#harnessWorkspaceDiffPreview img, #harnessWorkspaceDiffPreview script, #harnessWorkspaceDiffPreview iframe').length,
+          injected: Boolean(window.__ap008Injected),
+          width: document.documentElement.scrollWidth,
+          viewport: window.innerWidth,
+        }));
+        record(`inert workspace preview at ${width}px in ${theme}`, /<script>/.test(preview.text) && preview.images === 0 && !preview.injected && preview.width <= preview.viewport + 1, JSON.stringify(preview));
+        await page.focus('#harnessWorkspaceReview summary');
+        await page.keyboard.press('Enter');
+        const closed = await page.evaluate(() => !document.getElementById('harnessWorkspaceReview').open && document.activeElement.tagName === 'SUMMARY');
+        record(`workspace disclosure supports keyboard at ${width}px in ${theme}`, closed, `closed and focused=${closed}`);
+      }
+
+      await page.setViewport({ width: 780, height: 900, deviceScaleFactor: 1 });
+      await page.evaluate(async () => {
+        document.body.style.zoom = '2';
+        document.getElementById('harnessWorkspaceReview').open = true;
+        await refreshHarnessWorkspaceReview();
+      });
+      const zoom = await page.evaluate(() => {
+        const summary = document.querySelector('#harnessWorkspaceReview summary').getBoundingClientRect();
+        return {width:document.documentElement.scrollWidth, viewport:window.innerWidth, left:summary.left, right:summary.right};
+      });
+      record('workspace disclosure remains reachable at CSS 200 percent zoom', zoom.width <= zoom.viewport + 1 && zoom.left >= 0 && zoom.right <= zoom.viewport + 1, JSON.stringify(zoom));
+      await page.evaluate(() => { document.body.style.zoom = ''; document.getElementById('harnessWorkspaceReview').open = false; });
+
+      // Fail only the snapshot read; the fixture remains the real backend. Re-check
+      // with the real route and keyboard, including the warning's focus restoration.
+      for (const [theme, width] of [["light", 390], ["dark", 320]]) {
+        await page.setViewport({ width, height: 844, deviceScaleFactor: 1 });
+        await page.evaluate(async (theme) => {
+          applyTheme(theme);
+          const original = window.fetch;
+          window.fetch = (url, options) => String(url).endsWith('/state')
+            ? Promise.resolve(new Response('', {status: 503})) : original(url, options);
+          try { await harnessResyncFromSnapshot('test-unavailable'); } finally { window.fetch = original; }
+        }, theme);
+        const warning = await page.evaluate(() => ({
+          text: document.getElementById('harnessSnapshotState').textContent,
+          width: document.documentElement.scrollWidth,
+          viewport: window.innerWidth,
+        }));
+        record(`snapshot failure is visible at ${width}px in ${theme}`, /unavailable/i.test(warning.text) && /503/.test(warning.text) && warning.width <= warning.viewport + 1, JSON.stringify(warning));
+        await page.focus('#harnessSnapshotState button');
+        await page.keyboard.press('Enter');
+        await sleep(args.settleMs * 8);
+        const restored = await page.evaluate(() => ({
+          text: document.getElementById('harnessSnapshotState').textContent,
+          focus: document.activeElement.id,
+        }));
+        record(`keyboard retry restores status and focus at ${width}px in ${theme}`, !restored.text.trim() && restored.focus === 'harnessSnapshotState', JSON.stringify(restored));
+      }
+      await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
+
       // ── Resume is a real call, and the surface reports what came back ───────
       await page.evaluate(() => {
         const button = document.querySelector('#harnessRecoveryStory .presentation-actions .btn[data-action-id="resume"]');
@@ -365,6 +453,16 @@ async function run(args) {
         `focusInside=${prepared.focusInside} tag=${prepared.focusTag}`,
       );
       await shoot(page, "resume-prepared");
+      await page.evaluate(() => { document.getElementById('harnessPromptInput').value = 'unsent draft'; });
+      const postsBeforeContinue = posts.length;
+      await pressAction(page, 'continue');
+      const protectedDraft = await page.evaluate(() => ({
+        value: document.getElementById('harnessPromptInput').value,
+        focused: document.activeElement.id,
+        note: document.getElementById('harnessRecoveryNote').textContent,
+      }));
+      record('continue preserves an unsent draft and does not start a run', protectedDraft.value === 'unsent draft' && protectedDraft.focused === 'harnessPromptInput' && /draft is unchanged/i.test(protectedDraft.note) && posts.length === postsBeforeContinue, JSON.stringify(protectedDraft));
+      await page.evaluate(() => { document.getElementById('harnessPromptInput').value = ''; });
 
       // ── Cancel takes two presses and says what it did ───────────────────────
       await pressAction(page, "cancel");

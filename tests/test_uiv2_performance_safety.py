@@ -205,6 +205,20 @@ def test_isolation_cannot_be_silently_released_or_have_failures_removed() -> Non
     assert any("overclaims" in error for error in contract.validate_backend_run(overclaim))
 
 
+def test_ap008_runs_are_separate_from_preserved_historical_records() -> None:
+    historical_browser = ROOT / "product" / "M5_2_0_UIUX_V2_Performance_Run.json"
+    historical_backend = ROOT / "product" / "M5_2_0_UIUX_V2_Backend_Safety_Run.json"
+    assert contract.RUN_PATH != historical_browser
+    assert contract.BACKEND_RUN_PATH != historical_backend
+    assert contract.sha256(historical_browser) == "be373dca64ad9b241c85a0feaf6a257c9a6ceee0a4e6f12db5e8a4c57ad2d7b8"
+    assert contract.sha256(historical_backend) == "460138ccd3db70459782a8680a86d4115257ad81aad0eb0556e6c3bf7636095e"
+    old = json.loads(historical_browser.read_text(encoding="utf-8"))
+    memory = old["metrics"]["harness"]["memory"]
+    assert [memory[key]["Nodes"] for key in ("baseline", "after_cycle_1", "after_cycle_2")] == [8548, 8548, 8548]
+    assert contract.validate_browser_run(browser_run()) == []
+    assert contract.validate_backend_run(backend_run()) == []
+
+
 def test_docs_index_links_the_gate_and_test_map_owns_it() -> None:
     assert contract.DOC_PATH.name in (ROOT / "docs" / "README.md").read_text(encoding="utf-8")
     scopes = json.loads((ROOT / "tests" / "test_scopes.json").read_text(encoding="utf-8"))

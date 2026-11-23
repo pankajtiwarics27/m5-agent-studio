@@ -282,6 +282,9 @@ jobs:
         env:
           PYTHONUNBUFFERED: "1"
           PYTEST_ADDOPTS: "--durations=15 --durations-min=1.0"
+          # Drafts may bootstrap same-head CI evidence; readiness remains blocked.
+          # Ready PRs, main, schedules and manual runs always execute the strict gate.
+          UIV2_DRAFT_EVIDENCE_BOOTSTRAP: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft && '1' || '0' }}
         run: >-
           python scripts/ci_test_shard.py
           --run-shard "${{ matrix.shard }}"

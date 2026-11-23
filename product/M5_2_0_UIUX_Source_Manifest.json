@@ -12,9 +12,9 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "397c3ae069fe281d8150485e1b88e73c7970de8a1ac07841c6790f7fe685da0f",
-      "bytes": 1066750,
-      "lines": 18198
+      "sha256": "dad4fff7a3e0e6e8d837c7718eeed96671e30d3a3ba8cb6af3b424a96cd7ec80",
+      "bytes": 1079701,
+      "lines": 18396
     },
     {
       "path": "app.py",
@@ -26,9 +26,9 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "bede9c7751e479419d3f2aba7fc758137cdf5fbc5743d9e9603e14f992ca6356",
-      "bytes": 4580486,
-      "lines": 89796
+      "sha256": "f6ec2196381f971d885028378bf6e39b44c0e46ce677e76d1e93fc6e131d508c",
+      "bytes": 4593437,
+      "lines": 89994
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -460,8 +460,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "397c3ae069fe281d8150485e1b88e73c7970de8a1ac07841c6790f7fe685da0f",
-    "lines": 18198,
+    "sha256": "dad4fff7a3e0e6e8d837c7718eeed96671e30d3a3ba8cb6af3b424a96cd7ec80",
+    "lines": 18396,
     "tab_count": 6,
     "tabs": [
       {
@@ -507,8 +507,8 @@
         "onclick_target": "chat"
       }
     ],
-    "fetch_call_count": 71,
-    "api_literal_count": 57,
+    "fetch_call_count": 73,
+    "api_literal_count": 58,
     "api_literals": [
       "/api/cache/clear-ssd",
       "/api/chat/stream",
@@ -538,6 +538,7 @@
       "/api/harness/sessions/{param}/grants",
       "/api/harness/sessions/{param}/grants/revoke",
       "/api/harness/sessions/{param}/sdlc",
+      "/api/harness/sessions/{param}/snapshots",
       "/api/harness/sessions/{param}/state",
       "/api/harness/sessions/{param}/task",
       "/api/harness/sessions/{param}/{param}",

@@ -26,7 +26,8 @@ ROOT = Path(__file__).resolve().parents[1]
 STATIC_PATH = ROOT / "static" / "index.html"
 WALK_PATH = ROOT / "scripts" / "uiv2_accessibility_adversarial_walk.mjs"
 JSON_PATH = ROOT / "product" / "M5_2_0_UIUX_V2_Accessibility_Adversarial.json"
-RUN_PATH = ROOT / "product" / "M5_2_0_UIUX_V2_Accessibility_Adversarial_Run.json"
+# Keep the original UIV2-28 run immutable; this separate run binds the AP-008 source.
+RUN_PATH = ROOT / "product" / "M5_2_0_UIUX_V2_Accessibility_AP008_Run.json"
 DOC_PATH = ROOT / "docs" / "uiv2-v2-accessibility-adversarial.md"
 CROSS_TAB_PATH = ROOT / "product" / "M5_2_0_UIUX_V2_Cross_Tab_Reference.json"
 WORKFLOW_PATH = ROOT / ".github" / "workflows" / "ci.yml"

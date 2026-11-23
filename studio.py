@@ -4884,6 +4884,11 @@ EMBEDDED_HTML = r"""<!DOCTYPE html>
   @media (max-width: 880px) { .harness-shell { grid-template-columns: 1fr; } .harness-sidebar { display: none; } }
   .harness-sidebar { background: var(--bg-elev); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
   .harness-main { display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
+  .harness-workspace-review { margin: 8px 16px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-card); min-width: 0; }
+  .harness-workspace-review summary { cursor: pointer; padding: 9px 12px; font-weight: 600; }
+  .harness-workspace-review-body { padding: 0 12px 12px; color: var(--text-dim); overflow-wrap: anywhere; }
+  .harness-workspace-review-body p { margin: 8px 0; }
+  .harness-workspace-review pre { max-height: 16rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text); }
   .harness-bar { padding: 9px 16px; background: var(--bg-elev); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .harness-stream { flex: 1; min-height: 96px; overflow-y: auto; padding: 14px 18px 22px; display: flex; flex-direction: column; gap: 11px; }
   /* The stream is focusable so it can be scrolled with the arrow keys; without a ring the focus
@@ -6140,7 +6145,8 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
 #pane-harness .harness-main { min-width: 0; min-height: 0; overflow-y: auto; position: relative; }
 #pane-harness .harness-stream { width: 100%; max-width: 900px; margin: 0 auto; padding: 24px; min-height: 120px; }
 #pane-harness .harness-main:has(.harness-welcome) .harness-stages,
-#pane-harness .harness-main:has(.harness-welcome) #harnessInfoBanner { display: none !important; }
+#pane-harness .harness-main:has(.harness-welcome) #harnessInfoBanner,
+#pane-harness .harness-main:has(.harness-welcome) .harness-workspace-review { display: none !important; }
 #pane-harness .harness-main:has(.harness-welcome) .harness-stream { flex: 0 0 auto; margin-top: auto; overflow: visible; }
 #pane-harness .harness-main:has(.harness-welcome) .task-composer { margin-bottom: auto; }
 .harness-welcome { text-align: center; padding: 16px 0 4px; }
@@ -7430,6 +7436,19 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
             </div>
           </div>
 
+          <details id="harnessWorkspaceReview" class="harness-workspace-review" ontoggle="if (this.open) refreshHarnessWorkspaceReview()">
+            <summary>Files, progress &amp; resources</summary>
+            <div class="harness-workspace-review-body">
+              <p id="harnessWorkspaceProgress" role="status">Select a session to see its recorded progress.</p>
+              <p id="harnessWorkspaceVersions" role="status" aria-live="polite">Open this section to inspect recorded workspace snapshots.</p>
+              <p id="harnessWorkspaceDiffState" role="status" aria-live="polite">Open this section to inspect workspace changes.</p>
+              <pre id="harnessWorkspaceDiffPreview" aria-label="Inert text preview of workspace changes" hidden></pre>
+              <p>Preview is inert text, not an active website. Source references and artifact versions are not available here. Workspace snapshots are recovery records, not artifact versions; changes shown are current and may differ from a snapshot.</p>
+              <button type="button" class="btn btn-xs" onclick="refreshHarnessWorkspaceReview()">Refresh workspace review</button>
+              <button type="button" class="btn btn-xs" onclick="openHarnessEvidenceModal()">Verification &amp; artifacts</button>
+            </div>
+          </details>
+
           <!-- Recovery: the state the run was left in, what survived it, and the way
                forward. Present only when the task is not simply ready or finished, and
                built from `GET …/state` + `GET …/task` - no route was added for it. -->
@@ -7460,6 +7479,9 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
             <div id="harnessTimelineState" class="harness-timeline-state" data-mode="idle" role="status" aria-live="polite"></div>
             <ol id="harnessTimelineList" class="harness-timeline-list" aria-label="Durable task events, oldest first" hidden></ol>
           </div>
+
+          <!-- Snapshot failures are distinct from a disconnected event stream. -->
+          <div id="harnessSnapshotState" role="status" aria-live="polite"></div>
 
           <!-- Trajectory Stream -->
           <div id="harnessRefusalState"></div>
@@ -16973,10 +16995,13 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
 
   function startFreshHarnessDraft() {
     activeHarnessId = null;
+    harnessSnapshotReadSerial += 1;
+    clearHarnessSnapshotUnavailable();
     activeHarnessSession = null;
     harnessResetEventCache();
     harnessLogTelemetry = { source: "idle", reason: "", trigger: "", pages: 0, reloads: 0, resyncs: 0, streamed: 0, latest: 0, retained: 0 };
     harnessSnapshot = null;
+    resetHarnessWorkspaceReview();
     closeHarnessEventStream();
     document.getElementById("harnessActiveLabel").textContent = "New Harness Draft — choose workspace, worktree isolation, & policy, then run your task below.";
     setStatus("harnessActiveStatusBadge", "neutral", uiStatus("draft").label);
@@ -17411,8 +17436,10 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     if (sess.critic_model && unifiedCatalog.some(x => x.id === sess.critic_model)) document.getElementById("harnessCriticModel").value = sess.critic_model;
     updateHarnessRunControl();
     const st = (sess.status || "").toLowerCase();
-    if (st === "done" || st === "completed" || st === "failed" || st === "error") {
+    if (st === "done" || st === "completed") {
       harnessStageState.plan = harnessStageState.execute = harnessStageState.verify = "done";
+    } else if (st === "failed" || st === "error") {
+      harnessStageState.plan = "pending"; harnessStageState.execute = "blocked"; harnessStageState.verify = "pending";
     } else if (st === "running" || st === "active" || st === "paused") {
       harnessStageState.plan = "done"; harnessStageState.execute = "active";
     } else if (st === "blocked") {
@@ -17425,9 +17452,12 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     // Reload is a first-class path: rebuild from the authoritative task snapshot
     // and the durable event log, never from whatever DOM happened to survive.
     activeHarnessId = id;
+    harnessSnapshotReadSerial += 1;
+    clearHarnessSnapshotUnavailable();
     harnessResetEventCache();
     harnessLogTelemetry = { source: "idle", reason: "", trigger: "", pages: 0, reloads: 0, resyncs: 0, streamed: 0, latest: 0, retained: 0 };
     harnessSnapshot = null;
+    resetHarnessWorkspaceReview();
     harnessGrantSnapshot = null;
     harnessGrantConfirm = "";
     harnessApprovalRequests.clear();
@@ -17437,9 +17467,13 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     await closeHarnessEventStream();
     try {
       const r = await fetch(`/api/harness/sessions/${encodeURIComponent(id)}`);
-      if (!r.ok) return;
-      updateHarnessHeaderBanner(await r.json());
-    } catch (e) {}
+      if (r.ok) {
+        const session = await r.json();
+        if (activeHarnessId !== id) return;
+        updateHarnessHeaderBanner(session);
+      }
+    } catch (e) {} // The authoritative snapshot below reports an unavailable service.
+    if (activeHarnessId !== id) return;
     renderHarnessSidebar();
     await harnessResyncFromSnapshot("select");
     await refreshHarnessGrants();
@@ -17537,6 +17571,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
   let harnessCachedSnapshot = null;       // the ordered array last handed out, until the cache moves
   let harnessCursor = 0;                  // highest seq applied to the UI
   let harnessSnapshot = null;             // last authoritative /state payload
+  let harnessSnapshotReadSerial = 0;       // fence overlapping snapshot requests
   let harnessEventStreamAbort = null;     // live follow stream (GET SSE) abort handle
   let harnessStreamRetryTimer = null;
   let harnessRunActive = false;           // a POST run stream owns the transcript
@@ -17915,8 +17950,97 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     return verdict;
   }
 
+  let harnessWorkspaceReviewSerial = 0;
+
+  function renderHarnessWorkspaceProgress() {
+    const node = document.getElementById("harnessWorkspaceProgress");
+    if (!node) return;
+    const state = harnessSnapshot;
+    if (!activeHarnessId) { node.textContent = "Select a session to see its recorded progress."; return; }
+    if (!state || state.session_id !== activeHarnessId) { node.textContent = "Task state is unavailable; no progress can be confirmed."; return; }
+    const milestones = Array.isArray(state.milestones) ? state.milestones : [];
+    const completed = milestones.filter(item => item && item.state === "completed").length;
+    const approvals = state.approvals && Array.isArray(state.approvals.pending) ? state.approvals.pending.length : 0;
+    const budget = state.budget || {};
+    const parts = [`Task: ${state.task_status || "unknown"}`, milestones.length ? `Milestones: ${completed}/${milestones.length} complete` : "No milestones recorded", `${approvals} decision(s) pending`];
+    if (Number.isFinite(budget.steps_used)) parts.push(`Steps used: ${budget.steps_used}`);
+    const stale = document.querySelector("#harnessSnapshotState .presentation");
+    node.textContent = `${stale ? "Last known (may be stale): " : "Recorded: "}${parts.join(" · ")}`;
+  }
+
+  function resetHarnessWorkspaceReview() {
+    harnessWorkspaceReviewSerial += 1;
+    const status = document.getElementById("harnessWorkspaceDiffState");
+    const preview = document.getElementById("harnessWorkspaceDiffPreview");
+    const versions = document.getElementById("harnessWorkspaceVersions");
+    if (versions) versions.textContent = activeHarnessId ? "Open or refresh to inspect recorded workspace snapshots." : "No session selected; workspace snapshots are unavailable.";
+    if (status) status.textContent = activeHarnessId ? "Open or refresh to inspect workspace changes." : "No session selected; workspace changes are unavailable.";
+    if (preview) { preview.textContent = ""; preview.hidden = true; }
+    renderHarnessWorkspaceProgress();
+    const panel = document.getElementById("harnessWorkspaceReview");
+    if (activeHarnessId && panel && panel.open) refreshHarnessWorkspaceReview();
+  }
+
+  async function refreshHarnessWorkspaceSnapshots(sessionId, readSerial) {
+    const node = document.getElementById("harnessWorkspaceVersions");
+    if (!node) return;
+    if (!sessionId) { node.textContent = "No session selected; workspace snapshots are unavailable."; return; }
+    node.textContent = "Reading recorded workspace snapshots…";
+    try {
+      const response = await fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/snapshots`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      if (activeHarnessId !== sessionId || readSerial !== harnessWorkspaceReviewSerial) return;
+      if (!data || data.session_id !== sessionId || !Array.isArray(data.snapshots)) throw new Error("invalid session snapshot response");
+      const rows = data.snapshots;
+      if (rows.some(row => !row || typeof row.snapshot_id !== "string" || !row.snapshot_id)) throw new Error("invalid snapshot record");
+      const latestId = data.latest_snapshot_id;
+      if (latestId && !rows.some(row => row.snapshot_id === latestId)) throw new Error("latest snapshot is missing from the record");
+      if (!rows.length) { node.textContent = "No workspace snapshots recorded for this session."; return; }
+      const latest = rows.find(row => row.snapshot_id === latestId);
+      if (!latest) { node.textContent = `${rows.length} workspace snapshot(s) recorded; the latest pointer is unavailable.`; return; }
+      const label = typeof latest.label === "string" && latest.label ? latest.label : "unlabelled";
+      node.textContent = `${rows.length} workspace snapshot(s) recorded. Latest: ${latest.snapshot_id} · ${label}. This is not a live workspace version.`;
+    } catch (error) {
+      if (activeHarnessId === sessionId && readSerial === harnessWorkspaceReviewSerial) node.textContent = `Workspace snapshots are unavailable: ${error.message || "connection failed"}.`;
+    }
+  }
+
+  async function refreshHarnessWorkspaceReview() {
+    const status = document.getElementById("harnessWorkspaceDiffState");
+    const preview = document.getElementById("harnessWorkspaceDiffPreview");
+    if (!status || !preview) return;
+    const sessionId = activeHarnessId;
+    const readSerial = ++harnessWorkspaceReviewSerial;
+    renderHarnessWorkspaceProgress();
+    refreshHarnessWorkspaceSnapshots(sessionId, readSerial);
+    preview.textContent = "";
+    preview.hidden = true;
+    if (!sessionId) { status.textContent = "No session selected; workspace changes are unavailable."; return; }
+    status.textContent = "Reading workspace changes…";
+    try {
+      const response = await fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/diff`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      if (activeHarnessId !== sessionId || readSerial !== harnessWorkspaceReviewSerial) return;
+      if (!data.is_git) { status.textContent = "This workspace is not a Git repository; no Git preview is available."; return; }
+      const diff = typeof data.diff === "string" ? data.diff : "";
+      if (diff.startsWith("Git diff error:")) { status.textContent = `Workspace changes are unavailable: ${diff}`; return; }
+      const gitStatus = typeof data.status === "string" ? data.status : "";
+      status.textContent = gitStatus ? `Workspace status:\n${gitStatus}` : "No workspace changes reported by Git.";
+      if (diff) {
+        preview.textContent = diff;
+        preview.hidden = false;
+        if (diff.length >= 50000) status.textContent += " Preview may be truncated.";
+      } else if (gitStatus) status.textContent += " No diff preview is available for the reported status.";
+    } catch (error) {
+      if (activeHarnessId === sessionId && readSerial === harnessWorkspaceReviewSerial) status.textContent = `Workspace changes are unavailable: ${error.message || "connection failed"}.`;
+    }
+  }
+
   function applyHarnessSnapshotState(state) {
     if (!state) return;
+    renderHarnessWorkspaceProgress();
     const badge = document.getElementById("harnessActiveStatusBadge");
     const b = harnessStatusBadge(state);
     if (badge) setStatus(badge, b.cls, b.label);
@@ -17937,23 +18061,47 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     }
   }
 
+  function presentHarnessSnapshotUnavailable(reason) {
+    const host = document.getElementById("harnessSnapshotState");
+    const hadFocus = Boolean(host && host.contains(document.activeElement));
+    const panel = presentInto("harnessSnapshotState", {
+      kind: "error",
+      title: "Task status unavailable",
+      cause: reason,
+      context: "The displayed task and decisions may be out of date. Your draft is unchanged; no outcome can be confirmed until the server is read again.",
+      actions: [{ label: "Retry status", run: () => harnessResyncFromSnapshot("operator"), title: "Read the current task state again" }],
+    });
+    if (hadFocus && panel) panel.querySelector("button")?.focus();
+    renderHarnessWorkspaceProgress();
+    return panel;
+  }
+
+  function clearHarnessSnapshotUnavailable() {
+    clearPresentation("harnessSnapshotState");
+  }
+
   async function harnessResyncFromSnapshot(reason) {
     // Authoritative reload: task state + approval state + the durable event log.
     const sessionId = activeHarnessId;
     if (!sessionId) return;
+    const readSerial = ++harnessSnapshotReadSerial;
     harnessLastResyncAt = Date.now();
     let state;
     try {
       const r = await fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/state`);
-      if (!r.ok) return;
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
       state = await r.json();
-    } catch (e) { return; }
-    if (activeHarnessId !== sessionId) return;
+    } catch (e) {
+      if (activeHarnessId === sessionId && readSerial === harnessSnapshotReadSerial) presentHarnessSnapshotUnavailable(`The task snapshot could not be read (${e.message || "connection failed"}).`);
+      return;
+    }
+    if (activeHarnessId !== sessionId || readSerial !== harnessSnapshotReadSerial) return;
+    clearHarnessSnapshotUnavailable();
     harnessSnapshot = state;
     if (state.session) updateHarnessHeaderBanner(state.session);
     applyHarnessSnapshotState(state);
     const verdict = await loadHarnessEvents({ full: true });
-    if (activeHarnessId !== sessionId) return;
+    if (activeHarnessId !== sessionId || readSerial !== harnessSnapshotReadSerial) return;
     harnessLogTelemetry.source = "snapshot";
     harnessLogTelemetry.trigger = String(reason || "");
     harnessLogTelemetry.reason = verdict.gap && verdict.reason !== "session_changed" ? verdict.reason : "";
@@ -17968,6 +18116,25 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     // The recovery surface reads the same two routes a resync just read; it is
     // refreshed here so every path that re-reads the task state also re-draws it.
     await refreshHarnessRecovery();
+  }
+
+  async function refreshHarnessSnapshotAfterOutcome(sessionId) {
+    // A late stream response must never replace a newer reconnect or approval read.
+    const readSerial = ++harnessSnapshotReadSerial;
+    try {
+      const response = await fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/state`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const state = await response.json();
+      if (activeHarnessId !== sessionId || readSerial !== harnessSnapshotReadSerial) return;
+      if (!state || state.session_id !== sessionId) throw new Error("unexpected session state");
+      clearHarnessSnapshotUnavailable();
+      if (state.session) updateHarnessHeaderBanner(state.session);
+      harnessSnapshot = state; applyHarnessSnapshotState(state); renderStoredHarnessEvents(harnessCachedEvents());
+    } catch (error) {
+      if (activeHarnessId === sessionId && readSerial === harnessSnapshotReadSerial) {
+        presentHarnessSnapshotUnavailable(`The task snapshot could not be read (${error.message || "connection failed"}).`);
+      }
+    }
   }
 
   async function closeHarnessEventStream() {
@@ -18029,10 +18196,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
             scheduleHarnessStreamRender();
             if (data.type && (data.type === "turn/end" || data.type === "turn/verified" || data.type === "turn/cancelled")) {
               // A turn reached a durable outcome: re-anchor status to the runtime.
-              fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/state`)
-                .then(r => (r.ok ? r.json() : null))
-                .then(state => { if (state && activeHarnessId === sessionId) { harnessSnapshot = state; applyHarnessSnapshotState(state); renderStoredHarnessEvents(harnessCachedEvents()); } })
-                .catch(() => {});
+              refreshHarnessSnapshotAfterOutcome(sessionId);
             }
           } else if (frameEvent === "resync_required") {
             await harnessResyncFromSnapshot(data.reason || "stream_gap");
@@ -18774,6 +18938,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     if (!sessionId || sessionId !== String(activeHarnessId || "")) {
       return { ok: false, authoritative: false, message: "This approval is not for the active Harness session; no decision was sent." };
     }
+    const readSerial = ++harnessSnapshotReadSerial;
     let response;
     try {
       response = await fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/state`);
@@ -18792,6 +18957,9 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     }
     if (sessionId !== String(activeHarnessId || "")) {
       return { ok: false, authoritative: false, message: "The active Harness session changed; no decision was sent." };
+    }
+    if (readSerial !== harnessSnapshotReadSerial) {
+      return { ok: false, authoritative: false, message: "The task state was refreshed while verifying this approval; no decision was sent. Try again." };
     }
     const stateSessionId = String(state.session_id || (state.session && state.session.id) || "");
     if (stateSessionId !== sessionId) {
@@ -18894,12 +19062,20 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     openOverlay("harnessDiffModal");
     document.getElementById("harnessGitStatusBox").textContent = "Inspecting workspace git status...";
     document.getElementById("harnessGitDiffBox").innerHTML = "";
+    document.getElementById("harnessGitDiffSummary").textContent = "";
+    document.getElementById("harnessDiffMeta").textContent = "";
+    document.getElementById("applyWorktreeBtn").style.display = "none";
     try {
-      const d = await (await fetch(`/api/harness/sessions/${encodeURIComponent(activeHarnessId)}/diff`)).json();
+      const sessionId = activeHarnessId;
+      const response = await fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/diff`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const d = await response.json();
+      if (activeHarnessId !== sessionId) return;
+      if (typeof d.diff === "string" && d.diff.startsWith("Git diff error:")) throw new Error(d.diff);
       const s = activeHarnessSession || {};
       document.getElementById("harnessDiffMeta").textContent = `${s.worktree_dir || ""} ${d.branch ? "(" + d.branch + ")" : ""}`;
-      document.getElementById("applyWorktreeBtn").style.display = (s.use_worktree && s.workspace_dir !== s.worktree_dir) ? "inline-flex" : "none";
-      document.getElementById("harnessGitStatusBox").textContent = d.status ? d.status : "(clean working tree — no modified/untracked files)";
+      document.getElementById("applyWorktreeBtn").style.display = (d.is_git !== false && s.use_worktree && s.workspace_dir !== s.worktree_dir) ? "inline-flex" : "none";
+      document.getElementById("harnessGitStatusBox").textContent = d.is_git === false ? "Workspace is not a Git repository; Git status is unavailable." : (d.status ? d.status : "(clean working tree — no modified/untracked files)");
       const files = harnessDiffFiles(d.diff || "");
       const summaryBox = document.getElementById("harnessGitDiffSummary");
       if (summaryBox) {
@@ -19986,6 +20162,11 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
         return;
       }
       const input = document.getElementById("harnessPromptInput");
+      if (input && input.value) {
+        harnessRecoverySay("Your draft is unchanged. Clear or save it before continuing with the earlier prompt.", "warn");
+        input.focus();
+        return;
+      }
       if (input) { input.value = prompt; fitHarnessComposer(); }
       runHarnessTurn();
       return;
@@ -20081,16 +20262,24 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     payload: () => harnessRecoveryPayload,
   };
 
+  function harnessClearSubmittedDraft(input, submittedDraft) {
+    if (input && input.value === submittedDraft) {
+      input.value = "";
+      fitHarnessComposer();
+    }
+  }
+
   function runHarnessTurn() {
     const input = document.getElementById("harnessPromptInput");
-    const prompt = input.value.trim();
+    const submittedDraft = input.value;
+    const submittedSessionId = activeHarnessId;
+    const prompt = submittedDraft.trim();
     if (!prompt) {
       updateHarnessRunControl();
       input.focus();
       return;
     }
-    input.value = "";
-    fitHarnessComposer();
+    // Preserve the draft until a turn-start event confirms the server recorded it.
 
     const stream = document.getElementById("harnessStream");
     if (!activeHarnessId) stream.innerHTML = "";
@@ -20145,6 +20334,8 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
       skills: [...selectedSkills],
     }, {
       turn_start(d) {
+        if (activeHarnessId !== submittedSessionId) return;
+        harnessClearSubmittedDraft(input, submittedDraft);
         if (activeHarnessId !== d.session.id) {
           activeHarnessId = d.session.id;
           harnessResetEventCache();
@@ -20214,8 +20405,14 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
       error(d) {
         const errDiv = document.createElement("div");
         errDiv.className = "h-tool-card err";
-        errDiv.innerHTML = `<strong>Harness Error:</strong> ${escapeHtml(d.message || "")}`;
+        errDiv.innerHTML = `<strong>Harness Error:</strong> ${escapeHtml(d.message || "")}<p>The request may have reached the server. Check the session record before retrying; any unsent draft remains in the composer.</p>`;
         stream.appendChild(errDiv);
+      },
+      closed() {
+        const notice = document.createElement("div");
+        notice.className = "h-tool-card err";
+        notice.textContent = "The stream closed without a final outcome. Check the session record before retrying; the request may have reached the server.";
+        stream.appendChild(notice);
       }
     }, () => {
       document.getElementById("harnessRunBtn").disabled = false;
@@ -20223,6 +20420,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
       // The turn is over: re-render from the durable log so missed live frames can
       // never leave a duplicate or a missing completion on screen.
       setHarnessRunActive(false);
+      fitHarnessComposer();
     });
   }
 

@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "397c3ae069fe281d8150485e1b88e73c7970de8a1ac07841c6790f7fe685da0f",
+  "frontend_sha256": "dad4fff7a3e0e6e8d837c7718eeed96671e30d3a3ba8cb6af3b424a96cd7ec80",
   "panes": [
     {
       "dom_id": "start",
@@ -139,15 +139,15 @@
     {
       "dom_id": "harness",
       "section_id": "pane-harness",
-      "control_count": 35,
+      "control_count": 38,
       "counts": {
-        "button": 19,
+        "button": 21,
         "input": 3,
         "select": 9,
-        "summary": 3,
+        "summary": 4,
         "textarea": 1
       },
-      "controls_without_id": 13,
+      "controls_without_id": 16,
       "controls_without_label": 0,
       "controls": [
         {
@@ -170,6 +170,24 @@
           "aria-label": "Filter harness sessions by title, id, status or policy",
           "placeholder": "Filter sessions…",
           "oninput": "renderHarnessSidebar()"
+        },
+        {
+          "tag": "summary",
+          "text": "Files, progress & resources"
+        },
+        {
+          "tag": "button",
+          "type": "button",
+          "class": "btn btn-xs",
+          "onclick": "refreshHarnessWorkspaceReview()",
+          "text": "Refresh workspace review"
+        },
+        {
+          "tag": "button",
+          "type": "button",
+          "class": "btn btn-xs",
+          "onclick": "openHarnessEvidenceModal()",
+          "text": "Verification & artifacts"
         },
         {
           "tag": "button",
@@ -2028,8 +2046,8 @@
   },
   "totals": {
     "panes": 6,
-    "markup_controls": 273,
-    "pane_controls": 110,
+    "markup_controls": 276,
+    "pane_controls": 113,
     "chrome_controls": 163,
     "script_rendered_controls": 74,
     "script_rendered_by_function": {
