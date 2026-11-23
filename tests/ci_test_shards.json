@@ -26,8 +26,8 @@
       645.0
     ],
     "module_counts": [
-      87,
-      75,
+      88,
+      76,
       75
     ],
     "node_counts": [
@@ -175,6 +175,7 @@
       "tests/test_mcp_client.py",
       "tests/test_mcp_tools.py",
       "tests/test_mission_authority_envelope.py",
+      "tests/test_model_capability_profiles.py",
       "tests/test_model_comparison.py",
       "tests/test_model_updates.py",
       "tests/test_native_transition_driver.py",
@@ -279,6 +280,7 @@
       "tests/test_release_manager.py",
       "tests/test_request_fit.py",
       "tests/test_responsive.py",
+      "tests/test_routing_decision_records.py",
       "tests/test_runtime_dispatch_boundary.py",
       "tests/test_scoped_tests.py",
       "tests/test_screenshots.py",
