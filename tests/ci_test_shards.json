@@ -27,7 +27,7 @@
     ],
     "module_counts": [
       87,
-      75,
+      76,
       75
     ],
     "node_counts": [
@@ -278,6 +278,7 @@
       "tests/test_release_manager.py",
       "tests/test_request_fit.py",
       "tests/test_responsive.py",
+      "tests/test_routing_decision_records.py",
       "tests/test_runtime_dispatch_boundary.py",
       "tests/test_scoped_tests.py",
       "tests/test_screenshots.py",
