@@ -301,6 +301,28 @@ async function run(args) {
       await page.evaluate((id) => selectHarnessSession(id), args.verifiedSessionId);
       await sleep(args.settleMs * 12);
 
+      // AP-008: contract requirements come from the selected session's real
+      // snapshot and remain legible in phone layouts; they are not a verdict.
+      for (const [theme, width] of [["light", 390], ["dark", 320]]) {
+        await page.setViewport({width, height:844, deviceScaleFactor:1});
+        const details = await page.evaluate(async (id, theme) => {
+          applyTheme(theme);
+          document.getElementById('harnessWorkspaceReview').open = true;
+          await refreshHarnessWorkspaceReview();
+          const response = await fetch(`/api/harness/sessions/${encodeURIComponent(id)}/state`);
+          const data = await response.json();
+          const node = document.getElementById('harnessWorkspaceContractFiles');
+          return {session:data.session_id, required:data.verification_spec?.required_files, modified:data.verification_spec?.required_modified_files, text:node.textContent, width:document.documentElement.scrollWidth, viewport:window.innerWidth};
+        }, args.verifiedSessionId, theme);
+        record(`session file requirements stay truthful at ${width}px in ${theme}`, details.session === args.verifiedSessionId && details.required.includes('tests/test_total.py') && details.modified.includes('src/total.py') && details.text.includes('tests/test_total.py') && details.text.includes('src/total.py') && /not proof/.test(details.text) && details.width <= details.viewport + 1, JSON.stringify(details));
+        if (theme === 'light') await shoot(page, 'workspace-contract-mobile');
+        await page.focus('#harnessWorkspaceReview summary');
+        await page.keyboard.press('Enter');
+        record(`workspace contract disclosure closes with keyboard at ${width}px`, await page.evaluate(() => !document.getElementById('harnessWorkspaceReview').open && document.activeElement.tagName === 'SUMMARY'), 'summary focus');
+      }
+      await page.setViewport({width:1440, height:900, deviceScaleFactor:1});
+      await page.evaluate(() => applyTheme('light'));
+
       // ── A verdict is a card that states what it rests on ─────────────────
       const verified = await readCard(page, "verified");
       record(
@@ -404,7 +426,7 @@ async function run(args) {
         surface.files.length > 0
           && surface.files.length === Math.max(expectedFiles, surface.files.length)
           && surface.files.some((file) => /src\/total\.py/.test(file.path) && file.added !== "" && file.deleted !== ""),
-        `files=${surface.files.length} server=${expectedFiles}`,
+        `files=${surface.files.length} server=${expectedFiles} payload=${JSON.stringify({is_git:serverDiff?.is_git,status:serverDiff?.status,diffType:typeof serverDiff?.diff})} ui=${JSON.stringify(await page.evaluate(() => harnessEvidencePayload && harnessEvidencePayload.diff && ({is_git:harnessEvidencePayload.diff.is_git,status:harnessEvidencePayload.diff.status,diffType:typeof harnessEvidencePayload.diff.diff,diff:harnessEvidencePayload.diff.diff})))}`,
       );
       record(
         "the change section says the diff is read now, not frozen at the verdict",
@@ -416,12 +438,71 @@ async function run(args) {
         /Checkpoints/.test(surface.artifacts) && /seq 1/.test(surface.artifacts) && /Workspace now/.test(surface.artifacts),
         surface.artifacts.slice(0, 200),
       );
+      const checkpointRefs = await page.evaluate(async id => {
+        const response = await fetch(`/api/harness/sessions/${encodeURIComponent(id)}/task`);
+        const task = await response.json();
+        const artifact = task.latest_checkpoint?.evidence_refs?.find(ref => ref.kind === 'artifact' && ref.ref_id === 'src/total.py');
+        const node = document.getElementById('harnessEvidenceArtifacts');
+        return {session:task.latest_checkpoint?.task_id, artifact, text:node.textContent, links:node.querySelectorAll('a').length};
+      }, args.verifiedSessionId);
+      record('latest session checkpoint references are displayed as inert recorded pointers', checkpointRefs.session === args.verifiedSessionId && !!checkpointRefs.artifact?.sha256 && checkpointRefs.text.includes(checkpointRefs.artifact.sha256) && /src\/total\.py/.test(checkpointRefs.text) && /not artifact versions/.test(checkpointRefs.text) && /not been rechecked/.test(checkpointRefs.text) && checkpointRefs.links === 0, JSON.stringify(checkpointRefs));
+      await page.setViewport({width:320,height:800,deviceScaleFactor:1});
+      const referenceWidth = await page.evaluate(() => {
+        const modal = document.querySelector('#harnessEvidenceModal .modal');
+        const refs = document.getElementById('harnessEvidenceArtifacts');
+        return {width:modal.scrollWidth, client:modal.clientWidth, refsWidth:refs.scrollWidth, refsClient:refs.clientWidth};
+      });
+      record('checkpoint reference digests fit a 320px modal', referenceWidth.width <= referenceWidth.client + 1 && referenceWidth.refsWidth <= referenceWidth.refsClient + 1, JSON.stringify(referenceWidth));
+      await page.evaluate(() => document.getElementById('harnessEvidenceArtifacts').scrollIntoView({block:'center'}));
+      await shoot(page, 'checkpoint-references-mobile');
+      await page.setViewport({width:1440,height:900,deviceScaleFactor:1});
       record(
         "the surface states what it does not prove",
         surface.limits.length === 4 && surface.limits.some((line) => /does not re-run/.test(line)),
         `${surface.limits.length} limit(s)`,
       );
       await shoot(page, "verdict-record");
+
+      // AP-008: a failed Git read is not a clean workspace. Exercise the modal
+      // with the real task route, changing only the returned diff payload.
+      const diffFailure = await page.evaluate(async () => {
+        const original = window.fetch;
+        window.fetch = (url, options) => String(url).endsWith('/diff')
+          ? Promise.resolve(new Response(JSON.stringify({is_git:true,status:'',diff:'Git diff error: <img src=x onerror=window.__evidenceInjected=1>'}), {status:200,headers:{'Content-Type':'application/json'}}))
+          : original(url, options);
+        try { await refreshHarnessEvidence(); } finally { window.fetch = original; }
+        const section = document.getElementById('harnessEvidenceChange');
+        return {text:section.textContent, images:section.querySelectorAll('img,script,iframe').length, injected:Boolean(window.__evidenceInjected)};
+      });
+      record('Git failure is visible and inert, never reported as clean', /could not be read/.test(diffFailure.text) && !/Status\s*clean/.test(diffFailure.text) && diffFailure.images === 0 && !diffFailure.injected, JSON.stringify(diffFailure));
+      const overlap = await page.evaluate(async () => {
+        const original = window.fetch;
+        let release;
+        window.fetch = (url, options) => String(url).endsWith('/task') ? new Promise(resolve => {release = resolve;}) : original(url, options);
+        const oldRead = refreshHarnessEvidence();
+        const cleared = !document.getElementById('harnessEvidenceChange').textContent.trim();
+        window.fetch = original;
+        await refreshHarnessEvidence();
+        release(new Response(JSON.stringify({task:{title:'STALE SESSION SECRET'}}), {status:200,headers:{'Content-Type':'application/json'}}));
+        await oldRead;
+        return {cleared, text:document.getElementById('harnessEvidenceModal').textContent};
+      });
+      record('overlapping evidence refresh clears and rejects a late response', overlap.cleared && !overlap.text.includes('STALE SESSION SECRET') && /Completion verified/.test(overlap.text), `cleared=${overlap.cleared}`);
+      await page.evaluate(() => {
+        window._evidenceOriginalFetch = window.fetch;
+        window.fetch = (url, options) => String(url).endsWith('/task') ? new Promise(resolve => {window._releaseEvidenceRead = resolve;}) : window._evidenceOriginalFetch(url, options);
+        window._pendingEvidenceRead = refreshHarnessEvidence();
+      });
+      await page.keyboard.press('Escape');
+      const closed = await page.evaluate(async () => {
+        window.fetch = window._evidenceOriginalFetch;
+        window._releaseEvidenceRead(new Response(JSON.stringify({task:{title:'CLOSED SECRET'}}), {status:200,headers:{'Content-Type':'application/json'}}));
+        await window._pendingEvidenceRead;
+        return {open:document.getElementById('harnessEvidenceModal').classList.contains('open'), text:document.getElementById('harnessEvidenceModal').textContent, meta:document.getElementById('harnessEvidenceMeta').textContent};
+      });
+      record('Escape invalidates a delayed evidence read', !closed.open && !closed.meta.trim() && !closed.text.includes('CLOSED SECRET'), JSON.stringify(closed));
+      await page.evaluate(() => openHarnessEvidenceModal());
+      await page.waitForFunction(() => /Completion verified/.test(document.getElementById('harnessEvidenceVerdict').textContent));
 
       // ── A rejection is drawn as one ──────────────────────────────────────
       await page.evaluate(() => closeHarnessEvidenceModal());

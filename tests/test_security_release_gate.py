@@ -287,6 +287,7 @@ def test_internal_git_helpers_and_snapshots_neutralize_fsmonitor_hooks_and_exter
     assert info["is_git"] is True
 
     diff_res = studio._compute_git_diff(repo)
+    assert isinstance(diff_res["diff"], str), "inspect the redacted text, not tuple membership"
     assert "HOST_SECRET_TOKEN_XYZ" not in diff_res["diff"]
     assert "sk-ant-api03-secretvalue1234567890" not in diff_res["diff"]
 

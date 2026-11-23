@@ -169,6 +169,9 @@ def seed(environment: demo_tour.DemoEnvironment):
                 "messages_len": 2,
                 "note": "the workspace was edited before the authoritative command ran",
             },
+            evidence_refs=studio._collect_step_evidence_refs(
+                session_id, epoch=0, wt_dir=workspace, extra_artifacts=(workspace / "src" / "total.py",),
+            ),
         )
         report = sm.verify_task_completion(session_id, workspace_dir=workspace)
         studio._append_harness_event(

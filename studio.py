@@ -7440,6 +7440,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
             <summary>Files, progress &amp; resources</summary>
             <div class="harness-workspace-review-body">
               <p id="harnessWorkspaceProgress" role="status">Select a session to see its recorded progress.</p>
+              <p id="harnessWorkspaceContractFiles" role="status">Select a session to see its verification file requirements.</p>
               <p id="harnessWorkspaceVersions" role="status" aria-live="polite">Open this section to inspect recorded workspace snapshots.</p>
               <p id="harnessWorkspaceDiffState" role="status" aria-live="polite">Open this section to inspect workspace changes.</p>
               <pre id="harnessWorkspaceDiffPreview" aria-label="Inert text preview of workspace changes" hidden></pre>
@@ -8200,6 +8201,9 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
   }
 
   function closeOverlay(id) {
+    // Escape and the shared overlay API must fence evidence reads just like the
+    // modal's close button; a hidden modal must not accept a late response.
+    if (id === "harnessEvidenceModal" || (id === undefined && overlayStack[overlayStack.length - 1]?.id === "harnessEvidenceModal")) invalidateHarnessEvidence();
     let index = -1;
     if (id === undefined) index = overlayStack.length - 1;
     else for (let i = overlayStack.length - 1; i >= 0; i -= 1) if (overlayStack[i].id === id) { index = i; break; }
@@ -16995,6 +16999,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
 
   function startFreshHarnessDraft() {
     activeHarnessId = null;
+    invalidateHarnessEvidence();
     harnessSnapshotReadSerial += 1;
     clearHarnessSnapshotUnavailable();
     activeHarnessSession = null;
@@ -17452,6 +17457,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     // Reload is a first-class path: rebuild from the authoritative task snapshot
     // and the durable event log, never from whatever DOM happened to survive.
     activeHarnessId = id;
+    invalidateHarnessEvidence();
     harnessSnapshotReadSerial += 1;
     clearHarnessSnapshotUnavailable();
     harnessResetEventCache();
@@ -17968,6 +17974,23 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     node.textContent = `${stale ? "Last known (may be stale): " : "Recorded: "}${parts.join(" · ")}`;
   }
 
+  function renderHarnessWorkspaceContractFiles() {
+    const node = document.getElementById("harnessWorkspaceContractFiles");
+    if (!node) return;
+    const state = harnessSnapshot;
+    if (!activeHarnessId) { node.textContent = "Select a session to see its verification file requirements."; return; }
+    if (!state || state.session_id !== activeHarnessId) { node.textContent = "Verification file requirements are unavailable; the task snapshot could not be confirmed."; return; }
+    const stale = document.querySelector("#harnessSnapshotState .presentation");
+    const prefix = stale ? "Last known contract (may be stale): " : "Verification contract: ";
+    const spec = state.verification_spec;
+    if (spec === null) { node.textContent = `${prefix}no contract recorded.`; return; }
+    if (!spec || typeof spec !== "object" || !Array.isArray(spec.required_files) || !Array.isArray(spec.required_modified_files) || [...spec.required_files, ...spec.required_modified_files].some(path => typeof path !== "string")) {
+      node.textContent = `${prefix}file requirements unavailable (invalid contract).`; return;
+    }
+    const describe = paths => paths.length ? `${paths.slice(0, 20).join(", ")}${paths.length > 20 ? `, … (${paths.length} total)` : ""}` : "none declared";
+    node.textContent = `${prefix}required files: ${describe(spec.required_files)} · required modified files: ${describe(spec.required_modified_files)}. These are requirements, not proof that files exist or were modified.`;
+  }
+
   function resetHarnessWorkspaceReview() {
     harnessWorkspaceReviewSerial += 1;
     const status = document.getElementById("harnessWorkspaceDiffState");
@@ -17977,6 +18000,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     if (status) status.textContent = activeHarnessId ? "Open or refresh to inspect workspace changes." : "No session selected; workspace changes are unavailable.";
     if (preview) { preview.textContent = ""; preview.hidden = true; }
     renderHarnessWorkspaceProgress();
+    renderHarnessWorkspaceContractFiles();
     const panel = document.getElementById("harnessWorkspaceReview");
     if (activeHarnessId && panel && panel.open) refreshHarnessWorkspaceReview();
   }
@@ -18013,6 +18037,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     const sessionId = activeHarnessId;
     const readSerial = ++harnessWorkspaceReviewSerial;
     renderHarnessWorkspaceProgress();
+    renderHarnessWorkspaceContractFiles();
     refreshHarnessWorkspaceSnapshots(sessionId, readSerial);
     preview.textContent = "";
     preview.hidden = true;
@@ -18041,6 +18066,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
   function applyHarnessSnapshotState(state) {
     if (!state) return;
     renderHarnessWorkspaceProgress();
+    renderHarnessWorkspaceContractFiles();
     const badge = document.getElementById("harnessActiveStatusBadge");
     const b = harnessStatusBadge(state);
     if (badge) setStatus(badge, b.cls, b.label);
@@ -18073,6 +18099,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     });
     if (hadFocus && panel) panel.querySelector("button")?.focus();
     renderHarnessWorkspaceProgress();
+    renderHarnessWorkspaceContractFiles();
     return panel;
   }
 
@@ -19371,7 +19398,16 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
 
   // ================= The record behind the card =================
   let harnessEvidencePayload = null;
-  let harnessEvidenceBusy = false;
+  let harnessEvidenceReadSerial = 0;
+
+  function invalidateHarnessEvidence() {
+    harnessEvidenceReadSerial += 1;
+    harnessEvidencePayload = null;
+    for (const id of ["harnessEvidenceMeta", "harnessEvidenceVerdict", "harnessEvidenceSpec", "harnessEvidenceObserved", "harnessEvidenceChange", "harnessEvidenceArtifacts", "harnessEvidenceLimits"]) {
+      const node = document.getElementById(id);
+      if (node) node.textContent = "";
+    }
+  }
 
   function harnessLatestVerdict() {
     const events = harnessCachedEvents() || [];
@@ -19396,8 +19432,9 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
 
   async function refreshHarnessEvidence() {
     const sessionId = activeHarnessId;
-    if (!sessionId || harnessEvidenceBusy) return;
-    harnessEvidenceBusy = true;
+    if (!sessionId) return;
+    invalidateHarnessEvidence();
+    const readSerial = harnessEvidenceReadSerial;
     const meta = document.getElementById("harnessEvidenceMeta");
     if (meta) meta.textContent = `${sessionId} · reading the contract, the record and the change…`;
     let task = null;
@@ -19410,6 +19447,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     } catch (error) {
       errors.push(`the contract could not be read: ${error.message}`);
     }
+    if (activeHarnessId !== sessionId || readSerial !== harnessEvidenceReadSerial) return;
     try {
       const response = await fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/diff`);
       if (response.ok) diff = await response.json();
@@ -19417,8 +19455,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     } catch (error) {
       errors.push(`the diff could not be read: ${error.message}`);
     }
-    harnessEvidenceBusy = false;
-    if (activeHarnessId !== sessionId) return;
+    if (activeHarnessId !== sessionId || readSerial !== harnessEvidenceReadSerial) return;
     harnessEvidencePayload = { sessionId, task, diff, report: harnessLatestVerdict(), errors };
     renderHarnessEvidence(harnessEvidencePayload);
   }
@@ -19515,7 +19552,15 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
       return `<div class="ev-heading">The change</div>
         <p class="ev-note">The workspace diff could not be read, so this record cannot say what the verdict was attached to.</p>`;
     }
-    const files = harnessDiffFiles(diff.diff || "");
+    if (diff.is_git !== true || typeof diff.diff !== "string" || typeof diff.status !== "string") {
+      return `<div class="ev-heading">The change</div>
+        <p class="ev-note">The Git workspace diff is unavailable or invalid; this record cannot establish whether the workspace is clean.</p>`;
+    }
+    if (diff.diff.startsWith("Git diff error:")) {
+      return `<div class="ev-heading">The change</div>
+        <p class="ev-note">The Git workspace diff could not be read: ${escapeHtml(diff.diff)}. The workspace status is not confirmed.</p>`;
+    }
+    const files = harnessDiffFiles(diff.diff);
     const added = files.reduce((total, file) => total + file.added, 0);
     const deleted = files.reduce((total, file) => total + file.deleted, 0);
     const rows = files.length
@@ -19524,7 +19569,9 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
           <span class="ev-file-add mono">+${escapeHtml(String(file.added))}</span>
           <span class="ev-file-del mono">-${escapeHtml(String(file.deleted))}</span>
         </div>`).join("")
-      : `<p class="ev-note">The worktree has no uncommitted change, so there is no diff to attach a claim to.</p>`;
+      : (diff.status
+        ? `<p class="ev-note">Git reports workspace changes, but no file patch is available in this preview.</p>`
+        : `<p class="ev-note">Git reports no workspace changes; no file patch is available in this preview.</p>`);
     return `<div class="ev-heading">The change</div>
       <dl class="ev-facts">
         <dt>Branch</dt><dd class="mono">${escapeHtml(String(diff.branch || "no branch (not a git worktree)"))}</dd>
@@ -19536,7 +19583,20 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
       <p class="ev-note">This diff is the worktree as it is now, not a copy frozen at the verdict: a change made after the turn appears here too.</p>`;
   }
 
-  function harnessEvidenceArtifactsHtml(task, report) {
+  function harnessCheckpointReferencesHtml(task, sessionId) {
+    if (task.checkpoint_integrity_error) return `<p class="ev-note">Checkpoint references unavailable: the latest checkpoint failed its integrity check.</p>`;
+    const checkpoint = task.latest_checkpoint;
+    if (checkpoint === null) return `<p class="ev-note">No latest checkpoint recorded; no references to list.</p>`;
+    if (!checkpoint || typeof checkpoint !== "object" || !sessionId || checkpoint.task_id !== sessionId) return `<p class="ev-note">Checkpoint references unavailable: session identity could not be confirmed.</p>`;
+    const refs = checkpoint.evidence_refs;
+    if (!Array.isArray(refs) || refs.some(ref => !ref || typeof ref !== "object" || typeof ref.kind !== "string" || !ref.kind.trim() || typeof ref.ref_id !== "string" || !ref.ref_id.trim() || typeof ref.sha256 !== "string" || typeof ref.summary !== "string")) return `<p class="ev-note">Checkpoint references unavailable: the record is malformed.</p>`;
+    if (!refs.length) return `<p class="ev-note">The latest checkpoint has no evidence references recorded.</p>`;
+    const safe = value => escapeHtml(value.slice(0, 256));
+    const items = refs.slice(0, 20).map(ref => `<li><span class="mono">${safe(ref.kind)} · ${safe(ref.ref_id)}</span>${ref.sha256 ? ` · recorded sha256 <span class="mono">${safe(ref.sha256)}</span>` : " · no digest recorded"}${ref.summary ? ` · ${safe(ref.summary)}` : ""}</li>`).join("");
+    return `<div style="overflow-wrap:anywhere"><div class="ev-subheading">Latest checkpoint references (${escapeHtml(String(refs.length))})</div><ul class="ev-limits">${items}</ul>${refs.length > 20 ? `<p class="ev-note">Showing 20 of ${escapeHtml(String(refs.length))} references.</p>` : ""}<p class="ev-note">These are recorded pointers, not artifact versions or copies. A recorded digest has not been rechecked against current content.</p></div>`;
+  }
+
+  function harnessEvidenceArtifactsHtml(task, report, sessionId) {
     if (!task) {
       return `<div class="ev-heading">What the turn left behind</div>
         <p class="ev-note">The contract read failed, so the checkpoints and the workspace revision this session recorded could not be listed.</p>`;
@@ -19559,12 +19619,12 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     }
     if (lineage && !lineage.error) {
       rows.push({
-        label: "Lineage",
+        label: "Global lineage (not session-specific)",
         value: `revision ${lineage.revision} · ${lineage.artifact_count} artifact(s) · ${lineage.provenance_entry_count} provenance entr(y/ies) · ${lineage.stale_evidence_count || 0} stale evidence`,
         mono: true,
       });
     } else if (lineage && lineage.error) {
-      rows.push({ label: "Lineage", value: `could not be read: ${lineage.error}`, mono: false });
+      rows.push({ label: "Global lineage (not session-specific)", value: `could not be read: ${lineage.error}`, mono: false });
     }
     if (previewRevision) {
       rows.push({
@@ -19579,6 +19639,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     const modified = Array.isArray(report && report.modified_files) ? report.modified_files : [];
     return `<div class="ev-heading">What the turn left behind</div>
       ${harnessEvidenceFactListHtml(rows)}
+      ${harnessCheckpointReferencesHtml(task, sessionId)}
       ${modified.length ? `<div class="ev-files"><div class="ev-subheading">Files the verdict recorded as modified</div>${modified
         .map(path => `<div class="ev-file"><span class="ev-file-path mono">${escapeHtml(String(path))}</span></div>`)
         .join("")}</div>` : ""}
@@ -19600,7 +19661,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
       ["harnessEvidenceSpec", harnessEvidenceSpecHtml(payload.task)],
       ["harnessEvidenceObserved", harnessEvidenceObservedHtml(payload)],
       ["harnessEvidenceChange", harnessEvidenceChangeHtml(payload.diff)],
-      ["harnessEvidenceArtifacts", harnessEvidenceArtifactsHtml(payload.task, payload.report)],
+      ["harnessEvidenceArtifacts", harnessEvidenceArtifactsHtml(payload.task, payload.report, payload.sessionId)],
       ["harnessEvidenceLimits", harnessEvidenceLimitsHtml()],
     ];
     for (const [id, html] of sections) {
@@ -31983,9 +32044,9 @@ def _compute_git_diff(target_dir: Path) -> dict[str, Any]:
             except PermissionError:
                 continue
             if up.is_file() and not up.is_symlink() and up.stat().st_size < 200_000:
-                content = redact_text(up.read_text(encoding="utf-8", errors="replace"))
+                content, _ = redact_text(up.read_text(encoding="utf-8", errors="replace"))
                 extra_diffs.append(_unified_diff_snippet(rel_u, "", content, max_lines=120))
-        combined = redact_text(
+        combined, _ = redact_text(
             (diff_out.strip() + ("\n\n" + "\n\n".join(extra_diffs) if extra_diffs else "")).strip()
         )
         return {

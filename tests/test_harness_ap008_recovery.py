@@ -251,3 +251,147 @@ let fetch;
 '''
     result = subprocess.run(["node", "-"], input=script, text=True, capture_output=True, cwd=ROOT, check=False)
     assert result.returncode == 0, result.stderr
+
+
+def test_evidence_diff_never_reports_failure_or_unrendered_changes_as_clean():
+    html = HTML.read_text(encoding="utf-8")
+    start = html.index('  function harnessDiffFiles(')
+    end = html.index('  function harnessEvidenceFactListHtml(', start)
+    change_start = html.index('  function harnessEvidenceChangeHtml(')
+    change_end = html.index('  function harnessEvidenceArtifactsHtml(', change_start)
+    script = r'''
+const assert = require('node:assert/strict');
+function escapeHtml(v) {return String(v).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');}
+''' + html[start:end] + html[change_start:change_end] + r'''
+const failure = harnessEvidenceChangeHtml({is_git:true,status:'',diff:'Git diff error: <script>alert(1)</script>'});
+assert.match(failure,/could not be read/); assert.doesNotMatch(failure,/Status<\/dt><dd class="mono">clean/);
+assert.doesNotMatch(failure,/<script>/); assert.match(failure,/&lt;script&gt;/);
+for (const data of [{is_git:false,status:'',diff:''}, {is_git:true,status:'',diff:null}, {}]) {
+  const output=harnessEvidenceChangeHtml(data); assert.match(output,/unavailable or invalid/); assert.doesNotMatch(output,/reports no workspace changes/);
+}
+const dirty=harnessEvidenceChangeHtml({is_git:true,status:'?? new.bin',diff:''});
+assert.match(dirty,/Git reports workspace changes/); assert.doesNotMatch(dirty,/reports no workspace changes/);
+const clean=harnessEvidenceChangeHtml({is_git:true,status:'',diff:''}); assert.match(clean,/Git reports no workspace changes/);
+'''
+    result = subprocess.run(["node", "-"], input=script, text=True, capture_output=True, cwd=ROOT, check=False)
+    assert result.returncode == 0, result.stderr
+
+
+def test_real_git_diff_returns_redacted_text_for_tracked_and_untracked(tmp_path):
+    import app
+
+    def git(*args):
+        subprocess.run(["git", *args], cwd=tmp_path, check=True, capture_output=True)
+
+    git("init", "-q")
+    git("config", "user.name", "AP008 test")
+    git("config", "user.email", "ap008@example.invalid")
+    tracked = tmp_path / "tracked.txt"
+    tracked.write_text("before\n", encoding="utf-8")
+    git("add", "tracked.txt")
+    git("commit", "-qm", "baseline")
+    secret = "sk-ant-" + "A" * 24
+    tracked.write_text(f"tracked {secret}\n", encoding="utf-8")
+    (tmp_path / "new.txt").write_text(f"new {secret}\n", encoding="utf-8")
+    (tmp_path / ".env").write_text(f"secret {secret}\n", encoding="utf-8")
+    diff = app._compute_git_diff(tmp_path)
+    assert diff["is_git"] is True
+    assert isinstance(diff["diff"], str)
+    assert "tracked.txt" in diff["diff"] and "new.txt" in diff["diff"]
+    assert secret not in diff["diff"] and diff["diff"].count("[REDACTED]") >= 2
+    assert ".env" not in diff["diff"]
+    assert len(diff["diff"]) <= 50_000
+
+
+def test_contract_file_disclosure_is_session_scoped_stale_aware_and_inert():
+    html = HTML.read_text(encoding="utf-8")
+    start = html.index('  function renderHarnessWorkspaceContractFiles() {')
+    end = html.index('  function resetHarnessWorkspaceReview()', start)
+    script = r'''
+const assert = require('node:assert/strict');
+let activeHarnessId='one', harnessSnapshot=null, stale=false;
+const node={textContent:''};
+let document={getElementById(){return node},querySelector(){return stale ? {} : null}};
+''' + html[start:end] + r'''
+renderHarnessWorkspaceContractFiles(); assert.match(node.textContent,/unavailable/);
+harnessSnapshot={session_id:'two', verification_spec:{required_files:['other'],required_modified_files:[]}};
+renderHarnessWorkspaceContractFiles(); assert.doesNotMatch(node.textContent,/other/);
+harnessSnapshot={session_id:'one', verification_spec:null}; renderHarnessWorkspaceContractFiles();
+assert.match(node.textContent,/no contract recorded/);
+harnessSnapshot.verification_spec={required_files:['<img src=x onerror=alert(1)>'],required_modified_files:['src/a.py']};
+renderHarnessWorkspaceContractFiles(); assert.match(node.textContent,/<img/); assert.equal(node.innerHTML,undefined);
+assert.match(node.textContent,/not proof/); assert.match(node.textContent,/src\/a.py/);
+stale=true; renderHarnessWorkspaceContractFiles(); assert.match(node.textContent,/may be stale/);
+harnessSnapshot.verification_spec={required_files:[],required_modified_files:[]};
+renderHarnessWorkspaceContractFiles(); assert.match(node.textContent,/none declared/);
+harnessSnapshot.verification_spec={required_files:['ok'],required_modified_files:[42]};
+renderHarnessWorkspaceContractFiles(); assert.match(node.textContent,/invalid contract/);
+activeHarnessId=null; renderHarnessWorkspaceContractFiles(); assert.match(node.textContent,/Select a session/);
+'''
+    result = subprocess.run(["node", "-"], input=script, text=True, capture_output=True, cwd=ROOT, check=False)
+    assert result.returncode == 0, result.stderr
+
+
+def test_evidence_modal_clears_and_fences_overlapping_session_reads():
+    html = HTML.read_text(encoding="utf-8")
+    start = html.index('  let harnessEvidencePayload = null;')
+    end = html.index('  function harnessEvidenceMetaText(', start)
+    script = r'''
+const assert=require('node:assert/strict');
+let activeHarnessId='one', nodes={}, rendered=[];
+let document={getElementById(id){return nodes[id] ||= {textContent:'old secret'}}};
+function harnessCachedEvents(){return [];} function harnessVerdictTone(){return '';}
+function renderHarnessEvidence(value){rendered.push(value);} function openOverlay(){} function closeOverlay(){invalidateHarnessEvidence();}
+function showToast(){} let fetch;
+''' + html[start:end] + r'''
+(async()=>{
+  let releaseOld;
+  fetch=url=>String(url).endsWith('/task') ? new Promise(resolve=>{releaseOld=resolve}) : Promise.resolve({ok:true,json:async()=>({status:'old'})});
+  const old=refreshHarnessEvidence();
+  assert.equal(nodes.harnessEvidenceChange.textContent,''); assert.match(nodes.harnessEvidenceMeta.textContent,/reading/);
+  fetch=async url=>({ok:true,json:async()=>String(url).endsWith('/task')?{task:'new'}:{diff:'new'}});
+  await refreshHarnessEvidence();
+  releaseOld({ok:true,json:async()=>({task:'old'})}); await old;
+  assert.equal(rendered.length,1); assert.equal(rendered[0].task.task,'new');
+  let releaseA;
+  fetch=()=>new Promise(resolve=>{releaseA=resolve});
+  const a=refreshHarnessEvidence(); activeHarnessId='two'; invalidateHarnessEvidence(); activeHarnessId='one'; invalidateHarnessEvidence();
+  releaseA({ok:true,json:async()=>({task:'stale'})}); await a;
+  assert.equal(rendered.length,1); assert.equal(nodes.harnessEvidenceChange.textContent,'');
+  fetch=()=>new Promise(resolve=>{releaseA=resolve});
+  const closing=refreshHarnessEvidence(); closeHarnessEvidenceModal();
+  releaseA({ok:true,json:async()=>({task:'closed'})}); await closing;
+  assert.equal(rendered.length,1); assert.equal(nodes.harnessEvidenceMeta.textContent,'');
+  fetch=async()=>({ok:false,status:403}); await refreshHarnessEvidence();
+  assert.equal(rendered.length,2); assert.equal(rendered[1].task,null); assert.equal(rendered[1].diff,null);
+  assert.ok(rendered[1].errors.every(x=>x.includes('403')));
+})().catch(e=>{console.error(e);process.exit(1)});
+'''
+    result = subprocess.run(["node", "-"], input=script, text=True, capture_output=True, cwd=ROOT, check=False)
+    assert result.returncode == 0, result.stderr
+
+
+def test_checkpoint_evidence_references_are_session_scoped_inert_and_bounded():
+    html = HTML.read_text(encoding="utf-8")
+    start = html.index('  function harnessCheckpointReferencesHtml(')
+    end = html.index('  function harnessEvidenceArtifactsHtml(', start)
+    script = r'''
+const assert = require('node:assert/strict');
+function escapeHtml(s){return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+''' + html[start:end] + r'''
+const ref={kind:'artifact',ref_id:'<img src=x onerror=evil()>',sha256:'abcdef',summary:'<script>evil()</script>'};
+const task={latest_checkpoint:{task_id:'one',evidence_refs:[ref]}};
+const html=harnessCheckpointReferencesHtml(task,'one');
+assert.match(html,/&lt;img/); assert.ok(!html.includes('<img')); assert.ok(!html.includes('<script>'));
+assert.match(html,/recorded sha256/); assert.match(html,/not artifact versions/); assert.match(html,/not been rechecked/);
+assert.match(harnessCheckpointReferencesHtml(task,'two'),/identity could not be confirmed/);
+assert.ok(!harnessCheckpointReferencesHtml(task,'two').includes('abcdef'));
+assert.match(harnessCheckpointReferencesHtml({...task,checkpoint_integrity_error:'corrupt'},'one'),/integrity check/);
+assert.match(harnessCheckpointReferencesHtml({latest_checkpoint:null},'one'),/No latest checkpoint/);
+assert.match(harnessCheckpointReferencesHtml({latest_checkpoint:{task_id:'one',evidence_refs:[]}},'one'),/no evidence references/);
+assert.match(harnessCheckpointReferencesHtml({latest_checkpoint:{task_id:'one',evidence_refs:[{kind:'x'}]}},'one'),/malformed/);
+assert.match(harnessCheckpointReferencesHtml({latest_checkpoint:{task_id:'one',evidence_refs:Array(25).fill(ref)}},'one'),/Showing 20 of 25/);
+assert.ok(!harnessCheckpointReferencesHtml({latest_checkpoint:{task_id:'one',evidence_refs:[{...ref,ref_id:'x'.repeat(1000)}]}},'one').includes('x'.repeat(257)));
+'''
+    result = subprocess.run(["node", "-"], input=script, text=True, capture_output=True, cwd=ROOT, check=False)
+    assert result.returncode == 0, result.stderr

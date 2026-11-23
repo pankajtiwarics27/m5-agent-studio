@@ -13620,9 +13620,9 @@ def _compute_git_diff(target_dir: Path) -> dict[str, Any]:
             except PermissionError:
                 continue
             if up.is_file() and not up.is_symlink() and up.stat().st_size < 200_000:
-                content = redact_text(up.read_text(encoding="utf-8", errors="replace"))
+                content, _ = redact_text(up.read_text(encoding="utf-8", errors="replace"))
                 extra_diffs.append(_unified_diff_snippet(rel_u, "", content, max_lines=120))
-        combined = redact_text(
+        combined, _ = redact_text(
             (diff_out.strip() + ("\n\n" + "\n\n".join(extra_diffs) if extra_diffs else "")).strip()
         )
         return {
