@@ -26,7 +26,7 @@
       645.0
     ],
     "module_counts": [
-      87,
+      88,
       76,
       75
     ],
@@ -159,6 +159,7 @@
       "tests/test_compare_evidence.py",
       "tests/test_comparison_board.py",
       "tests/test_configuration_contracts.py",
+      "tests/test_continuation_contracts.py",
       "tests/test_council_deliberation.py",
       "tests/test_demo_isolation.py",
       "tests/test_demo_tour.py",
