@@ -1,14 +1,14 @@
 {
   "story": "UIV2-29",
   "git": {
-    "head": "5d109edc14aaebd4a9f0c7e1378c7a9e64bc7297",
+    "head": "41b47edae6323c3c287ac37d351e954e964a8a16",
     "dirty": true
   },
   "source_sha256": {
-    "static/index.html": "7d884abe868205bcd7242cde7a402f35dba50986e5b62d71560d6bef3025f044",
+    "static/index.html": "dad4fff7a3e0e6e8d837c7718eeed96671e30d3a3ba8cb6af3b424a96cd7ec80",
     "scripts/uiv2_performance_safety_walk.mjs": "db65e34744d881132250aba25da39f6d239adcf43c407ac4ebaf85f840070643"
   },
-  "generated_at": "2026-11-22T02:04:31.670Z",
+  "generated_at": "2026-11-23T09:14:21.046Z",
   "environment": {
     "node": "v22.22.3",
     "platform": "linux",
@@ -54,45 +54,45 @@
       },
       "fast": {
         "model": "Gemma-4-21B-REAP-4bit",
-        "elapsed_ms": 330.89999999990687,
-        "renders": 18,
+        "elapsed_ms": 339.30000000004657,
+        "renders": 19,
         "schedules": 58,
         "model_tokens": 58,
-        "sse_per_second": 175.28,
+        "sse_per_second": 170.94,
         "complete_chars": 330
       }
     },
     "harness": {
       "memory": {
         "baseline": {
-          "Nodes": 8582,
+          "Nodes": 8585,
           "Documents": 2,
           "JSEventListeners": 339,
-          "JSHeapUsedSize": 3400048,
+          "JSHeapUsedSize": 3400288,
           "JSHeapTotalSize": 3932160,
           "LayoutCount": 1,
           "RecalcStyleCount": 3
         },
         "after_cycle_1": {
-          "Nodes": 8582,
+          "Nodes": 8585,
           "Documents": 2,
           "JSEventListeners": 339,
-          "JSHeapUsedSize": 3333188,
-          "JSHeapTotalSize": 4165632,
+          "JSHeapUsedSize": 3345748,
+          "JSHeapTotalSize": 3641344,
           "LayoutCount": 123,
           "RecalcStyleCount": 245
         },
         "after_cycle_2": {
-          "Nodes": 8582,
+          "Nodes": 8585,
           "Documents": 2,
           "JSEventListeners": 339,
-          "JSHeapUsedSize": 3361688,
-          "JSHeapTotalSize": 3903488,
+          "JSHeapUsedSize": 3342448,
+          "JSHeapTotalSize": 3641344,
           "LayoutCount": 245,
           "RecalcStyleCount": 487
         },
         "cycle_1": {
-          "elapsed_ms": 3979.600000000093,
+          "elapsed_ms": 4102.699999999953,
           "cursor": 18000,
           "cached": 5000,
           "cards": 300,
@@ -100,7 +100,7 @@
           "last": 18000
         },
         "cycle_2": {
-          "elapsed_ms": 3973.600000000093,
+          "elapsed_ms": 4014.0999999998603,
           "cursor": 30000,
           "cached": 5000,
           "cards": 300,
@@ -111,9 +111,9 @@
       },
       "steady": {
         "calls": 20,
-        "mean_ms": 2.080000000016298,
-        "p95_ms": 2.9000000001396984,
-        "max_ms": 2.9000000001396984,
+        "mean_ms": 2.174999999976717,
+        "p95_ms": 2.7999999998137355,
+        "max_ms": 3.5,
         "cards": 300
       }
     },
@@ -239,13 +239,13 @@
       "group": "sse",
       "step": "high-frequency SSE tokens are coalesced without losing the final reply",
       "passed": true,
-      "detail": "schedules=58 renders=18 model_tokens=58 chars=330 full_reply_matches=true"
+      "detail": "schedules=58 renders=19 model_tokens=58 chars=330 full_reply_matches=true"
     },
     {
       "group": "sse",
       "step": "the measured fast fixture actually exceeds fifty scheduled SSE updates per second",
       "passed": true,
-      "detail": "rate=175.3/s elapsed=330.9ms schedules=58"
+      "detail": "rate=170.9/s elapsed=339.3ms schedules=58"
     },
     {
       "group": "dom-memory",
@@ -269,13 +269,13 @@
       "group": "dom-memory",
       "step": "post-GC document nodes plateau instead of growing with the event count",
       "passed": true,
-      "detail": "baseline=8582 cycle1=8582 cycle2=8582 delta=0"
+      "detail": "baseline=8585 cycle1=8585 cycle2=8585 delta=0"
     },
     {
       "group": "dom-memory",
       "step": "post-GC JS heap remains within the declared repeated-cycle plateau budgets",
       "passed": true,
-      "detail": "baseline=3400048 cycle1=3333188 cycle2=3361688 cycle_delta=28500 baseline_delta=-38360"
+      "detail": "baseline=3400288 cycle1=3345748 cycle2=3342448 cycle_delta=-3300 baseline_delta=-57840"
     },
     {
       "group": "dom-memory",
@@ -287,7 +287,7 @@
       "group": "dom-memory",
       "step": "ten-event frames retain the existing four-millisecond full-window budget",
       "passed": true,
-      "detail": "{\"calls\":20,\"mean_ms\":2.080000000016298,\"p95_ms\":2.9000000001396984,\"max_ms\":2.9000000001396984,\"cards\":300}"
+      "detail": "{\"calls\":20,\"mean_ms\":2.174999999976717,\"p95_ms\":2.7999999998137355,\"max_ms\":3.5,\"cards\":300}"
     },
     {
       "group": "layout",
@@ -371,7 +371,7 @@
   "captures": [
     {
       "path": "chat-midstream.png",
-      "sha256": "f655c2ba4c64cc818722bcbf88fd325706ae1b2b2e3bc6ecabfcb79c84629bf9",
+      "sha256": "bdd326dcc9a3bfa18cd8cbf781c1844209403ea090093dc96597ed4ef0ab949e",
       "group": "sse",
       "viewport": "1440x900",
       "theme": "dark",
@@ -380,7 +380,7 @@
     },
     {
       "path": "chat-complete.png",
-      "sha256": "865beefa082e8209938f89e8e032596b93ab22351a05086ca18cdae293e42d2c",
+      "sha256": "213bcd89aa389aead5214136a348536e226a49d2ebde2a4382599075cb27a2b7",
       "group": "sse",
       "viewport": "1440x900",
       "theme": "dark",
@@ -389,7 +389,7 @@
     },
     {
       "path": "chat-high-frequency-complete.png",
-      "sha256": "8e096c412f7d6e3d028136510ba19c21ec4bd1bcf04099b43d50c61916abb342",
+      "sha256": "7aa3a6d500a90d987e94a7addc1959e30bdd8012d19c655c9bb8f52764105576",
       "group": "sse",
       "viewport": "1440x900",
       "theme": "dark",
@@ -398,7 +398,7 @@
     },
     {
       "path": "layout/light/1640x900-harness.png",
-      "sha256": "63de617e63399db92e2c40a856009c53f3856aca51e35e50948c520d2a77d856",
+      "sha256": "db4d809dabd7d5a1d69dffcf3945eb81baaacf059b3a9b78ac867b0a5f0832b7",
       "group": "layout",
       "viewport": "1640x900",
       "theme": "light",
@@ -407,7 +407,7 @@
     },
     {
       "path": "layout/dark/1640x900-harness.png",
-      "sha256": "968fa2f7e06e7ec0024f7885e5d98f21798cbfb0ccfd1334eb0d0a9514ea85e3",
+      "sha256": "6c5021c9909155476c496c818ccc7c6fb8c836a5b4634f323d2687e517592ba9",
       "group": "layout",
       "viewport": "1640x900",
       "theme": "dark",
@@ -416,7 +416,7 @@
     },
     {
       "path": "layout/light/1440x900-harness.png",
-      "sha256": "758cd1977ba6d1774c2a0e4873718611ba2463f333851a5d7fc01b5e3cea8d37",
+      "sha256": "5f5982d6bfb06d2794154f715a03f4223082e8174be8f6c76cf6047f86cc7097",
       "group": "layout",
       "viewport": "1440x900",
       "theme": "light",
@@ -425,7 +425,7 @@
     },
     {
       "path": "layout/dark/1440x900-harness.png",
-      "sha256": "0dc14823112e3b8671d916c1d31820a70c340151ddfb8038d356e39d4e7a6c83",
+      "sha256": "d037903448b77dac1c63d48f27d875baaff00312ef988a07ea28de18c62af5f8",
       "group": "layout",
       "viewport": "1440x900",
       "theme": "dark",
@@ -434,7 +434,7 @@
     },
     {
       "path": "layout/light/1280x800-harness.png",
-      "sha256": "5c7ef5c8ab31a4d53f751639160518f89e64a13a9260bad3887d0f0bfa5073d9",
+      "sha256": "f558721821e1470db0d2680b2a1a58950f622d96e6e33c3cd1a1c0393a778be6",
       "group": "layout",
       "viewport": "1280x800",
       "theme": "light",
@@ -443,7 +443,7 @@
     },
     {
       "path": "layout/dark/1280x800-harness.png",
-      "sha256": "2034fa0c7cdcdc018aa653b50046cc2fab581452cf4dbabaef05d1a4ca71524f",
+      "sha256": "458845df6bb66f0b7e7365b2dae17b29f4180b1230c60cf94830795848ca871c",
       "group": "layout",
       "viewport": "1280x800",
       "theme": "dark",

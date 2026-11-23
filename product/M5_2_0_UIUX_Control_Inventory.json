@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "7d884abe868205bcd7242cde7a402f35dba50986e5b62d71560d6bef3025f044",
+  "frontend_sha256": "dad4fff7a3e0e6e8d837c7718eeed96671e30d3a3ba8cb6af3b424a96cd7ec80",
   "panes": [
     {
       "dom_id": "start",
@@ -180,7 +180,7 @@
           "type": "button",
           "class": "btn btn-xs",
           "onclick": "refreshHarnessWorkspaceReview()",
-          "text": "Refresh workspace changes"
+          "text": "Refresh workspace review"
         },
         {
           "tag": "button",

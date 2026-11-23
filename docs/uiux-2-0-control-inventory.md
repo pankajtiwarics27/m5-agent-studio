@@ -6,7 +6,7 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 re-derived from the markup on every run.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
-* Frontend digest: `7d884abe868205bcd7242cde7a402f35dba50986e5b62d71560d6bef3025f044`.
+* Frontend digest: `dad4fff7a3e0e6e8d837c7718eeed96671e30d3a3ba8cb6af3b424a96cd7ec80`.
 * Panes: 6 · controls in panes: 113 · controls in the
   shared chrome: 163 · script-rendered: 74.
 
@@ -67,7 +67,7 @@ Section `pane-harness`, 38 interactive elements.
 | 2 | button | — | — | + New session | startFreshHarnessDraft() |
 | 3 | input | harnessSessionFilter | search | Filter harness sessions by title, id, status or policy | renderHarnessSidebar() |
 | 4 | summary | — | — | Files, progress & resources | — |
-| 5 | button | — | button | Refresh workspace changes | refreshHarnessWorkspaceReview() |
+| 5 | button | — | button | Refresh workspace review | refreshHarnessWorkspaceReview() |
 | 6 | button | — | button | Verification & artifacts | openHarnessEvidenceModal() |
 | 7 | button | harnessTimelineToggle | button | Session log | toggleHarnessTimeline() |
 | 8 | button | — | button | All | setHarnessEventFilter('all') |

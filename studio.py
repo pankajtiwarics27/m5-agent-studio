@@ -7440,10 +7440,11 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
             <summary>Files, progress &amp; resources</summary>
             <div class="harness-workspace-review-body">
               <p id="harnessWorkspaceProgress" role="status">Select a session to see its recorded progress.</p>
+              <p id="harnessWorkspaceVersions" role="status" aria-live="polite">Open this section to inspect recorded workspace snapshots.</p>
               <p id="harnessWorkspaceDiffState" role="status" aria-live="polite">Open this section to inspect workspace changes.</p>
               <pre id="harnessWorkspaceDiffPreview" aria-label="Inert text preview of workspace changes" hidden></pre>
-              <p>Preview is text, not an active website. Source references are not available here. Workspace changes are current, not a frozen artifact version.</p>
-              <button type="button" class="btn btn-xs" onclick="refreshHarnessWorkspaceReview()">Refresh workspace changes</button>
+              <p>Preview is inert text, not an active website. Source references and artifact versions are not available here. Workspace snapshots are recovery records, not artifact versions; changes shown are current and may differ from a snapshot.</p>
+              <button type="button" class="btn btn-xs" onclick="refreshHarnessWorkspaceReview()">Refresh workspace review</button>
               <button type="button" class="btn btn-xs" onclick="openHarnessEvidenceModal()">Verification &amp; artifacts</button>
             </div>
           </details>
@@ -17971,11 +17972,38 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     harnessWorkspaceReviewSerial += 1;
     const status = document.getElementById("harnessWorkspaceDiffState");
     const preview = document.getElementById("harnessWorkspaceDiffPreview");
+    const versions = document.getElementById("harnessWorkspaceVersions");
+    if (versions) versions.textContent = activeHarnessId ? "Open or refresh to inspect recorded workspace snapshots." : "No session selected; workspace snapshots are unavailable.";
     if (status) status.textContent = activeHarnessId ? "Open or refresh to inspect workspace changes." : "No session selected; workspace changes are unavailable.";
     if (preview) { preview.textContent = ""; preview.hidden = true; }
     renderHarnessWorkspaceProgress();
     const panel = document.getElementById("harnessWorkspaceReview");
     if (activeHarnessId && panel && panel.open) refreshHarnessWorkspaceReview();
+  }
+
+  async function refreshHarnessWorkspaceSnapshots(sessionId, readSerial) {
+    const node = document.getElementById("harnessWorkspaceVersions");
+    if (!node) return;
+    if (!sessionId) { node.textContent = "No session selected; workspace snapshots are unavailable."; return; }
+    node.textContent = "Reading recorded workspace snapshots…";
+    try {
+      const response = await fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/snapshots`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      if (activeHarnessId !== sessionId || readSerial !== harnessWorkspaceReviewSerial) return;
+      if (!data || data.session_id !== sessionId || !Array.isArray(data.snapshots)) throw new Error("invalid session snapshot response");
+      const rows = data.snapshots;
+      if (rows.some(row => !row || typeof row.snapshot_id !== "string" || !row.snapshot_id)) throw new Error("invalid snapshot record");
+      const latestId = data.latest_snapshot_id;
+      if (latestId && !rows.some(row => row.snapshot_id === latestId)) throw new Error("latest snapshot is missing from the record");
+      if (!rows.length) { node.textContent = "No workspace snapshots recorded for this session."; return; }
+      const latest = rows.find(row => row.snapshot_id === latestId);
+      if (!latest) { node.textContent = `${rows.length} workspace snapshot(s) recorded; the latest pointer is unavailable.`; return; }
+      const label = typeof latest.label === "string" && latest.label ? latest.label : "unlabelled";
+      node.textContent = `${rows.length} workspace snapshot(s) recorded. Latest: ${latest.snapshot_id} · ${label}. This is not a live workspace version.`;
+    } catch (error) {
+      if (activeHarnessId === sessionId && readSerial === harnessWorkspaceReviewSerial) node.textContent = `Workspace snapshots are unavailable: ${error.message || "connection failed"}.`;
+    }
   }
 
   async function refreshHarnessWorkspaceReview() {
@@ -17985,6 +18013,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     const sessionId = activeHarnessId;
     const readSerial = ++harnessWorkspaceReviewSerial;
     renderHarnessWorkspaceProgress();
+    refreshHarnessWorkspaceSnapshots(sessionId, readSerial);
     preview.textContent = "";
     preview.hidden = true;
     if (!sessionId) { status.textContent = "No session selected; workspace changes are unavailable."; return; }

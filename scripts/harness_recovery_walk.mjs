@@ -339,6 +339,27 @@ async function run(args) {
       );
       await shoot(page, "paused-panel");
 
+      // The version disclosure reads the real session snapshot route, not the diff
+      // and not an invented artifact version. Failures must remain independent.
+      const versions = await page.evaluate(async (id) => {
+        document.getElementById('harnessWorkspaceReview').open = true;
+        const response = await fetch(`/api/harness/sessions/${encodeURIComponent(id)}/snapshots`);
+        const data = await response.json();
+        await refreshHarnessWorkspaceReview();
+        await new Promise(resolve => setTimeout(resolve, 400));
+        return {ok:response.ok, data, text:document.getElementById('harnessWorkspaceVersions').textContent};
+      }, args.pausedSessionId);
+      record('workspace snapshots reflect the real session route', versions.ok && versions.data.session_id === args.pausedSessionId && (versions.data.snapshots.length ? versions.text.includes(String(versions.data.latest_snapshot_id)) : /No workspace snapshots/.test(versions.text)), JSON.stringify({count: versions.data.snapshots.length, latest: versions.data.latest_snapshot_id, text: versions.text}));
+      await shoot(page, "workspace-snapshots");
+      const denied = await page.evaluate(async () => {
+        const original = window.fetch;
+        window.fetch = (url, options) => String(url).endsWith('/snapshots') ? Promise.resolve(new Response('', {status:403})) : original(url, options);
+        try { await refreshHarnessWorkspaceReview(); await new Promise(resolve => setTimeout(resolve, 200)); }
+        finally { window.fetch = original; }
+        return document.getElementById('harnessWorkspaceVersions').textContent;
+      });
+      record('snapshot denial is visible without fabricating an empty record', /unavailable.*403/.test(denied), denied);
+
       // AP-008: preview untrusted content as text only, including at phone widths.
       for (const [theme, width] of [["light", 390], ["dark", 320]]) {
         await page.setViewport({ width, height: 844, deviceScaleFactor: 1 });

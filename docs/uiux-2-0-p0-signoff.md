@@ -9,7 +9,7 @@ and what a revert does and does not touch.
 * Approval binding: **unbound** — The historical record has no approved input snapshot and does not establish approval of current inputs.
 * Pinned baseline source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (input artifacts are hashed separately).
 * 6 panes · 21 preserved capabilities · 276 markup controls (163 chrome, 113 panes) · 74 rendered by script.
-* 121 routes exist, 74 with a resolved or possible caller, 47 with none observed and 0 unknown due to unresolved edges; 50 state-changing candidates traced.
+* 121 routes exist, 75 with a resolved or possible caller, 46 with none observed and 0 unknown due to unresolved edges; 50 state-changing candidates traced.
 * 0 fetch site(s) have 0 unresolved URL or method edge(s) (0 method).
 * Baseline screenshots recorded in the index: 6 of 6 (not provenance-verified).
 
@@ -29,7 +29,7 @@ separates the historical signature from any explicit binding to current input di
 |---|---|---|
 | 1 | Accept the preservation matrix as the baseline P1 must preserve | 21 capability rows across 6 panes, carried row for row from product/M5_2_0_UIUX_Autonomous_Roadmap.json |
 | 2 | Accept the control inventory as the list of controls that must stay reachable | 276 markup controls (163 chrome, 113 panes) plus 74 rendered by script |
-| 3 | Review route candidates and preserve confirmed browser-reachable routes and their gates | 121 routes exist; 74 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 50 state-changing candidates; the lexical scan is not exhaustive |
+| 3 | Review route candidates and preserve confirmed browser-reachable routes and their gates | 121 routes exist; 75 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 50 state-changing candidates; the lexical scan is not exhaustive |
 | 4 | Accept that P1 may not weaken the shared boundary | host allowlist (400), cross-origin rejection (403), bearer token (401, 503 when unconfigured), rate limit (429) and body-size limit (413), read from the middleware itself |
 | 5 | Review the rollback path and the state effects of each story | this package adds no migration or privilege; review each story's actual merge, revert and recovery effects, then regenerate artifacts and re-run the checks below |
 
@@ -114,7 +114,7 @@ An agent session over a workspace, with the diff, approval, and abort controls.
 | button | — | + New session | startFreshHarnessDraft() |
 | input | harnessSessionFilter | — | — |
 | summary | — | Files, progress & resources | — |
-| button | — | Refresh workspace changes | refreshHarnessWorkspaceReview() |
+| button | — | Refresh workspace review | refreshHarnessWorkspaceReview() |
 | button | — | Verification & artifacts | openHarnessEvidenceModal() |
 | button | harnessTimelineToggle | Session log | toggleHarnessTimeline() |
 | button | — | All | setHarnessEventFilter('all') |
@@ -149,7 +149,7 @@ An agent session over a workspace, with the diff, approval, and abort controls.
 | button | harnessProjectSummary | Choose a project | document.getElementById('harnessTaskSettings').open = true; document.getElementById('harnessWorkspaceInput').focus() |
 | summary | — | Review run details | — |
 
-**Routes reached from this pane's controls — 17, walking at most 2 calls; 6 route(s) reached through the same shared helper were excluded because this pane's walk never passes the function that supplied their URL:**
+**Routes reached from this pane's controls — 18, walking at most 2 calls; 6 route(s) reached through the same shared helper were excluded because this pane's walk never passes the function that supplied their URL:**
 
 | Method | Route | Certainty | State-changing | Walk | Gates that can refuse it |
 |---|---|---|---|---|---|
@@ -161,6 +161,7 @@ An agent session over a workspace, with the diff, approval, and abort controls.
 | GET | `/api/harness/sessions/{session_id}/events/stream` | certain | no | `harnessResyncFromSnapshot` → `scheduleHarnessEventStreamRetry` → `openHarnessEventStream` | — |
 | GET | `/api/harness/sessions/{session_id}/grants` | certain | no | `openHarnessGrants` → `refreshHarnessGrants` | — |
 | GET | `/api/harness/sessions/{session_id}/sdlc` | certain | no | `executeHarnessSelectedWorkflow` → `openSdlcModal` → `refreshSdlcBoard` | — |
+| GET | `/api/harness/sessions/{session_id}/snapshots` | certain | no | `refreshHarnessWorkspaceReview` → `refreshHarnessWorkspaceSnapshots` | — |
 | GET | `/api/harness/sessions/{session_id}/state` | certain | no | `harnessResyncFromSnapshot` | — |
 | GET | `/api/harness/sessions/{session_id}/task` | certain | no | `abortHarnessRun` → `refreshHarnessRecovery` | — |
 | GET | `/api/opencontext/docs` | certain | no | `openContextModal` → `loadOpenContextDocs` | — |
@@ -394,11 +395,11 @@ provenance; a matching snapshot cannot clear separate review holds.
 | Input | Current digest | Owner-recorded digest |
 |---|---|---|
 | `ledger_content_sha256` | `cb04b1bdf0ec9be6b39d2233496d9e9e53ffb91b0f92397824c9964af333b85f` | `not recorded` |
-| `source_manifest_sha256` | `37e51fa6f664356972bce867bfdf0213ef4353befaa0303714c38a113d748f45` | `not recorded` |
-| `control_inventory_sha256` | `0a613b686d5c1fc6ea46085b1452df5d8d5471473ef229dd6a931a392d3cf424` | `not recorded` |
-| `route_map_sha256` | `2a8a2362254bb4214efff5e90ab6a0b52dab1ae113db8a6c6fb837b0a34c9860` | `not recorded` |
-| `authorization_trace_sha256` | `a615dc12c9c41eb91e87c60f6cb8862aa9b75be6e9b4f9f4ac5c42fa4cecde73` | `not recorded` |
-| `frontend_sha256` | `7d884abe868205bcd7242cde7a402f35dba50986e5b62d71560d6bef3025f044` | `not recorded` |
+| `source_manifest_sha256` | `6add7f561420a29dd7a298e93a9c13753b7a982f6302e399e53acd409e9c0022` | `not recorded` |
+| `control_inventory_sha256` | `098042c19c9287fc1360b06d7c2c93116858db330752eb77c247b093b21b6234` | `not recorded` |
+| `route_map_sha256` | `e4f66880a23811f1f11c2bc5e657e45702748a8c196d1404df8212470dfeabc2` | `not recorded` |
+| `authorization_trace_sha256` | `c5d624ac8dc4783f24b409f101ef0ee83f6669a06ab32e88db4b7d62c9b42ea8` | `not recorded` |
+| `frontend_sha256` | `dad4fff7a3e0e6e8d837c7718eeed96671e30d3a3ba8cb6af3b424a96cd7ec80` | `not recorded` |
 | `screenshot_manifest_sha256` | `b488bf453ae260b6564ae592f0455e3d70cff3121dca1e7c823c7abb270b44d3` | `not recorded` |
 | `screenshot_index_sha256` | `16b0620ca1d02a1b181ad15b3a2b0c6aae9e7aa539654d27ed80d9147189634e` | `not recorded` |
 | `generator_sha256` | `6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65` | `not recorded` |

@@ -215,3 +215,39 @@ let fetch;
 '''
     result = subprocess.run(["node", "-"], input=script, text=True, capture_output=True, cwd=ROOT, check=False)
     assert result.returncode == 0, result.stderr
+
+
+def test_workspace_snapshot_summary_is_inert_truthful_and_fenced():
+    html = HTML.read_text(encoding="utf-8")
+    start = html.index('  async function refreshHarnessWorkspaceSnapshots(')
+    end = html.index('  async function refreshHarnessWorkspaceReview()', start)
+    script = r'''
+const assert = require('node:assert/strict');
+let activeHarnessId='one', harnessWorkspaceReviewSerial=1;
+let node={textContent:''}; let document={getElementById(){return node}};
+let fetch;
+''' + html[start:end] + r'''
+(async () => {
+  const run = async data => {fetch=async()=>({ok:true,json:async()=>data}); await refreshHarnessWorkspaceSnapshots('one',1)};
+  await run({session_id:'one',snapshots:[],latest_snapshot_id:null});
+  assert.match(node.textContent,/No workspace snapshots/);
+  const label='<img src=x onerror=alert(1)>';
+  await run({session_id:'one',latest_snapshot_id:'s1',snapshots:[{snapshot_id:'s1',label}]});
+  assert.match(node.textContent,/Latest: s1/); assert.ok(node.textContent.includes(label));
+  assert.equal(node.innerHTML,undefined); assert.match(node.textContent,/not a live workspace version/);
+  await run({session_id:'one',latest_snapshot_id:'missing',snapshots:[{snapshot_id:'s1'}]});
+  assert.match(node.textContent,/unavailable.*missing/);
+  await run({session_id:'two',snapshots:[]}); assert.match(node.textContent,/invalid session/);
+  await run({session_id:'one',snapshots:null}); assert.match(node.textContent,/invalid session/);
+  fetch=async()=>({ok:false,status:403}); await refreshHarnessWorkspaceSnapshots('one',1);
+  assert.match(node.textContent,/HTTP 403/);
+  fetch=async()=>{throw new Error('offline')}; await refreshHarnessWorkspaceSnapshots('one',1);
+  assert.match(node.textContent,/offline/);
+  let release; fetch=()=>new Promise(resolve=>{release=resolve});
+  const old=refreshHarnessWorkspaceSnapshots('one',1); harnessWorkspaceReviewSerial=2;
+  node.textContent='new session'; release({ok:true,json:async()=>({session_id:'one',latest_snapshot_id:'s1',snapshots:[{snapshot_id:'s1'}]})});
+  await old; assert.equal(node.textContent,'new session');
+})().catch(e=>{console.error(e);process.exit(1)});
+'''
+    result = subprocess.run(["node", "-"], input=script, text=True, capture_output=True, cwd=ROOT, check=False)
+    assert result.returncode == 0, result.stderr

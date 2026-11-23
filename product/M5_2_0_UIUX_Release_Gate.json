@@ -107,9 +107,9 @@
         {
           "artifact": "product/M5_2_0_UIUX_Route_Map.json",
           "totals": {
-            "fetch_call_sites": 72,
-            "resolved_urls": 80,
-            "exact_matches": 78,
+            "fetch_call_sites": 73,
+            "resolved_urls": 81,
+            "exact_matches": 79,
             "dynamic_matches": 2,
             "dynamic_method_matches": 0,
             "forwarded_call_sites": 1,
@@ -118,15 +118,15 @@
             "unresolved_method_edges": 0,
             "findings": 0,
             "routes": 121,
-            "routes_with_resolved_or_possible_caller": 74,
-            "routes_with_certain_caller": 65,
+            "routes_with_resolved_or_possible_caller": 75,
+            "routes_with_certain_caller": 66,
             "routes_only_possible_caller": 9,
-            "routes_no_caller_observed": 47,
+            "routes_no_caller_observed": 46,
             "routes_unknown_frontend_caller": 0,
             "resolved_from": {
               "assignment": 1,
               "forwarded": 1,
-              "literal": 70
+              "literal": 71
             }
           }
         }
@@ -219,14 +219,14 @@
             "pane_controls": 113,
             "script_rendered_controls": 74,
             "routes": 121,
-            "routes_with_resolved_or_possible_caller": 74,
-            "routes_no_caller_observed": 47,
+            "routes_with_resolved_or_possible_caller": 75,
+            "routes_no_caller_observed": 46,
             "routes_unknown_frontend_caller": 0,
             "route_map_unresolved_call_sites": 0,
             "route_map_unresolved_caller_edges": 0,
             "route_map_unresolved_method_edges": 0,
             "state_changing_routes_traced": 50,
-            "pane_routes_reached": 43,
+            "pane_routes_reached": 44,
             "pane_routes_excluded": 34,
             "route_walk_depth": 2,
             "screenshots_captured": 6,
@@ -547,7 +547,7 @@
             "surface_lists": 5,
             "capability_map_tools": 18,
             "routes": 4,
-            "routes_called": 57,
+            "routes_called": 58,
             "routes_unmounted": 0,
             "findings": 0
           }
@@ -572,7 +572,7 @@
             "functions": 25,
             "record_sections": 6,
             "routes": 3,
-            "routes_called": 57,
+            "routes_called": 58,
             "routes_unmounted": 0,
             "styles": 15,
             "findings": 0
