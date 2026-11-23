@@ -2654,6 +2654,7 @@
         ],
         "tests_executed": [
           "Author-run (Linux x86_64, Python 3.11.2): tests/test_bounded_specialists.py 83 passed, fully offline - no model loaded, no runtime started, no provider or network contacted, no production path exercised; every task, artifact, join and score is synthetic.",
+          "Author-run full suite on the delivery head: 6161 passed, 38 skipped, 1 warning in 1376.22s. The 38 skips are the pre-existing opt-in gates (pinned Chromium, live container runtime, browser screenshot captures); none is a new skip introduced by AP-017.",
           "Author-run: tests/test_ci_test_shard.py and tests/test_scoped_tests.py 20 passed after the module was registered in the shard manifest (89/78/75) and the test module mapped in test scopes; scripts/run_scoped_tests.py --check-map reports a valid map over 242 modules in 15 areas.",
           "Gates run locally: ruff check clean over the tree; ruff format applied to both new files; mypy clean over 87 source files; python autonomous_production_decisions.py valid true with inventory_status not_measured; scripts/validate_docs.py passed; scripts/validate_governance.py passed.",
           "NOT run: no specialist team was dispatched against a real model, runtime or worktree; no join was reconciled from a live process; no team-versus-baseline benchmark was executed. The topology decision consumes caller-supplied challenger_evaluation results and measure_metrics output, and every number in the tests is synthetic - none is presented as a measurement of a running system."
