@@ -2467,7 +2467,7 @@
       "title": "Implement reproducible challenger and workflow evaluations",
       "priority": "P1",
       "optional": false,
-      "status": "in_progress",
+      "status": "in_review",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-003",
@@ -2526,10 +2526,10 @@
         "owner": "arena/c9b61b55-m5-agent-studio",
         "branch": "arena/c9b61b55-m5-agent-studio",
         "base_sha": "984e70af59b22e0043848e22c5deadc65525ae01",
-        "head_sha": null,
+        "head_sha": "a499fef56f8cb9c4524c85f4a4805f5f6f06443d",
         "claimed_at": "2026-11-23T09:20:00Z",
         "heartbeat_at": "2026-11-23T09:20:00Z",
-        "pr_url": null,
+        "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/347",
         "delivery_status": "pr_open",
         "acceptance_evidence": [
           "AC1 run records pin exact task/config/tool/model/environment and include all failures: RunRecord requires six sha256 digests (task, config, tool, model, environment, toolchain), a failed or cancelled run must state why, and StrategyRuns enforces attempted == recorded so an omitted failure is caught by arithmetic rather than trusted away. Tests: test_a_run_pins_task_config_tool_model_and_environment, test_a_malformed_digest_is_refused, test_a_failure_must_state_why, test_a_completed_run_has_no_failure_reason, test_failures_are_records_not_absences, test_a_strategy_reports_its_failure_rate_over_attempts, test_duplicate_run_ids_within_a_strategy_are_refused, test_a_record_from_another_strategy_is_refused.",
