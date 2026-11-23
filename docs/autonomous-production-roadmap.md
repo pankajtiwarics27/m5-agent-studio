@@ -1,6 +1,6 @@
 # M5 Agent Studio — Autonomous Production Product Roadmap
 
-**Revision:** 2.8 • **Prepared:** 2026-11-08 • **Status:** owner-requested product specification and proposed execution program; not evidence of implementation, independent security acceptance, or authorization to bypass existing gates.
+**Revision:** 2.9 • **Prepared:** 2026-11-08 • **Status:** owner-requested product specification and proposed execution program; not evidence of implementation, independent security acceptance, or authorization to bypass existing gates.
 
 **Audience:** any implementation agent or human entering without this conversation. Read this document, the companion story ledger, and the agent prompt before proposing changes.
 
@@ -12,6 +12,33 @@
 **Source snapshot inspected:** `pankajtiwarics27/m5-agent-studio` main at `a67e8b291614f8afdac7c8d38ba51bcc8926d695`. Inspection covered repository guidance, module contracts and selected runtime-status documents; not a full code/security audit, installed-runtime qualification, or fresh end-to-end execution. Refresh against current main before implementing.
 
 **Precedence:** repository `AGENTS.md`, accepted security decisions, existing program ownership and signed approvals remain binding. This program does not replace the AS, M5 runtime, UIUX/UIV2, or LC ledgers, and does not reopen their completed stories. Reconcile overlapping work in AP-001. Drafting this roadmap does not grant automatic execution authority to its stories or to downloaded tools.
+
+## Revision 2.9 — AP-030 guest-desktop contract delivered (2026-11-23; AP-030 only)
+
+The owner was asked directly, because AP-030 is flagged optional and the program
+prompt requires explicit approval for an optional story; they chose it. AP-030 is
+also the only dependency-ready story: its dependencies (AP-010, AP-012) are done,
+while AP-018 and everything downstream of it still needs AP-008, which a separate
+session holds `in_progress` with a fresh draft at PR #348.
+
+The delivery adds `guest_desktop.py`: a per-task justification against the
+simpler API/browser capabilities (an untried alternative cannot be claimed
+insufficient, and a *successful* alternative defeats the justification); platform
+qualification that admits only an observed profile with passing checks and a
+named verifier, never transferring evidence between profiles; six host surfaces
+denied by default with explicit, scoped, redacted grants and no host-credential
+sharing; shared folders confined to the workspace root and screened for secret
+names, `.git` and traversal; a guest failure that can never fall back to
+controlling the host; and an adapter with no executor that ships **disabled and
+`not_qualified`**, publishing its limitations.
+
+What this record deliberately does not claim: **no virtual machine, desktop
+session, service or provider was launched, and no bake-off was measured.** No
+platform is qualified and no GUI-only task is demonstrated to need desktop
+control — those require an observed guest and a named verifier, which this
+environment cannot provide. `runtime_activation_authorized` remains `false`;
+ADR-0040–0045 remain `not-reviewed`; AP-018 onward remain unauthorized. See
+[guest desktop](guest-desktop.md).
 
 ## Revision 2.8 — AP-017 recorded done (2026-11-23; AP-017 only)
 

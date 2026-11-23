@@ -131,6 +131,7 @@
       "test_durable_intent_ledger.py",
       "test_execution_*.py",
       "test_failure_injection.py",
+      "test_guest_desktop.py",
       "test_isolation_smoke.py",
       "test_live_sandbox.py",
       "test_mcp_*.py",
@@ -496,6 +497,10 @@
     "workspace_snapshots.py": [
       "ui.harness",
       "security.execution"
+    ],
+    "guest_desktop.py": [
+      "security.execution",
+      "quality.docs-ci"
     ]
   }
 }
