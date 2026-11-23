@@ -1,6 +1,6 @@
 # M5 Agent Studio — Autonomous Production Product Roadmap
 
-**Revision:** 2.9 • **Prepared:** 2026-11-08 • **Status:** owner-requested product specification and proposed execution program; not evidence of implementation, independent security acceptance, or authorization to bypass existing gates.
+**Revision:** 3.0 • **Prepared:** 2026-11-08 • **Status:** owner-requested product specification and proposed execution program; not evidence of implementation, independent security acceptance, or authorization to bypass existing gates.
 
 **Audience:** any implementation agent or human entering without this conversation. Read this document, the companion story ledger, and the agent prompt before proposing changes.
 
@@ -12,6 +12,23 @@
 **Source snapshot inspected:** `pankajtiwarics27/m5-agent-studio` main at `a67e8b291614f8afdac7c8d38ba51bcc8926d695`. Inspection covered repository guidance, module contracts and selected runtime-status documents; not a full code/security audit, installed-runtime qualification, or fresh end-to-end execution. Refresh against current main before implementing.
 
 **Precedence:** repository `AGENTS.md`, accepted security decisions, existing program ownership and signed approvals remain binding. This program does not replace the AS, M5 runtime, UIUX/UIV2, or LC ledgers, and does not reopen their completed stories. Reconcile overlapping work in AP-001. Drafting this roadmap does not grant automatic execution authority to its stories or to downloaded tools.
+
+## Revision 3.0 — AP-030 recorded done (2026-11-23; AP-030 only)
+
+PR #353 merged as `618537f020e37eecef383ba813264a7d83b9b200` at
+2026-11-23T14:32:07Z carrying final head `483c5c9`; the exact-head CI was green
+(27 pass, 0 fail, CLEAN) and the author's full suite was 6242 passed, 38 skipped,
+0 failed, with the skips confined to the pinned-Chromium and live-runtime gates
+this shell cannot export. This record marks AP-030 `done` for that scope only.
+
+What this record deliberately does not claim: **no virtual machine, desktop
+session, service or provider was launched, and no bake-off was measured.** No
+platform is qualified and no GUI-only task is demonstrated to need desktop
+control; the adapter ships disabled and `not_qualified`, and its own tests assert
+that state rather than a platform result. Nothing is activated;
+`runtime_activation_authorized` remains `false`; ADR-0040–0045 remain
+`not-reviewed`; AP-018 onward remain unauthorized, and AP-018 and everything
+downstream still need AP-008, held `in_progress` by a separate session.
 
 ## Revision 2.9 — AP-030 guest-desktop contract delivered (2026-11-23; AP-030 only)
 
