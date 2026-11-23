@@ -1760,14 +1760,22 @@
         "Push/PR state; owner/independent approvals where required"
       ],
       "tracking": {
-        "owner": "arena/833f4126-m5-agent-studio",
-        "branch": "arena/833f4126-m5-agent-studio",
-        "base_sha": "1a26bf34696a1e3a2dbc26fee0b2b669b61730a2",
-        "head_sha": "11c9d750a1855fad0cdcdb489c46bdb3a3fd7c86",
-        "claimed_at": "2026-11-23T11:06:15Z",
-        "heartbeat_at": "2026-11-23T11:06:15Z",
-        "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/348",
+        "owner": "arena/ab195e0f-m5-agent-studio",
+        "branch": "arena/ab195e0f-m5-agent-studio",
+        "base_sha": "e721fc2d4efbb3d70c5ca8b9aea1a6f1ef1a2a1a",
+        "head_sha": "6d564b2ab32b1c2fd70b2ea0e98e7cbc0c5e9d5b",
+        "claimed_at": "2026-11-23T15:02:00Z",
+        "heartbeat_at": "2026-11-23T16:55:00Z",
+        "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/356",
         "delivery_status": "pr_open",
+        "authorization_record": {
+          "authority": "explicit owner instruction to take over AP-008 from the stopped session",
+          "owner_statement": "That session stopped just now with below comments, you can takeover from here",
+          "recorded_at": "2026-11-23T15:02:00Z",
+          "takeover_reason": "The prior session (arena/833f4126-m5-agent-studio) stopped mid-story; its work was merged as PR #348, so the claim is superseded rather than contested. No competing open AP-008 PR existed at takeover.",
+          "scope_limit": "AP-008's remaining gap only: session-scoped artifact versions and source references from the integrated routes. Does not authorize runtime activation, IsolationAcceptance, live dispatch, installed-runtime qualification, or AP-018 onward.",
+          "superseded_pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/348"
+        },
         "acceptance_evidence": [],
         "tests_executed": [
           "Claim head 7d37a49: scoped docs-ledger 44 passed; prior Harness baseline 120 passed (one warning).",
@@ -1784,6 +1792,20 @@
         ],
         "handoff": "Continuation after owner-requested merge of partial AP-008 PR #329 at 1a26bf34696a1e3a2dbc26fee0b2b669b61730a2. Owner said continue on assigned branch arena/833f4126-m5-agent-studio. Prior claim and its historical handoff are preserved in prior_claims; no competing open AP-008 PR was found. AP-008 remains in_progress; no production runtime activation, IsolationAcceptance, live dispatch or installed-runtime qualification is claimed. Continue using durable session authority and inert previews; do not start AP-018/019/020. User conditionally accepted sampled rendered workspace using Puppeteer; do not transfer that approval to materially changed output without validating it. Continuation adds session-scoped verification-file requirements from the durable state contract, explicitly not proof of files or artifact versions, and repairs the existing redacted Git diff producer and refusal presentation. The current Git diff is bounded and not a frozen artifact. Source references and versioned artifact listing remain unavailable. See PR #348 for exact evidence and status.",
         "prior_claims": [
+          {
+            "owner": "arena/833f4126-m5-agent-studio",
+            "branch": "arena/833f4126-m5-agent-studio",
+            "base_sha": "8901a94c86d5f72fd67232ed7787894d5cfe3232",
+            "head_sha": "e935fb3fad6ebd8667e254a94660ddfe1dac24ac",
+            "claimed_at": "2026-11-23T11:06:15Z",
+            "heartbeat_at": "2026-11-23T16:55:00Z",
+            "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/348",
+            "delivery_status": "merged",
+            "work_preserved": "Merged as #348 into main at e721fc2. Its 45-file slice and its 11 tests are carried forward unchanged on the takeover branch; the takeover did not revert or rewrite any of it.",
+            "acceptance_evidence": [],
+            "tests_executed": [],
+            "blockers": []
+          },
           {
             "owner": "arena/63f06456-m5-agent-studio",
             "branch": "arena/63f06456-m5-agent-studio",
