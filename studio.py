@@ -16994,6 +16994,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
 
   function startFreshHarnessDraft() {
     activeHarnessId = null;
+    harnessSnapshotReadSerial += 1;
     clearHarnessSnapshotUnavailable();
     activeHarnessSession = null;
     harnessResetEventCache();
@@ -17450,6 +17451,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     // Reload is a first-class path: rebuild from the authoritative task snapshot
     // and the durable event log, never from whatever DOM happened to survive.
     activeHarnessId = id;
+    harnessSnapshotReadSerial += 1;
     clearHarnessSnapshotUnavailable();
     harnessResetEventCache();
     harnessLogTelemetry = { source: "idle", reason: "", trigger: "", pages: 0, reloads: 0, resyncs: 0, streamed: 0, latest: 0, retained: 0 };
@@ -18087,6 +18089,25 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     await refreshHarnessRecovery();
   }
 
+  async function refreshHarnessSnapshotAfterOutcome(sessionId) {
+    // A late stream response must never replace a newer reconnect or approval read.
+    const readSerial = ++harnessSnapshotReadSerial;
+    try {
+      const response = await fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/state`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const state = await response.json();
+      if (activeHarnessId !== sessionId || readSerial !== harnessSnapshotReadSerial) return;
+      if (!state || state.session_id !== sessionId) throw new Error("unexpected session state");
+      clearHarnessSnapshotUnavailable();
+      if (state.session) updateHarnessHeaderBanner(state.session);
+      harnessSnapshot = state; applyHarnessSnapshotState(state); renderStoredHarnessEvents(harnessCachedEvents());
+    } catch (error) {
+      if (activeHarnessId === sessionId && readSerial === harnessSnapshotReadSerial) {
+        presentHarnessSnapshotUnavailable(`The task snapshot could not be read (${error.message || "connection failed"}).`);
+      }
+    }
+  }
+
   async function closeHarnessEventStream() {
     if (harnessStreamRetryTimer) { clearTimeout(harnessStreamRetryTimer); harnessStreamRetryTimer = null; }
     if (harnessEventStreamAbort) {
@@ -18146,10 +18167,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
             scheduleHarnessStreamRender();
             if (data.type && (data.type === "turn/end" || data.type === "turn/verified" || data.type === "turn/cancelled")) {
               // A turn reached a durable outcome: re-anchor status to the runtime.
-              fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/state`)
-                .then(r => (r.ok ? r.json() : null))
-                .then(state => { if (state && activeHarnessId === sessionId) { harnessSnapshot = state; applyHarnessSnapshotState(state); renderStoredHarnessEvents(harnessCachedEvents()); } })
-                .catch(() => {});
+              refreshHarnessSnapshotAfterOutcome(sessionId);
             }
           } else if (frameEvent === "resync_required") {
             await harnessResyncFromSnapshot(data.reason || "stream_gap");
@@ -18891,6 +18909,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     if (!sessionId || sessionId !== String(activeHarnessId || "")) {
       return { ok: false, authoritative: false, message: "This approval is not for the active Harness session; no decision was sent." };
     }
+    const readSerial = ++harnessSnapshotReadSerial;
     let response;
     try {
       response = await fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/state`);
@@ -18909,6 +18928,9 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     }
     if (sessionId !== String(activeHarnessId || "")) {
       return { ok: false, authoritative: false, message: "The active Harness session changed; no decision was sent." };
+    }
+    if (readSerial !== harnessSnapshotReadSerial) {
+      return { ok: false, authoritative: false, message: "The task state was refreshed while verifying this approval; no decision was sent. Try again." };
     }
     const stateSessionId = String(state.session_id || (state.session && state.session.id) || "");
     if (stateSessionId !== sessionId) {

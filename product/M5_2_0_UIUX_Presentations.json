@@ -300,7 +300,7 @@
       "actions": [
         "Retry status"
       ],
-      "line": 14103
+      "line": 14105
     }
   ],
   "containers": [
@@ -371,7 +371,7 @@
       "handler": "installSkill"
     },
     {
-      "line": 15106,
+      "line": 15128,
       "handler": "openHarnessDiffModal"
     }
   ],

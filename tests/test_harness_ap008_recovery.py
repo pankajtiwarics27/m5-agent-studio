@@ -160,3 +160,58 @@ assert.equal(fits,1);
 '''
     result = subprocess.run(["node", "-"], input=script, text=True, capture_output=True, cwd=ROOT, check=False)
     assert result.returncode == 0, result.stderr
+def test_outcome_and_approval_reads_reject_superseded_or_foreign_snapshots():
+    html = (ROOT / "static/index.html").read_text(encoding="utf-8")
+    start = html.index("  async function refreshHarnessSnapshotAfterOutcome(sessionId) {")
+    end = html.index("  async function closeHarnessEventStream()", start)
+    approval_start = html.index("  async function confirmLiveHarnessApproval(sessionId, approvalId) {")
+    approval_end = html.index("  function setHarnessApprovalCardStatus(", approval_start)
+    fresh_start = html.index("  function startFreshHarnessDraft() {")
+    selection_start = html.index("  async function selectHarnessSession(id) {")
+    fresh = html[fresh_start:fresh_start + 400]
+    selection = html[selection_start:selection_start + 700]
+    assert "harnessSnapshotReadSerial += 1;" in fresh[:400]
+    assert "harnessSnapshotReadSerial += 1;" in selection
+    script = r'''
+const assert = require('node:assert/strict');
+let activeHarnessId='one', harnessSnapshotReadSerial=0, harnessSnapshot={session_id:'one',task_status:'initial'};
+let notices=[], rendered=[];
+function clearHarnessSnapshotUnavailable(){notices.push('cleared');}
+function presentHarnessSnapshotUnavailable(message){notices.push(message);}
+function updateHarnessHeaderBanner(){}
+function applyHarnessSnapshotState(s){rendered.push(s.task_status);}
+function harnessCachedEvents(){return [];}
+function renderStoredHarnessEvents(){}
+let fetch;
+''' + html[start:end] + html[approval_start:approval_end] + r'''
+(async () => {
+  let release;
+  fetch=()=>new Promise(resolve=>{release=resolve});
+  const old=refreshHarnessSnapshotAfterOutcome('one');
+  fetch=async()=>({ok:true,json:async()=>({session_id:'one',task_status:'new'})});
+  await refreshHarnessSnapshotAfterOutcome('one');
+  release({ok:true,json:async()=>({session_id:'one',task_status:'old'})});
+  await old;
+  assert.equal(harnessSnapshot.task_status,'new');
+  assert.deepEqual(rendered,['new']);
+  fetch=async()=>({ok:true,json:async()=>({session_id:'other',task_status:'wrong'})});
+  await refreshHarnessSnapshotAfterOutcome('one');
+  assert.equal(harnessSnapshot.task_status,'new');
+  assert.match(notices.at(-1),/unexpected session state/);
+  fetch=async()=>({ok:false,status:503});
+  await refreshHarnessSnapshotAfterOutcome('one');
+  assert.match(notices.at(-1),/503/);
+  fetch=()=>new Promise(resolve=>{release=resolve});
+  const pending=confirmLiveHarnessApproval('one','a');
+  harnessSnapshotReadSerial++;
+  release({ok:true,json:async()=>({session_id:'one',approvals:{pending:[{approval_id:'a'}]}})});
+  const result=await pending;
+  assert.equal(result.ok,false); assert.equal(result.authoritative,false);
+  assert.match(result.message,/no decision was sent/);
+  assert.equal(harnessSnapshot.task_status,'new');
+  fetch=async()=>({ok:true,json:async()=>({session_id:'one',approvals:{pending:[{approval_id:'a'}]}})});
+  assert.equal((await confirmLiveHarnessApproval('one','a')).ok,true);
+})().catch(e=>{console.error(e);process.exit(1)});
+'''
+    result = subprocess.run(["node", "-"], input=script, text=True, capture_output=True, cwd=ROOT, check=False)
+    assert result.returncode == 0, result.stderr
