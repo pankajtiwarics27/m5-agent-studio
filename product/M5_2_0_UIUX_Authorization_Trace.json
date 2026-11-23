@@ -8,8 +8,8 @@
   "check_with": "python3 scripts/uiux_authorization_trace.py --check",
   "statement": "For state-changing route candidates resolved by the browser map: the shared gates every request passes, handler refusals, referenced authority and durable-state subsystems, and possible effects. The route map is a lexical scan, not proof of exhaustive browser coverage; a reference is evidence of a consultation, not proof of enforcement.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "app_sha256": "d3ac68beed947dc04a9e94977444ac3e209b2b24ea71a5ea141cfb93b2ddf67e",
-  "route_map_sha256": "e4f66880a23811f1f11c2bc5e657e45702748a8c196d1404df8212470dfeabc2",
+  "app_sha256": "bb3e3e2e15ed147317395311ee67ce1f6addf23560776436a1c76ddeb4681ac5",
+  "route_map_sha256": "bb5917a7eb039e627126ab6ad1bcef0a1508e0ffbed8113e93d1669861831e13",
   "totals": {
     "routes_in_app": 121,
     "state_changing_routes_in_app": 81,

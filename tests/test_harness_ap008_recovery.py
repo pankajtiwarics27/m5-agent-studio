@@ -251,3 +251,53 @@ let fetch;
 '''
     result = subprocess.run(["node", "-"], input=script, text=True, capture_output=True, cwd=ROOT, check=False)
     assert result.returncode == 0, result.stderr
+
+
+def test_evidence_diff_never_reports_failure_or_unrendered_changes_as_clean():
+    html = HTML.read_text(encoding="utf-8")
+    start = html.index('  function harnessDiffFiles(')
+    end = html.index('  function harnessEvidenceFactListHtml(', start)
+    change_start = html.index('  function harnessEvidenceChangeHtml(')
+    change_end = html.index('  function harnessEvidenceArtifactsHtml(', change_start)
+    script = r'''
+const assert = require('node:assert/strict');
+function escapeHtml(v) {return String(v).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');}
+''' + html[start:end] + html[change_start:change_end] + r'''
+const failure = harnessEvidenceChangeHtml({is_git:true,status:'',diff:'Git diff error: <script>alert(1)</script>'});
+assert.match(failure,/could not be read/); assert.doesNotMatch(failure,/Status<\/dt><dd class="mono">clean/);
+assert.doesNotMatch(failure,/<script>/); assert.match(failure,/&lt;script&gt;/);
+for (const data of [{is_git:false,status:'',diff:''}, {is_git:true,status:'',diff:null}, {}]) {
+  const output=harnessEvidenceChangeHtml(data); assert.match(output,/unavailable or invalid/); assert.doesNotMatch(output,/reports no workspace changes/);
+}
+const dirty=harnessEvidenceChangeHtml({is_git:true,status:'?? new.bin',diff:''});
+assert.match(dirty,/Git reports workspace changes/); assert.doesNotMatch(dirty,/reports no workspace changes/);
+const clean=harnessEvidenceChangeHtml({is_git:true,status:'',diff:''}); assert.match(clean,/Git reports no workspace changes/);
+'''
+    result = subprocess.run(["node", "-"], input=script, text=True, capture_output=True, cwd=ROOT, check=False)
+    assert result.returncode == 0, result.stderr
+
+
+def test_real_git_diff_returns_redacted_text_for_tracked_and_untracked(tmp_path):
+    import app
+
+    def git(*args):
+        subprocess.run(["git", *args], cwd=tmp_path, check=True, capture_output=True)
+
+    git("init", "-q")
+    git("config", "user.name", "AP008 test")
+    git("config", "user.email", "ap008@example.invalid")
+    tracked = tmp_path / "tracked.txt"
+    tracked.write_text("before\n", encoding="utf-8")
+    git("add", "tracked.txt")
+    git("commit", "-qm", "baseline")
+    secret = "sk-ant-" + "A" * 24
+    tracked.write_text(f"tracked {secret}\n", encoding="utf-8")
+    (tmp_path / "new.txt").write_text(f"new {secret}\n", encoding="utf-8")
+    (tmp_path / ".env").write_text(f"secret {secret}\n", encoding="utf-8")
+    diff = app._compute_git_diff(tmp_path)
+    assert diff["is_git"] is True
+    assert isinstance(diff["diff"], str)
+    assert "tracked.txt" in diff["diff"] and "new.txt" in diff["diff"]
+    assert secret not in diff["diff"] and diff["diff"].count("[REDACTED]") >= 2
+    assert ".env" not in diff["diff"]
+    assert len(diff["diff"]) <= 50_000

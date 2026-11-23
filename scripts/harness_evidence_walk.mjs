@@ -404,7 +404,7 @@ async function run(args) {
         surface.files.length > 0
           && surface.files.length === Math.max(expectedFiles, surface.files.length)
           && surface.files.some((file) => /src\/total\.py/.test(file.path) && file.added !== "" && file.deleted !== ""),
-        `files=${surface.files.length} server=${expectedFiles}`,
+        `files=${surface.files.length} server=${expectedFiles} payload=${JSON.stringify({is_git:serverDiff?.is_git,status:serverDiff?.status,diffType:typeof serverDiff?.diff})} ui=${JSON.stringify(await page.evaluate(() => harnessEvidencePayload && harnessEvidencePayload.diff && ({is_git:harnessEvidencePayload.diff.is_git,status:harnessEvidencePayload.diff.status,diffType:typeof harnessEvidencePayload.diff.diff,diff:harnessEvidencePayload.diff.diff})))}`,
       );
       record(
         "the change section says the diff is read now, not frozen at the verdict",
@@ -422,6 +422,20 @@ async function run(args) {
         `${surface.limits.length} limit(s)`,
       );
       await shoot(page, "verdict-record");
+
+      // AP-008: a failed Git read is not a clean workspace. Exercise the modal
+      // with the real task route, changing only the returned diff payload.
+      const diffFailure = await page.evaluate(async () => {
+        const original = window.fetch;
+        window.fetch = (url, options) => String(url).endsWith('/diff')
+          ? Promise.resolve(new Response(JSON.stringify({is_git:true,status:'',diff:'Git diff error: <img src=x onerror=window.__evidenceInjected=1>'}), {status:200,headers:{'Content-Type':'application/json'}}))
+          : original(url, options);
+        try { await refreshHarnessEvidence(); } finally { window.fetch = original; }
+        const section = document.getElementById('harnessEvidenceChange');
+        return {text:section.textContent, images:section.querySelectorAll('img,script,iframe').length, injected:Boolean(window.__evidenceInjected)};
+      });
+      record('Git failure is visible and inert, never reported as clean', /could not be read/.test(diffFailure.text) && !/Status\s*clean/.test(diffFailure.text) && diffFailure.images === 0 && !diffFailure.injected, JSON.stringify(diffFailure));
+      await page.evaluate(() => refreshHarnessEvidence());
 
       // ── A rejection is drawn as one ──────────────────────────────────────
       await page.evaluate(() => closeHarnessEvidenceModal());

@@ -19515,7 +19515,15 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
       return `<div class="ev-heading">The change</div>
         <p class="ev-note">The workspace diff could not be read, so this record cannot say what the verdict was attached to.</p>`;
     }
-    const files = harnessDiffFiles(diff.diff || "");
+    if (diff.is_git !== true || typeof diff.diff !== "string" || typeof diff.status !== "string") {
+      return `<div class="ev-heading">The change</div>
+        <p class="ev-note">The Git workspace diff is unavailable or invalid; this record cannot establish whether the workspace is clean.</p>`;
+    }
+    if (diff.diff.startsWith("Git diff error:")) {
+      return `<div class="ev-heading">The change</div>
+        <p class="ev-note">The Git workspace diff could not be read: ${escapeHtml(diff.diff)}. The workspace status is not confirmed.</p>`;
+    }
+    const files = harnessDiffFiles(diff.diff);
     const added = files.reduce((total, file) => total + file.added, 0);
     const deleted = files.reduce((total, file) => total + file.deleted, 0);
     const rows = files.length
@@ -19524,7 +19532,9 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
           <span class="ev-file-add mono">+${escapeHtml(String(file.added))}</span>
           <span class="ev-file-del mono">-${escapeHtml(String(file.deleted))}</span>
         </div>`).join("")
-      : `<p class="ev-note">The worktree has no uncommitted change, so there is no diff to attach a claim to.</p>`;
+      : (diff.status
+        ? `<p class="ev-note">Git reports workspace changes, but no file patch is available in this preview.</p>`
+        : `<p class="ev-note">Git reports no workspace changes; no file patch is available in this preview.</p>`);
     return `<div class="ev-heading">The change</div>
       <dl class="ev-facts">
         <dt>Branch</dt><dd class="mono">${escapeHtml(String(diff.branch || "no branch (not a git worktree)"))}</dd>
@@ -31983,9 +31993,9 @@ def _compute_git_diff(target_dir: Path) -> dict[str, Any]:
             except PermissionError:
                 continue
             if up.is_file() and not up.is_symlink() and up.stat().st_size < 200_000:
-                content = redact_text(up.read_text(encoding="utf-8", errors="replace"))
+                content, _ = redact_text(up.read_text(encoding="utf-8", errors="replace"))
                 extra_diffs.append(_unified_diff_snippet(rel_u, "", content, max_lines=120))
-        combined = redact_text(
+        combined, _ = redact_text(
             (diff_out.strip() + ("\n\n" + "\n\n".join(extra_diffs) if extra_diffs else "")).strip()
         )
         return {

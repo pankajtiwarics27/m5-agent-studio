@@ -490,7 +490,7 @@ def test_a_task_route_that_drops_the_preview_is_caught(sources):
 def test_a_diff_route_that_stops_redacting_is_caught(sources):
     def unredacted(server: str) -> str:
         return server.replace(
-            "        combined = redact_text(\n",
+            "        combined, _ = redact_text(\n",
             "        combined = (\n",
             1,
         )

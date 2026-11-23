@@ -360,7 +360,7 @@ def read_server(server: str) -> dict:
             "still_returns_the_git_diff": "_compute_git_diff(Path(sess[\"worktree_dir\"]))" in diff,
             "still_reports_a_branch": '"branch": info["branch"]' in compute,
             "still_reports_a_status": '"status": status_out' in compute,
-            "still_redacts": "combined = redact_text(" in compute,
+            "still_redacts": "combined, _ = redact_text(" in compute and "content, _ = redact_text(" in compute,
             "still_previews_untracked": "_unified_diff_snippet(" in compute,
             "still_says_when_it_is_not_a_repo": "Workspace is not a git repository." in compute,
             "still_bounds_the_payload": "combined[:50_000]" in compute,

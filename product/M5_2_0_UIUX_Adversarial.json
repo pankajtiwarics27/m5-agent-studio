@@ -425,98 +425,98 @@
     },
     {
       "function": "harnessRecoveryPost",
-      "line": 16172,
+      "line": 16182,
       "call": "fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/${path}`, { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, b",
       "kind": "reports",
       "note": "returns {ok, status, data} to its caller and never claims a resume it did not get"
     },
     {
       "function": "saveMcpServer",
-      "line": 17639,
+      "line": 17649,
       "call": "fetch(\"/api/mcp/servers\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify(payload), })",
       "kind": "reports",
       "note": "toasts the server's detail and keeps the form"
     },
     {
       "function": "importMcpJson",
-      "line": 17673,
+      "line": 17683,
       "call": "fetch(\"/api/mcp/import-json\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify({ json_text: raw, auto",
       "kind": "reports",
       "note": "toasts the server's detail and keeps the pasted JSON"
     },
     {
       "function": "syncMcpServer",
-      "line": 17687,
+      "line": 17697,
       "call": "fetch(`/api/mcp/servers/${encodeURIComponent(alias)}/sync`, { method: \"POST\" })",
       "kind": "reports",
       "note": "toasts the server's detail and re-reads the server list"
     },
     {
       "function": "toggleMcpServerEnabled",
-      "line": 17703,
+      "line": 17713,
       "call": "fetch(`/api/mcp/servers/${encodeURIComponent(alias)}`, { method: \"PATCH\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.string",
       "kind": "guarded",
       "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
     },
     {
       "function": "changeMcpApprovalPolicy",
-      "line": 17718,
+      "line": 17728,
       "call": "fetch(`/api/mcp/servers/${encodeURIComponent(alias)}`, { method: \"PATCH\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.string",
       "kind": "guarded",
       "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
     },
     {
       "function": "toggleMcpSingleTool",
-      "line": 17736,
+      "line": 17746,
       "call": "fetch(`/api/mcp/servers/${encodeURIComponent(alias)}`, { method: \"PATCH\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.string",
       "kind": "guarded",
       "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
     },
     {
       "function": "deleteMcpServer",
-      "line": 17751,
+      "line": 17761,
       "call": "fetch(`/api/mcp/servers/${encodeURIComponent(alias)}`, { method: \"DELETE\" })",
       "kind": "guarded",
       "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
     },
     {
       "function": "runMcpPlayground",
-      "line": 17786,
+      "line": 17796,
       "call": "fetch(`/api/mcp/servers/${encodeURIComponent(alias)}/call`, { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.st",
       "kind": "reports",
       "note": "prints the server's detail in the output box"
     },
     {
       "function": "compactActiveHarness",
-      "line": 17833,
+      "line": 17843,
       "call": "fetch(`/api/harness/sessions/${encodeURIComponent(activeHarnessId)}/compact`, { method: \"POST\" })",
       "kind": "guarded",
       "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
     },
     {
       "function": "saveOpenContextDoc",
-      "line": 18059,
+      "line": 18069,
       "call": "fetch(\"/api/opencontext/docs\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify(payload), })",
       "kind": "reports",
       "note": "toasts the server's detail and keeps the editor contents"
     },
     {
       "function": "togglePinOpenContextDoc",
-      "line": 18073,
+      "line": 18083,
       "call": "fetch(`/api/opencontext/docs/${encodeURIComponent(id)}`, { method: \"PATCH\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stri",
       "kind": "guarded",
       "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
     },
     {
       "function": "deleteOpenContextDoc",
-      "line": 18086,
+      "line": 18096,
       "call": "fetch(`/api/opencontext/docs/${encodeURIComponent(id)}`, { method: \"DELETE\" })",
       "kind": "guarded",
       "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"
     },
     {
       "function": "runCodeGraphPlayground",
-      "line": 18137,
+      "line": 18147,
       "call": "fetch(\"/api/codegraph/query\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify({ workspace_dir: ws, m",
       "kind": "guarded",
       "note": "calls guardedWrite(), which reads the status before the body and draws the refusal"

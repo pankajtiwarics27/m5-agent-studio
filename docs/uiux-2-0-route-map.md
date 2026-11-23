@@ -6,7 +6,7 @@ functions and structural route candidates, derived from the inline script and th
 route table, not from handler names.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4`.
-* Frontend digest: `dad4fff7a3e0e6e8…` · `app.py` digest: `d3ac68beed947dc0…`.
+* Frontend digest: `ca2426aac100ce9b…` · `app.py` digest: `bb3e3e2e15ed1473…`.
 * 73 call sites resolve to 81 URLs — exact: 79, dynamic URL: 2, unknown method: 0, forwarded through a helper: 1, findings: 0, unresolved sites: 0, unresolved edges: 0 (0 method).
 * 121 routes exist; 75 have a resolved or possible caller (66 unique structural matches, 9 only possible candidates); 46 have none observed and 0 are unknown due to unresolved edges.
 
@@ -98,28 +98,28 @@ Line numbers appear in two frames: `Script` is the line inside the inline `<scri
 | `applyHarnessWorktree` | 11095 | 15172 | POST | literal | — | `/api/harness/sessions/{param}/apply` | exact | `/api/harness/sessions/{session_id}/apply` |
 | `refreshHarnessEvidence` | 11397 | 15474 | GET | literal | — | `/api/harness/sessions/{param}/task` | exact | `/api/harness/sessions/{session_id}/task` |
 | `refreshHarnessEvidence` | 11404 | 15481 | GET | literal | — | `/api/harness/sessions/{param}/diff` | exact | `/api/harness/sessions/{session_id}/diff` |
-| `refreshHarnessRecovery` | 12056 | 16133 | GET | literal | — | `/api/harness/sessions/{param}/task` | exact | `/api/harness/sessions/{session_id}/task` |
-| `refreshHarnessRecovery` | 12065 | 16142 | GET | literal | — | `/api/harness/sessions/{param}/state` | exact | `/api/harness/sessions/{session_id}/state` |
-| `harnessRecoveryPost` | 12095 | 16172 | POST | literal | — | `/api/harness/sessions/{param}/{param}` | dynamic | `/api/harness/sessions/{session_id}/apply or /api/harness/sessions/{session_id}/compact or /api/harness/sessions/{session_id}/snapshots or /api/harness/sessions/{session_id}/pause or /api/harness/sessions/{session_id}/cancel or /api/harness/sessions/{session_id}/contain or /api/harness/sessions/{session_id}/grants or /api/harness/sessions/{session_id}/switch-model or /api/harness/sessions/{session_id}/delegations or /api/harness/sessions/{session_id}/resume` |
-| `loadMcpServers` | 13010 | 17087 | GET | literal | — | `/api/mcp/servers` | exact | `/api/mcp/servers` |
-| `saveMcpServer` | 13562 | 17639 | POST | literal | — | `/api/mcp/servers` | exact | `/api/mcp/servers` |
-| `importMcpJson` | 13596 | 17673 | POST | literal | — | `/api/mcp/import-json` | exact | `/api/mcp/import-json` |
-| `syncMcpServer` | 13610 | 17687 | POST | literal | — | `/api/mcp/servers/{param}/sync` | exact | `/api/mcp/servers/{alias}/sync` |
-| `toggleMcpServerEnabled` | 13626 | 17703 | PATCH | literal | — | `/api/mcp/servers/{param}` | exact | `/api/mcp/servers/{alias}` |
-| `changeMcpApprovalPolicy` | 13641 | 17718 | PATCH | literal | — | `/api/mcp/servers/{param}` | exact | `/api/mcp/servers/{alias}` |
-| `toggleMcpSingleTool` | 13659 | 17736 | PATCH | literal | — | `/api/mcp/servers/{param}` | exact | `/api/mcp/servers/{alias}` |
-| `deleteMcpServer` | 13674 | 17751 | DELETE | literal | — | `/api/mcp/servers/{param}` | exact | `/api/mcp/servers/{alias}` |
-| `runMcpPlayground` | 13709 | 17786 | POST | literal | — | `/api/mcp/servers/{param}/call` | exact | `/api/mcp/servers/{alias}/call` |
-| `compactActiveHarness` | 13756 | 17833 | POST | literal | — | `/api/harness/sessions/{param}/compact` | exact | `/api/harness/sessions/{session_id}/compact` |
-| `loadOpenContextDocs` | 13919 | 17996 | GET | literal | — | `/api/opencontext/docs` | exact | `/api/opencontext/docs` |
-| `searchOpenContextUI` | 13928 | 18005 | GET | literal | — | `/api/opencontext/search?q={param}` | exact | `/api/opencontext/search` |
-| `saveOpenContextDoc` | 13982 | 18059 | POST | literal | — | `/api/opencontext/docs` | exact | `/api/opencontext/docs` |
-| `togglePinOpenContextDoc` | 13996 | 18073 | PATCH | literal | — | `/api/opencontext/docs/{param}` | exact | `/api/opencontext/docs/{doc_id}` |
-| `deleteOpenContextDoc` | 14009 | 18086 | DELETE | literal | — | `/api/opencontext/docs/{param}` | exact | `/api/opencontext/docs/{doc_id}` |
-| `runOpenContextLintUI` | 14021 | 18098 | GET | literal | — | `/api/opencontext/lint` | exact | `/api/opencontext/lint` |
-| `refreshCodeGraphOverview` | 14035 | 18112 | GET | literal | — | `/api/codegraph/analyze?workspace_dir={param}` | exact | `/api/codegraph/analyze` |
-| `runCodeGraphPlayground` | 14060 | 18137 | POST | literal | — | `/api/codegraph/query` | exact | `/api/codegraph/query` |
-| `refreshSdlcBoard` | 14108 | 18185 | GET | literal | — | `/api/harness/sessions/{param}/sdlc` | exact | `/api/harness/sessions/{session_id}/sdlc` |
+| `refreshHarnessRecovery` | 12066 | 16143 | GET | literal | — | `/api/harness/sessions/{param}/task` | exact | `/api/harness/sessions/{session_id}/task` |
+| `refreshHarnessRecovery` | 12075 | 16152 | GET | literal | — | `/api/harness/sessions/{param}/state` | exact | `/api/harness/sessions/{session_id}/state` |
+| `harnessRecoveryPost` | 12105 | 16182 | POST | literal | — | `/api/harness/sessions/{param}/{param}` | dynamic | `/api/harness/sessions/{session_id}/apply or /api/harness/sessions/{session_id}/compact or /api/harness/sessions/{session_id}/snapshots or /api/harness/sessions/{session_id}/pause or /api/harness/sessions/{session_id}/cancel or /api/harness/sessions/{session_id}/contain or /api/harness/sessions/{session_id}/grants or /api/harness/sessions/{session_id}/switch-model or /api/harness/sessions/{session_id}/delegations or /api/harness/sessions/{session_id}/resume` |
+| `loadMcpServers` | 13020 | 17097 | GET | literal | — | `/api/mcp/servers` | exact | `/api/mcp/servers` |
+| `saveMcpServer` | 13572 | 17649 | POST | literal | — | `/api/mcp/servers` | exact | `/api/mcp/servers` |
+| `importMcpJson` | 13606 | 17683 | POST | literal | — | `/api/mcp/import-json` | exact | `/api/mcp/import-json` |
+| `syncMcpServer` | 13620 | 17697 | POST | literal | — | `/api/mcp/servers/{param}/sync` | exact | `/api/mcp/servers/{alias}/sync` |
+| `toggleMcpServerEnabled` | 13636 | 17713 | PATCH | literal | — | `/api/mcp/servers/{param}` | exact | `/api/mcp/servers/{alias}` |
+| `changeMcpApprovalPolicy` | 13651 | 17728 | PATCH | literal | — | `/api/mcp/servers/{param}` | exact | `/api/mcp/servers/{alias}` |
+| `toggleMcpSingleTool` | 13669 | 17746 | PATCH | literal | — | `/api/mcp/servers/{param}` | exact | `/api/mcp/servers/{alias}` |
+| `deleteMcpServer` | 13684 | 17761 | DELETE | literal | — | `/api/mcp/servers/{param}` | exact | `/api/mcp/servers/{alias}` |
+| `runMcpPlayground` | 13719 | 17796 | POST | literal | — | `/api/mcp/servers/{param}/call` | exact | `/api/mcp/servers/{alias}/call` |
+| `compactActiveHarness` | 13766 | 17843 | POST | literal | — | `/api/harness/sessions/{param}/compact` | exact | `/api/harness/sessions/{session_id}/compact` |
+| `loadOpenContextDocs` | 13929 | 18006 | GET | literal | — | `/api/opencontext/docs` | exact | `/api/opencontext/docs` |
+| `searchOpenContextUI` | 13938 | 18015 | GET | literal | — | `/api/opencontext/search?q={param}` | exact | `/api/opencontext/search` |
+| `saveOpenContextDoc` | 13992 | 18069 | POST | literal | — | `/api/opencontext/docs` | exact | `/api/opencontext/docs` |
+| `togglePinOpenContextDoc` | 14006 | 18083 | PATCH | literal | — | `/api/opencontext/docs/{param}` | exact | `/api/opencontext/docs/{doc_id}` |
+| `deleteOpenContextDoc` | 14019 | 18096 | DELETE | literal | — | `/api/opencontext/docs/{param}` | exact | `/api/opencontext/docs/{doc_id}` |
+| `runOpenContextLintUI` | 14031 | 18108 | GET | literal | — | `/api/opencontext/lint` | exact | `/api/opencontext/lint` |
+| `refreshCodeGraphOverview` | 14045 | 18122 | GET | literal | — | `/api/codegraph/analyze?workspace_dir={param}` | exact | `/api/codegraph/analyze` |
+| `runCodeGraphPlayground` | 14070 | 18147 | POST | literal | — | `/api/codegraph/query` | exact | `/api/codegraph/query` |
+| `refreshSdlcBoard` | 14118 | 18195 | GET | literal | — | `/api/harness/sessions/{param}/sdlc` | exact | `/api/harness/sessions/{session_id}/sdlc` |
 
 ## Findings
 
