@@ -27,7 +27,7 @@
     ],
     "module_counts": [
       89,
-      78,
+      79,
       75
     ],
     "node_counts": [
@@ -139,6 +139,7 @@
     },
     "unfitted_modules": [
       "tests/test_bounded_specialists.py",
+      "tests/test_guest_desktop.py",
       "tests/test_harness_ap008_recovery.py",
       "tests/test_mission_authority_envelope.py"
     ]
@@ -260,6 +261,7 @@
       "tests/test_edit_transactions.py",
       "tests/test_execution_profiles.py",
       "tests/test_execution_spine.py",
+      "tests/test_guest_desktop.py",
       "tests/test_harness_approval_ui.py",
       "tests/test_harness_evidence.py",
       "tests/test_live_sandbox.py",

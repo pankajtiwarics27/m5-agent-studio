@@ -3,9 +3,9 @@
   "document_type": "proposed_autonomous_production_execution_ledger",
   "product": "M5 Agent Studio",
   "program": "AP",
-  "revision": "2.8",
+  "revision": "2.9",
   "prepared_date": "2026-11-08",
-  "lifecycle": "registered_tracking_ap017_done_ap018_unauthorized_u01_u05_resolved",
+  "lifecycle": "registered_tracking_ap030_in_review_ap018_blocked_ap008_u01_u05_resolved",
   "source_snapshot": "a67e8b291614f8afdac7c8d38ba51bcc8926d695",
   "source_repository": "https://github.com/pankajtiwarics27/m5-agent-studio",
   "specification": "docs/autonomous-production-roadmap.md",
@@ -3588,7 +3588,7 @@
       "title": "Evaluate optional guest-desktop capability",
       "priority": "P1",
       "optional": true,
-      "status": "not_started",
+      "status": "in_review",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-010",
@@ -3639,18 +3639,38 @@
         "Push/PR state; owner/independent approvals where required"
       ],
       "tracking": {
-        "owner": null,
-        "branch": null,
-        "base_sha": null,
-        "head_sha": null,
-        "claimed_at": null,
-        "heartbeat_at": null,
-        "pr_url": null,
-        "delivery_status": "not_pushed",
-        "acceptance_evidence": [],
-        "tests_executed": [],
+        "owner": "arena/5800bb1c-m5-agent-studio",
+        "branch": "arena/5800bb1c-m5-agent-studio",
+        "base_sha": "ddccc5dd106ba6b184047de064803f62762f2eaf",
+        "head_sha": "61dd97000d88fa55cd1397602d167bfe8bb7b28f",
+        "claimed_at": "2026-11-23T13:20:00Z",
+        "heartbeat_at": "2026-11-23T14:10:00Z",
+        "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/353",
+        "delivery_status": "pr_open",
+        "acceptance_evidence": [
+          "AC1 chosen task justifies desktop control instead of existing API/browser tools: DesktopJustification requires recorded attempts against http_api/mcp_tool/browser_worker/cli, each failed attempt must state why that failure makes desktop necessary, an untried capability cannot be claimed insufficient, and a capability that was attempted and SUFFICIENT raises instead - a working simpler tool defeats the justification rather than supporting it. Tests: test_a_task_with_failed_simpler_alternatives_is_justified, test_a_desktop_task_without_any_alternative_is_refused, test_a_sufficient_simpler_tool_defeats_the_justification, test_an_untried_capability_cannot_be_claimed_insufficient, test_an_attempt_without_a_reason_is_refused, test_an_unknown_simpler_capability_is_refused, test_the_justification_records_what_was_attempted, test_require_desktop_justification_returns_the_record, test_a_task_is_justified_only_per_task_not_per_project.",
+          "AC2 exact supported platform/version/resources and setup are verified: PlatformProfile requires every resource dimension, refuses unknown dimensions and a non-boolean 'observed', and validates the host fingerprint shape sandbox_boundary emits; QualificationRecord has three honest states, refuses to carry evidence when not_measured, and a qualified record must list passed checks, carry no failed check and name its verifier. evaluate_platform_qualification refuses a not_measured record, an unobserved profile, a record naming a different profile, and an unqualified record. Tests: test_a_complete_observed_profile_is_qualifiable, test_a_profile_missing_a_resource_dimension_is_refused, test_a_profile_with_an_unknown_dimension_is_refused, test_a_non_positive_resource_is_refused, test_a_malformed_host_fingerprint_is_refused, test_a_claimed_observation_must_be_a_boolean, test_a_qualified_record_needs_passed_checks, test_a_qualified_record_cannot_carry_failed_checks, test_a_qualified_record_needs_a_named_verifier, test_an_unqualified_record_must_name_the_failure, test_a_not_measured_record_cannot_smuggle_evidence, test_an_unknown_qualification_state_is_refused, test_an_observed_qualified_platform_is_admitted, test_a_not_measured_platform_is_refused, test_an_unobserved_profile_cannot_be_qualified_even_with_a_record, test_evidence_for_another_platform_does_not_transfer, test_no_profile_means_no_platform_is_qualified, test_an_observed_but_failed_platform_is_refused.",
+          "AC3 host desktop/files/accounts/clipboard remain outside untrusted guest authority unless separately granted: six host surfaces are denied by default, a grant requires an explicit scope, a refused grant cannot carry a scope, one grant never implies another, a surface cannot be granted twice, and host credentials are never shared (credentials_shared=True raises). Tests: test_every_host_surface_is_denied_by_default, test_a_grant_requires_an_explicit_scope, test_a_refused_grant_cannot_carry_a_scope, test_an_unknown_host_surface_is_refused, test_one_grant_does_not_imply_another, test_host_credentials_are_never_shared_with_a_guest, test_a_surface_cannot_be_granted_twice, test_host_accounts_grant_is_auditable.",
+          "AC4 shared folders, credentials, networking and screenshots are scoped/redacted: shared folders must sit under ~/M5_AP_Workspace, refuse secret filenames from sandbox_boundary.SECRET_NAMES, refuse .git and traversal, and may not overlap; guest networking defaults to none, supports only a credential-free allowlist and never bridges the host; screenshots must land under the workspace root, be redacted (reusing history_privacy.redact_text), carry a size cap, and may not be requested writable or unredacted. Tests: test_a_share_outside_the_workspace_root_is_refused, test_a_share_exposing_a_secret_file_is_refused, test_a_share_reaching_git_metadata_is_refused, test_a_share_with_traversal_is_refused, test_a_confined_read_only_share_is_accepted, test_overlapping_shares_are_refused, test_guest_network_defaults_to_none, test_guest_network_may_not_forward_host_credentials, test_an_unsupported_network_mode_is_refused, test_no_network_mode_cannot_carry_an_allowlist, test_an_allowlist_network_must_name_its_hosts, test_screenshots_are_disabled_by_default, test_screenshots_outside_the_workspace_root_are_refused, test_unredacted_screenshots_are_refused, test_an_enabled_screenshot_policy_must_cap_its_size, test_a_disabled_screenshot_policy_cannot_name_a_target, test_a_scoped_redacted_screenshot_policy_is_accepted, test_screenshot_text_is_redacted_before_storage, test_a_raw_host_clipboard_grant_is_refused, test_a_writable_host_capture_grant_is_refused.",
+          "AC5 guest failure cannot fall back to controlling the host: GuestFailure exposes host_fallback_available as a hard-coded False property (not a settable field), refuses any host_actions_taken > 0 with HostFallbackRefusedError, refuses an uncontained failure, and publishes a next step that forbids retrying on the host; assert_no_host_fallback raises for any host action. Tests: test_a_contained_guest_failure_offers_no_host_fallback, test_a_host_action_after_a_guest_failure_is_refused, test_an_uncontained_guest_failure_is_refused, test_a_failure_without_a_reason_is_refused, test_no_host_fallback_accepts_zero_host_actions, test_no_host_fallback_refuses_any_host_action.",
+          "AC6 publish maturity/limitations and keep the optional adapter disabled unless qualified: GuestDesktopAdapter has no executor, derives enabled from qualification, refuses to be enabled while unqualified, refuses qualified maturity without a qualified record, and requires limitations to be published; default_disabled_adapter ships not_qualified with four stated limitations; BakeOffReport reports measured false and recommends nothing when empty, and otherwise ranks completed drivers by host interventions then latency. Tests: test_the_shipped_adapter_is_disabled_and_not_qualified, test_the_shipped_adapter_publishes_its_limitations, test_an_unqualified_adapter_cannot_be_enabled, test_an_adapter_cannot_claim_qualified_maturity_without_a_record, test_an_adapter_without_limitations_is_refused, test_a_qualified_adapter_may_only_be_enabled_explicitly, test_a_qualified_adapter_is_not_enabled_by_default, test_an_unknown_maturity_state_is_refused, test_an_empty_bake_off_recommends_nothing, test_a_bake_off_recommends_the_fewest_host_interventions, test_a_bake_off_prefers_lower_latency_on_a_tie, test_a_bake_off_with_no_completed_driver_recommends_none, test_a_failed_bake_off_entry_must_state_why, test_a_negative_latency_is_refused, test_the_bake_off_digest_is_stable.",
+          "Reviewability: render_capability is deterministic sorted-key JSON with a trailing newline, a desktop_rules block stating every boundary and a three-line does_not_prove block. Tests: test_the_rendered_capability_is_deterministic_json, test_the_rendered_capability_states_every_boundary, test_the_rendered_capability_does_not_overclaim, test_the_rendered_capability_shows_an_unevidenced_task_as_unjustified, test_no_module_verb_launches_a_vm_or_drives_the_host."
+        ],
+        "tests_executed": [
+          "Author-run (Linux x86_64, Python 3.11.2): tests/test_guest_desktop.py 81 passed, fully offline - no VM, desktop session, service or provider launched; every platform fact, grant and bake-off entry is synthetic.",
+          "Author-run full suite on the delivery head: 6242 passed, 38 skipped, 1 warning in 1351.99s. The 38 skips are the pre-existing opt-in gates (pinned Chromium, live container runtime, browser screenshot captures); none is a new skip introduced by AP-030.",
+          "Author-run: tests/test_ci_test_shard.py and tests/test_scoped_tests.py 20 passed after the module was registered in the shard manifest (89/79/75) and the test module mapped in test scopes; scripts/run_scoped_tests.py --check-map reports a valid map over 243 modules in 15 areas.",
+          "Gates run locally: ruff check clean over the tree; ruff format applied to both new files; mypy clean over 88 source files; python autonomous_production_decisions.py valid true with inventory_status not_measured; scripts/validate_docs.py passed; scripts/validate_governance.py passed.",
+          "NOT run, and the reason AC2 and AC6 are satisfied by refusal rather than by measurement: no guest desktop was launched or observed, so no platform is qualified and the adapter ships disabled and not_qualified. No bake-off was executed between any driver and a guest, so BakeOffReport is empty and recommends nothing. No GUI-only task was run against the API or browser workers, so no task is demonstrated to need desktop control. Qualifying a platform here would require an observed guest with a named verifier, which this environment cannot provide; fabricating it was not an option."
+        ],
         "blockers": [],
-        "handoff": null
+        "handoff": null,
+        "authorization_record": {
+          "authorization": "normal_story_authorization — owner-approved single optional story (AP-030 only)",
+          "owner_instruction": "The owner was asked directly, because AP-030 is flagged optional and the program prompt says an optional story needs its explicit approval. The owner selected the AP-030 option in that question, whose text read: 'I'd build an offline capability/authority contract: when desktop control is justified over existing API/browser tools, the host-vs-guest boundary (files, clipboard, accounts, egress, screenshots), and guest failure never falling back to host control. The adapter stays disabled and marked not-qualified - I cannot run a real VM bake-off here, so AC2/AC6 would honestly read not measured rather than fabricated.'",
+          "selection_evidence": "AP-030 is the only story in the ledger whose dependencies are all done (AP-010 and AP-012) and that is not blocked by a decision: every other unstarted story depends on AP-008, which the separate session still holds in_progress with a fresh draft at PR #348, or on AP-018/AP-019 downstream of it. AP-030 therefore is the only dependency-ready story, and it is optional, which is exactly why the owner was asked rather than assumed.",
+          "scope_limit": "AP-030 only, capped at the offline contract: a desktop-capability bake-off record, platform qualification gating, the host/guest boundary for files, clipboard, accounts, egress and screenshots, and a no-host-fallback rule, plus published maturity and limitations. The adapter has no executor, runs no VM, service or provider, and stays disabled and not-qualified because no real guest was observed in this environment. No activation, no spend, no network, no I/O outside ~/M5_AP_Workspace. AP-018 onward remain unauthorized."
+        }
       },
       "implementation_prompt": "Implement AP-030: Evaluate optional guest-desktop capability. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
