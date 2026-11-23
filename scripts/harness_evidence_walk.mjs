@@ -457,7 +457,19 @@ async function run(args) {
         return {text:section.textContent, images:section.querySelectorAll('img,script,iframe').length, injected:Boolean(window.__evidenceInjected)};
       });
       record('Git failure is visible and inert, never reported as clean', /could not be read/.test(diffFailure.text) && !/Status\s*clean/.test(diffFailure.text) && diffFailure.images === 0 && !diffFailure.injected, JSON.stringify(diffFailure));
-      await page.evaluate(() => refreshHarnessEvidence());
+      const overlap = await page.evaluate(async () => {
+        const original = window.fetch;
+        let release;
+        window.fetch = (url, options) => String(url).endsWith('/task') ? new Promise(resolve => {release = resolve;}) : original(url, options);
+        const oldRead = refreshHarnessEvidence();
+        const cleared = !document.getElementById('harnessEvidenceChange').textContent.trim();
+        window.fetch = original;
+        await refreshHarnessEvidence();
+        release(new Response(JSON.stringify({task:{title:'STALE SESSION SECRET'}}), {status:200,headers:{'Content-Type':'application/json'}}));
+        await oldRead;
+        return {cleared, text:document.getElementById('harnessEvidenceModal').textContent};
+      });
+      record('overlapping evidence refresh clears and rejects a late response', overlap.cleared && !overlap.text.includes('STALE SESSION SECRET') && /Completion verified/.test(overlap.text), `cleared=${overlap.cleared}`);
 
       // ── A rejection is drawn as one ──────────────────────────────────────
       await page.evaluate(() => closeHarnessEvidenceModal());

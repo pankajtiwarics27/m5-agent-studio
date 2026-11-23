@@ -16996,6 +16996,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
 
   function startFreshHarnessDraft() {
     activeHarnessId = null;
+    invalidateHarnessEvidence();
     harnessSnapshotReadSerial += 1;
     clearHarnessSnapshotUnavailable();
     activeHarnessSession = null;
@@ -17453,6 +17454,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     // Reload is a first-class path: rebuild from the authoritative task snapshot
     // and the durable event log, never from whatever DOM happened to survive.
     activeHarnessId = id;
+    invalidateHarnessEvidence();
     harnessSnapshotReadSerial += 1;
     clearHarnessSnapshotUnavailable();
     harnessResetEventCache();
@@ -19393,7 +19395,16 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
 
   // ================= The record behind the card =================
   let harnessEvidencePayload = null;
-  let harnessEvidenceBusy = false;
+  let harnessEvidenceReadSerial = 0;
+
+  function invalidateHarnessEvidence() {
+    harnessEvidenceReadSerial += 1;
+    harnessEvidencePayload = null;
+    for (const id of ["harnessEvidenceMeta", "harnessEvidenceVerdict", "harnessEvidenceSpec", "harnessEvidenceObserved", "harnessEvidenceChange", "harnessEvidenceArtifacts", "harnessEvidenceLimits"]) {
+      const node = document.getElementById(id);
+      if (node) node.textContent = "";
+    }
+  }
 
   function harnessLatestVerdict() {
     const events = harnessCachedEvents() || [];
@@ -19413,13 +19424,15 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
   }
 
   function closeHarnessEvidenceModal() {
+    invalidateHarnessEvidence();
     closeOverlay("harnessEvidenceModal");
   }
 
   async function refreshHarnessEvidence() {
     const sessionId = activeHarnessId;
-    if (!sessionId || harnessEvidenceBusy) return;
-    harnessEvidenceBusy = true;
+    if (!sessionId) return;
+    invalidateHarnessEvidence();
+    const readSerial = harnessEvidenceReadSerial;
     const meta = document.getElementById("harnessEvidenceMeta");
     if (meta) meta.textContent = `${sessionId} · reading the contract, the record and the change…`;
     let task = null;
@@ -19432,6 +19445,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     } catch (error) {
       errors.push(`the contract could not be read: ${error.message}`);
     }
+    if (activeHarnessId !== sessionId || readSerial !== harnessEvidenceReadSerial) return;
     try {
       const response = await fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/diff`);
       if (response.ok) diff = await response.json();
@@ -19439,8 +19453,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     } catch (error) {
       errors.push(`the diff could not be read: ${error.message}`);
     }
-    harnessEvidenceBusy = false;
-    if (activeHarnessId !== sessionId) return;
+    if (activeHarnessId !== sessionId || readSerial !== harnessEvidenceReadSerial) return;
     harnessEvidencePayload = { sessionId, task, diff, report: harnessLatestVerdict(), errors };
     renderHarnessEvidence(harnessEvidencePayload);
   }

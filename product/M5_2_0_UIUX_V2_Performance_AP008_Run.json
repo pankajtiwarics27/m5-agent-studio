@@ -1,14 +1,14 @@
 {
   "story": "UIV2-29",
   "git": {
-    "head": "722c6b5d2968b71502791629d81daa37771b996f",
+    "head": "a012b4e946bb8f596f6b9a4ab9ae491e3c7ac263",
     "dirty": true
   },
   "source_sha256": {
-    "static/index.html": "4af59f14d904d908218a773e502dd9531610f6b2fc394fad7721d48289d66c9c",
+    "static/index.html": "7cc5eb9ae45854f586006cc67e4c0b788fd9b9bd96b51f2e3f6c8e88cda3e5a8",
     "scripts/uiv2_performance_safety_walk.mjs": "db65e34744d881132250aba25da39f6d239adcf43c407ac4ebaf85f840070643"
   },
-  "generated_at": "2026-11-23T12:13:32.854Z",
+  "generated_at": "2026-11-23T12:53:41.848Z",
   "environment": {
     "node": "v22.22.3",
     "platform": "linux",
@@ -54,11 +54,11 @@
       },
       "fast": {
         "model": "Gemma-4-21B-REAP-4bit",
-        "elapsed_ms": 416,
-        "renders": 20,
+        "elapsed_ms": 366.29999999981374,
+        "renders": 17,
         "schedules": 58,
         "model_tokens": 58,
-        "sse_per_second": 139.423,
+        "sse_per_second": 158.34,
         "complete_chars": 330
       }
     },
@@ -68,7 +68,7 @@
           "Nodes": 8588,
           "Documents": 2,
           "JSEventListeners": 339,
-          "JSHeapUsedSize": 3397040,
+          "JSHeapUsedSize": 3396172,
           "JSHeapTotalSize": 3932160,
           "LayoutCount": 1,
           "RecalcStyleCount": 3
@@ -77,22 +77,22 @@
           "Nodes": 8588,
           "Documents": 2,
           "JSEventListeners": 339,
-          "JSHeapUsedSize": 3353484,
+          "JSHeapUsedSize": 3345216,
           "JSHeapTotalSize": 3903488,
           "LayoutCount": 123,
           "RecalcStyleCount": 245
         },
         "after_cycle_2": {
-          "Nodes": 8588,
+          "Nodes": 8612,
           "Documents": 2,
           "JSEventListeners": 339,
-          "JSHeapUsedSize": 3356452,
+          "JSHeapUsedSize": 3360648,
           "JSHeapTotalSize": 3903488,
-          "LayoutCount": 245,
-          "RecalcStyleCount": 487
+          "LayoutCount": 246,
+          "RecalcStyleCount": 488
         },
         "cycle_1": {
-          "elapsed_ms": 4144.399999999965,
+          "elapsed_ms": 4203.5,
           "cursor": 18000,
           "cached": 5000,
           "cards": 300,
@@ -100,7 +100,7 @@
           "last": 18000
         },
         "cycle_2": {
-          "elapsed_ms": 4018.6999999999534,
+          "elapsed_ms": 4179.800000000047,
           "cursor": 30000,
           "cached": 5000,
           "cards": 300,
@@ -111,9 +111,9 @@
       },
       "steady": {
         "calls": 20,
-        "mean_ms": 1.884999999991851,
-        "p95_ms": 2.2999999999883585,
-        "max_ms": 3.099999999976717,
+        "mean_ms": 2.0300000000046565,
+        "p95_ms": 3.300000000046566,
+        "max_ms": 3.5,
         "cards": 300
       }
     },
@@ -145,10 +145,10 @@
       {
         "viewport": "1440x900",
         "theme": "light",
-        "cls_total": 0.22236,
-        "cls_internal_stream": 0.22236,
+        "cls_total": 0.19059,
+        "cls_internal_stream": 0.19059,
         "cls_external_shell": 0,
-        "shifts": 7,
+        "shifts": 6,
         "overflow": 0,
         "max_geometry_delta": 0,
         "cards": 300,
@@ -169,10 +169,10 @@
       {
         "viewport": "1280x800",
         "theme": "light",
-        "cls_total": 0.17168,
-        "cls_internal_stream": 0.17168,
+        "cls_total": 0.2003,
+        "cls_internal_stream": 0.2003,
         "cls_external_shell": 0,
-        "shifts": 6,
+        "shifts": 7,
         "overflow": 0,
         "max_geometry_delta": 0,
         "cards": 300,
@@ -239,13 +239,13 @@
       "group": "sse",
       "step": "high-frequency SSE tokens are coalesced without losing the final reply",
       "passed": true,
-      "detail": "schedules=58 renders=20 model_tokens=58 chars=330 full_reply_matches=true"
+      "detail": "schedules=58 renders=17 model_tokens=58 chars=330 full_reply_matches=true"
     },
     {
       "group": "sse",
       "step": "the measured fast fixture actually exceeds fifty scheduled SSE updates per second",
       "passed": true,
-      "detail": "rate=139.4/s elapsed=416.0ms schedules=58"
+      "detail": "rate=158.3/s elapsed=366.3ms schedules=58"
     },
     {
       "group": "dom-memory",
@@ -269,13 +269,13 @@
       "group": "dom-memory",
       "step": "post-GC document nodes plateau instead of growing with the event count",
       "passed": true,
-      "detail": "baseline=8588 cycle1=8588 cycle2=8588 delta=0"
+      "detail": "baseline=8588 cycle1=8588 cycle2=8612 delta=24"
     },
     {
       "group": "dom-memory",
       "step": "post-GC JS heap remains within the declared repeated-cycle plateau budgets",
       "passed": true,
-      "detail": "baseline=3397040 cycle1=3353484 cycle2=3356452 cycle_delta=2968 baseline_delta=-40588"
+      "detail": "baseline=3396172 cycle1=3345216 cycle2=3360648 cycle_delta=15432 baseline_delta=-35524"
     },
     {
       "group": "dom-memory",
@@ -287,7 +287,7 @@
       "group": "dom-memory",
       "step": "ten-event frames retain the existing four-millisecond full-window budget",
       "passed": true,
-      "detail": "{\"calls\":20,\"mean_ms\":1.884999999991851,\"p95_ms\":2.2999999999883585,\"max_ms\":3.099999999976717,\"cards\":300}"
+      "detail": "{\"calls\":20,\"mean_ms\":2.0300000000046565,\"p95_ms\":3.300000000046566,\"max_ms\":3.5,\"cards\":300}"
     },
     {
       "group": "layout",
@@ -311,7 +311,7 @@
       "group": "layout",
       "step": "1440x900 light: streaming shifts neither shell geometry nor the page",
       "passed": true,
-      "detail": "{\"cls_total\":0.22236,\"cls_internal_stream\":0.22236,\"cls_external_shell\":0,\"shifts\":7,\"overflow\":0,\"max_geometry_delta\":0,\"cards\":300,\"cursor\":30502}",
+      "detail": "{\"cls_total\":0.19059,\"cls_internal_stream\":0.19059,\"cls_external_shell\":0,\"shifts\":6,\"overflow\":0,\"max_geometry_delta\":0,\"cards\":300,\"cursor\":30502}",
       "viewport": "1440x900",
       "theme": "light",
       "pane": "harness"
@@ -329,7 +329,7 @@
       "group": "layout",
       "step": "1280x800 light: streaming shifts neither shell geometry nor the page",
       "passed": true,
-      "detail": "{\"cls_total\":0.17168,\"cls_internal_stream\":0.17168,\"cls_external_shell\":0,\"shifts\":6,\"overflow\":0,\"max_geometry_delta\":0,\"cards\":300,\"cursor\":30702}",
+      "detail": "{\"cls_total\":0.2003,\"cls_internal_stream\":0.2003,\"cls_external_shell\":0,\"shifts\":7,\"overflow\":0,\"max_geometry_delta\":0,\"cards\":300,\"cursor\":30702}",
       "viewport": "1280x800",
       "theme": "light",
       "pane": "harness"
@@ -371,7 +371,7 @@
   "captures": [
     {
       "path": "chat-midstream.png",
-      "sha256": "6438aa37ffc2a3b21e39f3c8db63d1f297e883d9de5ea3c1371fc08075cc1f1d",
+      "sha256": "125391fb9c6171e019332bbdc14f5ab05ec5582908b2944d6f1fb328e7e27fd2",
       "group": "sse",
       "viewport": "1440x900",
       "theme": "dark",
@@ -380,7 +380,7 @@
     },
     {
       "path": "chat-complete.png",
-      "sha256": "c1d261e035d262be2db260e7de24b3a08b5ad08dc3577473c8326a7bde76c0d8",
+      "sha256": "f282bc41c9cc7d3a866ff223b38e41b9f60ec87ee7e9c43a882cbc02f57c717f",
       "group": "sse",
       "viewport": "1440x900",
       "theme": "dark",
@@ -389,7 +389,7 @@
     },
     {
       "path": "chat-high-frequency-complete.png",
-      "sha256": "cf48443ec324279c4b4d2b481b49ee3f40481deeb9a06d63b4ca81f654ecaedc",
+      "sha256": "1a9a32ed5d849b506c9c805224744ec2b91e053c9de5642362973ba8af2f12a3",
       "group": "sse",
       "viewport": "1440x900",
       "theme": "dark",
@@ -398,7 +398,7 @@
     },
     {
       "path": "layout/light/1640x900-harness.png",
-      "sha256": "45da64ef47cfe4366ee7c1ecd5aa0a81a8d43264785740880d25c2ee3f9ead57",
+      "sha256": "6ca4869d677250f0e0a844e29a9c065f4baa172d9005927db12934e67814f47c",
       "group": "layout",
       "viewport": "1640x900",
       "theme": "light",
@@ -407,7 +407,7 @@
     },
     {
       "path": "layout/dark/1640x900-harness.png",
-      "sha256": "58c875f6a987724ef59e9777774e11da5c1706a9ca901928874335156f9ede41",
+      "sha256": "64b9a957de233741cd25611628ca41f3b1382a16080db24ac3755fb7492db877",
       "group": "layout",
       "viewport": "1640x900",
       "theme": "dark",
@@ -416,7 +416,7 @@
     },
     {
       "path": "layout/light/1440x900-harness.png",
-      "sha256": "9c757579804162f3cf71ee291e8c2f08953122dcdb24e33b3b416a45186e4c5f",
+      "sha256": "393a2cea4b48003d1401ad89605277f993b15a3fc59891af766ededb65de833d",
       "group": "layout",
       "viewport": "1440x900",
       "theme": "light",
@@ -425,7 +425,7 @@
     },
     {
       "path": "layout/dark/1440x900-harness.png",
-      "sha256": "83eb55d1bae08aa85213d73b5eb0b6edbb2d5172356fad1e97f42c07cccb29fd",
+      "sha256": "baeebd0c3f55a3ba2ea2b68ae7231de0170c78ac70a25aa442c3fe6ec4d610d5",
       "group": "layout",
       "viewport": "1440x900",
       "theme": "dark",
@@ -434,7 +434,7 @@
     },
     {
       "path": "layout/light/1280x800-harness.png",
-      "sha256": "d248147d4abd218c0ffc57930a1fd809209cf8200e0ff5889a1b3d41c0d9e053",
+      "sha256": "d3930d0ab8fb4684caf80c0e1f7936e7b4261bbc42771a8b15febed9449d3ee3",
       "group": "layout",
       "viewport": "1280x800",
       "theme": "light",
@@ -443,7 +443,7 @@
     },
     {
       "path": "layout/dark/1280x800-harness.png",
-      "sha256": "fda29dd789a8a1c8907b2c2f090fb01568e15aa4003ba0e81f5f0e84555963b7",
+      "sha256": "76e157da69b9682958ff13502dd57313f93782b7dc3b38062c66d8e9e51b2924",
       "group": "layout",
       "viewport": "1280x800",
       "theme": "dark",
@@ -461,7 +461,7 @@
     },
     {
       "path": "layout/dark/390x844-harness.png",
-      "sha256": "874bf4d50c59e78cb88c5a05fb7cf313c561299bd738b3946a78a1b1380a5177",
+      "sha256": "149be59ddd0cc7e674337f0565cfa14393096ecd6182df0040937450af83b642",
       "group": "layout",
       "viewport": "390x844",
       "theme": "dark",

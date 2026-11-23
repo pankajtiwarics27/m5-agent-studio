@@ -16,12 +16,12 @@ Environment: `linux` / `x64`, 2 CPUs, Node `v22.22.3`, `Python 3.11.2`, `Headles
 
 | Metric | Actual | Gate |
 | --- | ---: | ---: |
-| Fast real SSE schedules | 58 in 416.0ms (139.4/s) | ≥20 and ≥50/s |
-| Coalesced chat renders | 20 | fewer than 58 schedules, complete text retained |
-| Full-window ten-event frame | mean 1.88ms; nearest-rank p95 2.30ms; max 3.10ms | mean ≤4ms |
+| Fast real SSE schedules | 58 in 366.3ms (158.3/s) | ≥20 and ≥50/s |
+| Coalesced chat renders | 17 | fewer than 58 schedules, complete text retained |
+| Full-window ten-event frame | mean 2.03ms; nearest-rank p95 3.30ms; max 3.50ms | mean ≤4ms |
 | Events / cache / cards | 30,000 / 5,000 / 300 | 5,000 / 300 ceilings |
-| Post-GC document nodes | 8588 → 8588 → 8588 | repeated-cycle growth ≤64 |
-| Post-GC JS heap | 3.24 MiB → 3.20 MiB → 3.20 MiB | cycle growth ≤8 MiB; baseline growth ≤16 MiB |
+| Post-GC document nodes | 8588 → 8588 → 8612 | repeated-cycle growth ≤64 |
+| Post-GC JS heap | 3.24 MiB → 3.19 MiB → 3.20 MiB | cycle growth ≤8 MiB; baseline growth ≤16 MiB |
 
 Memory readings use CDP `Performance.getMetrics` immediately after `HeapProfiler.collectGarbage`. They are repeated-cycle plateau checks, not a claim that a browser never allocates during a frame.
 
@@ -33,9 +33,9 @@ Streaming intentionally moves cards inside the trajectory scroller. The gate rep
 | --- | --- | ---: | ---: | ---: | ---: | ---: |
 | 1640x900 | light | 0.15210 | 0.15210 | 0.00000 | 0.00px | 0px |
 | 1640x900 | dark | 0.24490 | 0.24490 | 0.00000 | 0.00px | 0px |
-| 1440x900 | light | 0.22236 | 0.22236 | 0.00000 | 0.00px | 0px |
+| 1440x900 | light | 0.19059 | 0.19059 | 0.00000 | 0.00px | 0px |
 | 1440x900 | dark | 0.31766 | 0.31766 | 0.00000 | 0.00px | 0px |
-| 1280x800 | light | 0.17168 | 0.17168 | 0.00000 | 0.00px | 0px |
+| 1280x800 | light | 0.20030 | 0.20030 | 0.00000 | 0.00px | 0px |
 | 1280x800 | dark | 0.28614 | 0.28614 | 0.00000 | 0.00px | 0px |
 | 390x844 | light | 0.65698 | 0.65698 | 0.00000 | 0.00px | 0px |
 | 390x844 | dark | 0.93855 | 0.93855 | 0.00000 | 0.00px | 0px |

@@ -330,3 +330,42 @@ activeHarnessId=null; renderHarnessWorkspaceContractFiles(); assert.match(node.t
 '''
     result = subprocess.run(["node", "-"], input=script, text=True, capture_output=True, cwd=ROOT, check=False)
     assert result.returncode == 0, result.stderr
+
+
+def test_evidence_modal_clears_and_fences_overlapping_session_reads():
+    html = HTML.read_text(encoding="utf-8")
+    start = html.index('  let harnessEvidencePayload = null;')
+    end = html.index('  function harnessEvidenceMetaText(', start)
+    script = r'''
+const assert=require('node:assert/strict');
+let activeHarnessId='one', nodes={}, rendered=[];
+let document={getElementById(id){return nodes[id] ||= {textContent:'old secret'}}};
+function harnessCachedEvents(){return [];} function harnessVerdictTone(){return '';}
+function renderHarnessEvidence(value){rendered.push(value);} function openOverlay(){} function closeOverlay(){}
+function showToast(){} let fetch;
+''' + html[start:end] + r'''
+(async()=>{
+  let releaseOld;
+  fetch=url=>String(url).endsWith('/task') ? new Promise(resolve=>{releaseOld=resolve}) : Promise.resolve({ok:true,json:async()=>({status:'old'})});
+  const old=refreshHarnessEvidence();
+  assert.equal(nodes.harnessEvidenceChange.textContent,''); assert.match(nodes.harnessEvidenceMeta.textContent,/reading/);
+  fetch=async url=>({ok:true,json:async()=>String(url).endsWith('/task')?{task:'new'}:{diff:'new'}});
+  await refreshHarnessEvidence();
+  releaseOld({ok:true,json:async()=>({task:'old'})}); await old;
+  assert.equal(rendered.length,1); assert.equal(rendered[0].task.task,'new');
+  let releaseA;
+  fetch=()=>new Promise(resolve=>{releaseA=resolve});
+  const a=refreshHarnessEvidence(); activeHarnessId='two'; invalidateHarnessEvidence(); activeHarnessId='one'; invalidateHarnessEvidence();
+  releaseA({ok:true,json:async()=>({task:'stale'})}); await a;
+  assert.equal(rendered.length,1); assert.equal(nodes.harnessEvidenceChange.textContent,'');
+  fetch=()=>new Promise(resolve=>{releaseA=resolve});
+  const closing=refreshHarnessEvidence(); closeHarnessEvidenceModal();
+  releaseA({ok:true,json:async()=>({task:'closed'})}); await closing;
+  assert.equal(rendered.length,1); assert.equal(nodes.harnessEvidenceMeta.textContent,'');
+  fetch=async()=>({ok:false,status:403}); await refreshHarnessEvidence();
+  assert.equal(rendered.length,2); assert.equal(rendered[1].task,null); assert.equal(rendered[1].diff,null);
+  assert.ok(rendered[1].errors.every(x=>x.includes('403')));
+})().catch(e=>{console.error(e);process.exit(1)});
+'''
+    result = subprocess.run(["node", "-"], input=script, text=True, capture_output=True, cwd=ROOT, check=False)
+    assert result.returncode == 0, result.stderr

@@ -43,7 +43,7 @@ is a bug in the caller, and the `error` kind is already how bugs are shown.
 | `#chatState` | Chat | `error` | `Retry`, `Dismiss` | 12625 |
 | `#chatState` | Chat | `recovery` | `Back to Chat`, `Open Harness` | 12651 |
 | `#chatState` | Chat | `recovery` | `Undo`, `Dismiss` | 12835 |
-| `#harnessSnapshotState` | Harness | `error` | `Retry status` | 14155 |
+| `#harnessSnapshotState` | Harness | `error` | `Retry status` | 14157 |
 
 20 call sites across 10 of 10 containers: 3 empty, 10 error, 7 recovery.
 
@@ -70,7 +70,7 @@ should not quietly become a pane rewrite:
 | Handler | Line |
 |---|---|
 | `installSkill()` | 6705 |
-| `openHarnessDiffModal()` | 15179 |
+| `openHarnessDiffModal()` | 15181 |
 
 ## Checks and limits
 

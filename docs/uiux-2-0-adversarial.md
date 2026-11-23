@@ -76,29 +76,29 @@ run a server that has no token configured.
 | `unloadAllModels` | 9153 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
 | `clearSsdCache` | 9161 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
 | `consumeSSE` | 9178 | reports — reads the refusal's own detail and Retry-After before it opens the stream, so the pane shows the server's reason and the wait instead of `HTTP <status>` |
-| `saveWorkspaceDirectory` | 13128 | reports — returns {ok, message} so Start can present a failure with a cause |
-| `createPathPickerFolder` | 13268 | reports — checks the response status and shows the server detail without applying or switching the workspace; draws or announces it in the pane |
-| `askPathPickerModel` | 13298 | reports — checks the response status and shows the server detail while retaining manual entry and separate create/apply consent; draws or announces it in the pane |
-| `patchActiveHarnessSettings` | 13559 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
-| `deleteHarnessSession` | 13583 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
-| `revokeHarnessGrant` | 14661 | reports — renders the refusal in the grants panel and keeps the grant listed |
-| `resolveHarnessApproval` | 15098 | reports — re-checks the live slot, then resyncs the session on a refusal and prints the server's detail |
-| `abortHarnessRun` | 15134 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
-| `applyHarnessWorktree` | 15194 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
-| `harnessRecoveryPost` | 16204 | reports — returns {ok, status, data} to its caller and never claims a resume it did not get |
-| `saveMcpServer` | 17671 | reports — toasts the server's detail and keeps the form |
-| `importMcpJson` | 17705 | reports — toasts the server's detail and keeps the pasted JSON |
-| `syncMcpServer` | 17719 | reports — toasts the server's detail and re-reads the server list |
-| `toggleMcpServerEnabled` | 17735 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
-| `changeMcpApprovalPolicy` | 17750 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
-| `toggleMcpSingleTool` | 17768 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
-| `deleteMcpServer` | 17783 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
-| `runMcpPlayground` | 17818 | reports — prints the server's detail in the output box |
-| `compactActiveHarness` | 17865 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
-| `saveOpenContextDoc` | 18091 | reports — toasts the server's detail and keeps the editor contents |
-| `togglePinOpenContextDoc` | 18105 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
-| `deleteOpenContextDoc` | 18118 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
-| `runCodeGraphPlayground` | 18169 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
+| `saveWorkspaceDirectory` | 13129 | reports — returns {ok, message} so Start can present a failure with a cause |
+| `createPathPickerFolder` | 13269 | reports — checks the response status and shows the server detail without applying or switching the workspace; draws or announces it in the pane |
+| `askPathPickerModel` | 13299 | reports — checks the response status and shows the server detail while retaining manual entry and separate create/apply consent; draws or announces it in the pane |
+| `patchActiveHarnessSettings` | 13561 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
+| `deleteHarnessSession` | 13585 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
+| `revokeHarnessGrant` | 14663 | reports — renders the refusal in the grants panel and keeps the grant listed |
+| `resolveHarnessApproval` | 15100 | reports — re-checks the live slot, then resyncs the session on a refusal and prints the server's detail |
+| `abortHarnessRun` | 15136 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
+| `applyHarnessWorktree` | 15196 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
+| `harnessRecoveryPost` | 16217 | reports — returns {ok, status, data} to its caller and never claims a resume it did not get |
+| `saveMcpServer` | 17684 | reports — toasts the server's detail and keeps the form |
+| `importMcpJson` | 17718 | reports — toasts the server's detail and keeps the pasted JSON |
+| `syncMcpServer` | 17732 | reports — toasts the server's detail and re-reads the server list |
+| `toggleMcpServerEnabled` | 17748 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
+| `changeMcpApprovalPolicy` | 17763 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
+| `toggleMcpSingleTool` | 17781 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
+| `deleteMcpServer` | 17796 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
+| `runMcpPlayground` | 17831 | reports — prints the server's detail in the output box |
+| `compactActiveHarness` | 17878 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
+| `saveOpenContextDoc` | 18104 | reports — toasts the server's detail and keeps the editor contents |
+| `togglePinOpenContextDoc` | 18118 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
+| `deleteOpenContextDoc` | 18131 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
+| `runCodeGraphPlayground` | 18182 | guarded — calls guardedWrite(), which reads the status before the body and draws the refusal |
 
 `guarded` writes call `guardedWrite()`; `reports` writes read the status and carry the server's own
 reason in a toast or a returned value, and the inventory names each one's line; anything else is a
