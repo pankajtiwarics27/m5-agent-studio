@@ -1,6 +1,6 @@
 # M5 Agent Studio — Autonomous Production Product Roadmap
 
-**Revision:** 2.6 • **Prepared:** 2026-11-08 • **Status:** owner-requested product specification and proposed execution program; not evidence of implementation, independent security acceptance, or authorization to bypass existing gates.
+**Revision:** 2.7 • **Prepared:** 2026-11-08 • **Status:** owner-requested product specification and proposed execution program; not evidence of implementation, independent security acceptance, or authorization to bypass existing gates.
 
 **Audience:** any implementation agent or human entering without this conversation. Read this document, the companion story ledger, and the agent prompt before proposing changes.
 
@@ -12,6 +12,30 @@
 **Source snapshot inspected:** `pankajtiwarics27/m5-agent-studio` main at `a67e8b291614f8afdac7c8d38ba51bcc8926d695`. Inspection covered repository guidance, module contracts and selected runtime-status documents; not a full code/security audit, installed-runtime qualification, or fresh end-to-end execution. Refresh against current main before implementing.
 
 **Precedence:** repository `AGENTS.md`, accepted security decisions, existing program ownership and signed approvals remain binding. This program does not replace the AS, M5 runtime, UIUX/UIV2, or LC ledgers, and does not reopen their completed stories. Reconcile overlapping work in AP-001. Drafting this roadmap does not grant automatic execution authority to its stories or to downloaded tools.
+
+## Revision 2.7 — AP-017 bounded specialists delivered (2026-11-23; AP-017 only)
+
+The owner said `sure go ahead` after this session reported AP-016 merged and
+recorded done. AP-017's dependencies (AP-005, AP-006, AP-007, AP-014, AP-015,
+AP-016) are done with no decision blockers. AP-018 is the next P4 story but
+depends on AP-008, which a separate session still holds `in_progress`, so it is
+not dependency-ready here and was not taken.
+
+The delivery adds `bounded_specialists.py`, a composition contract over
+`child_delegation`, `artifact_lineage`, `execution_budget` and
+`challenger_evaluation`: specialist authority and budget must be *strict* parent
+subsets, checked per task and again for the team's combined reservation;
+handoffs carry versioned artifact identities and write scopes are pairwise
+disjoint; dispatch and join transitions are recorded, bounded, and reconciled
+after a restart by failing open tasks closed; a reviewer receives a brief with
+evidence and cannot be asked to endorse the builder; logical parallelism is
+declared separately from concurrent local inference; and a team topology is
+retained only on a trustworthy, measured trade-off, defaulting to a single agent.
+
+It runs no model, workflow or provider and writes no production caller. Nothing
+is activated; `runtime_activation_authorized` remains `false`; ADR-0040–0045
+remain `not-reviewed`; AP-018 onward remain unauthorized and unclaimed. See
+[bounded specialists](bounded-specialists.md).
 
 ## Revision 2.6 — AP-016 recorded done (2026-11-23; AP-016 only)
 
