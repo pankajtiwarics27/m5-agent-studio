@@ -2269,7 +2269,7 @@
       "title": "Compose policy-aware routing and resource-safe scheduling",
       "priority": "P1",
       "optional": false,
-      "status": "in_progress",
+      "status": "in_review",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-004",
@@ -2329,10 +2329,10 @@
         "owner": "arena/650d4ee5-m5-agent-studio",
         "branch": "arena/650d4ee5-m5-agent-studio",
         "base_sha": "bf59c85cf13bff29bbcd7f1cbbcc2265be44e812",
-        "head_sha": null,
+        "head_sha": "98535f3c718396980c8e43a7a10a59d681fcc2a5",
         "claimed_at": "2026-11-22T02:00:00Z",
-        "heartbeat_at": "2026-11-22T02:00:00Z",
-        "pr_url": null,
+        "heartbeat_at": "2026-11-22T03:40:00Z",
+        "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/343",
         "delivery_status": "pr_open",
         "acceptance_evidence": [
           "AC1 compatibility, measured quality, grants and actual resource fit all precede dispatch: GATE_ORDER fixes five gates evaluated in order before any dispatch could occur, each gate function is separately testable, `unknown` blocks rather than passing, and resource fit uses currently free bytes rather than total capacity. Tests: test_the_five_gates_run_in_a_fixed_order, test_a_clean_candidate_passes_every_gate, test_an_unverified_feature_blocks_rather_than_passing, test_an_unsupported_feature_fails_the_compatibility_gate, test_a_required_feature_never_mentioned_is_unknown_not_passed, test_quality_below_the_minimum_fails, test_a_missing_grant_fails_the_grant_gate, test_a_broader_grant_subsumes_a_narrower_requirement, test_resource_fit_uses_free_memory_not_total, test_negative_available_memory_is_refused.",
