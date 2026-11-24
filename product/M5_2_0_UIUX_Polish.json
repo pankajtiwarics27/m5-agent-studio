@@ -5,7 +5,7 @@
     "frontend": "static/index.html",
     "walk": "scripts/polish_walk.mjs",
     "style_blocks": 2,
-    "rules": 1389
+    "rules": 1400
   },
   "tokens": {
     "radius": [
@@ -106,6 +106,8 @@
       "button:focus-visible, select:focus-visible, textarea:focus-visible, input:focus-visible,\nsummary",
       "summary:focus-visible, [tabindex]:focus-visible",
       ":is(input, textarea, select):focus-visible",
+      ".ev-file[data-feedback-region]:focus-visible",
+      ".harness-feedback-form textarea:focus-visible",
       ".mcp-wizard-heading:focus-visible",
       ".mcp-hub-tab:focus-visible",
       ".inspector-tab:focus-visible",
@@ -141,7 +143,7 @@
     ]
   },
   "totals": {
-    "radius_rules": 146,
+    "radius_rules": 148,
     "motion_rules": 18,
     "press_rules": 2,
     "hover_rules": 36,

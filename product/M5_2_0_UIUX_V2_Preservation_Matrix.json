@@ -8,10 +8,10 @@
   "check_with": "python3 scripts/uiux_v2_preservation_matrix.py --check",
   "statement": "Control -> DOM handler -> API route -> test coverage for every interactive control in static/index.html, plus the three UIV2-02 contract investigations. api_status is existing when every call the handler makes resolves to a mounted @app route, absent-route when a call matches no mounted route, unknown when the resolver left an edge open, no-api for handlers that never fetch, and no-handler for controls without an inline handler. The contracts distinguish existing / partial / absent / unknown and cite file evidence; the generator hard-fails if the sources drift from the classification, so --check is a gate.",
   "pinned_source_commit": "9a584a36f1fbe29ba467562dd12a705626769f00",
-  "frontend_sha256": "f70cef5c37dac2f5906ce781bdc957e2f07b54735c20ec5575cb120946fb3d30",
-  "app_sha256": "e8b4f40ded215b4e0d09eb99af37c20254f591d876f0da8ed0acd442e71f4edb",
+  "frontend_sha256": "a0a9c0739f19d017585d5f74990e7126c8cbdaa0c8d2c78221590a6b3989249d",
+  "app_sha256": "a039ad7bef243bac90ae76661ae7b99554b3098785b46634ca8758f644f27901",
   "totals": {
-    "controls": 276,
+    "controls": 279,
     "by_pane": {
       "start": 15,
       "harness": 38,
@@ -20,14 +20,14 @@
       "debate": 10,
       "chat": 13
     },
-    "chrome_controls": 163,
+    "chrome_controls": 166,
     "api_status_counts": {
-      "existing": 38,
-      "no-api": 144,
-      "no-handler": 94
+      "existing": 39,
+      "no-api": 145,
+      "no-handler": 95
     },
-    "mounted_routes": 123,
-    "fetch_call_sites": 73
+    "mounted_routes": 128,
+    "fetch_call_sites": 77
   },
   "controls": [
     {
@@ -80,6 +80,7 @@
         "test_process_supervision.py",
         "test_recovery_guard.py",
         "test_routing_experiments.py",
+        "test_scoped_feedback_routes.py",
         "test_scoped_grants.py",
         "test_security_incident_containment.py",
         "test_single_agent_vertical_slice.py",
@@ -302,6 +303,7 @@
         "test_process_supervision.py",
         "test_recovery_guard.py",
         "test_routing_experiments.py",
+        "test_scoped_feedback_routes.py",
         "test_scoped_grants.py",
         "test_security_incident_containment.py",
         "test_single_agent_vertical_slice.py",
@@ -431,6 +433,7 @@
         "test_process_supervision.py",
         "test_recovery_guard.py",
         "test_routing_experiments.py",
+        "test_scoped_feedback_routes.py",
         "test_scoped_grants.py",
         "test_security_incident_containment.py",
         "test_single_agent_vertical_slice.py",
@@ -490,6 +493,7 @@
         "test_process_supervision.py",
         "test_recovery_guard.py",
         "test_routing_experiments.py",
+        "test_scoped_feedback_routes.py",
         "test_scoped_grants.py",
         "test_security_incident_containment.py",
         "test_single_agent_vertical_slice.py",
@@ -2395,6 +2399,7 @@
         "test_process_supervision.py",
         "test_recovery_guard.py",
         "test_routing_experiments.py",
+        "test_scoped_feedback_routes.py",
         "test_scoped_grants.py",
         "test_security_incident_containment.py",
         "test_single_agent_vertical_slice.py",
@@ -2434,6 +2439,7 @@
         "test_process_supervision.py",
         "test_recovery_guard.py",
         "test_routing_experiments.py",
+        "test_scoped_feedback_routes.py",
         "test_scoped_grants.py",
         "test_security_incident_containment.py",
         "test_single_agent_vertical_slice.py",
@@ -2498,6 +2504,7 @@
         "test_process_supervision.py",
         "test_recovery_guard.py",
         "test_routing_experiments.py",
+        "test_scoped_feedback_routes.py",
         "test_scoped_grants.py",
         "test_security_incident_containment.py",
         "test_single_agent_vertical_slice.py",
@@ -2513,6 +2520,66 @@
       "tag": "button",
       "text": "Close",
       "handler": "closeHarnessEvidenceModal",
+      "calls": [],
+      "api_status": "no-api",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "harnessFeedbackText",
+      "tag": "textarea",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Record feedback",
+      "handler": "submitHarnessFeedback",
+      "calls": [
+        {
+          "method": "POST",
+          "route": "/api/harness/sessions/{session_id}/feedback",
+          "kind": "exact"
+        }
+      ],
+      "api_status": "existing",
+      "tests": [
+        "test_child_delegation.py",
+        "test_direction_checkpoints_routes.py",
+        "test_durable_task_state_machine.py",
+        "test_harness_ap008_recovery.py",
+        "test_harness_approval_ui.py",
+        "test_harness_evidence.py",
+        "test_harness_permissions.py",
+        "test_harness_recovery.py",
+        "test_harness_settings.py",
+        "test_harness_timeline.py",
+        "test_mcp_idempotency_reconciliation.py",
+        "test_portable_handoff_and_switching.py",
+        "test_process_supervision.py",
+        "test_recovery_guard.py",
+        "test_routing_experiments.py",
+        "test_scoped_feedback_routes.py",
+        "test_scoped_grants.py",
+        "test_security_incident_containment.py",
+        "test_single_agent_vertical_slice.py",
+        "test_start_recent.py",
+        "test_task_events.py",
+        "test_uiux_adversarial.py",
+        "test_workspace_snapshots.py"
+      ]
+    },
+    {
+      "pane": "chrome",
+      "id": null,
+      "tag": "button",
+      "text": "Clear selection",
+      "handler": "clearHarnessFeedbackSelection",
       "calls": [],
       "api_status": "no-api",
       "tests": []
@@ -2547,6 +2614,7 @@
         "test_process_supervision.py",
         "test_recovery_guard.py",
         "test_routing_experiments.py",
+        "test_scoped_feedback_routes.py",
         "test_scoped_grants.py",
         "test_security_incident_containment.py",
         "test_single_agent_vertical_slice.py",
@@ -2808,6 +2876,7 @@
         "test_process_supervision.py",
         "test_recovery_guard.py",
         "test_routing_experiments.py",
+        "test_scoped_feedback_routes.py",
         "test_scoped_grants.py",
         "test_security_incident_containment.py",
         "test_single_agent_vertical_slice.py",
@@ -3333,7 +3402,7 @@
       "classification": "present_registry__picker_rendered_from_it",
       "picker": {
         "status": "rendered_from_registry",
-        "evidence": "select#chatPersona at static/index.html:3985 ships no <option>; renderChatPersonaPicker() fills it from CHAT_PERSONAS on load and on every filter",
+        "evidence": "select#chatPersona at static/index.html:4011 ships no <option>; renderChatPersonaPicker() fills it from CHAT_PERSONAS on load and on every filter",
         "option_source": "CHAT_PERSONAS"
       },
       "registry": {

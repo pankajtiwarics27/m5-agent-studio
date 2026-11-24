@@ -1370,6 +1370,9 @@ summary:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--ring)
 .h-verdict-actions, .ev-actions { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
 .h-verdict-not { margin: 0; font-size: 10.7px; color: var(--text-faint); }
 .ev-block { display: flex; flex-direction: column; gap: 7px; }
+.ev-file[data-feedback-region] { cursor: pointer; border-radius: var(--radius-sm); }
+.ev-file[data-feedback-region]:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
+.ev-file[aria-pressed="true"] { background: var(--bg-code); box-shadow: inset 0 0 0 1px var(--ring); }
 .ev-heading { font-size: 10.8px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-faint); }
 .ev-subheading { font-size: 10.6px; font-weight: 700; color: var(--text-dim); }
 .ev-verdict { display: flex; flex-direction: column; gap: 7px; background: var(--bg-card); border: 1px solid var(--border); border-left: 3px solid var(--emerald); border-radius: var(--radius-md); padding: 10px 12px; }
@@ -1414,6 +1417,16 @@ summary:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--ring)
    different thing. */
 .harness-direction { margin: 0 0 9px; padding: 9px 10px 2px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); }
 .harness-direction[hidden] { display: none; }
+/* AP-019: the feedback composer. The textarea is the plain-text fallback and is never hidden
+   behind a selection tool; the selection only narrows what a comment applies to. */
+.harness-feedback-form { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; }
+.harness-feedback-form textarea { width: 100%; min-height: 44px; resize: vertical; padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-code); color: var(--text); font: inherit; font-size: 12px; line-height: 1.5; }
+.harness-feedback-form textarea:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
+.harness-feedback-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.harness-feedback-actions #harnessFeedbackSelection { margin: 0; flex: 1 1 auto; min-width: 120px; }
+.harness-feedback [data-tone="danger"] { color: var(--danger, #e5484d); }
+.harness-feedback [data-tone="ok"] { color: var(--ok, #30a46c); }
+.harness-feedback [data-tone="warn"] { color: var(--warn, #f5a623); }
 .harness-direction .ev-note { display: block; margin: 6px 0 8px; padding-top: 6px; border-top: 1px solid var(--border); }
 .harness-recovery-note[data-tone="ok"] { color: #6ee7b7; }
 .harness-recovery-note[data-tone="warn"] { color: #fde68a; }
@@ -3071,6 +3084,19 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
       <div id="harnessEvidenceObserved" class="ev-block"></div>
       <div id="harnessEvidenceChange" class="ev-block"></div>
       <div id="harnessEvidenceArtifacts" class="ev-block"></div>
+      <div class="ev-block harness-feedback" id="harnessFeedbackBlock">
+        <div id="harnessFeedbackPanel"></div>
+        <form id="harnessFeedbackForm" class="harness-feedback-form" onsubmit="return submitHarnessFeedback(event)">
+          <label class="ev-subheading" for="harnessFeedbackText">Feedback on this artifact</label>
+          <textarea id="harnessFeedbackText" rows="2" maxlength="2000" placeholder="Say what should change. A region you select narrows this to that region; without a selection it applies to this artifact version only."></textarea>
+          <div class="harness-feedback-actions">
+            <button type="button" class="btn btn-xs btn-primary" onclick="submitHarnessFeedback(event)">Record feedback</button>
+            <button type="button" class="btn btn-xs" onclick="clearHarnessFeedbackSelection()">Clear selection</button>
+            <span id="harnessFeedbackSelection" class="ev-note" role="status"></span>
+          </div>
+          <p class="ev-note">Recording a comment is not accepting the artifact and does not publish anything. A preference is never inferred from one comment; widening is a separate decision with a stated reason.</p>
+        </form>
+      </div>
       <div id="harnessEvidenceLimits" class="ev-block"></div>
     </div>
   </div>
@@ -15641,7 +15667,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     const added = files.reduce((total, file) => total + file.added, 0);
     const deleted = files.reduce((total, file) => total + file.deleted, 0);
     const rows = files.length
-      ? files.map(file => `<div class="ev-file">
+      ? files.map(file => `<div class="ev-file" role="button" tabindex="0" title="Narrow feedback to this file" aria-pressed="${harnessFeedbackSelection && harnessFeedbackSelection.locator === file.path ? "true" : "false"}" data-feedback-region="${escapeHtml(file.path)}" onclick="selectHarnessFeedbackRegion(this.dataset.feedbackRegion)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectHarnessFeedbackRegion(this.dataset.feedbackRegion);}">
           <span class="ev-file-path mono">${escapeHtml(file.path)}</span>
           <span class="ev-file-add mono">+${escapeHtml(String(file.added))}</span>
           <span class="ev-file-del mono">-${escapeHtml(String(file.deleted))}</span>
@@ -15657,7 +15683,8 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
       </dl>
       ${rows}
       <div class="ev-actions"><button class="btn btn-xs" type="button" onclick="openHarnessDiffModal()">Read the full unified diff</button></div>
-      <p class="ev-note">This diff is the worktree as it is now, not a copy frozen at the verdict: a change made after the turn appears here too.</p>`;
+      <p class="ev-note">This diff is the worktree as it is now, not a copy frozen at the verdict: a change made after the turn appears here too.</p>
+      <p class="ev-note">Selecting a file above narrows the feedback to that region. Selecting nothing is fine: the comment then applies to this artifact version as a whole.</p>`;
   }
 
   function harnessCheckpointReferencesHtml(task, sessionId) {
@@ -15767,6 +15794,189 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
       <ul class="ev-limits">${HARNESS_EVIDENCE_LIMITS.map(limit => `<li>${escapeHtml(limit)}</li>`).join("")}</ul>`;
   }
 
+  // ---- AP-019: feedback state, capture and the optional selection -----------------------
+  // The selection is optional by design: precision must never be the price of reporting a
+  // problem. When there is none, the comment is recorded at artifact scope, which is a claim
+  // about one version -- not about the owner's taste in general.
+  let harnessFeedbackPayload = null;     // {sessionId, artifactId, digest, data, error}
+  let harnessFeedbackSelection = null;   // {locatorKind, locator, artifactSha256}
+  let harnessFeedbackNote = null;        // {tone, text}
+
+  // The artifact version feedback is bound to. It is the latest checkpoint's recorded artifact
+  // for this session; without one there is no version to pin to, and the pane says so rather
+  // than accepting a comment it could never check for staleness.
+  function harnessFeedbackTarget(task, sessionId) {
+    const versions = task && Array.isArray(task.session_artifact_versions) ? task.session_artifact_versions : [];
+    const first = versions.find(version => version && typeof version.artifact_id === "string" && harnessFeedbackDigest(version.content_sha256));
+    if (!first) return null;
+    return { sessionId: String(sessionId || ""), artifactId: first.artifact_id, digest: harnessFeedbackDigest(first.content_sha256) };
+  }
+
+  async function loadHarnessFeedback(target) {
+    if (!target || !target.sessionId) {
+      harnessFeedbackPayload = null;
+      return;
+    }
+    try {
+      const response = await fetch(
+        `/api/harness/sessions/${encodeURIComponent(target.sessionId)}/feedback?artifact_id=${encodeURIComponent(target.artifactId)}&artifact_sha256=${target.digest}`,
+      );
+      const data = response.ok ? await response.json() : { error: `HTTP ${response.status}` };
+      // A response for a session that is no longer active must not be drawn over the new one.
+      if (String(target.sessionId) !== String(activeHarnessId || "")) return;
+      harnessFeedbackPayload = { ...target, data, error: response.ok ? "" : (data.detail || data.error || "read failed") };
+    } catch (error) {
+      harnessFeedbackPayload = { ...target, data: null, error: `the request never reached the server: ${error.message}` };
+    }
+    renderHarnessFeedback();
+  }
+
+  function harnessFeedbackSay(text, tone) {
+    harnessFeedbackNote = text ? { text: String(text), tone: tone || "info" } : null;
+    renderHarnessFeedback();
+  }
+
+  function renderHarnessFeedback() {
+    const host = document.getElementById("harnessFeedbackPanel");
+    if (!host) return;
+    const note = harnessFeedbackNote;
+    const noteHtml = note ? `<p class="ev-note" data-tone="${escapeHtml(note.tone)}">${escapeHtml(note.text)}</p>` : "";
+    if (!harnessFeedbackPayload) {
+      host.innerHTML = `<div class="ev-heading">Feedback</div>
+        <p class="ev-note">No artifact version is recorded for this session yet, so there is nothing to bind feedback to. A comment that cannot name its version cannot be checked for staleness later.</p>${noteHtml}`;
+      return;
+    }
+    if (harnessFeedbackPayload.error) {
+      host.innerHTML = `<div class="ev-heading">Feedback</div>
+        <p class="ev-note">The feedback record could not be read: ${escapeHtml(harnessFeedbackPayload.error)}</p>${noteHtml}`;
+      return;
+    }
+    host.innerHTML = harnessFeedbackHtml(harnessFeedbackPayload.data) + noteHtml;
+    const status = document.getElementById("harnessFeedbackSelection");
+    if (status) {
+      status.textContent = harnessFeedbackSelection
+        ? `Narrowed to ${harnessFeedbackSelection.locatorKind}: ${harnessFeedbackSelection.locator}`
+        : "No selection: this will apply to this artifact version only";
+    }
+  }
+
+  // A region is a convenience, never a requirement. Whatever is selected has to name the
+  // version it was selected on, because a region id from one version means nothing in another.
+  function selectHarnessFeedbackRegion(locator) {
+    const payload = harnessFeedbackPayload;
+    const name = harnessFeedbackText(locator, 300);
+    if (!payload || payload.error || !name) {
+      harnessFeedbackSay("A region can only be selected once an artifact version is bound, so nothing was narrowed.", "warn");
+      return;
+    }
+    if (harnessFeedbackSelection && harnessFeedbackSelection.locator === name) {
+      clearHarnessFeedbackSelection();
+      return;
+    }
+    harnessFeedbackSelection = { locatorKind: "region", locator: name, artifactSha256: payload.digest };
+    if (harnessFeedbackNote && harnessFeedbackNote.tone === "warn") harnessFeedbackNote = null;
+    renderHarnessFeedback();
+    refreshHarnessEvidenceSelection();
+  }
+
+  function clearHarnessFeedbackSelection() {
+    harnessFeedbackSelection = null;
+    renderHarnessFeedback();
+    refreshHarnessEvidenceSelection();
+  }
+
+  // Only the pressed state of the file rows changes here; the diff itself is not re-fetched,
+  // so this cannot present a stale diff as a fresh one.
+  function refreshHarnessEvidenceSelection() {
+    document.querySelectorAll("#harnessEvidenceChange [data-feedback-region]").forEach(node => {
+      node.setAttribute("aria-pressed", harnessFeedbackSelection && harnessFeedbackSelection.locator === node.dataset.feedbackRegion ? "true" : "false");
+    });
+  }
+
+  // Which reading did the owner mean? This records the meaning of the words. It does not
+  // accept the artifact, and the sentence under the button says so -- an owner who confirms a
+  // reading must not later be told they approved the work.
+  async function confirmHarnessFeedback(feedbackId) {
+    const payload = harnessFeedbackPayload;
+    if (!payload || payload.error) return;
+    try {
+      const response = await fetch(`/api/harness/sessions/${encodeURIComponent(payload.sessionId)}/feedback/${encodeURIComponent(feedbackId)}/confirm`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmed_by: "owner" }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        harnessFeedbackSay(`The confirmation was refused: ${(data && (data.detail || data.error)) || `HTTP ${response.status}`}`, "danger");
+        return;
+      }
+      harnessFeedbackPayload = { ...payload, data, error: "" };
+      harnessFeedbackNote = { tone: "ok", text: "Reading confirmed. That settles what the words meant, and nothing about whether the work is accepted." };
+      renderHarnessFeedback();
+    } catch (error) {
+      harnessFeedbackSay(`The request never reached the server: ${error.message}`, "danger");
+    }
+  }
+
+  // Withdrawing is not deleting the history: the server keeps the record and stops counting it.
+  async function withdrawHarnessFeedback(feedbackId) {
+    const payload = harnessFeedbackPayload;
+    if (!payload || payload.error) return;
+    try {
+      const response = await fetch(`/api/harness/sessions/${encodeURIComponent(payload.sessionId)}/feedback/${encodeURIComponent(feedbackId)}`, { method: "DELETE" });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        harnessFeedbackSay(`The withdrawal was refused: ${(data && (data.detail || data.error)) || `HTTP ${response.status}`}`, "danger");
+        return;
+      }
+      harnessFeedbackPayload = { ...payload, data, error: "" };
+      harnessFeedbackNote = { tone: "ok", text: "Withdrawn. The record of what was said stays where it is; it no longer applies to this version." };
+      renderHarnessFeedback();
+    } catch (error) {
+      harnessFeedbackSay(`The request never reached the server: ${error.message}`, "danger");
+    }
+  }
+
+  async function submitHarnessFeedback(event) {
+    if (event && event.preventDefault) event.preventDefault();
+    const payload = harnessFeedbackPayload;
+    const field = document.getElementById("harnessFeedbackText");
+    const text = field ? String(field.value || "").trim() : "";
+    if (!payload || payload.error) {
+      harnessFeedbackSay("There is no artifact version to record this against, so nothing was sent.", "warn");
+      return false;
+    }
+    if (!text) {
+      harnessFeedbackSay("Nothing was recorded: say what should change, or use a quick action.", "warn");
+      return false;
+    }
+    try {
+      const response = await fetch(`/api/harness/sessions/${encodeURIComponent(payload.sessionId)}/feedback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          artifact_id: payload.artifactId,
+          artifact_sha256: payload.digest,
+          verbatim: text,
+          selection: harnessFeedbackSelection,
+        }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        harnessFeedbackSay(`The record was refused: ${(data && (data.detail || data.error)) || `HTTP ${response.status}`}`, "danger");
+        return false;
+      }
+      if (field) field.value = "";
+      harnessFeedbackSelection = null;
+      harnessFeedbackPayload = { ...payload, data, error: "" };
+      harnessFeedbackNote = { tone: "ok", text: "Recorded against this version. Confirming what it means is a separate step, and neither one accepts the artifact." };
+      renderHarnessFeedback();
+    } catch (error) {
+      harnessFeedbackSay(`The request never reached the server: ${error.message}`, "danger");
+    }
+    return false;
+  }
+
   function renderHarnessEvidence(payload) {
     const meta = document.getElementById("harnessEvidenceMeta");
     if (meta) {
@@ -15783,6 +15993,15 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     for (const [id, html] of sections) {
       const node = document.getElementById(id);
       if (node) node.innerHTML = html;
+    }
+    // AP-019: feedback is loaded from the server for exactly the version the panel is showing,
+    // so a comment is always recorded against what the reader is looking at.
+    const target = harnessFeedbackTarget(payload.task, payload.sessionId);
+    if (target) {
+      loadHarnessFeedback(target);
+    } else {
+      harnessFeedbackPayload = null;
+      renderHarnessFeedback();
     }
   }
 
@@ -16256,6 +16475,137 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
       ${model.points.length ? `<ul class="ev-limits">${model.points.map(point => `<li>${escapeHtml(point)}</li>`).join("")}</ul>` : ""}
       ${harnessEvidenceFactListHtml(rows)}
       <p class="ev-note">Approving a direction is not accepting this artifact, and it does not publish, deploy or spend anything. Final acceptance is a separate decision, and so is adopting this work as a reference.</p>`;
+  }
+
+  // ================= AP-019: SCOPED FEEDBACK =================
+  // A correction about one thing must not quietly become a rule about everything. The panel
+  // below records what the owner said against the exact artifact version they said it about,
+  // at the narrowest scope their action supports: a selection makes it element-scoped, plain
+  // words make it artifact-scoped, and a preference is never inferred -- widening needs the
+  // promote path with a basis, which this pane does not offer as a shortcut.
+  //
+  // Two sentences are load-bearing here as well:
+  //   - confirming what the words mean is not accepting the artifact;
+  //   - feedback is bound to a version, so a comment on an older version is shown as stale
+  //     rather than applied to what is on screen now.
+  const HARNESS_FEEDBACK_SCOPES = {
+    element: "only the region you selected",
+    artifact: "this artifact, this version",
+    preference: "more than one artifact",
+  };
+
+  const HARNESS_FEEDBACK_ACTIONS = [
+    ["shorter", "Shorter"],
+    ["longer", "Longer"],
+    ["louder", "More prominent"],
+    ["quieter", "Less prominent"],
+    ["plain", "Plainer words"],
+    ["keep", "Keep as it is"],
+  ];
+
+  function harnessFeedbackText(value, max) {
+    return typeof value === "string" ? value.slice(0, max || 512) : "";
+  }
+
+  function harnessFeedbackDigest(value) {
+    const digest = String(value || "").trim().toLowerCase();
+    return /^[0-9a-f]{64}$/.test(digest) ? digest : "";
+  }
+
+  // What the pane must be able to say about one item, from the record alone.
+  function harnessFeedbackModel(payload) {
+    if (!payload || typeof payload !== "object") return null;
+    const items = Array.isArray(payload.items) ? payload.items : [];
+    const stale = Array.isArray(payload.stale) ? payload.stale : [];
+    const revision = payload.revision && typeof payload.revision === "object" ? payload.revision : null;
+    return {
+      artifactId: harnessFeedbackText(payload.artifact_id, 256),
+      digest: harnessFeedbackDigest(payload.artifact_sha256),
+      items: items.map(item => ({
+        id: harnessFeedbackText(item.feedback_id, 120),
+        scope: harnessFeedbackText(item.scope_kind, 32),
+        reach: HARNESS_FEEDBACK_SCOPES[item.scope_kind] || "",
+        verbatim: harnessFeedbackText(item.verbatim, 2000),
+        interpretation: harnessFeedbackText(item.interpretation, 2000),
+        locator: item.selection && typeof item.selection === "object"
+          ? harnessFeedbackText(item.selection.locator, 300)
+          : "",
+        live: !item.deleted && !item.superseded_by,
+        deleted: item.deleted === true,
+        supersededBy: harnessFeedbackText(item.superseded_by, 120),
+        awaiting: revision && Array.isArray(revision.awaiting_confirmation)
+          ? revision.awaiting_confirmation.includes(item.feedback_id)
+          : false,
+        confirmed: item.confirmed === true,
+      })),
+      stale: stale.map(item => ({
+        id: harnessFeedbackText(item.feedback_id, 120),
+        verbatim: harnessFeedbackText(item.verbatim, 2000),
+        version: harnessFeedbackDigest(item.artifact_sha256).slice(0, 12),
+      })),
+      conflictCount: Array.isArray(payload.conflicts) ? payload.conflicts.length : 0,
+      ready: Boolean(revision && revision.ready),
+      awaitingCount: Array.isArray(payload.awaiting_confirmation) ? payload.awaiting_confirmation.length : 0,
+      hasVersion: Boolean(harnessFeedbackDigest(payload.artifact_sha256)),
+    };
+  }
+
+  // Every value is escaped text: the owner's words are data from outside the pane.
+  function harnessFeedbackHtml(payload) {
+    const model = harnessFeedbackModel(payload);
+    if (!model) return "";
+    if (!model.hasVersion) {
+      return `<div class="ev-heading">Feedback</div>
+        <p class="ev-note">This artifact has no recorded version, so feedback cannot be pinned to it. A comment that cannot name its version cannot be checked for staleness later, so none is accepted here.</p>`;
+    }
+    const rows = [];
+    rows.push({
+      label: "Bound to version",
+      value: `sha256 ${model.digest}`,
+      mono: true,
+      note: "Feedback is recorded against this exact version. If the artifact changes, earlier comments are shown as stale instead of being applied to the new one.",
+    });
+    if (model.awaitingCount) {
+      rows.push({
+        label: "Waiting on you",
+        value: `${model.awaitingCount} reading(s) to confirm`,
+        mono: false,
+        note: "The wording could mean more than one thing. Nothing is revised until you say which reading you meant.",
+      });
+    }
+    if (model.conflictCount) {
+      rows.push({
+        label: "Contradictory comments",
+        value: `${model.conflictCount} pair(s) on one region`,
+        mono: false,
+        note: "These cannot both be acted on. They are shown rather than averaged into a change nobody asked for.",
+      });
+    }
+    rows.push({
+      label: "Could revise now",
+      value: model.ready ? "yes, every comment is unambiguous" : "not yet",
+      mono: false,
+    });
+    const liveItems = model.items.filter(item => item.live);
+    // Each item states its reach, its own words (never a summary of them) and the two things an
+    // owner can do about it: say what the words meant, or withdraw it. Neither rewords the
+    // record; withdrawing keeps it as a tombstone so the history is not rewritten.
+    const itemHtml = liveItems.length
+      ? `<ul class="ev-limits">${liveItems.map(item => `<li>
+          <strong>${escapeHtml(item.reach || item.scope)}</strong> · ${escapeHtml(item.verbatim)}${item.locator ? ` <span class="mono">(${escapeHtml(item.locator)})</span>` : ""}
+          ${item.awaiting ? `<div class="harness-feedback-actions"><span class="ev-more">The wording could mean more than one thing.</span><button class="btn btn-xs" type="button" onclick="confirmHarnessFeedback('${escapeHtml(item.id)}')">This is what I meant</button></div>` : item.confirmed ? '<span class="ev-more"> · reading confirmed</span>' : ""}
+          <div class="harness-feedback-actions"><button class="btn btn-xs" type="button" onclick="withdrawHarnessFeedback('${escapeHtml(item.id)}')">Withdraw</button></div>
+        </li>`).join("")}</ul>`
+      : `<p class="ev-note">No feedback has been recorded for this version.</p>`;
+    const staleHtml = model.stale.length
+      ? `<div class="ev-subheading">Earlier versions</div><ul class="ev-limits">${model.stale.map(item => `<li>${escapeHtml(item.verbatim)} <span class="mono">(version ${escapeHtml(item.version)}…)</span> — no longer describes what is on screen</li>`).join("")}</ul>`
+      : "";
+    return `<div class="ev-heading">Feedback</div>
+      ${harnessEvidenceFactListHtml(rows)}
+      <div class="ev-subheading">What you asked for</div>
+      ${itemHtml}
+      ${staleHtml}
+      <p class="ev-note">Confirming what a comment means is not accepting the artifact. It records that the words were understood, and nothing here accepts, publishes or approves the work.</p>`;
   }
 
   function harnessRecoveryFactsHtml(facts) {

@@ -111,6 +111,8 @@
       "test_routing_*.py",
       "test_runtime_dispatch*.py",
       "test_shared_memory_admission.py",
+      "test_scoped_feedback.py",
+      "test_scoped_feedback_routes.py",
       "test_workflow_coordinated.py"
     ],
     "storage.history": [
@@ -505,6 +507,9 @@
       "quality.docs-ci"
     ],
     "direction_checkpoints.py": [
+      "models.providers"
+    ],
+    "scoped_feedback.py": [
       "models.providers"
     ]
   }
