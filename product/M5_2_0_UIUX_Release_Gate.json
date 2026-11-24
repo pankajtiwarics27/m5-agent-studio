@@ -900,15 +900,15 @@
         {
           "artifact": "product/M5_2_0_UIUX_Screenshot_Review.json",
           "totals": {
-            "sets": 38,
-            "files": 1784,
-            "reviewed_sets": 38,
-            "sets_eyed": 18,
-            "files_eyed": 104,
-            "re_taken_sets": 14,
+            "sets": 39,
+            "files": 1787,
+            "reviewed_sets": 39,
+            "sets_eyed": 19,
+            "files_eyed": 105,
+            "re_taken_sets": 15,
             "published_sets": 1,
             "findings": 0,
-            "observations": 31
+            "observations": 32
           }
         }
       ]
@@ -1155,9 +1155,9 @@
     "e2e_findings": 0,
     "refusals": 12,
     "refusal_statuses": 9,
-    "captures": 1784,
-    "capture_sets": 38,
-    "reviewed_sets": 38,
+    "captures": 1787,
+    "capture_sets": 39,
+    "reviewed_sets": 39,
     "screenshot_findings": 0,
     "doc_pages": 5,
     "doc_commands": 47,

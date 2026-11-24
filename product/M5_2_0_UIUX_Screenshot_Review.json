@@ -9,15 +9,15 @@
   "statement": "Every committed capture, the script that made it, what a reviewer concluded about it, and the checks that keep the claim honest: the index agrees with the disk, the theme in the filename is the theme in the pixels, the producer still exists, and a set that was re-shot in this story says so. A set nobody reviewed is a finding.",
   "luminance_measured": true,
   "totals": {
-    "sets": 38,
-    "files": 1784,
-    "reviewed_sets": 38,
-    "sets_eyed": 18,
-    "files_eyed": 104,
-    "re_taken_sets": 14,
+    "sets": 39,
+    "files": 1787,
+    "reviewed_sets": 39,
+    "sets_eyed": 19,
+    "files_eyed": 105,
+    "re_taken_sets": 15,
     "published_sets": 1,
     "findings": 0,
-    "observations": 31
+    "observations": 32
   },
   "coverage": {
     "grid": {
@@ -30,12 +30,12 @@
         "desktop": 121
       },
       "harness": {
-        "sets": 15,
-        "files": 197,
+        "sets": 16,
+        "files": 200,
         "dark": 85,
         "light": 73,
         "narrow": 38,
-        "desktop": 155
+        "desktop": 158
       },
       "hall": {
         "sets": 9,
@@ -5257,6 +5257,60 @@
           "theme": null,
           "theme_measured": "light",
           "luminance": 0.968
+        }
+      ]
+    },
+    {
+      "set": "harness-direction",
+      "directory": "docs/media/harness-direction",
+      "story": "AP-018",
+      "producer": "scripts/harness_direction_walk.mjs",
+      "producer_from": "curated",
+      "index": null,
+      "reviewed": true,
+      "note": "A direction check-in and what it is not: the sample, the digest of the exact version shown and the question sit inside their own bounded block, the limit is stated beside the buttons, and a hostile sample id is drawn as text rather than markup.",
+      "eye": [
+        "direction-waiting.png"
+      ],
+      "re_taken": true,
+      "theme_claim": "light",
+      "known_failing_producer": false,
+      "files": [
+        {
+          "file": "harness-direction/direction-answered.png",
+          "name": "direction-answered.png",
+          "bytes": 173392,
+          "sha256": "b603a02fc338334479afef1b1362f1186890c3fc9287b94ffc0c52be2fb3d989",
+          "width": 1440,
+          "height": 960,
+          "css_width": 1440,
+          "theme": null,
+          "theme_measured": "light",
+          "luminance": 0.9703
+        },
+        {
+          "file": "harness-direction/direction-hostile-text.png",
+          "name": "direction-hostile-text.png",
+          "bytes": 178377,
+          "sha256": "d3bbc26f3e5a9c124907774769ee4cffc2351a36340f1b2370430a3433c3f50d",
+          "width": 1440,
+          "height": 960,
+          "css_width": 1440,
+          "theme": null,
+          "theme_measured": "light",
+          "luminance": 0.9699
+        },
+        {
+          "file": "harness-direction/direction-waiting.png",
+          "name": "direction-waiting.png",
+          "bytes": 170666,
+          "sha256": "9311bc97660817f16d51d39eb123a5bc691d84ac56342c86b15b9f966a0570be",
+          "width": 1440,
+          "height": 960,
+          "css_width": 1440,
+          "theme": null,
+          "theme_measured": "light",
+          "luminance": 0.9711
         }
       ]
     },
@@ -22637,6 +22691,11 @@
     {
       "check": "no-index",
       "set": "harness",
+      "detail": "no index.json, so the set records neither when it was captured nor the checksum of what it holds"
+    },
+    {
+      "check": "no-index",
+      "set": "harness-direction",
       "detail": "no index.json, so the set records neither when it was captured nor the checksum of what it holds"
     },
     {

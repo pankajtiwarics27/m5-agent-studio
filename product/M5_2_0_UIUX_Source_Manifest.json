@@ -26,8 +26,8 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "4310bc829e11293eec21022b6fe58f29e9d13c87ad63ec84d6f62ba686ab4fe1",
-      "bytes": 4650955,
+      "sha256": "a255da9e22fc70c26bedeea5a37a06d1b0800a88c384ce21ed0e3a216904519e",
+      "bytes": 4651055,
       "lines": 91168
     },
     {
@@ -68,9 +68,9 @@
     {
       "path": "scripts/build_studio.py",
       "role": "regenerates studio.py from app.py and the inlined modules",
-      "sha256": "aceea9c3d32392eeb615e8f8e63db3623e7f27b767ec4844651f679be7bc4170",
-      "bytes": 11313,
-      "lines": 257
+      "sha256": "ebb5327419da0118dfe7fa7cf06ac555db0a8fc1e73c6c7bd16236cd92164937",
+      "bytes": 12904,
+      "lines": 289
     },
     {
       "path": "scripts/check_frontend_syntax.py",
@@ -418,9 +418,9 @@
     {
       "path": "scripts/uiux_screenshot_review.py",
       "role": "traces every committed capture to the script that made it and checks that the theme in its name is the theme in its pixels",
-      "sha256": "92c8ba67684914df01539d3eb4d0ccf8e4355edc43166a91f6b489648b339720",
-      "bytes": 82719,
-      "lines": 1520
+      "sha256": "b15ac71993a636f88412363f41b823f8737163d2ea8fb1df2dec0fa453bf4dda",
+      "bytes": 83255,
+      "lines": 1532
     },
     {
       "path": "tests/test_uiux_screenshot_review.py",
