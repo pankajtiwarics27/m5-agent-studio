@@ -1708,7 +1708,7 @@
       "title": "Expose clean mission controls and artifact-first status",
       "priority": "P0",
       "optional": false,
-      "status": "in_progress",
+      "status": "in_review",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-005",
@@ -1763,9 +1763,9 @@
         "owner": "arena/ab195e0f-m5-agent-studio",
         "branch": "arena/ab195e0f-m5-agent-studio",
         "base_sha": "e721fc2d4efbb3d70c5ca8b9aea1a6f1ef1a2a1a",
-        "head_sha": "6d564b2ab32b1c2fd70b2ea0e98e7cbc0c5e9d5b",
+        "head_sha": "c60bc623b0f0a7e5c1bd2c9c8e8a0d6f6a5e2f3d",
         "claimed_at": "2026-11-23T15:02:00Z",
-        "heartbeat_at": "2026-11-23T16:55:00Z",
+        "heartbeat_at": "2026-11-24T04:10:00Z",
         "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/356",
         "delivery_status": "pr_open",
         "authorization_record": {
@@ -1776,7 +1776,17 @@
           "scope_limit": "AP-008's remaining gap only: session-scoped artifact versions and source references from the integrated routes. Does not authorize runtime activation, IsolationAcceptance, live dispatch, installed-runtime qualification, or AP-018 onward.",
           "superseded_pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/348"
         },
-        "acceptance_evidence": [],
+        "acceptance_evidence": [
+          "AC1 status derives from durable backend state and recovers after reconnect: GET /api/harness/sessions/{id}/state is rebuilt from SQLite task/checkpoint rows plus the session event log; tests/test_harness_ap008_recovery.py covers snapshot failure and recovery and tests/test_harness_timeline.py covers jump-to-latest and a dropped-stream reconnect.",
+          "AC2 preview/files/sources without a permanent control-heavy toolbar: the verification panel reads latest_checkpoint, checkpoint_integrity_error, global lineage (labelled as not session-specific) and session_artifact_versions; docs/ap008-evidence-session-artifact-versions.md.",
+          "AC3 pause/stop/needs-input preserve drafts and show real outcomes: tests/test_harness_recovery.py asserts the two-press cancel, the un-resumable cancelled state, the deferred-pause refusal and the draft guard; the Chromium recovery walk exercises them.",
+          "AC4 keyboard/focus, light/dark, phone widths and 200% zoom: UIV2-28 120/120 checks at 1640x900, 1440x900, 1280x800 and 390x844 in both themes including half-CSS-viewport 200% zoom, re-captured from this tree with real Chromium in product/M5_2_0_UIUX_V2_Accessibility_AP008_Run.json.",
+          "AC5 untrusted artifact previews cannot reach credentials or privileged origin/network APIs: risk rows render recorded values as inert text through escapeHtml with no element and no handler (scripts/ui-probes/ev-facts-note.mjs plus its test), and the UIV2-28 adversarial checks include inert-text injection.",
+          "AC6 existing six-pane feature/control routes remain mapped: tests/test_harness_recovery.py::test_every_preserved_route_still_exists with the regenerated route map and source manifest (121 routes, 6 tabs).",
+          "AC7 applicable UX requirements and preservation: cross-tab reference 2200/2200 across 48 captures at a clean head (c29d943), Compare continuity 15/15, UI/UX release gate 37/37 artifact checks and 7/7 phase gates, UIV2-30 review ready with 0 findings.",
+          "Functional delivery: EvidenceRef records producer, producer_version, config_sha256 and input_versions; checkpoints written before that change re-verify byte-identically (proven by hashing the pre-upgrade bytes); identical bytes from different producers now yield different version identities.",
+          "Not claimed here: independent security/release review (the owner performs it at the end of the program), runtime activation, IsolationAcceptance, live dispatch and installed-runtime qualification remain absent; UIV2-29 isolation is unqualified and blocked."
+        ],
         "tests_executed": [
           "Claim head 7d37a49: scoped docs-ledger 44 passed; prior Harness baseline 120 passed (one warning).",
           "Candidate worktree: AP-008 and Harness focused regressions 121 passed (one warning); added AP-008 and CI-shard tests 7 passed; Chromium recovery walk 28/28 including 503 retry, keyboard focus and draft guard; cross-tab structural check 2200/2200 across 48 captures; UIV2-28 and UIV2-29 browser walks passed; UIV2-29 backend gate 308 tests and 16 isolation checks (isolation unqualified, blocked).",
