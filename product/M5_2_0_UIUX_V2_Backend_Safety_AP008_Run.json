@@ -1,14 +1,14 @@
 {
   "story": "UIV2-29",
   "kind": "backend-safety-run",
-  "generated_at": "2026-11-24T09:12:08.823545+00:00",
+  "generated_at": "2026-11-24T12:56:50.999127+00:00",
   "git": {
-    "head": "c83d57195fd1486d1d646245567134fc0aa6ecde",
+    "head": "f95e4d7b57301a2b9b350445e4b65741df9172f5",
     "dirty": true
   },
   "source_sha256": {
-    "static/index.html": "f70cef5c37dac2f5906ce781bdc957e2f07b54735c20ec5575cb120946fb3d30",
-    "app.py": "e8b4f40ded215b4e0d09eb99af37c20254f591d876f0da8ed0acd442e71f4edb",
+    "static/index.html": "a0a9c0739f19d017585d5f74990e7126c8cbdaa0c8d2c78221590a6b3989249d",
+    "app.py": "a039ad7bef243bac90ae76661ae7b99554b3098785b46634ca8758f644f27901",
     "task_events.py": "59ab9597bed3a497de995cf775354c5b6dff57a4009c19e232e33d0f6b8d31d7",
     "scoped_grants.py": "3af45959f61e939caa595066e5cede83ced72372c8e487262f9e35645e593ae0",
     "recovery_guard.py": "73fd90ed2ecd819876a7acc5f10a199b84c6439823833095ff2608acf2e44593",
@@ -58,22 +58,35 @@
     "tests/test_pipeline_recovery.py"
   ],
   "pytest": {
-    "exit_code": 0,
-    "passed": 308,
+    "exit_code": 1,
+    "passed": 307,
     "seconds": null,
     "output_tail": [
-      "........................................................................ [ 23%]",
+      "........................................................F............... [ 23%]",
       "........................................................................ [ 46%]",
       "........................................................................ [ 70%]",
       "........................................................................ [ 93%]",
       "....................                                                     [100%]",
+      "=================================== FAILURES ===================================",
+      "______________________ test_inventory_matches_the_source _______________________",
+      "tests/test_harness_permissions.py:95: in test_inventory_matches_the_source",
+      "    assert result.returncode == 0, result.stdout + result.stderr",
+      "E   AssertionError: error: the Harness permissions inventory has drifted from the source:",
+      "E            product/M5_2_0_UIUX_Harness_Permissions.json is stale",
+      "E            Regenerate it (the change belongs to the story):",
+      "E                python3 scripts/uiux_harness_permissions_inventory.py",
+      "E     ",
+      "E   assert 1 == 0",
+      "E    +  where 1 = CompletedProcess(args=['/tmp/m5-venv/bin/python', 'scripts/uiux_harness_permissions_inventory.py', '--check'], returnc... it (the change belongs to the story):\\n           python3 scripts/uiux_harness_permissions_inventory.py\\n', stderr='').returncode",
       "=============================== warnings summary ===============================",
       "../../../tmp/m5-venv/lib/python3.11/site-packages/fastapi/testclient.py:1",
       "  /tmp/m5-venv/lib/python3.11/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.",
       "    from starlette.testclient import TestClient as TestClient  # noqa",
       "",
       "-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html",
-      "308 passed, 1 warning in 81.40s (0:01:21)"
+      "=========================== short test summary info ============================",
+      "FAILED tests/test_harness_permissions.py::test_inventory_matches_the_source",
+      "1 failed, 307 passed, 1 warning in 79.57s (0:01:19)"
     ]
   },
   "isolation": {
@@ -99,7 +112,7 @@
       "  [PASS] no new privileges — --security-opt=no-new-privileges",
       "  [PASS] no implicit image pull — --pull=never",
       "  [PASS] resource limits — --pids-limit=128 --memory=2g --cpus=2",
-      "  [PASS] single workspace bind mount — type=bind,source=/tmp/m5-isolation-smoke-5ff_3oar,target=/workspace",
+      "  [PASS] single workspace bind mount — type=bind,source=/tmp/m5-isolation-smoke-i0dhflkk,target=/workspace",
       "",
       "== 3. Skill-code execution gates (app._run_skill_script) ==",
       "  [PASS] default-off skill-code denial — PermissionError",
@@ -155,11 +168,11 @@
       "scripts/isolation_smoke.py"
     ]
   },
-  "duration_seconds": 82.981,
+  "duration_seconds": 81.049,
   "totals": {
     "test_modules": 13,
-    "tests_passed": 308,
-    "failed": 0,
+    "tests_passed": 307,
+    "failed": 1,
     "isolation_pass_checks": 16
   }
 }
