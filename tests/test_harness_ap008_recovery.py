@@ -2,6 +2,8 @@
 from pathlib import Path
 import subprocess
 
+import pytest
+
 import workflow_checkpoints
 
 
@@ -586,3 +588,37 @@ def test_an_integrity_failure_suppresses_versions_instead_of_trusting_them(tmp_p
     assert "integrity" in body["checkpoint_integrity_error"].lower()
     # A checkpoint that failed its own integrity check cannot define a version.
     assert body["session_artifact_versions"] == []
+
+
+PROBE = ROOT / "scripts" / "ui-probes" / "ev-facts-note.mjs"
+
+
+def _jsdom_available() -> bool:
+    result = subprocess.run(
+        ["node", "-e", "require.resolve('jsdom')"],
+        capture_output=True,
+        text=True,
+        cwd=ROOT,
+        check=False,
+    )
+    return result.returncode == 0
+
+
+def test_the_shipped_fact_row_renderer_turns_data_into_text_never_markup():
+    """The verification facts list is the surface AP-008 extends.
+
+    jsdom is not a repository dependency, so this skips rather than pretending: a
+    skipped probe is not a passing one, and CI's Chromium walks remain the evidence
+    for layout, focus, theming and zoom.
+    """
+    if not _jsdom_available():
+        pytest.skip("jsdom is not installed; the DOM probe cannot run here")
+    result = subprocess.run(
+        ["node", str(PROBE)],
+        capture_output=True,
+        text=True,
+        cwd=ROOT,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "ALL PROBE CHECKS PASSED" in result.stdout

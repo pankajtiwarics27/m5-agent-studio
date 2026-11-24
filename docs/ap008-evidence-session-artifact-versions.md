@@ -106,3 +106,30 @@ step confirms it.
   far as it already stood and no further.
 * AP-008's second blocker (independent review and final implementation validation) stays
   open, and the story's `acceptance_evidence` remains empty until a review exists.
+
+## The renderer probe, and what it is not
+
+The row this slice wants to add would carry a note line, which means changing
+`harnessEvidenceFactListHtml` — the one function every fact row in the verification panel
+already goes through. Its escaping is therefore load-bearing beyond this story.
+
+`scripts/ui-probes/ev-facts-note.mjs` extracts the real `escapeHtml` and renderer from
+`static/index.html` (or the proposed replacement in
+`scripts/ui-probes/ev-facts-note.proposed.js`) and runs them in jsdom against markup,
+handler attributes, a 5000-character label, quote-breaking input and non-ASCII text. It
+asserts that a `<dt>`/`<dd>` is created with the input as verbatim text, that no element
+and no `on*` attribute survives, and that empty notes emit nothing.
+
+```
+node scripts/ui-probes/ev-facts-note.mjs             # the shipped renderer
+node scripts/ui-probes/ev-facts-note.mjs --proposed  # the replacement
+```
+
+`tests/test_harness_ap008_recovery.py::test_the_shipped_fact_row_renderer_turns_data_into_text_never_markup`
+runs it, and **skips** when jsdom is absent rather than passing silently — a skipped probe
+is not a passing one.
+
+What it does not prove: layout, focus order, theming, 200% zoom, or anything a screenshot
+would show. It proves data becomes text. It is not a substitute for the Chromium walks
+that produce the source-bound captures, and it does not restore the missing render
+evidence described above.
