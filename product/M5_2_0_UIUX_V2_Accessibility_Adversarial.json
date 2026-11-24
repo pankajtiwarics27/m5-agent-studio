@@ -17,7 +17,7 @@
     "zoom_factor": 2
   },
   "source_sha256": {
-    "static/index.html": "e84a8e7e4310e35be7b189c606d0d3e9638182d6f46fc0af9a331a5306373d68",
+    "static/index.html": "8c82c5c02093a82b5ccd6019b0a40a26a96657421ed5ba16f10abf668ce25899",
     "scripts/uiv2_accessibility_adversarial_walk.mjs": "831d65473af6d28d3e77294420fa49130addb5c02d132b433d0141ded525e0c7",
     "scripts/a11y_walk.mjs": "191400491161725465f2f87acd78456e75be08938e29cfcef99d733ea9037c7d",
     "scripts/responsive_walk.mjs": "f39b774a33f1122458c5435d8e566c57e30cba64834239091a26034b1cd40cbd",
@@ -616,7 +616,7 @@
       "captures": 62
     },
     "git": {
-      "head": "fd1f42a71c1c2cd927187bf4ca3ae49a9642bd82",
+      "head": "4f3c91bdc3cdc8348d29f2f39e03f187e71ae569",
       "dirty": true
     },
     "validation_errors": []

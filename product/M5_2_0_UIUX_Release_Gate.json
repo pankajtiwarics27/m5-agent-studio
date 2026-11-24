@@ -288,8 +288,8 @@
     {
       "script": "scripts/uiux_overlay_inventory.py",
       "command": "python3 scripts/uiux_overlay_inventory.py --check",
-      "exit_code": 0,
-      "failure_output": null,
+      "exit_code": 1,
+      "failure_output": "           python3 scripts/uiux_overlay_inventory.py",
       "story": "UIUX-P1-04",
       "artifacts": [
         "product/M5_2_0_UIUX_Overlays.json"
@@ -985,7 +985,7 @@
         "scripts/uiux_overlay_inventory.py",
         "scripts/uiux_presentation_inventory.py"
       ],
-      "met": true
+      "met": false
     },
     {
       "id": "P2",
@@ -1457,14 +1457,23 @@
   },
   "totals": {
     "checks": 37,
-    "checks_passed": 37,
+    "checks_passed": 36,
     "gates": 7,
-    "gates_met": 7,
+    "gates_met": 6,
     "acceptance_criteria": 5,
     "known_regressions": 46,
     "resolved_regressions": 3,
     "regenerated_files": 2,
-    "findings": 0
+    "findings": 2
   },
-  "findings": []
+  "findings": [
+    {
+      "check": "artifact-check",
+      "detail": "`python3 scripts/uiux_overlay_inventory.py --check` exited 1:            python3 scripts/uiux_overlay_inventory.py"
+    },
+    {
+      "check": "phase-gate",
+      "detail": "P1 is not met: 5/5 stories done"
+    }
+  ]
 }
