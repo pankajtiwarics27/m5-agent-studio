@@ -15387,7 +15387,10 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
 
   function harnessEvidenceFactListHtml(facts) {
     return `<dl class="ev-facts">${facts
-      .map(fact => `<dt>${escapeHtml(fact.label)}</dt><dd${fact.mono ? ' class="mono"' : ""}>${escapeHtml(fact.value)}</dd>`)
+      .map(fact => {
+        const note = fact.note ? `<p class="ev-note">${escapeHtml(fact.note)}</p>` : "";
+        return `<dt>${escapeHtml(fact.label)}</dt><dd${fact.mono ? ' class="mono"' : ""}>${escapeHtml(fact.value)}${note}</dd>`;
+      })
       .join("")}</dl>`;
   }
 
@@ -15679,7 +15682,46 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
       { label: "Latest", value: latest ? `seq ${latest.seq} · step ${latest.step} · ${latest.status}${latest.created_at ? ` · at ${harnessClockFrom(latest.created_at) || String(latest.created_at)}` : ""}` : "no checkpoint", mono: true },
     ];
     if (latest && Array.isArray(latest.evidence_refs)) {
-      rows.push({ label: "Its evidence", value: `${latest.evidence_refs.length} reference(s)`, mono: false });
+      // A count is not a version list. Say how many references carry a usable digest,
+      // and list the versions derived from them below, with their real basis.
+      const digested = latest.evidence_refs.filter(ref => ref && typeof ref.sha256 === "string" && /^[0-9a-f]{64}$/.test(ref.sha256)).length;
+      rows.push({
+        label: "Its evidence",
+        value: `${latest.evidence_refs.length} reference(s), ${digested} with a recorded digest`,
+        mono: false,
+        note: "A digest is what the checkpoint recorded, not a copy of the file and not proof the content still matches it.",
+      });
+    }
+    const versions = Array.isArray(task.session_artifact_versions) ? task.session_artifact_versions : [];
+    if (versions.length) {
+      rows.push({
+        label: "Session artifact versions",
+        value: `${versions.length} derived from this session's checkpoint`,
+        mono: false,
+        note: "A version is identified by its recorded content plus whatever provenance the checkpoint captured. Where an axis is listed as not recorded, this is weaker than a full version identity. It is not the global lineage or a workspace snapshot, and it is not re-checked against the file on disk.",
+      });
+      versions.slice(0, 20).forEach(version => {
+        const id = harnessEvidenceShort(version.identity_sha256, 12) || "no identity";
+        const name = String(version.artifact_id || "?").slice(0, 256);
+        const basis = String(version.identity_basis || "unknown basis").slice(0, 64);
+        const absent = Array.isArray(version.identity_axes_absent) ? version.identity_axes_absent.join(", ").slice(0, 128) : "";
+        rows.push({
+          label: name,
+          value: `version ${id} \u00b7 basis: ${basis}`,
+          mono: false,
+          note: absent ? `not recorded: ${absent}` : "content and full provenance recorded",
+        });
+      });
+      if (versions.length > 20) {
+        rows.push({ label: "Session artifact versions", value: `showing 20 of ${versions.length}`, mono: false });
+      }
+    } else if (latest && !task.checkpoint_integrity_error) {
+      rows.push({
+        label: "Session artifact versions",
+        value: "none derivable from this session's checkpoint",
+        mono: false,
+        note: "A reference without a content digest cannot be versioned; it stays a pointer only.",
+      });
     }
     if (task.checkpoint_integrity_error) {
       rows.push({ label: "Integrity", value: String(task.checkpoint_integrity_error), mono: false });

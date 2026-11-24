@@ -6,11 +6,11 @@
   "source": {
     "frontend": {
       "path": "static/index.html",
-      "sha256": "e84a8e7e4310e35be7b189c606d0d3e9638182d6f46fc0af9a331a5306373d68"
+      "sha256": "8c82c5c02093a82b5ccd6019b0a40a26a96657421ed5ba16f10abf668ce25899"
     },
     "backend": {
       "path": "app.py",
-      "sha256": "bb3e3e2e15ed147317395311ee67ce1f6addf23560776436a1c76ddeb4681ac5"
+      "sha256": "eb86a59bbda3a17d137c63f27ca5da28ec254bc288eb5651215819a6aebf719c"
     },
     "walk": {
       "path": "scripts/pipeline_workspace_walk.mjs",

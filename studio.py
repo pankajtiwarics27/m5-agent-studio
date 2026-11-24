@@ -19320,7 +19320,10 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
 
   function harnessEvidenceFactListHtml(facts) {
     return `<dl class="ev-facts">${facts
-      .map(fact => `<dt>${escapeHtml(fact.label)}</dt><dd${fact.mono ? ' class="mono"' : ""}>${escapeHtml(fact.value)}</dd>`)
+      .map(fact => {
+        const note = fact.note ? `<p class="ev-note">${escapeHtml(fact.note)}</p>` : "";
+        return `<dt>${escapeHtml(fact.label)}</dt><dd${fact.mono ? ' class="mono"' : ""}>${escapeHtml(fact.value)}${note}</dd>`;
+      })
       .join("")}</dl>`;
   }
 
@@ -19612,7 +19615,46 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
       { label: "Latest", value: latest ? `seq ${latest.seq} · step ${latest.step} · ${latest.status}${latest.created_at ? ` · at ${harnessClockFrom(latest.created_at) || String(latest.created_at)}` : ""}` : "no checkpoint", mono: true },
     ];
     if (latest && Array.isArray(latest.evidence_refs)) {
-      rows.push({ label: "Its evidence", value: `${latest.evidence_refs.length} reference(s)`, mono: false });
+      // A count is not a version list. Say how many references carry a usable digest,
+      // and list the versions derived from them below, with their real basis.
+      const digested = latest.evidence_refs.filter(ref => ref && typeof ref.sha256 === "string" && /^[0-9a-f]{64}$/.test(ref.sha256)).length;
+      rows.push({
+        label: "Its evidence",
+        value: `${latest.evidence_refs.length} reference(s), ${digested} with a recorded digest`,
+        mono: false,
+        note: "A digest is what the checkpoint recorded, not a copy of the file and not proof the content still matches it.",
+      });
+    }
+    const versions = Array.isArray(task.session_artifact_versions) ? task.session_artifact_versions : [];
+    if (versions.length) {
+      rows.push({
+        label: "Session artifact versions",
+        value: `${versions.length} derived from this session's checkpoint`,
+        mono: false,
+        note: "A version is identified by its recorded content plus whatever provenance the checkpoint captured. Where an axis is listed as not recorded, this is weaker than a full version identity. It is not the global lineage or a workspace snapshot, and it is not re-checked against the file on disk.",
+      });
+      versions.slice(0, 20).forEach(version => {
+        const id = harnessEvidenceShort(version.identity_sha256, 12) || "no identity";
+        const name = String(version.artifact_id || "?").slice(0, 256);
+        const basis = String(version.identity_basis || "unknown basis").slice(0, 64);
+        const absent = Array.isArray(version.identity_axes_absent) ? version.identity_axes_absent.join(", ").slice(0, 128) : "";
+        rows.push({
+          label: name,
+          value: `version ${id} \u00b7 basis: ${basis}`,
+          mono: false,
+          note: absent ? `not recorded: ${absent}` : "content and full provenance recorded",
+        });
+      });
+      if (versions.length > 20) {
+        rows.push({ label: "Session artifact versions", value: `showing 20 of ${versions.length}`, mono: false });
+      }
+    } else if (latest && !task.checkpoint_integrity_error) {
+      rows.push({
+        label: "Session artifact versions",
+        value: "none derivable from this session's checkpoint",
+        mono: false,
+        note: "A reference without a content digest cannot be versioned; it stays a pointer only.",
+      });
     }
     if (task.checkpoint_integrity_error) {
       rows.push({ label: "Integrity", value: String(task.checkpoint_integrity_error), mono: false });
@@ -30724,6 +30766,11 @@ def _collect_step_evidence_refs(
                     ref_id=rel,
                     sha256=digest,
                     summary=f"{len(data)}B",
+                    # The checkpoint knows one true provenance axis: the step that
+                    # produced this artifact. Recording it lets the version identity
+                    # distinguish the same bytes produced at different steps, and it is
+                    # a fact of the record rather than an inferred producer name.
+                    producer_version=f"step:{epoch}",
                 )
             )
     diff_info = _compute_git_diff(wt_dir)
@@ -32819,6 +32866,12 @@ def _harness_session_state_snapshot(session_id: str) -> dict[str, Any]:
         "workspace_baseline": baseline_summary,
         "latest_checkpoint": latest_ckpt.to_dict() if latest_ckpt is not None else None,
         "checkpoint_integrity_error": integrity_error,
+        # A checkpoint that failed its own integrity check cannot define a version.
+        "session_artifact_versions": (
+            _session_artifact_versions(latest_ckpt.evidence_refs, session_id=session_id)
+            if latest_ckpt is not None and not integrity_error
+            else []
+        ),
         "checkpoints": [ck.to_dict() for ck in sm.checkpoints.list_checkpoints(session_id, verify_integrity=False)],
         "milestones": [_serialize_task_record(ms) for ms in milestones],
         "transitions": [_serialize_transition_record(tr) for tr in sm.store.list_transitions(session_id)],
@@ -33084,6 +33137,112 @@ def _containment_summary_or_none(session_id: str) -> dict[str, Any]:
         }
 
 
+def _recorded_provenance(ref: Any) -> dict[str, Any]:
+    """The provenance axes a checkpoint reference actually recorded, empties dropped."""
+    if isinstance(ref, dict):
+        producer = str(ref.get("producer") or "").strip()
+        producer_version = str(ref.get("producer_version") or "").strip()
+        config = str(ref.get("config_sha256") or "").strip().lower()
+        raw_inputs = ref.get("inputs") or {}
+        inputs = {str(k): str(v) for k, v in raw_inputs.items()} if isinstance(raw_inputs, dict) else {}
+    elif hasattr(ref, "provenance"):
+        return dict(ref.provenance())
+    else:
+        producer = str(getattr(ref, "producer", "") or "").strip()
+        producer_version = str(getattr(ref, "producer_version", "") or "").strip()
+        config = str(getattr(ref, "config_sha256", "") or "").strip().lower()
+        inputs = dict(getattr(ref, "input_versions", ()) or ())
+    recorded: dict[str, Any] = {}
+    if producer:
+        recorded["producer"] = producer
+    if producer_version:
+        recorded["producer_version"] = producer_version
+    if config:
+        recorded["config_sha256"] = config
+    if inputs:
+        recorded["inputs"] = dict(sorted(inputs.items()))
+    return recorded
+
+
+def _session_artifact_versions(
+    refs: Sequence[workflow_checkpoints.EvidenceRef] | Sequence[dict[str, Any]],
+    *,
+    session_id: str,
+) -> list[dict[str, Any]]:
+    """Derive a version record for each artifact this session's checkpoint recorded.
+
+    AP-008 asks "which version of which artifact did this session leave behind". The
+    process-wide lineage registry cannot answer that -- it is global and says nothing
+    about a session -- and a workspace snapshot is a different fact again, so neither
+    may be substituted here.
+
+    What shapes this function is what a checkpoint actually records: a kind, a
+    reference id, a content digest and a summary. It does not record the producer,
+    the producer's configuration, or the versions of the inputs the artifact was
+    built from. ``artifact_lineage.artifact_identity_sha256`` derives a full identity
+    from exactly those axes, so calling it here with the missing axes filled in --
+    the reference path passed as a "producer", a placeholder "input" -- would mint a
+    confident-looking digest built on fabricated provenance. A weaker identity that
+    declares which axes it lacks is the honest alternative, and that is what this
+    returns.
+
+    ``rechecked_against_current_content`` is always false: this reads a recorded
+    pointer and never opens the file it names.
+    """
+    versions: list[dict[str, Any]] = []
+    for ref in refs or ():
+        if isinstance(ref, dict):
+            kind = str(ref.get("kind") or "")
+            raw_sha = ref.get("sha256")
+            ref_id = str(ref.get("ref_id") or "")
+            summary = str(ref.get("summary") or "")
+        else:
+            kind = str(getattr(ref, "kind", "") or "")
+            raw_sha = getattr(ref, "sha256", "")
+            ref_id = str(getattr(ref, "ref_id", "") or "")
+            summary = str(getattr(ref, "summary", "") or "")
+        if kind != "artifact":
+            continue
+        sha = str(raw_sha or "").strip().lower()
+        if not artifact_lineage._al_is_digest(sha):  # noqa: SLF001 - reusing the module's own check
+            # A reference with no usable digest is a pointer, not a version.
+            continue
+        # Provenance is used only when the checkpoint actually recorded it. Otherwise the
+        # identity is content-only and says which axes it lacks, rather than borrowing
+        # confidence from values this function would have to invent.
+        recorded = _recorded_provenance(ref)
+        try:
+            identity = artifact_lineage.artifact_identity_sha256(
+                sha,
+                producer=recorded.get("producer", ""),
+                producer_version=recorded.get("producer_version", ""),
+                config_sha256=recorded.get("config_sha256", ""),
+                inputs=recorded.get("inputs") or None,
+            )
+        except (artifact_lineage.ArtifactLineageError, ValueError):
+            continue
+        axes_recorded = ["content_sha256", *sorted(recorded)]
+        axes_absent = [axis for axis in ("producer", "producer_version", "config", "inputs") if axis not in recorded]
+        versions.append(
+            {
+                "artifact_id": ref_id,
+                "content_sha256": sha,
+                "identity_sha256": identity,
+                "identity_basis": "content+provenance" if recorded else "content_only",
+                "identity_axes_recorded": axes_recorded,
+                "identity_axes_absent": axes_absent,
+                "session_id": session_id,
+                "summary": summary,
+                "contributes_a_verified_version": True,
+                "rechecked_against_current_content": False,
+                "is_global_lineage": False,
+                "is_workspace_snapshot": False,
+            }
+        )
+    versions.sort(key=lambda version: (version["artifact_id"], version["identity_sha256"]))
+    return versions
+
+
 def _artifact_lineage_summary_or_none() -> dict[str, Any]:
     """Read-only artifact lineage view (M5-P5-02); corruption is reported, not hidden."""
     try:
@@ -33200,6 +33359,11 @@ async def api_get_harness_task_state(session_id: str) -> JSONResponse:
             "routing_experiments": _routing_experiments_summary_or_none(),
             "latest_checkpoint": latest_ckpt.to_dict() if latest_ckpt is not None else None,
             "checkpoint_integrity_error": integrity_error,
+            "session_artifact_versions": (
+                _session_artifact_versions(latest_ckpt.evidence_refs, session_id=session_id)
+                if latest_ckpt is not None and not integrity_error
+                else []
+            ),
             "checkpoints": [ck.to_dict() for ck in checkpoints],
             "milestones": [_serialize_task_record(ms) for ms in milestones],
             "child_subtasks": [_serialize_task_record(sub) for sub in child_subtasks],
@@ -47679,6 +47843,7 @@ execution_budget = sys.modules[__name__]
 import hashlib
 import hmac
 import json
+import re
 import sqlite3
 import time
 from dataclasses import dataclass
@@ -47871,6 +48036,14 @@ class WorkflowCheckpointStore:
         return tuple(AuditEntry(row["workflow_id"], row["step"], row["event"], row["detail"], row["created_at"]) for row in rows)
 
 
+_DIGEST_RE = re.compile(r"^[0-9a-f]{64}$")
+
+
+def _is_digest(value: str) -> bool:
+    """True for a lowercase SHA-256 hex digest; anything else is not one."""
+    return bool(_DIGEST_RE.fullmatch(value))
+
+
 def hmac_compare(left: str, right: str) -> bool:
     """Constant-time comparison for checkpoint integrity digests."""
     return hmac.compare_digest(left, right)
@@ -47878,36 +48051,86 @@ def hmac_compare(left: str, right: str) -> bool:
 
 @dataclass(frozen=True, slots=True)
 class EvidenceRef:
-    """Typed durable evidence pointer attached to a task checkpoint or transition."""
+    """Typed durable evidence pointer attached to a task checkpoint or transition.
+
+    An artifact reference answers "what are the bytes" via ``sha256``. It does not, on
+    its own, answer "which version of which thing" -- that needs the producer, the
+    producer's configuration and the versions of the inputs the artifact was built from,
+    because two runs of the same producer over the same inputs can share content while
+    different producers can converge on identical bytes.
+
+    Checkpoints saved before this field existed recorded none of that, and their
+    ``payload_hash`` was computed over these very dictionaries. So every provenance field
+    is omitted from ``to_dict()`` when it is empty: a legacy record serializes exactly as
+    it always did and its digest still verifies, while a new record that does supply
+    provenance has it committed and hash-protected. Unset is recorded as absent, never as
+    a placeholder -- a fabricated producer is worse than an unknown one.
+    """
 
     kind: str
     ref_id: str
     sha256: str = ""
     summary: str = ""
+    producer: str = ""
+    producer_version: str = ""
+    config_sha256: str = ""
+    input_versions: tuple[tuple[str, str], ...] = ()
 
     def __post_init__(self) -> None:
         if not isinstance(self.kind, str) or not self.kind.strip() or "\x00" in self.kind:
             raise CheckpointError("EvidenceRef.kind must be a non-empty string.")
         if not isinstance(self.ref_id, str) or not self.ref_id.strip() or "\x00" in self.ref_id:
             raise CheckpointError("EvidenceRef.ref_id must be a non-empty string.")
+        if self.config_sha256 and not _is_digest(str(self.config_sha256).strip().lower()):
+            raise CheckpointError("EvidenceRef.config_sha256 must be a lowercase SHA-256 hex string.")
+        for pair in self.input_versions:
+            if not isinstance(pair, tuple) or len(pair) != 2:
+                raise CheckpointError("EvidenceRef.input_versions entries must be (name, version) tuples.")
+            name, version = pair
+            if not str(name).strip() or not str(version).strip():
+                raise CheckpointError("EvidenceRef.input_versions needs a name and a version for every input.")
+
+    def provenance(self) -> dict[str, Any]:
+        """The provenance this reference actually records, with empty axes left out."""
+        recorded: dict[str, Any] = {}
+        if str(self.producer or "").strip():
+            recorded["producer"] = self.producer.strip()
+        if str(self.producer_version or "").strip():
+            recorded["producer_version"] = self.producer_version.strip()
+        if str(self.config_sha256 or "").strip():
+            recorded["config_sha256"] = self.config_sha256.strip().lower()
+        if self.input_versions:
+            recorded["inputs"] = dict(sorted({str(k).strip(): str(v).strip() for k, v in self.input_versions}.items()))
+        return recorded
 
     def to_dict(self) -> dict[str, str]:
-        return {
+        payload: dict[str, Any] = {
             "kind": self.kind.strip()[:64],
             "ref_id": self.ref_id.strip()[:256],
             "sha256": str(self.sha256 or "").strip()[:128],
             "summary": str(self.summary or "").strip()[:240],
         }
+        # Only present when it was recorded. See the class docstring: adding a key to a
+        # legacy record would change the string its payload_hash was computed over.
+        payload.update(self.provenance())
+        return payload
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> EvidenceRef:
         if not isinstance(data, dict):
             raise CheckpointError("EvidenceRef entry must be a JSON object.")
+        raw_inputs = data.get("inputs") or {}
+        if not isinstance(raw_inputs, dict):
+            raise CheckpointError("EvidenceRef.inputs must be a JSON object of name -> version.")
         return cls(
             kind=str(data.get("kind", "")),
             ref_id=str(data.get("ref_id", "")),
             sha256=str(data.get("sha256", "")),
             summary=str(data.get("summary", "")),
+            producer=str(data.get("producer", "")),
+            producer_version=str(data.get("producer_version", "")),
+            config_sha256=str(data.get("config_sha256", "")),
+            input_versions=tuple(sorted((str(k), str(v)) for k, v in raw_inputs.items())),
         )
 
 
