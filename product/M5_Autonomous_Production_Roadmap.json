@@ -2840,7 +2840,7 @@
       "title": "Capture lightweight scoped review and preference corrections",
       "priority": "P1",
       "optional": false,
-      "status": "in_review",
+      "status": "done",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-018"
@@ -2894,22 +2894,31 @@
         "owner": "arena/ab195e0f-m5-agent-studio",
         "branch": "arena/ab195e0f-m5-agent-studio",
         "base_sha": "0356da228d1de1aa9c616ba4555bf766e8216dae",
-        "head_sha": "46d5060f",
+        "head_sha": "743cf16",
         "claimed_at": "2026-11-24T13:20:00Z",
         "heartbeat_at": "2026-11-24T16:40:00Z",
         "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/359",
-        "delivery_status": "pr_open",
-        "acceptance_evidence": [],
+        "delivery_status": "merged",
+        "acceptance_evidence": [
+          "AC1 (free text and optional region/passage/timecode/quick actions, no mandatory scoring): the composer is a plain textarea with quick actions; a selection narrows the reach and the pane states it in words, and no selection is a first-class outcome recorded at artifact scope. Proved by scripts/harness_feedback_walk.mjs checks 1, 2 and 7, and by test_a_selection_makes_it_element_scoped_and_never_blocks_the_comment.",
+          "AC2 (feedback pins the artifact version and preserves the original wording): capture() requires the artifact digest as well as the id, verbatim is never rewritten, and the stale section draws an older comment in the words it was given. Proved by test_a_comment_is_recorded_against_exactly_one_version and walk checks 1 and 6.",
+          "AC3 (material interpretation confirmed; ambiguity and conflicts not silently generalised): the confirmation gate makes plan_revision().ready false until the owner says which reading they meant; a preference cannot be captured from one comment and cannot carry a selection; two live comments on one region that cannot both be acted on are reported as a pair. Proved by test_an_ambiguous_correction_waits_for_the_owner_reading, test_two_opposing_corrections_are_reported_rather_than_merged, test_a_preference_cannot_be_written_through_the_capture_route and walk checks 3, 4 and 5.",
+          "AC4 (a revision invalidates only affected downstream evidence/approvals): plan_revision() includes only feedback whose digest equals the base, stale_for() returns the rest, and affected_evidence() narrows invalidation to references naming that digest. Proved by test_feedback_on_an_older_version_is_reported_stale_not_applied and walk check 6.",
+          "AC5 (a retained preference can be corrected, deleted and inspected): each item prints its reach, offers 'This is what I meant' and 'Withdraw', and a withdrawal is a tombstone rather than a row delete. Proved by test_a_retained_preference_can_be_inspected_and_removed, test_withdrawing_feedback_keeps_the_record_and_clears_the_live_set and walk checks 4 and 8.",
+          "AC6 (keyboard, mobile and zoom remain usable; paused work resumes): the composer is a real textarea reachable by keyboard and the region rows activate through the app's single delegated data-key-activate handler, which the keyboard contract pins as the eighth such control. The pane is drawn at 390x844 and at 200% zoom without horizontal overflow and survives a reload from the record. Feedback writes no task state at all, so a paused run is untouched. Proved by walk check 10 and tests/test_keyboard_a11y.py.",
+          "AC7 (the direction rules in docs/autonomous-production-ux-direction.md): the pane keeps direction approval, final acceptance and publish permission distinct in its own words, and every record and revision emits is_final_acceptance false and grants_publish_permission false -- from_mapping() refuses a stored payload that claims otherwise. Documented in docs/ap019-scoped-feedback.md.",
+          "Refused on purpose: no acceptance, no publish permission, no benchmark adoption, no runtime activation. A comment that cannot name its version is refused, because it could never be checked for staleness later.",
+          "Discipline: scoped_feedback.py reads no clock, opens no file and touches no network (test_the_module_reads_no_clock_and_opens_nothing), and shares no top-level name with app.py."
+        ],
         "tests_executed": [
           "tests/test_scoped_feedback.py (40 tests) + tests/test_scoped_feedback_routes.py (15 tests): 55 passed",
           "scripts/harness_feedback_walk.mjs: 53/53 real-browser checks against a fixture staged through the feedback routes",
           "scripts/ci_test_shard.py --run-shard 1|2|3 on this branch: 0 failures",
           "scripts/uiv2_accessibility_adversarial.py --check: 120/120; scripts/uiv2_performance_safety.py --check: 21/21 + 308 backend tests"
         ],
-        "blockers": [
-          "The UIV2-30 release review cannot reach a green handoff from this branch, for a reason that predates AP-019: product/M5_2_0_UIUX_V2_Release_AP008_Evidence.json records implementation HEAD 198e411237f3dfdc7e1a5f712ca6626d299a032c, an AP-018 pull-request head that the squash merge (#358) removed from main's history. A fresh clone at any branch head cannot read the browser sources at that commit, so evidence validate() refuses it and draft_bootstrap_pending() asserts. Fixing it honestly needs a green CI run at a head reachable from the branch; the recorded head must not be relabelled."
-        ],
-        "handoff": null
+        "blockers": [],
+        "handoff": "Delivered in PR #359 against main, merged as 02f62b0. A correction keeps the scope it was given: element when the owner selected something, artifact when they only used words, and preference only through an explicit promote with a stated basis. Material readings must be confirmed before a revision can be built, and confirming a reading is not accepting the artifact. Two contradictory comments on one region are reported rather than averaged; feedback on another version is shown as stale rather than applied; withdrawing leaves a tombstone so the history is not rewritten. Verified by 55 module and route tests and 53/53 real-browser checks from a fixture that stages everything through the real routes, with the accessibility run at 120/120, performance at 21/21 plus 308 backend tests, cross-tab at 2200/2200 and Compare at 15/15, the release gate at 37/37 checks and 7/7 phase gates, and the UIV2-30 release review ready with 0 findings on a strict ready-PR run.",
+        "merge_commit": "02f62b088"
       },
       "implementation_prompt": "Implement AP-019: Capture lightweight scoped review and preference corrections. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
