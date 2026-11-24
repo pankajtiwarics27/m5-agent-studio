@@ -86,6 +86,15 @@ def draft_bootstrap_pending(payload: dict) -> bool:
     """
     if os.environ.get("UIV2_DRAFT_EVIDENCE_BOOTSTRAP") != "1":
         return False
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        # CI logs for this job are not always downloadable, and this is the one check whose
+        # failure is a fixpoint rather than a message. Annotate the actual state so a failing
+        # run explains itself instead of only saying "failed".
+        print(
+            "::error title=UIV2 bootstrap state::"
+            + f"current={payload['pinned_release']['current_browser_sources']}; "
+            + f"findings={payload['findings']!r}"[:900]
+        )
     if payload["pinned_release"]["current_browser_sources"]:
         return False
     assert payload["findings"] == [{

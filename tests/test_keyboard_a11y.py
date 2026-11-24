@@ -155,7 +155,9 @@ def test_the_count_of_non_native_controls_is_pinned(sources):
         ) + '<span class="chip" role="button" tabindex="0" data-key-activate onclick="noop()">x</span>'
 
     report = sources(html_transform=add_one)
-    assert "the remaining seven non-native controls retain delegated keyboard activation" in failing(report)
+    # Eight since AP-019: the feedback pane's selectable region is a non-native control too, and
+    # it activates through the same delegated handler as the other seven.
+    assert "the remaining eight non-native controls retain delegated keyboard activation" in failing(report)
 
 
 # ── 2. one delegated handler ───────────────────────────────────────────────

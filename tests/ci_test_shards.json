@@ -28,7 +28,7 @@
     "module_counts": [
       89,
       79,
-      77
+      79
     ],
     "node_counts": [
       1528,
@@ -143,7 +143,9 @@
       "tests/test_direction_checkpoints_routes.py",
       "tests/test_guest_desktop.py",
       "tests/test_harness_ap008_recovery.py",
-      "tests/test_mission_authority_envelope.py"
+      "tests/test_mission_authority_envelope.py",
+      "tests/test_scoped_feedback.py",
+      "tests/test_scoped_feedback_routes.py"
     ]
   },
   "shards": {
@@ -381,6 +383,8 @@
       "tests/test_request_fit_interruptions.py",
       "tests/test_resource_admission.py",
       "tests/test_routing_experiments.py",
+      "tests/test_scoped_feedback.py",
+      "tests/test_scoped_feedback_routes.py",
       "tests/test_start_recent.py",
       "tests/test_status_components.py",
       "tests/test_task_layout.py",

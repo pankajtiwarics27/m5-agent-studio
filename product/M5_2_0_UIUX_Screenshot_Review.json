@@ -9,15 +9,15 @@
   "statement": "Every committed capture, the script that made it, what a reviewer concluded about it, and the checks that keep the claim honest: the index agrees with the disk, the theme in the filename is the theme in the pixels, the producer still exists, and a set that was re-shot in this story says so. A set nobody reviewed is a finding.",
   "luminance_measured": true,
   "totals": {
-    "sets": 39,
-    "files": 1787,
-    "reviewed_sets": 39,
-    "sets_eyed": 19,
-    "files_eyed": 105,
-    "re_taken_sets": 15,
+    "sets": 40,
+    "files": 1792,
+    "reviewed_sets": 40,
+    "sets_eyed": 20,
+    "files_eyed": 108,
+    "re_taken_sets": 16,
     "published_sets": 1,
     "findings": 0,
-    "observations": 32
+    "observations": 33
   },
   "coverage": {
     "grid": {
@@ -30,12 +30,12 @@
         "desktop": 121
       },
       "harness": {
-        "sets": 16,
-        "files": 200,
+        "sets": 17,
+        "files": 205,
         "dark": 85,
         "light": 73,
         "narrow": 38,
-        "desktop": 158
+        "desktop": 162
       },
       "hall": {
         "sets": 9,
@@ -5387,6 +5387,86 @@
           "theme": null,
           "theme_measured": "light",
           "luminance": 0.7214
+        }
+      ]
+    },
+    {
+      "set": "harness-feedback",
+      "directory": "docs/media/harness-feedback",
+      "story": "AP-019",
+      "producer": "scripts/harness_feedback_walk.mjs",
+      "producer_from": "curated",
+      "index": null,
+      "reviewed": true,
+      "note": "Feedback as a record, not a chat message: each comment states the reach it was given (\"only the region you selected\" beside \"this artifact, this version\"), the owner's own words are shown rather than a paraphrase, the exact version digest is bound above them, an ambiguous reading is marked as waiting on the owner, and the pair of contradictory comments on one region is shown as a contradiction instead of being averaged into a change nobody asked for. The stale set places the earlier comment under its own heading with the words it was given in, and the hostile capture draws markup as text.",
+      "eye": [
+        "feedback-pane.png",
+        "feedback-confirmed.png",
+        "feedback-stale.png"
+      ],
+      "re_taken": true,
+      "theme_claim": "dark",
+      "known_failing_producer": false,
+      "files": [
+        {
+          "file": "harness-feedback/feedback-confirmed.png",
+          "name": "feedback-confirmed.png",
+          "bytes": 203494,
+          "sha256": "36cebb1909c05dbab0bdbe488f63fc222cf839d42e387879fdb445124ac04634",
+          "width": 1440,
+          "height": 960,
+          "css_width": 1440,
+          "theme": null,
+          "theme_measured": "light",
+          "luminance": 0.7219
+        },
+        {
+          "file": "harness-feedback/feedback-hostile.png",
+          "name": "feedback-hostile.png",
+          "bytes": 202847,
+          "sha256": "4e490839a3ca31775cbd0d338760c1a6cf8672e419f39102afed355f428f5abb",
+          "width": 1440,
+          "height": 960,
+          "css_width": 1440,
+          "theme": null,
+          "theme_measured": "light",
+          "luminance": 0.7219
+        },
+        {
+          "file": "harness-feedback/feedback-mobile.png",
+          "name": "feedback-mobile.png",
+          "bytes": 224213,
+          "sha256": "fed2a51d90660cd0bbf541bafe6da5489622269475206390592e7db0b6590905",
+          "width": 780,
+          "height": 1688,
+          "css_width": 780,
+          "theme": null,
+          "theme_measured": "light",
+          "luminance": 0.8567
+        },
+        {
+          "file": "harness-feedback/feedback-pane.png",
+          "name": "feedback-pane.png",
+          "bytes": 203490,
+          "sha256": "aa5a72c5836515f22a07591a037a3c504974a5dd05464a65424cdbe1680b63d4",
+          "width": 1440,
+          "height": 960,
+          "css_width": 1440,
+          "theme": null,
+          "theme_measured": "light",
+          "luminance": 0.7219
+        },
+        {
+          "file": "harness-feedback/feedback-stale.png",
+          "name": "feedback-stale.png",
+          "bytes": 203126,
+          "sha256": "d9fd9b9ab4e4e06cd6fef3d9f5fa666e4e5a4c661c5768056f92c2232df0216d",
+          "width": 1440,
+          "height": 960,
+          "css_width": 1440,
+          "theme": null,
+          "theme_measured": "light",
+          "luminance": 0.7219
         }
       ]
     },
@@ -22701,6 +22781,11 @@
     {
       "check": "no-index",
       "set": "harness-evidence",
+      "detail": "no index.json, so the set records neither when it was captured nor the checksum of what it holds"
+    },
+    {
+      "check": "no-index",
+      "set": "harness-feedback",
       "detail": "no index.json, so the set records neither when it was captured nor the checksum of what it holds"
     },
     {

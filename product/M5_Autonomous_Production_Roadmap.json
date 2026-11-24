@@ -1785,9 +1785,9 @@
           "AC6 existing six-pane feature/control routes remain mapped: tests/test_harness_recovery.py::test_every_preserved_route_still_exists with the regenerated route map and source manifest (121 routes, 6 tabs).",
           "AC7 applicable UX requirements and preservation: cross-tab reference 2200/2200 across 48 captures at a clean head (c29d943), Compare continuity 15/15, UI/UX release gate 37/37 artifact checks and 7/7 phase gates, UIV2-30 review ready with 0 findings.",
           "Functional delivery: EvidenceRef records producer, producer_version, config_sha256 and input_versions; checkpoints written before that change re-verify byte-identically (proven by hashing the pre-upgrade bytes); identical bytes from different producers now yield different version identities.",
-          "Not claimed here: independent security/release review (the owner performs it at the end of the program), runtime activation, IsolationAcceptance, live dispatch and installed-runtime qualification remain absent; UIV2-29 isolation is unqualified and blocked."
-        ,
-          "Completion record: PR #356 merged as 8e2af202e935aeac09968586e0126c494daf13e7 (2026-11-24T05:00:30Z) at exact head 30be61798e53e96ccbdf636b7db27600853b9bdb with 27/27 checks green. Blocker 1 closed: session artifact versions are served by both integrated routes and drawn in the pane, with the provenance axes a checkpoint does not record stated explicitly. Blocker 2 is the owner's independent review at the end of the program, recorded as awaiting that review rather than as an agent-held blocker. No runtime activation, IsolationAcceptance, live dispatch or installed-runtime qualification is claimed."],
+          "Not claimed here: independent security/release review (the owner performs it at the end of the program), runtime activation, IsolationAcceptance, live dispatch and installed-runtime qualification remain absent; UIV2-29 isolation is unqualified and blocked.",
+          "Completion record: PR #356 merged as 8e2af202e935aeac09968586e0126c494daf13e7 (2026-11-24T05:00:30Z) at exact head 30be61798e53e96ccbdf636b7db27600853b9bdb with 27/27 checks green. Blocker 1 closed: session artifact versions are served by both integrated routes and drawn in the pane, with the provenance axes a checkpoint does not record stated explicitly. Blocker 2 is the owner's independent review at the end of the program, recorded as awaiting that review rather than as an agent-held blocker. No runtime activation, IsolationAcceptance, live dispatch or installed-runtime qualification is claimed."
+        ],
         "status_evidence": {
           "merged_pr": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/356",
           "merge_commit": "8e2af202e935aeac09968586e0126c494daf13e7",
@@ -2840,7 +2840,7 @@
       "title": "Capture lightweight scoped review and preference corrections",
       "priority": "P1",
       "optional": false,
-      "status": "not_started",
+      "status": "in_review",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-018"
@@ -2891,17 +2891,24 @@
         "Push/PR state; owner/independent approvals where required"
       ],
       "tracking": {
-        "owner": null,
-        "branch": null,
-        "base_sha": null,
-        "head_sha": null,
-        "claimed_at": null,
-        "heartbeat_at": null,
-        "pr_url": null,
-        "delivery_status": "not_pushed",
+        "owner": "arena/ab195e0f-m5-agent-studio",
+        "branch": "arena/ab195e0f-m5-agent-studio",
+        "base_sha": "0356da228d1de1aa9c616ba4555bf766e8216dae",
+        "head_sha": "46d5060f",
+        "claimed_at": "2026-11-24T13:20:00Z",
+        "heartbeat_at": "2026-11-24T16:40:00Z",
+        "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/359",
+        "delivery_status": "pr_open",
         "acceptance_evidence": [],
-        "tests_executed": [],
-        "blockers": [],
+        "tests_executed": [
+          "tests/test_scoped_feedback.py (40 tests) + tests/test_scoped_feedback_routes.py (15 tests): 55 passed",
+          "scripts/harness_feedback_walk.mjs: 53/53 real-browser checks against a fixture staged through the feedback routes",
+          "scripts/ci_test_shard.py --run-shard 1|2|3 on this branch: 0 failures",
+          "scripts/uiv2_accessibility_adversarial.py --check: 120/120; scripts/uiv2_performance_safety.py --check: 21/21 + 308 backend tests"
+        ],
+        "blockers": [
+          "The UIV2-30 release review cannot reach a green handoff from this branch, for a reason that predates AP-019: product/M5_2_0_UIUX_V2_Release_AP008_Evidence.json records implementation HEAD 198e411237f3dfdc7e1a5f712ca6626d299a032c, an AP-018 pull-request head that the squash merge (#358) removed from main's history. A fresh clone at any branch head cannot read the browser sources at that commit, so evidence validate() refuses it and draft_bootstrap_pending() asserts. Fixing it honestly needs a green CI run at a head reachable from the branch; the recorded head must not be relabelled."
+        ],
         "handoff": null
       },
       "implementation_prompt": "Implement AP-019: Capture lightweight scoped review and preference corrections. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."

@@ -8,8 +8,8 @@ and what a revert does and does not touch.
 * Status: **historical-approval-unbound** — Signed in the ledger; this page reports the historical owner record, not a new approval.
 * Approval binding: **unbound** — The historical record has no approved input snapshot and does not establish approval of current inputs.
 * Pinned baseline source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (input artifacts are hashed separately).
-* 6 panes · 21 preserved capabilities · 276 markup controls (163 chrome, 113 panes) · 74 rendered by script.
-* 123 routes exist, 77 with a resolved or possible caller, 46 with none observed and 0 unknown due to unresolved edges; 52 state-changing candidates traced.
+* 6 panes · 21 preserved capabilities · 279 markup controls (166 chrome, 113 panes) · 76 rendered by script.
+* 128 routes exist, 81 with a resolved or possible caller, 47 with none observed and 0 unknown due to unresolved edges; 55 state-changing candidates traced.
 * 0 fetch site(s) have 0 unresolved URL or method edge(s) (0 method).
 * Baseline screenshots recorded in the index: 6 of 6 (not provenance-verified).
 
@@ -28,8 +28,8 @@ separates the historical signature from any explicit binding to current input di
 | # | Ask | Evidence in this package |
 |---|---|---|
 | 1 | Accept the preservation matrix as the baseline P1 must preserve | 21 capability rows across 6 panes, carried row for row from product/M5_2_0_UIUX_Autonomous_Roadmap.json |
-| 2 | Accept the control inventory as the list of controls that must stay reachable | 276 markup controls (163 chrome, 113 panes) plus 74 rendered by script |
-| 3 | Review route candidates and preserve confirmed browser-reachable routes and their gates | 123 routes exist; 77 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 52 state-changing candidates; the lexical scan is not exhaustive |
+| 2 | Accept the control inventory as the list of controls that must stay reachable | 279 markup controls (166 chrome, 113 panes) plus 76 rendered by script |
+| 3 | Review route candidates and preserve confirmed browser-reachable routes and their gates | 128 routes exist; 81 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 55 state-changing candidates; the lexical scan is not exhaustive |
 | 4 | Accept that P1 may not weaken the shared boundary | host allowlist (400), cross-origin rejection (403), bearer token (401, 503 when unconfigured), rate limit (429) and body-size limit (413), read from the middleware itself |
 | 5 | Review the rollback path and the state effects of each story | this package adds no migration or privilege; review each story's actual merge, revert and recovery effects, then regenerate artifacts and re-run the checks below |
 
@@ -332,7 +332,7 @@ A single streaming conversation with the selected model.
 
 ## Shared chrome
 
-163 controls: button 97, input 37, select 14, summary 8, textarea 7.
+166 controls: button 99, input 37, select 14, summary 8, textarea 8.
 
 Tabs, command palette, modals and the shared toolbar. A pane story may restyle chrome, but every control here stays reachable: the inventory test fails if one disappears.
 
@@ -395,11 +395,11 @@ provenance; a matching snapshot cannot clear separate review holds.
 | Input | Current digest | Owner-recorded digest |
 |---|---|---|
 | `ledger_content_sha256` | `cb04b1bdf0ec9be6b39d2233496d9e9e53ffb91b0f92397824c9964af333b85f` | `not recorded` |
-| `source_manifest_sha256` | `d7259c49644d5579b8bb7118dba81bfc89a0b2b7b4cd6555ee1c812b4f56d678` | `not recorded` |
-| `control_inventory_sha256` | `1cbc74b441fe2e3fbfa8111c4fe2a3c6475bc486fef709db56886cb39b88e896` | `not recorded` |
-| `route_map_sha256` | `71a273fd4e806cce0aa5c1e36037b194aab4259e4d0ed30c19d3a8a0e71f5046` | `not recorded` |
-| `authorization_trace_sha256` | `3efc14bacf7ea4a6b280448d8938c0781997f60db12e40b2fa5c1bbed98084a5` | `not recorded` |
-| `frontend_sha256` | `f70cef5c37dac2f5906ce781bdc957e2f07b54735c20ec5575cb120946fb3d30` | `not recorded` |
+| `source_manifest_sha256` | `6786d7e16db670f3bf69ad0a391c54ff8e1be99424c9f9d318526b700ec569b4` | `not recorded` |
+| `control_inventory_sha256` | `fbb254e6c3d4573444fad12d2a2f9b4502ce75672f02545fb7cf3a71bdfc4773` | `not recorded` |
+| `route_map_sha256` | `e2869ecf701244afa396a2046450baa395a51115ad88aae088b0ee577a79a855` | `not recorded` |
+| `authorization_trace_sha256` | `278f53386695bf48b6783ff70a4dec2f4772f676141e58f7f106557bacacba8d` | `not recorded` |
+| `frontend_sha256` | `78a2e62a8e16f7ccc602fa55428dd1e6dfb9ccc04e5963396de501d5b436a467` | `not recorded` |
 | `screenshot_manifest_sha256` | `b488bf453ae260b6564ae592f0455e3d70cff3121dca1e7c823c7abb270b44d3` | `not recorded` |
 | `screenshot_index_sha256` | `16b0620ca1d02a1b181ad15b3a2b0c6aae9e7aa539654d27ed80d9147189634e` | `not recorded` |
 | `generator_sha256` | `6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65` | `not recorded` |

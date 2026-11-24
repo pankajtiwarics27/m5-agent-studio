@@ -49,6 +49,10 @@
       {
         "tag": "div",
         "class": "chronicle-item"
+      },
+      {
+        "tag": "div",
+        "class": "ev-file"
       }
     ]
   },
@@ -69,7 +73,7 @@
     "positive_tabindex": 0
   },
   "names": {
-    "controls": 107,
+    "controls": 108,
     "unnamed": 0,
     "live_regions": 30
   },
@@ -118,7 +122,7 @@
       "detail": ""
     },
     {
-      "check": "the remaining seven non-native controls retain delegated keyboard activation",
+      "check": "the remaining eight non-native controls retain delegated keyboard activation",
       "ok": true,
       "detail": ""
     },

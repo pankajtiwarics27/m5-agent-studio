@@ -76,6 +76,7 @@ import onboarding_preflight
 import recovery_guard
 import runtime_persistence
 import sandbox_boundary
+import scoped_feedback
 import start_command_center
 import side_effect_ledger
 import direction_checkpoints
@@ -887,6 +888,35 @@ def get_scoped_grant_store() -> scoped_grants.ScopedGrantStore:
             _SCOPED_GRANT_STORE = scoped_grants.ScopedGrantStore(cur_dir)
             _SCOPED_GRANT_STORE_DIR = cur_dir
         return _SCOPED_GRANT_STORE
+
+
+_SCOPED_FEEDBACK_STORE: scoped_feedback.FeedbackStore | None = None
+_SCOPED_FEEDBACK_STORE_PATH: Path | None = None
+_SCOPED_FEEDBACK_STORE_LOCK = threading.Lock()
+
+
+def get_scoped_feedback_store() -> scoped_feedback.FeedbackStore:
+    """Return the durable AP-019 scoped feedback store, in the application's own database.
+
+    Deliberately not a second database: feedback is a record about work this app produced, and
+    a separate file would let the two fall out of step. The store keeps the owner's words, the
+    version they were about and the scope, and it never keeps a preference they did not state.
+    """
+    global _SCOPED_FEEDBACK_STORE, _SCOPED_FEEDBACK_STORE_PATH
+    cur_path = Path(DB_PATH).resolve()
+    with _SCOPED_FEEDBACK_STORE_LOCK:
+        if _SCOPED_FEEDBACK_STORE is None or _SCOPED_FEEDBACK_STORE_PATH != cur_path:
+            _SCOPED_FEEDBACK_STORE = scoped_feedback.FeedbackStore(cur_path)
+            _SCOPED_FEEDBACK_STORE_PATH = cur_path
+        return _SCOPED_FEEDBACK_STORE
+
+
+def _reset_scoped_feedback_store(store: scoped_feedback.FeedbackStore | None = None) -> None:
+    """Replace or clear the cached feedback store (tests / clock injection)."""
+    global _SCOPED_FEEDBACK_STORE, _SCOPED_FEEDBACK_STORE_PATH
+    with _SCOPED_FEEDBACK_STORE_LOCK:
+        _SCOPED_FEEDBACK_STORE = store
+        _SCOPED_FEEDBACK_STORE_PATH = Path(DB_PATH).resolve() if store is not None else None
 
 
 def _reset_scoped_grant_store(store: scoped_grants.ScopedGrantStore | None = None) -> None:
@@ -15215,6 +15245,195 @@ async def api_answer_direction_checkpoint(session_id: str, request: Request) -> 
             "grants_publish_permission": False,
             "task": _serialize_task_record(updated),
         }
+    )
+
+
+_SCOPED_FEEDBACK_PATH = "/api/harness/sessions/{session_id}/feedback"
+
+
+def _feedback_state(session_id: str, artifact_id: str, artifact_sha256: str) -> dict[str, Any]:
+    """Everything the pane needs to draw feedback for one artifact version, from the store."""
+    store = get_scoped_feedback_store()
+    # Filtered by run as well as artifact: the same artifact name at the same version can be
+    # produced by two runs, and one run's corrections must not be read as the other's.
+    records = store.list(session_id=session_id, artifact_id=artifact_id)
+    revision = scoped_feedback.plan_revision(
+        artifact_id=artifact_id, base_sha256=artifact_sha256, feedback=records
+    )
+    stale = scoped_feedback.stale_for(
+        feedback=records, artifact_id=artifact_id, current_sha256=artifact_sha256
+    )
+    return {
+        "artifact_id": artifact_id,
+        "artifact_sha256": artifact_sha256,
+        # Named `items`, not `feedback`: a route returns the recorded item as `feedback`, and a
+        # spread that shadowed it would answer with a list where the caller expects one record.
+        "items": [item.to_mapping() for item in records],
+        "live": [item.to_mapping() for item in scoped_feedback.live(records)],
+        "revision": revision.to_mapping(),
+        "awaiting_confirmation": list(revision.awaiting_confirmation),
+        "conflicts": [list(pair) for pair in revision.conflicts],
+        "stale": [item.to_mapping() for item in stale],
+    }
+
+
+@app.get("/api/harness/sessions/{session_id}/feedback")
+async def api_list_scoped_feedback(session_id: str, artifact_id: str = "", artifact_sha256: str = "") -> JSONResponse:
+    """List feedback for one artifact version, with what still stands and what no longer applies."""
+    _require_well_formed_session(session_id)
+    name = str(artifact_id or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="artifact_id is required: feedback is about one artifact.")
+    digest = str(artifact_sha256 or "").strip().lower()
+    if not digest:
+        raise HTTPException(
+            status_code=400,
+            detail="artifact_sha256 is required: feedback without a version cannot be checked for staleness.",
+        )
+    try:
+        return JSONResponse(_feedback_state(session_id, name, digest))
+    except scoped_feedback.FeedbackError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/harness/sessions/{session_id}/feedback")
+async def api_capture_scoped_feedback(session_id: str, request: Request) -> JSONResponse:
+    """Record what the owner said about one artifact version, at the narrowest scope it supports.
+
+    Nothing is generalised here. The scope follows what was pointed at: a selection makes it
+    element-scoped, plain words make it artifact-scoped, and a preference is never captured
+    from one comment -- that widening happens only through the promote route, with a basis.
+    """
+    _require_well_formed_session(session_id)
+    try:
+        body = await request.json()
+    except Exception:
+        body = None
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="Feedback needs a JSON body.")
+
+    artifact_id = str(body.get("artifact_id") or "").strip()
+    artifact_sha256 = str(body.get("artifact_sha256") or "").strip().lower()
+    if not artifact_id or not artifact_sha256:
+        raise HTTPException(
+            status_code=400,
+            detail="artifact_id and artifact_sha256 are both required: feedback is pinned to the version it was given on.",
+        )
+
+    raw_selection = body.get("selection")
+    selection: scoped_feedback.ElementSelection | None = None
+    try:
+        if isinstance(raw_selection, dict):
+            selection = scoped_feedback.ElementSelection(
+                locator_kind=str(raw_selection.get("locator_kind") or "element"),
+                locator=str(raw_selection.get("locator") or ""),
+                artifact_sha256=str(raw_selection.get("artifact_sha256") or artifact_sha256),
+                selection_sha256=str(raw_selection.get("selection_sha256") or ""),
+            )
+        record = scoped_feedback.capture(
+            feedback_id=str(body.get("feedback_id") or f"fb-{uuid.uuid4().hex[:16]}"),
+            session_id=session_id,
+            artifact_id=artifact_id,
+            artifact_sha256=artifact_sha256,
+            verbatim=str(body.get("verbatim") or ""),
+            selection=selection,
+            quick_action=str(body.get("quick_action") or ""),
+            interpretation=str(body.get("interpretation") or ""),
+            material=body.get("material") if isinstance(body.get("material"), bool) else None,
+            # Passed through rather than ignored: a caller that asks for preference scope is
+            # refused by the module, and silently downgrading it to artifact scope would record
+            # something the caller did not ask for.
+            scope_kind=str(body["scope_kind"]) if body.get("scope_kind") else None,
+        )
+        get_scoped_feedback_store().put(record)
+    except scoped_feedback.FeedbackError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    _append_harness_event(
+        session_id,
+        "feedback/captured",
+        {"feedback_id": record.feedback_id, "scope_kind": record.scope_kind, "artifact_id": artifact_id},
+    )
+    return JSONResponse(
+        {"status": "captured", "feedback": record.to_mapping(), **_feedback_state(session_id, artifact_id, artifact_sha256)}
+    )
+
+
+@app.post("/api/harness/sessions/{session_id}/feedback/{feedback_id}/confirm")
+async def api_confirm_scoped_feedback(session_id: str, feedback_id: str, request: Request) -> JSONResponse:
+    """Confirm what a piece of feedback means, so a revision may be built on it.
+
+    This confirms the interpretation of the words, not the work: no route here accepts an
+    artifact, and the record it writes says so.
+    """
+    _require_well_formed_session(session_id)
+    try:
+        body = await request.json()
+    except Exception:
+        body = None
+    who = str((body or {}).get("confirmed_by") or "").strip() if isinstance(body, dict) else ""
+    store = get_scoped_feedback_store()
+    try:
+        existing = store.get(feedback_id)
+        if existing is None or existing.session_id != session_id:
+            # A comment belongs to the run it was given in. Answering 404 for another run's id
+            # is the honest reply: it is not this session's feedback to settle.
+            raise HTTPException(status_code=404, detail=f"No feedback {feedback_id!r} in this session.")
+        updated = store.put(scoped_feedback.confirm(existing, confirmed_by=who or "owner"))
+    except scoped_feedback.FeedbackError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return JSONResponse(
+        {"status": "confirmed", "feedback": updated.to_mapping(), **_feedback_state(session_id, updated.artifact_id, updated.artifact_sha256)}
+    )
+
+
+@app.post("/api/harness/sessions/{session_id}/feedback/{feedback_id}/promote")
+async def api_promote_scoped_feedback(session_id: str, feedback_id: str, request: Request) -> JSONResponse:
+    """Widen a correction into a preference, with a stated basis. The only path that widens."""
+    _require_well_formed_session(session_id)
+    try:
+        body = await request.json()
+    except Exception:
+        body = None
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="Promotion needs a JSON body with a basis.")
+    store = get_scoped_feedback_store()
+    existing = store.get(feedback_id)
+    if existing is None or existing.session_id != session_id:
+        raise HTTPException(status_code=404, detail=f"No feedback {feedback_id!r} in this session.")
+    try:
+        promoted = scoped_feedback.promote(
+            existing,
+            basis=str(body.get("basis") or ""),
+            promoted_by=str(body.get("promoted_by") or "owner"),
+            scope_kind=str(body.get("scope_kind") or "preference"),
+        )
+    except scoped_feedback.FeedbackError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    store.put(promoted)
+    _append_harness_event(
+        session_id, "feedback/promoted", {"feedback_id": promoted.feedback_id, "scope_kind": promoted.scope_kind}
+    )
+    return JSONResponse(
+        {"status": "promoted", "feedback": promoted.to_mapping(), **_feedback_state(session_id, promoted.artifact_id, promoted.artifact_sha256)}
+    )
+
+
+@app.delete("/api/harness/sessions/{session_id}/feedback/{feedback_id}")
+async def api_delete_scoped_feedback(session_id: str, feedback_id: str) -> JSONResponse:
+    """Withdraw retained feedback. The record survives; the live set does not include it."""
+    _require_well_formed_session(session_id)
+    store = get_scoped_feedback_store()
+    existing = store.get(feedback_id)
+    if existing is None or existing.session_id != session_id:
+        raise HTTPException(status_code=404, detail=f"No feedback {feedback_id!r} in this session.")
+    try:
+        removed = store.delete(feedback_id)
+    except scoped_feedback.FeedbackError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    _append_harness_event(session_id, "feedback/deleted", {"feedback_id": feedback_id})
+    return JSONResponse(
+        {"status": "deleted", "feedback": removed.to_mapping(), **_feedback_state(session_id, removed.artifact_id, removed.artifact_sha256)}
     )
 
 

@@ -51,15 +51,16 @@
           "artifact": "product/M5_2_0_UIUX_Control_Inventory.json",
           "totals": {
             "panes": 6,
-            "markup_controls": 276,
+            "markup_controls": 279,
             "pane_controls": 113,
-            "chrome_controls": 163,
-            "script_rendered_controls": 74,
+            "chrome_controls": 166,
+            "script_rendered_controls": 76,
             "script_rendered_by_function": {
               "debateModelPageFooter": 2,
               "ensureStageCardMounted": 1,
               "hallClearScopeNoteHtml": 2,
               "harnessEvidenceChangeHtml": 1,
+              "harnessFeedbackHtml": 2,
               "mcpCatalogCardHtml": 1,
               "mcpToolRowHtml": 3,
               "openSpawnModal": 1,
@@ -107,9 +108,9 @@
         {
           "artifact": "product/M5_2_0_UIUX_Route_Map.json",
           "totals": {
-            "fetch_call_sites": 73,
-            "resolved_urls": 81,
-            "exact_matches": 79,
+            "fetch_call_sites": 77,
+            "resolved_urls": 85,
+            "exact_matches": 83,
             "dynamic_matches": 2,
             "dynamic_method_matches": 0,
             "forwarded_call_sites": 1,
@@ -117,16 +118,16 @@
             "unresolved_caller_edges": 0,
             "unresolved_method_edges": 0,
             "findings": 0,
-            "routes": 123,
-            "routes_with_resolved_or_possible_caller": 77,
-            "routes_with_certain_caller": 66,
+            "routes": 128,
+            "routes_with_resolved_or_possible_caller": 81,
+            "routes_with_certain_caller": 70,
             "routes_only_possible_caller": 11,
-            "routes_no_caller_observed": 46,
+            "routes_no_caller_observed": 47,
             "routes_unknown_frontend_caller": 0,
             "resolved_from": {
-              "assignment": 1,
+              "assignment": 2,
               "forwarded": 1,
-              "literal": 71
+              "literal": 74
             }
           }
         }
@@ -146,31 +147,31 @@
         {
           "artifact": "product/M5_2_0_UIUX_Authorization_Trace.json",
           "totals": {
-            "routes_in_app": 123,
-            "state_changing_routes_in_app": 83,
-            "traced_routes": 52,
+            "routes_in_app": 128,
+            "state_changing_routes_in_app": 87,
+            "traced_routes": 55,
             "route_map_unresolved_call_sites": 0,
             "route_map_unresolved_caller_edges": 0,
             "route_map_unresolved_method_edges": 0,
             "traced_by_method": {
-              "DELETE": 7,
+              "DELETE": 8,
               "PATCH": 3,
-              "POST": 42
+              "POST": 44
             },
-            "routes_with_authority_subsystem": 28,
-            "routes_with_authority_directly": 17,
-            "routes_with_state_subsystem": 45,
+            "routes_with_authority_subsystem": 31,
+            "routes_with_authority_directly": 20,
+            "routes_with_state_subsystem": 47,
             "routes_with_state_directly": 18,
             "routes_with_durable_writes": 3,
             "routes_that_can_leave_the_machine": 23,
             "distinct_handler_refusals": 8,
             "refusals_by_status": {
-              "400": 105,
-              "401": 52,
-              "403": 58,
-              "404": 21,
+              "400": 112,
+              "401": 55,
+              "403": 61,
+              "404": 24,
               "409": 26,
-              "413": 52,
+              "413": 55,
               "429": 8,
               "500": 1,
               "502": 2,
@@ -178,16 +179,16 @@
               "507": 3
             },
             "shared_refusals_by_status": {
-              "400": 52,
-              "401": 52,
-              "403": 52,
-              "413": 52,
+              "400": 55,
+              "401": 55,
+              "403": 55,
+              "413": 55,
               "429": 8
             },
             "handler_refusals_by_status": {
-              "400": 53,
+              "400": 57,
               "403": 6,
-              "404": 21,
+              "404": 24,
               "409": 26,
               "500": 1,
               "502": 2,
@@ -214,18 +215,18 @@
           "totals": {
             "panes": 6,
             "preserved_capabilities": 21,
-            "markup_controls": 276,
-            "chrome_controls": 163,
+            "markup_controls": 279,
+            "chrome_controls": 166,
             "pane_controls": 113,
-            "script_rendered_controls": 74,
-            "routes": 123,
-            "routes_with_resolved_or_possible_caller": 77,
-            "routes_no_caller_observed": 46,
+            "script_rendered_controls": 76,
+            "routes": 128,
+            "routes_with_resolved_or_possible_caller": 81,
+            "routes_no_caller_observed": 47,
             "routes_unknown_frontend_caller": 0,
             "route_map_unresolved_call_sites": 0,
             "route_map_unresolved_caller_edges": 0,
             "route_map_unresolved_method_edges": 0,
-            "state_changing_routes_traced": 52,
+            "state_changing_routes_traced": 55,
             "pane_routes_reached": 44,
             "pane_routes_excluded": 34,
             "route_walk_depth": 2,
@@ -251,7 +252,7 @@
           "totals": {
             "tokens": 58,
             "groups": 8,
-            "references": 1654,
+            "references": 1666,
             "theme_overrides": 20,
             "density_overrides": 5,
             "contrast_pairs": 28,
@@ -517,10 +518,10 @@
             "gap_reasons": 6,
             "strip_controls": 8,
             "functions": 13,
-            "event_types_emitted": 45,
+            "event_types_emitted": 48,
             "event_types_with_a_card": 16,
             "event_types_described_by_name": 23,
-            "event_types_with_only_the_generic_preview": 22,
+            "event_types_with_only_the_generic_preview": 25,
             "checks": 105,
             "findings": 0
           }
@@ -547,7 +548,7 @@
             "surface_lists": 5,
             "capability_map_tools": 18,
             "routes": 4,
-            "routes_called": 58,
+            "routes_called": 61,
             "routes_unmounted": 0,
             "findings": 0
           }
@@ -572,7 +573,7 @@
             "functions": 25,
             "record_sections": 6,
             "routes": 3,
-            "routes_called": 58,
+            "routes_called": 61,
             "routes_unmounted": 0,
             "styles": 15,
             "findings": 0
@@ -821,7 +822,7 @@
         {
           "artifact": "product/M5_2_0_UIUX_Polish.json",
           "totals": {
-            "radius_rules": 146,
+            "radius_rules": 148,
             "motion_rules": 18,
             "press_rules": 2,
             "hover_rules": 36,
@@ -853,7 +854,7 @@
             "route_provers": 13,
             "control_provers": 4,
             "walks": 18,
-            "support_walks": 30,
+            "support_walks": 31,
             "findings": 0
           }
         }
@@ -878,9 +879,9 @@
             "real": 5,
             "injected": 4,
             "server_only": 3,
-            "mutating_writes": 39,
+            "mutating_writes": 42,
             "guarded_writes": 23,
-            "reporting_writes": 16,
+            "reporting_writes": 19,
             "presentation_hosts": 5
           }
         }
@@ -900,15 +901,15 @@
         {
           "artifact": "product/M5_2_0_UIUX_Screenshot_Review.json",
           "totals": {
-            "sets": 39,
-            "files": 1787,
-            "reviewed_sets": 39,
-            "sets_eyed": 19,
-            "files_eyed": 105,
-            "re_taken_sets": 15,
+            "sets": 40,
+            "files": 1792,
+            "reviewed_sets": 40,
+            "sets_eyed": 20,
+            "files_eyed": 108,
+            "re_taken_sets": 16,
             "published_sets": 1,
             "findings": 0,
-            "observations": 32
+            "observations": 33
           }
         }
       ]
@@ -1146,18 +1147,18 @@
   ],
   "inventory": {
     "tabs": 6,
-    "routes": 123,
-    "markup_controls": 276,
-    "chrome_controls": 163,
-    "script_rendered_controls": 74,
+    "routes": 128,
+    "markup_controls": 279,
+    "chrome_controls": 166,
+    "script_rendered_controls": 76,
     "capabilities": 21,
     "e2e_rows": 21,
     "e2e_findings": 0,
     "refusals": 12,
     "refusal_statuses": 9,
-    "captures": 1787,
-    "capture_sets": 39,
-    "reviewed_sets": 39,
+    "captures": 1792,
+    "capture_sets": 40,
+    "reviewed_sets": 40,
     "screenshot_findings": 0,
     "doc_pages": 5,
     "doc_commands": 47,
