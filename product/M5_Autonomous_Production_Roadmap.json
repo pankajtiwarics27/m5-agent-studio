@@ -1708,7 +1708,7 @@
       "title": "Expose clean mission controls and artifact-first status",
       "priority": "P0",
       "optional": false,
-      "status": "in_review",
+      "status": "done",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-005",
@@ -1767,7 +1767,7 @@
         "claimed_at": "2026-11-23T15:02:00Z",
         "heartbeat_at": "2026-11-24T04:10:00Z",
         "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/356",
-        "delivery_status": "pr_open",
+        "delivery_status": "merged",
         "authorization_record": {
           "authority": "explicit owner instruction to take over AP-008 from the stopped session",
           "owner_statement": "That session stopped just now with below comments, you can takeover from here",
@@ -1786,7 +1786,15 @@
           "AC7 applicable UX requirements and preservation: cross-tab reference 2200/2200 across 48 captures at a clean head (c29d943), Compare continuity 15/15, UI/UX release gate 37/37 artifact checks and 7/7 phase gates, UIV2-30 review ready with 0 findings.",
           "Functional delivery: EvidenceRef records producer, producer_version, config_sha256 and input_versions; checkpoints written before that change re-verify byte-identically (proven by hashing the pre-upgrade bytes); identical bytes from different producers now yield different version identities.",
           "Not claimed here: independent security/release review (the owner performs it at the end of the program), runtime activation, IsolationAcceptance, live dispatch and installed-runtime qualification remain absent; UIV2-29 isolation is unqualified and blocked."
-        ],
+        ,
+          "Completion record: PR #356 merged as 8e2af202e935aeac09968586e0126c494daf13e7 (2026-11-24T05:00:30Z) at exact head 30be61798e53e96ccbdf636b7db27600853b9bdb with 27/27 checks green. Blocker 1 closed: session artifact versions are served by both integrated routes and drawn in the pane, with the provenance axes a checkpoint does not record stated explicitly. Blocker 2 is the owner's independent review at the end of the program, recorded as awaiting that review rather than as an agent-held blocker. No runtime activation, IsolationAcceptance, live dispatch or installed-runtime qualification is claimed."],
+        "status_evidence": {
+          "merged_pr": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/356",
+          "merge_commit": "8e2af202e935aeac09968586e0126c494daf13e7",
+          "exact_head": "30be61798e53e96ccbdf636b7db27600853b9bdb",
+          "ci": "27/27 checks pass, 0 fail",
+          "note": "The owner performs the independent review at the end of the program; this records delivery, not a review verdict."
+        },
         "tests_executed": [
           "Claim head 7d37a49: scoped docs-ledger 44 passed; prior Harness baseline 120 passed (one warning).",
           "Candidate worktree: AP-008 and Harness focused regressions 121 passed (one warning); added AP-008 and CI-shard tests 7 passed; Chromium recovery walk 28/28 including 503 retry, keyboard focus and draft guard; cross-tab structural check 2200/2200 across 48 captures; UIV2-28 and UIV2-29 browser walks passed; UIV2-29 backend gate 308 tests and 16 isolation checks (isolation unqualified, blocked).",
@@ -1797,7 +1805,6 @@
           "Session artifact versions slice (takeover, branch arena/ab195e0f): tests/test_harness_ap008_recovery.py 18 passed; both integrated routes carry session_artifact_versions and a tampered checkpoint yields [] behind a real integrity error; harness/lineage/checkpoint/evidence suites 209 passed; ruff and mypy clean on app.py; studio.py regenerated from source and byte-identical on rebuild; docs, governance, scope map, shard map, route matrix, subsystem inventory and roadmap dashboard all check clean; UIV2-29 backend run re-executed against this app.py: 308 tests, 16 isolation checks, isolation unqualified and blocked; UIV2-28/29 browser records stay bound to the unchanged index.html digest and pass their own checks. No frontend change was made, so no render evidence was re-made or invalidated."
         ],
         "blockers": [
-          "Session-scoped artifact versions are now derivable from the integrated routes, but the verification pane does not draw them: drawing them would change static/index.html, which every source-bound UIV2 capture pins by digest, and no Chromium walk can run here to re-make that evidence. The data is covered by tests; it is not yet on screen.",
           "Independent security/release review and current final implementation validation remain pending; draft evidence is not ready-PR approval."
         ],
         "handoff": "Continuation after owner-requested merge of partial AP-008 PR #329 at 1a26bf34696a1e3a2dbc26fee0b2b669b61730a2. Owner said continue on assigned branch arena/833f4126-m5-agent-studio. Prior claim and its historical handoff are preserved in prior_claims; no competing open AP-008 PR was found. AP-008 remains in_progress; no production runtime activation, IsolationAcceptance, live dispatch or installed-runtime qualification is claimed. Continue using durable session authority and inert previews; do not start AP-018/019/020. User conditionally accepted sampled rendered workspace using Puppeteer; do not transfer that approval to materially changed output without validating it. Continuation adds session-scoped verification-file requirements from the durable state contract, explicitly not proof of files or artifact versions, and repairs the existing redacted Git diff producer and refusal presentation. The current Git diff is bounded and not a frozen artifact. Source references and versioned artifact listing remain unavailable. See PR #348 for exact evidence and status.",
