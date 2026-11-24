@@ -198,6 +198,10 @@ class DirectionCheckpoint:
         default=False, init=False
     )
 
+    def __post_init__(self) -> None:
+        _text(self.task_id, "task_id")
+        _text(self.task_kind, "task_kind")
+
     @property
     def pauses_production(self) -> bool:
         return self.trigger in {"no_benchmark", "uncertainty_exceeds_coverage"}
@@ -228,6 +232,73 @@ class DirectionCheckpoint:
     def fingerprint(self) -> str:
         canonical = json.dumps(self.to_mapping(), sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+    @classmethod
+    def from_mapping(cls, recorded: Mapping[str, Any]) -> "DirectionCheckpoint":
+        """Rebuild a checkpoint that was persisted, refusing anything it cannot vouch for.
+
+        The record comes back from durable storage, so it is re-validated rather than
+        trusted: a stored checkpoint whose flags claim acceptance is refused here, which
+        means a forged or edited row cannot be used to turn a direction answer into
+        permission. ``schema_version`` is checked so an older or newer shape is a clear
+        error instead of a silently half-read checkpoint.
+        """
+        if not isinstance(recorded, Mapping):
+            raise DirectionError("a recorded direction checkpoint must be a mapping")
+        version = recorded.get("schema_version")
+        if version != SCHEMA_VERSION:
+            raise DirectionError(
+                f"recorded direction checkpoint has schema {version!r}, expected {SCHEMA_VERSION!r}"
+            )
+        for flag in (
+            "direction_approval_is_final_acceptance",
+            "direction_approval_grants_publish_permission",
+        ):
+            if recorded.get(flag, False) is not False:
+                raise DirectionError(
+                    f"recorded direction checkpoint claims {flag}; a direction answer never carries that"
+                )
+        raw_sample = recorded.get("sample")
+        sample: SampleArtifact | None = None
+        if isinstance(raw_sample, Mapping):
+            checks = raw_sample.get("technical_checks")
+            sample = SampleArtifact(
+                artifact_id=str(raw_sample.get("artifact_id") or ""),
+                content_sha256=str(raw_sample.get("content_sha256") or ""),
+                technical_checks=(
+                    {str(k): bool(v) for k, v in checks.items()}
+                    if isinstance(checks, Mapping)
+                    else {}
+                ),
+            )
+        elif raw_sample is not None:
+            raise DirectionError(
+                "recorded direction checkpoint has an unreadable sample"
+            )
+
+        trigger = str(recorded.get("trigger") or "")
+        if trigger not in TRIGGERS:
+            raise DirectionError(
+                f"recorded direction checkpoint has unknown trigger {trigger!r}"
+            )
+        return cls(
+            task_id=str(recorded.get("task_id") or ""),
+            task_kind=str(recorded.get("task_kind") or ""),
+            trigger=trigger,
+            rationale=str(recorded.get("rationale") or ""),
+            sample=sample,
+            feedback_prompt=str(recorded.get("feedback_prompt") or ""),
+            feedback_points=tuple(
+                str(x) for x in (recorded.get("feedback_points") or ())
+            ),
+            benchmark_reference_id=str(recorded.get("benchmark_reference_id") or ""),
+            benchmark_reference_sha256=str(
+                recorded.get("benchmark_reference_sha256") or ""
+            ),
+            escalated_uncertainties=tuple(
+                str(x) for x in (recorded.get("escalated_uncertainties") or ())
+            ),
+        )
 
 
 def decide(

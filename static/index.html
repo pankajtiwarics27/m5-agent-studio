@@ -1409,6 +1409,12 @@ summary:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--ring)
 .harness-recovery-facts dd { margin: 0; color: var(--text); overflow-wrap: anywhere; }
 .harness-recovery-note { margin: 0 0 9px; font-size: 11.2px; line-height: 1.5; color: var(--text-dim); overflow-wrap: anywhere; }
 .harness-recovery-note[hidden] { display: none; }
+/* AP-018: the direction sample is its own block. Without a boundary its closing note reads as
+   the first line of the recovery facts list below it, which is a different claim about a
+   different thing. */
+.harness-direction { margin: 0 0 9px; padding: 9px 10px 2px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); }
+.harness-direction[hidden] { display: none; }
+.harness-direction .ev-note { display: block; margin: 6px 0 8px; padding-top: 6px; border-top: 1px solid var(--border); }
 .harness-recovery-note[data-tone="ok"] { color: #6ee7b7; }
 .harness-recovery-note[data-tone="warn"] { color: #fde68a; }
 .harness-recovery-note[data-tone="danger"] { color: #fda4af; }
@@ -3522,6 +3528,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
                built from `GET …/state` + `GET …/task` - no route was added for it. -->
           <div id="harnessRecoveryPanel" class="harness-recovery" role="group" aria-label="Recovery" hidden>
             <div id="harnessRecoveryStory"></div>
+            <div id="harnessDirectionPanel" class="harness-direction"></div>
             <dl id="harnessRecoveryFacts" class="harness-recovery-facts" aria-label="What survived"></dl>
             <p id="harnessRecoveryNote" class="harness-recovery-note" role="status" aria-live="polite" hidden></p>
           </div>
@@ -15834,6 +15841,8 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     confirm_cancel: "Confirm: cancel and fence this task",
     abort: "Abort the run and stop following",
     fresh: "Start a new session",
+    "direction-keep": "Keep this direction",
+    "direction-redirect": "Change direction",
   };
 
   // The reason codes a stopped task carries, in plain words. Every code below is one the
@@ -16039,6 +16048,23 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
           { id: "cancel", label: HARNESS_RECOVERY_ACTION_LABELS.cancel, tone: "danger", title: "Fence the lease, revoke this session's grants and mark the task cancelled" },
         ],
       };
+    } else if (status === "waiting_approval") {
+      // A direction pause is not a stuck run: the runtime is waiting for a judgement on the
+      // sample. The controls say what each answer does, and the limit is in the panel below.
+      const direction = harnessDirectionModel(harnessRecoveryPayload && harnessRecoveryPayload.task);
+      story = {
+        kind: "recovery",
+        tone: "paused",
+        title: "Waiting on you: is this the right direction?",
+        cause: direction && direction.explanation
+          ? `the run stopped to ask, because ${direction.explanation}.`
+          : "the run stopped to ask about the direction of an early sample.",
+        context: `the sample, its version and the question below are recorded in this task's own log, so they survive a reconnect. Nothing is published or accepted by answering.`,
+        actions: [
+          { id: "direction-keep", label: "Keep this direction", title: "Continue producing in this direction. This is not acceptance of the finished artifact." },
+          { id: "direction-redirect", label: "Change direction", title: "Continue producing, but change course first. Your note is recorded as the direction." },
+        ],
+      };
     } else if (status === "running") {
       story = following
         ? {
@@ -16129,6 +16155,109 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     return story;
   }
 
+  // ================= AP-018: THE DIRECTION SAMPLE =================
+  // An autonomous run that shows nothing until it is finished can spend a large budget on a
+  // direction the owner did not want. `POST …/direction-checkpoint` records the sample, the
+  // digest of the exact version shown and the question, and moves the task to
+  // `waiting_approval`; `POST …/direction-answer` resolves it. Everything drawn below is read
+  // off `GET …/task`'s `direction_checkpoint`, which is recovered from the task's own
+  // transition log - so a reader who opens this pane after a reconnect sees the same question,
+  // not a reconstruction of it.
+  //
+  // Two sentences are load-bearing and are printed verbatim rather than paraphrased:
+  //   - Direction approval is not final acceptance.
+  //   - It grants no permission to publish, deploy or spend.
+  // They are the flags the server returns. A direction answer that could be read as "ship it"
+  // is the failure this whole story exists to prevent, so the pane states the limit beside the
+  // buttons rather than in a footnote.
+  const HARNESS_DIRECTION_TRIGGERS = {
+    no_benchmark: "no owner-approved reference covers this kind of work, so the sample is the cheapest way to settle direction",
+    uncertainty_exceeds_coverage: "an owner-approved reference covers this work, but something about this task sits outside what it measured",
+    benchmark_covered: "an owner-approved reference covers this work and nothing was escalated",
+  };
+
+  function harnessDirectionText(value, max) {
+    return typeof value === "string" ? value.slice(0, max || 512) : "";
+  }
+
+  function harnessDirectionDigest(value) {
+    const digest = String(value || "").trim().toLowerCase();
+    return /^[0-9a-f]{64}$/.test(digest) ? digest : "";
+  }
+
+  // Returns null when there is nothing to show. A malformed record is drawn as malformed:
+  // falling back to an empty panel would make a broken question look like no question.
+  function harnessDirectionModel(task) {
+    const record = task && typeof task === "object" ? task.direction_checkpoint : null;
+    if (!record || typeof record !== "object") return null;
+    const taken = Number(task.direction_checkpoints_taken);
+    const sample = record.sample && typeof record.sample === "object" ? record.sample : null;
+    const checks = sample && sample.technical_checks && typeof sample.technical_checks === "object"
+      ? Object.entries(sample.technical_checks).map(([name, passed]) => [String(name).slice(0, 64), passed === true])
+      : [];
+    return {
+      trigger: harnessDirectionText(record.trigger, 64),
+      explanation: HARNESS_DIRECTION_TRIGGERS[record.trigger] || "",
+      rationale: harnessDirectionText(record.rationale),
+      question: harnessDirectionText(record.feedback_prompt),
+      points: Array.isArray(record.feedback_points) ? record.feedback_points.map(point => harnessDirectionText(point, 160)).filter(Boolean) : [],
+      artifactId: sample ? harnessDirectionText(sample.artifact_id, 256) : "",
+      digest: sample ? harnessDirectionDigest(sample.content_sha256) : "",
+      checks,
+      escalated: Array.isArray(record.escalated_uncertainties) ? record.escalated_uncertainties.map(u => harnessDirectionText(u, 64)).filter(Boolean) : [],
+      reference: harnessDirectionText(record.benchmark_reference_id, 256),
+      taken: Number.isFinite(taken) && taken >= 0 ? taken : null,
+      waiting: String((task.task && task.task.state) || "").toLowerCase() === "waiting_approval",
+    };
+  }
+
+  // The panel never builds markup from the record: every value is escaped text, so a sample id
+  // or a feedback line containing angle brackets stays a string. It is a read-only summary -
+  // the answer is sent by the controls in the recovery story above, which already refuse a
+  // stale answer.
+  function harnessDirectionHtml(task) {
+    const model = harnessDirectionModel(task);
+    if (!model) return "";
+    const rows = [];
+    rows.push({
+      label: "Why you were asked",
+      value: model.explanation || `the runtime gave trigger ${model.trigger || "?"}`,
+      mono: false,
+    });
+    if (model.rationale) rows.push({ label: "Reason", value: model.rationale, mono: false });
+    if (model.artifactId) rows.push({ label: "Sample", value: model.artifactId, mono: true });
+    rows.push({
+      label: "Sample version",
+      value: model.digest ? `sha256 ${model.digest}` : "no digest recorded, so this sample cannot be identified",
+      mono: !!model.digest,
+      note: model.digest
+        ? "An answer is bound to this digest. If the sample changes, the answer is refused rather than applied to a version you did not see."
+        : "",
+    });
+    if (model.checks.length) {
+      rows.push({
+        label: "Checks the sample passed",
+        value: model.checks.map(([name, passed]) => `${name}: ${passed ? "pass" : "FAIL"}`).join(" \u00b7 "),
+        mono: true,
+        note: "Technical checks only. They say the sample renders, not that it is the right direction.",
+      });
+    }
+    if (model.escalated.length) {
+      rows.push({
+        label: "Outside what the reference measured",
+        value: model.escalated.join(", "),
+        mono: true,
+      });
+    }
+    if (model.reference) rows.push({ label: "Reference that covers this", value: model.reference, mono: true });
+    if (model.taken !== null) rows.push({ label: "Check-ins taken", value: String(model.taken), mono: true });
+    return `<div class="ev-heading">Direction sample${model.waiting ? " \u2014 waiting on you" : ""}</div>
+      ${model.question ? `<div class="ev-subheading">${escapeHtml(model.question)}</div>` : ""}
+      ${model.points.length ? `<ul class="ev-limits">${model.points.map(point => `<li>${escapeHtml(point)}</li>`).join("")}</ul>` : ""}
+      ${harnessEvidenceFactListHtml(rows)}
+      <p class="ev-note">Approving a direction is not accepting this artifact, and it does not publish, deploy or spend anything. Final acceptance is a separate decision, and so is adopting this work as a reference.</p>`;
+  }
+
   function harnessRecoveryFactsHtml(facts) {
     if (!facts || !facts.length) return "";
     return facts
@@ -16159,11 +16288,16 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     const factsHost = document.getElementById("harnessRecoveryFacts");
     if (!host || !storyHost || !factsHost) return;
     const story = harnessRecoveryStory(harnessRecoveryPayload);
+    const directionHostEarly = document.getElementById("harnessDirectionPanel");
     if (!story) {
       host.hidden = true;
       storyHost.innerHTML = "";
       factsHost.innerHTML = "";
       factsHost.hidden = true;
+      if (directionHostEarly) {
+        directionHostEarly.innerHTML = "";
+        directionHostEarly.hidden = true;
+      }
       harnessRecoverySay(null);
       return;
     }
@@ -16194,6 +16328,12 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     });
     factsHost.hidden = false;
     factsHost.innerHTML = harnessRecoveryFactsHtml(story.facts);
+    const directionHost = document.getElementById("harnessDirectionPanel");
+    if (directionHost) {
+      const directionHtml = harnessDirectionHtml(harnessRecoveryPayload && harnessRecoveryPayload.task);
+      directionHost.innerHTML = directionHtml;
+      directionHost.hidden = !directionHtml;
+    }
     const note = harnessRecoveryNote && harnessRecoveryNote.sessionId === harnessRecoveryPayload.sessionId
       ? harnessRecoveryNote
       : null;
@@ -16319,6 +16459,43 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
           checkpointId: String(checkpoint.checkpoint_id || ""),
         };
         harnessRecoverySay(`Resume prepared from step ${Number(data.next_step || 1)}. Nothing has run yet: pressing Run continues from the checkpoint instead of starting over.`, "ok");
+      }
+    } else if (id === "direction-keep" || id === "direction-redirect") {
+      const direction = harnessDirectionModel(payload.task);
+      if (!direction || !direction.digest) {
+        // Without the digest there is no version to bind the answer to, and an answer that
+        // cannot be tied to a version is exactly what the server will refuse.
+        harnessRecoverySay("No direction sample with a recorded version is available, so no answer was sent.", "warn");
+        return;
+      }
+      let answer = "keep";
+      if (id === "direction-redirect") {
+        const note = window.prompt("What should change about the direction?");
+        if (note === null) {
+          harnessRecoverySay("No answer was sent: the direction was left as it was.", "info");
+          return;
+        }
+        answer = String(note || "").trim();
+        if (!answer) {
+          harnessRecoverySay("A change of direction needs a note saying what to change, so nothing was sent.", "warn");
+          return;
+        }
+      }
+      const result = await harnessRecoveryPost("direction-answer", {
+        answer,
+        answered_artifact_sha256: direction.digest,
+        current_artifact_sha256: direction.digest,
+      });
+      if (!result.ok) {
+        harnessRecoverySay(`The answer was refused: ${harnessRecoveryRefusalDetail(result.data, result.status)} The question is still open.`, "danger");
+      } else {
+        const outcome = result.data && result.data.outcome;
+        harnessRecoverySay(
+          outcome === "redirect"
+            ? "Direction recorded as a change of course. The run resumes with your note; nothing was accepted or published."
+            : "Direction kept. The run resumes in this direction; this is not acceptance of the finished artifact and grants no permission to publish.",
+          "ok",
+        );
       }
     } else if (id === "continue") {
       const prepared = harnessRecoveryPrepared;

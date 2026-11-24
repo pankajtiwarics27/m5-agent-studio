@@ -6,7 +6,7 @@ executed by [`scripts/preservation_suite.py`](../scripts/preservation_suite.py).
 
 * 21 of 21 matrix rows mapped, 73 provers, 0 findings
 * 42 walk checks, 14 pytest nodes, 13 route probes, 4 wired controls
-* 18 walks prove a row; 29 more are listed with the reason they do not
+* 18 walks prove a row; 30 more are listed with the reason they do not
 
 ## What this page is, and is not
 
@@ -100,6 +100,7 @@ than succeed. That is what "existing endpoint and permission semantics" means in
 | `compare_balanced_walk.mjs` | the Compare composition walk (UIV2-16) proves how the question, the folded criteria and the answer columns are drawn; the capability it belongs to is the comparison itself, which the matrix already enumerates from the pane's own controls |
 | `compare_continuity_walk.mjs` | Compare continuity (P4-06) keeps a comparison; the capability it belongs to is the comparison itself |
 | `compare_evidence_walk.mjs` | the Compare evidence walk (UIV2-17) proves what the results table, the verdict card and the inspector's evidence lines say about a reply; the capability it belongs to is the comparison itself, which the matrix already enumerates from the pane's own controls |
+| `harness_direction_walk.mjs` | the AP-018 direction walk proves that a pause for direction is stated with the sample and its exact version, that keeping or changing the direction goes through the real route and never claims acceptance, and that a covered task is not interrupted; the capability it belongs to is autonomous production, which this matrix does not enumerate |
 | `harness_recovery_walk.mjs` | Harness pause/resume/abort recovery (P3-05) extends the abort surface rather than preserving it |
 | `keyboard_walk.mjs` | the rail's tab semantics (P1-02) are shell behaviour |
 | `mcp_hub_walk.mjs` | the MCP hub walk (UIV2-21) proves that the dialog is three tabs rather than one configuration scroll, that every preset card states its transport, trust, key requirement and approval policy before anything is connected, that search and the filter chips narrow the catalog, that a server which cannot be reached keeps the sync note it really got in both the Connected list and Activity, that a live stdio server syncs its real tools and a test call is recorded with its outcome and latency, and that a stored token never reaches the document; the capability it belongs to is the MCP surface, which the matrix already enumerates from the tool strip and the dialog's own controls |

@@ -5342,6 +5342,12 @@ summary:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--ring)
 .harness-recovery-facts dd { margin: 0; color: var(--text); overflow-wrap: anywhere; }
 .harness-recovery-note { margin: 0 0 9px; font-size: 11.2px; line-height: 1.5; color: var(--text-dim); overflow-wrap: anywhere; }
 .harness-recovery-note[hidden] { display: none; }
+/* AP-018: the direction sample is its own block. Without a boundary its closing note reads as
+   the first line of the recovery facts list below it, which is a different claim about a
+   different thing. */
+.harness-direction { margin: 0 0 9px; padding: 9px 10px 2px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); }
+.harness-direction[hidden] { display: none; }
+.harness-direction .ev-note { display: block; margin: 6px 0 8px; padding-top: 6px; border-top: 1px solid var(--border); }
 .harness-recovery-note[data-tone="ok"] { color: #6ee7b7; }
 .harness-recovery-note[data-tone="warn"] { color: #fde68a; }
 .harness-recovery-note[data-tone="danger"] { color: #fda4af; }
@@ -7455,6 +7461,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
                built from `GET …/state` + `GET …/task` - no route was added for it. -->
           <div id="harnessRecoveryPanel" class="harness-recovery" role="group" aria-label="Recovery" hidden>
             <div id="harnessRecoveryStory"></div>
+            <div id="harnessDirectionPanel" class="harness-direction"></div>
             <dl id="harnessRecoveryFacts" class="harness-recovery-facts" aria-label="What survived"></dl>
             <p id="harnessRecoveryNote" class="harness-recovery-note" role="status" aria-live="polite" hidden></p>
           </div>
@@ -19767,6 +19774,8 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     confirm_cancel: "Confirm: cancel and fence this task",
     abort: "Abort the run and stop following",
     fresh: "Start a new session",
+    "direction-keep": "Keep this direction",
+    "direction-redirect": "Change direction",
   };
 
   // The reason codes a stopped task carries, in plain words. Every code below is one the
@@ -19972,6 +19981,23 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
           { id: "cancel", label: HARNESS_RECOVERY_ACTION_LABELS.cancel, tone: "danger", title: "Fence the lease, revoke this session's grants and mark the task cancelled" },
         ],
       };
+    } else if (status === "waiting_approval") {
+      // A direction pause is not a stuck run: the runtime is waiting for a judgement on the
+      // sample. The controls say what each answer does, and the limit is in the panel below.
+      const direction = harnessDirectionModel(harnessRecoveryPayload && harnessRecoveryPayload.task);
+      story = {
+        kind: "recovery",
+        tone: "paused",
+        title: "Waiting on you: is this the right direction?",
+        cause: direction && direction.explanation
+          ? `the run stopped to ask, because ${direction.explanation}.`
+          : "the run stopped to ask about the direction of an early sample.",
+        context: `the sample, its version and the question below are recorded in this task's own log, so they survive a reconnect. Nothing is published or accepted by answering.`,
+        actions: [
+          { id: "direction-keep", label: "Keep this direction", title: "Continue producing in this direction. This is not acceptance of the finished artifact." },
+          { id: "direction-redirect", label: "Change direction", title: "Continue producing, but change course first. Your note is recorded as the direction." },
+        ],
+      };
     } else if (status === "running") {
       story = following
         ? {
@@ -20062,6 +20088,109 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     return story;
   }
 
+  // ================= AP-018: THE DIRECTION SAMPLE =================
+  // An autonomous run that shows nothing until it is finished can spend a large budget on a
+  // direction the owner did not want. `POST …/direction-checkpoint` records the sample, the
+  // digest of the exact version shown and the question, and moves the task to
+  // `waiting_approval`; `POST …/direction-answer` resolves it. Everything drawn below is read
+  // off `GET …/task`'s `direction_checkpoint`, which is recovered from the task's own
+  // transition log - so a reader who opens this pane after a reconnect sees the same question,
+  // not a reconstruction of it.
+  //
+  // Two sentences are load-bearing and are printed verbatim rather than paraphrased:
+  //   - Direction approval is not final acceptance.
+  //   - It grants no permission to publish, deploy or spend.
+  // They are the flags the server returns. A direction answer that could be read as "ship it"
+  // is the failure this whole story exists to prevent, so the pane states the limit beside the
+  // buttons rather than in a footnote.
+  const HARNESS_DIRECTION_TRIGGERS = {
+    no_benchmark: "no owner-approved reference covers this kind of work, so the sample is the cheapest way to settle direction",
+    uncertainty_exceeds_coverage: "an owner-approved reference covers this work, but something about this task sits outside what it measured",
+    benchmark_covered: "an owner-approved reference covers this work and nothing was escalated",
+  };
+
+  function harnessDirectionText(value, max) {
+    return typeof value === "string" ? value.slice(0, max || 512) : "";
+  }
+
+  function harnessDirectionDigest(value) {
+    const digest = String(value || "").trim().toLowerCase();
+    return /^[0-9a-f]{64}$/.test(digest) ? digest : "";
+  }
+
+  // Returns null when there is nothing to show. A malformed record is drawn as malformed:
+  // falling back to an empty panel would make a broken question look like no question.
+  function harnessDirectionModel(task) {
+    const record = task && typeof task === "object" ? task.direction_checkpoint : null;
+    if (!record || typeof record !== "object") return null;
+    const taken = Number(task.direction_checkpoints_taken);
+    const sample = record.sample && typeof record.sample === "object" ? record.sample : null;
+    const checks = sample && sample.technical_checks && typeof sample.technical_checks === "object"
+      ? Object.entries(sample.technical_checks).map(([name, passed]) => [String(name).slice(0, 64), passed === true])
+      : [];
+    return {
+      trigger: harnessDirectionText(record.trigger, 64),
+      explanation: HARNESS_DIRECTION_TRIGGERS[record.trigger] || "",
+      rationale: harnessDirectionText(record.rationale),
+      question: harnessDirectionText(record.feedback_prompt),
+      points: Array.isArray(record.feedback_points) ? record.feedback_points.map(point => harnessDirectionText(point, 160)).filter(Boolean) : [],
+      artifactId: sample ? harnessDirectionText(sample.artifact_id, 256) : "",
+      digest: sample ? harnessDirectionDigest(sample.content_sha256) : "",
+      checks,
+      escalated: Array.isArray(record.escalated_uncertainties) ? record.escalated_uncertainties.map(u => harnessDirectionText(u, 64)).filter(Boolean) : [],
+      reference: harnessDirectionText(record.benchmark_reference_id, 256),
+      taken: Number.isFinite(taken) && taken >= 0 ? taken : null,
+      waiting: String((task.task && task.task.state) || "").toLowerCase() === "waiting_approval",
+    };
+  }
+
+  // The panel never builds markup from the record: every value is escaped text, so a sample id
+  // or a feedback line containing angle brackets stays a string. It is a read-only summary -
+  // the answer is sent by the controls in the recovery story above, which already refuse a
+  // stale answer.
+  function harnessDirectionHtml(task) {
+    const model = harnessDirectionModel(task);
+    if (!model) return "";
+    const rows = [];
+    rows.push({
+      label: "Why you were asked",
+      value: model.explanation || `the runtime gave trigger ${model.trigger || "?"}`,
+      mono: false,
+    });
+    if (model.rationale) rows.push({ label: "Reason", value: model.rationale, mono: false });
+    if (model.artifactId) rows.push({ label: "Sample", value: model.artifactId, mono: true });
+    rows.push({
+      label: "Sample version",
+      value: model.digest ? `sha256 ${model.digest}` : "no digest recorded, so this sample cannot be identified",
+      mono: !!model.digest,
+      note: model.digest
+        ? "An answer is bound to this digest. If the sample changes, the answer is refused rather than applied to a version you did not see."
+        : "",
+    });
+    if (model.checks.length) {
+      rows.push({
+        label: "Checks the sample passed",
+        value: model.checks.map(([name, passed]) => `${name}: ${passed ? "pass" : "FAIL"}`).join(" \u00b7 "),
+        mono: true,
+        note: "Technical checks only. They say the sample renders, not that it is the right direction.",
+      });
+    }
+    if (model.escalated.length) {
+      rows.push({
+        label: "Outside what the reference measured",
+        value: model.escalated.join(", "),
+        mono: true,
+      });
+    }
+    if (model.reference) rows.push({ label: "Reference that covers this", value: model.reference, mono: true });
+    if (model.taken !== null) rows.push({ label: "Check-ins taken", value: String(model.taken), mono: true });
+    return `<div class="ev-heading">Direction sample${model.waiting ? " \u2014 waiting on you" : ""}</div>
+      ${model.question ? `<div class="ev-subheading">${escapeHtml(model.question)}</div>` : ""}
+      ${model.points.length ? `<ul class="ev-limits">${model.points.map(point => `<li>${escapeHtml(point)}</li>`).join("")}</ul>` : ""}
+      ${harnessEvidenceFactListHtml(rows)}
+      <p class="ev-note">Approving a direction is not accepting this artifact, and it does not publish, deploy or spend anything. Final acceptance is a separate decision, and so is adopting this work as a reference.</p>`;
+  }
+
   function harnessRecoveryFactsHtml(facts) {
     if (!facts || !facts.length) return "";
     return facts
@@ -20092,11 +20221,16 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     const factsHost = document.getElementById("harnessRecoveryFacts");
     if (!host || !storyHost || !factsHost) return;
     const story = harnessRecoveryStory(harnessRecoveryPayload);
+    const directionHostEarly = document.getElementById("harnessDirectionPanel");
     if (!story) {
       host.hidden = true;
       storyHost.innerHTML = "";
       factsHost.innerHTML = "";
       factsHost.hidden = true;
+      if (directionHostEarly) {
+        directionHostEarly.innerHTML = "";
+        directionHostEarly.hidden = true;
+      }
       harnessRecoverySay(null);
       return;
     }
@@ -20127,6 +20261,12 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     });
     factsHost.hidden = false;
     factsHost.innerHTML = harnessRecoveryFactsHtml(story.facts);
+    const directionHost = document.getElementById("harnessDirectionPanel");
+    if (directionHost) {
+      const directionHtml = harnessDirectionHtml(harnessRecoveryPayload && harnessRecoveryPayload.task);
+      directionHost.innerHTML = directionHtml;
+      directionHost.hidden = !directionHtml;
+    }
     const note = harnessRecoveryNote && harnessRecoveryNote.sessionId === harnessRecoveryPayload.sessionId
       ? harnessRecoveryNote
       : null;
@@ -20252,6 +20392,43 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
           checkpointId: String(checkpoint.checkpoint_id || ""),
         };
         harnessRecoverySay(`Resume prepared from step ${Number(data.next_step || 1)}. Nothing has run yet: pressing Run continues from the checkpoint instead of starting over.`, "ok");
+      }
+    } else if (id === "direction-keep" || id === "direction-redirect") {
+      const direction = harnessDirectionModel(payload.task);
+      if (!direction || !direction.digest) {
+        // Without the digest there is no version to bind the answer to, and an answer that
+        // cannot be tied to a version is exactly what the server will refuse.
+        harnessRecoverySay("No direction sample with a recorded version is available, so no answer was sent.", "warn");
+        return;
+      }
+      let answer = "keep";
+      if (id === "direction-redirect") {
+        const note = window.prompt("What should change about the direction?");
+        if (note === null) {
+          harnessRecoverySay("No answer was sent: the direction was left as it was.", "info");
+          return;
+        }
+        answer = String(note || "").trim();
+        if (!answer) {
+          harnessRecoverySay("A change of direction needs a note saying what to change, so nothing was sent.", "warn");
+          return;
+        }
+      }
+      const result = await harnessRecoveryPost("direction-answer", {
+        answer,
+        answered_artifact_sha256: direction.digest,
+        current_artifact_sha256: direction.digest,
+      });
+      if (!result.ok) {
+        harnessRecoverySay(`The answer was refused: ${harnessRecoveryRefusalDetail(result.data, result.status)} The question is still open.`, "danger");
+      } else {
+        const outcome = result.data && result.data.outcome;
+        harnessRecoverySay(
+          outcome === "redirect"
+            ? "Direction recorded as a change of course. The run resumes with your note; nothing was accepted or published."
+            : "Direction kept. The run resumes in this direction; this is not acceptance of the finished artifact and grants no permission to publish.",
+          "ok",
+        );
       }
     } else if (id === "continue") {
       const prepared = harnessRecoveryPrepared;
@@ -33287,6 +33464,69 @@ def _routing_experiments_summary_or_none() -> dict[str, Any]:
         }
 
 
+_DIRECTION_CHECKPOINT_KEY = "direction_checkpoint"
+
+
+def _require_well_formed_session(session_id: str) -> dict[str, Any]:
+    """Read the session row, or refuse with 404 rather than guessing a storage key.
+
+    A path parameter reaches the store, so an id that is not a well-formed session
+    identifier is rejected here instead of being used to build a path.
+    """
+    sid = str(session_id or "").strip()
+    if not sid or len(sid) > 128 or not all(ch.isalnum() or ch in "-_" for ch in sid):
+        raise HTTPException(status_code=404, detail="Harness session not found.")
+    try:
+        return get_harness_session_db(sid)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Harness session {sid!r} not found.") from exc
+
+
+def _latest_direction_checkpoint(transitions: Sequence[Mapping[str, Any]]) -> dict[str, Any] | None:
+    """The most recent direction checkpoint this task recorded, read from its own transitions.
+
+    AP-018 needs somewhere to keep "we asked, here is the sample and the question". A new
+    table would be a second place that can disagree with the task record, so the checkpoint
+    rides in the `evidence_json` of the `running -> waiting_approval` transition that
+    created the pause: same transaction, same log, and a resume cannot leave it behind.
+    It is recovered by scanning that log, newest first, which is also how it is audited.
+    """
+    if not isinstance(transitions, (list, tuple)):
+        return None
+    for row in reversed(transitions):
+        if not isinstance(row, dict):
+            continue
+        evidence = row.get("evidence")
+        if not isinstance(evidence, dict):
+            continue
+        recorded = evidence.get(_DIRECTION_CHECKPOINT_KEY)
+        if isinstance(recorded, dict):
+            return recorded
+    return None
+
+
+def _load_direction_checkpoint(recorded: Mapping[str, Any]) -> direction_checkpoints.DirectionCheckpoint:
+    """Rebuild the checkpoint from its stored form, refusing a record the module cannot vouch for."""
+    return direction_checkpoints.DirectionCheckpoint.from_mapping(recorded)
+
+
+def _direction_checkpoints_taken(transitions: Sequence[Mapping[str, Any]]) -> int:
+    """How many direction checkpoints this task has already taken.
+
+    Counted, never inferred: a second sample is a different decision from the first, so the
+    number is part of what the surface has to be able to show.
+    """
+    if not isinstance(transitions, (list, tuple)):
+        return 0
+    return sum(
+        1
+        for row in transitions
+        if isinstance(row, dict)
+        and isinstance(row.get("evidence"), dict)
+        and isinstance(row["evidence"].get(_DIRECTION_CHECKPOINT_KEY), dict)
+    )
+
+
 @app.get("/api/harness/sessions/{session_id}/task")
 async def api_get_harness_task_state(session_id: str) -> JSONResponse:
     """Return durable root-task state, child milestones, checkpoints, budgets, and transition log."""
@@ -33359,6 +33599,12 @@ async def api_get_harness_task_state(session_id: str) -> JSONResponse:
             "routing_experiments": _routing_experiments_summary_or_none(),
             "latest_checkpoint": latest_ckpt.to_dict() if latest_ckpt is not None else None,
             "checkpoint_integrity_error": integrity_error,
+            "direction_checkpoint": _latest_direction_checkpoint(
+                [_serialize_transition_record(tr) for tr in transitions]
+            ),
+            "direction_checkpoints_taken": _direction_checkpoints_taken(
+                [_serialize_transition_record(tr) for tr in transitions]
+            ),
             "session_artifact_versions": (
                 _session_artifact_versions(latest_ckpt.evidence_refs, session_id=session_id)
                 if latest_ckpt is not None and not integrity_error
@@ -33412,6 +33658,204 @@ async def api_pause_harness_session(session_id: str, request: Request) -> JSONRe
             "deferred_to_safe_boundary": outcome.deferred_to_safe_boundary,
             "task": _serialize_task_record(outcome.task),
             "budget": outcome.budget.to_dict(),
+        }
+    )
+
+
+@app.post("/api/harness/sessions/{session_id}/direction-checkpoint")
+async def api_request_direction_checkpoint(session_id: str, request: Request) -> JSONResponse:
+    """Ask the owner to judge an early sample, when a check-in is worth the interruption.
+
+    The decision belongs to ``direction_checkpoints.decide``; this route only supplies the
+    facts it needs and records the answer in the task's own transition log. Four things are
+    refused here rather than papered over: a check-in on a task that is not running, a
+    sample the caller did not describe, a sample whose digest is not a digest, and a
+    harness that is already waiting on the owner. The last one matters most -- a second
+    pause over a live one would let the first question be answered into a task that has
+    moved on, which is exactly the stale-answer failure the module refuses.
+    """
+    sess = _require_well_formed_session(session_id)
+    sm = get_task_state_machine()
+    task, _ = sm.ensure_root_task(
+        session_id,
+        session_id=session_id,
+        title=str(sess.get("title") or ""),
+        workspace_dir=str(sess.get("worktree_dir") or ""),
+        policy=str(sess.get("policy") or "standard"),
+    )
+    if task.state == "waiting_approval":
+        # Checked before the general running-state rule so the reason is the true one: the
+        # task is waiting, just not on this question. A second pause over a live one would
+        # let the first answer land on work that has moved on.
+        raise HTTPException(
+            status_code=409,
+            detail="this task is already waiting on the owner; answer that question before asking another.",
+        )
+    if task.state != "running":
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"a direction check-in is only taken on a running task; this one is {task.state}. "
+                "Asking the owner to judge a direction for work that is not in progress would be a prompt, not a check-in."
+            ),
+        )
+    try:
+        body = await request.json()
+    except Exception:
+        body = None
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="A direction check-in needs a JSON body describing the sample.")
+
+    task_kind = str(body.get("task_kind") or "").strip()
+    if not task_kind:
+        raise HTTPException(status_code=400, detail="task_kind is required: coverage is decided per task kind, not for the session as a whole.")
+
+    raw_sample = body.get("sample")
+    sample: direction_checkpoints.SampleArtifact | None = None
+    if isinstance(raw_sample, dict):
+        checks = raw_sample.get("technical_checks")
+        try:
+            sample = direction_checkpoints.SampleArtifact(
+                artifact_id=str(raw_sample.get("artifact_id") or "")[:256],
+                content_sha256=str(raw_sample.get("content_sha256") or "").strip().lower(),
+                technical_checks={str(k): bool(v) for k, v in checks.items()} if isinstance(checks, dict) else {},
+            )
+        except direction_checkpoints.DirectionError as exc:
+            # A sample that cannot name its own version cannot be shown for judgement:
+            # the first thing to fix is the record, not the direction.
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    benchmarks: list[direction_checkpoints.BenchmarkCoverage] = []
+    for row in body.get("benchmarks") or ():
+        if not isinstance(row, dict):
+            continue
+        try:
+            benchmarks.append(
+                direction_checkpoints.BenchmarkCoverage(
+                    reference_id=str(row.get("reference_id") or ""),
+                    reference_sha256=str(row.get("reference_sha256") or "").strip().lower(),
+                    covered_task_kinds=tuple(str(k) for k in (row.get("covered_task_kinds") or ())),
+                    measured_checks=tuple(str(c) for c in (row.get("measured_checks") or ())),
+                )
+            )
+        except direction_checkpoints.DirectionError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    try:
+        checkpoint = direction_checkpoints.decide(
+            task_id=session_id,
+            task_kind=task_kind,
+            sample=sample,
+            benchmarks=benchmarks,
+            uncertainties=tuple(str(u) for u in (body.get("uncertainties") or ())),
+        )
+    except direction_checkpoints.DirectionError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    if not checkpoint.pauses_production:
+        # A covered, calm task keeps running. The decision is still reported, because
+        # "we looked and did not need you" is a different fact from "we never looked".
+        return JSONResponse(
+            {
+                "status": "skipped",
+                "direction_checkpoint": checkpoint.to_mapping(),
+                "task": _serialize_task_record(task),
+            }
+        )
+
+    try:
+        updated = sm.transition_task(
+            session_id,
+            "waiting_approval",
+            reason=f"direction_checkpoint:{checkpoint.trigger}"[:240],
+            extra_evidence={_DIRECTION_CHECKPOINT_KEY: checkpoint.to_mapping()},
+        )
+    except workflow_state.WorkflowTransitionRejected as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    _update_harness_session_state(session_id, status="waiting_approval")
+    _append_harness_event(
+        session_id,
+        "direction/checkpoint",
+        {"trigger": checkpoint.trigger, "sample": checkpoint.sample.artifact_id if checkpoint.sample else ""},
+    )
+    return JSONResponse(
+        {
+            "status": "waiting",
+            "direction_checkpoint": checkpoint.to_mapping(),
+            "task": _serialize_task_record(updated),
+        }
+    )
+
+
+@app.post("/api/harness/sessions/{session_id}/direction-answer")
+async def api_answer_direction_checkpoint(session_id: str, request: Request) -> JSONResponse:
+    """Resolve a direction question: continue on an explicit keep, redirect otherwise.
+
+    The answer is refused if it was given about a different version of the artifact than
+    the one the checkpoint showed, and the task is put back to `running` before that
+    version check runs -- so a refused answer leaves neither a stale pause nor a task
+    that quietly moved on. Direction approval is not acceptance: nothing here marks the
+    artifact accepted, publishes it or promotes it to a reference.
+    """
+    sess = _require_well_formed_session(session_id)
+    sm = get_task_state_machine()
+    task, _ = sm.ensure_root_task(
+        session_id,
+        session_id=session_id,
+        title=str(sess.get("title") or ""),
+        workspace_dir=str(sess.get("worktree_dir") or ""),
+        policy=str(sess.get("policy") or "standard"),
+    )
+    recorded = _latest_direction_checkpoint(
+        [_serialize_transition_record(tr) for tr in sm.store.list_transitions(session_id)]
+    )
+    if recorded is None:
+        raise HTTPException(status_code=409, detail="this task recorded no direction check-in to answer.")
+    if task.state != "waiting_approval":
+        raise HTTPException(
+            status_code=409,
+            detail=f"the direction check-in is already resolved; this task is {task.state}.",
+        )
+    try:
+        body = await request.json()
+    except Exception:
+        body = None
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="A direction answer needs a JSON body.")
+    answer = str(body.get("answer") or "").strip()
+    if not answer:
+        raise HTTPException(status_code=400, detail="answer is required; an empty answer is not a direction.")
+    current = str(body.get("current_artifact_sha256") or recorded.get("sample_sha256") or "").strip().lower()
+
+    try:
+        checkpoint = _load_direction_checkpoint(recorded)
+        outcome = direction_checkpoints.resume(
+            checkpoint,
+            answer=answer,
+            answered_artifact_sha256=str(body.get("answered_artifact_sha256") or recorded.get("sample_sha256") or ""),
+            current_artifact_sha256=current,
+        )
+    except direction_checkpoints.DirectionError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    try:
+        updated = sm.transition_task(
+            session_id,
+            "running",
+            reason=f"direction_answered:{outcome}"[:240],
+            extra_evidence={"direction_answer": {"answer": answer[:240], "outcome": outcome}},
+        )
+    except workflow_state.WorkflowTransitionRejected as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    _update_harness_session_state(session_id, status="running")
+    _append_harness_event(session_id, "direction/answered", {"outcome": outcome})
+    return JSONResponse(
+        {
+            "status": outcome,
+            "outcome": outcome,
+            "direction_is_final_acceptance": False,
+            "grants_publish_permission": False,
+            "task": _serialize_task_record(updated),
         }
     )
 
@@ -48757,6 +49201,452 @@ class DurableTaskCheckpointStore:
         )
 
 workflow_checkpoints = sys.modules[__name__]
+
+#!/usr/bin/env python3
+"""Early direction samples: ask before expensive production, and only when it is worth asking.
+
+An autonomous builder that runs to completion before showing anything burns a large
+budget on work the owner may not want. The obvious fix -- show a sample before every
+job -- is worse: it turns autonomy back into supervision and trains the owner to
+approve without reading.
+
+So this module makes one decision, explicitly, and refuses to make it by default:
+
+* **Sample when there is no benchmark covering the task.** An unbenchmarked task has no
+  established direction to follow, so a small representative sample is the cheapest way
+  to find out whether the direction is right.
+* **Skip the check-in when a benchmark covers it.** An owner-approved reference already
+  settles direction for that class of work; asking again spends the owner's attention on
+  a question they have already answered. That is the "skip unnecessary check-ins" path.
+* **Escalate anyway on material uncertainty,** even when benchmarked. A benchmark covers
+  what it measured. A task that diverges from it -- a new format, an unsupported
+  interaction, a changed audience -- is outside the covered surface, and silence would be
+  the check-in failing open.
+
+What a pause is *not*: it is not acceptance. ``DirectionDecision`` carries
+``direction_approval_is_final_acceptance = False`` and
+``direction_approval_grants_publish_permission = False`` as constants, because the one
+mistake that would matter here is a direction "yes" being read later as "ship it". The
+artifact is preserved by the caller through the existing checkpoint; this module records
+which artifact version a question is about so a late answer cannot be applied to a
+different version (AP-019's stale-selection rule starts here).
+
+The module is pure: it reads no clock, opens no file, starts no job and loads no model.
+A caller supplies the evidence; nothing here can manufacture it.
+"""
+
+
+import hashlib
+import json
+import re
+from dataclasses import dataclass, field
+from typing import Any, Mapping, Sequence
+
+SCHEMA_VERSION = 1
+
+# Reportable reasons a direction checkpoint fired or was skipped. Free-form strings would
+# make the "did we ask too much / too little" question unanswerable later.
+TRIGGERS = frozenset(
+    {
+        "no_benchmark",
+        "uncertainty_exceeds_coverage",
+        "benchmark_covered",
+    }
+)
+
+# Uncertainties a benchmark can be blind to even when it nominally covers the task class.
+MATERIAL_UNCERTAINTIES = frozenset(
+    {
+        "new_format",
+        "unsupported_interaction",
+        "audience_change",
+        "scope_change",
+        "rights_unresolved",
+        "external_dependency",
+    }
+)
+
+MAX_FEEDBACK_POINTS = 5
+MAX_TEXT = 400
+_DIGEST_RE = re.compile(r"^[0-9a-f]{64}$")
+_STEP_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 .:/-]{0,119}$")
+
+
+class DirectionError(ValueError):
+    """Raised when a direction record would state something it cannot support."""
+
+
+def _text(value: object, field_name: str, *, allow_empty: bool = False) -> str:
+    text = " ".join(str(value or "").split())
+    if not text and not allow_empty:
+        raise DirectionError(f"{field_name} must not be empty.")
+    if len(text) > MAX_TEXT:
+        raise DirectionError(f"{field_name} must be at most {MAX_TEXT} characters.")
+    return text
+
+
+def _digest_or_empty(value: object, field_name: str) -> str:
+    text = str(value or "").strip().lower()
+    if not text:
+        return ""
+    if not _DIGEST_RE.fullmatch(text):
+        raise DirectionError(f"{field_name} must be a lowercase SHA-256 hex digest.")
+    return text
+
+
+@dataclass(frozen=True, slots=True)
+class BenchmarkCoverage:
+    """What an owner-approved reference already settles, and how far that reaches.
+
+    ``covered_task_kinds`` are the task classes the reference was approved for.
+    ``measured_checks`` are the specific checks it actually established. A caller cannot
+    claim coverage for a check that was never measured, which is what keeps "benchmarked"
+    from quietly widening into "anything we have ever done once".
+    """
+
+    reference_id: str
+    reference_sha256: str
+    covered_task_kinds: tuple[str, ...]
+    measured_checks: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        _text(self.reference_id, "reference_id")
+        _digest_or_empty(self.reference_sha256, "reference_sha256")
+        if not self.reference_sha256:
+            raise DirectionError(
+                "A benchmark reference must carry the digest of the version it covers."
+            )
+        if not self.covered_task_kinds:
+            raise DirectionError(
+                "A benchmark must name at least one task kind it covers."
+            )
+
+    def covers(self, task_kind: str) -> bool:
+        return task_kind in self.covered_task_kinds
+
+    def to_mapping(self) -> dict[str, Any]:
+        return {
+            "reference_id": self.reference_id,
+            "reference_sha256": self.reference_sha256,
+            "covered_task_kinds": list(self.covered_task_kinds),
+            "measured_checks": list(self.measured_checks),
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class SampleArtifact:
+    """The cheap thing shown to the owner, and what the checks actually found.
+
+    ``technical_checks`` maps a check name to whether it passed. The sample is only
+    presentable when every check recorded for it passed: showing a broken sample and
+    asking "is this the right direction?" invites a judgement about a defect.
+    """
+
+    artifact_id: str
+    content_sha256: str
+    technical_checks: Mapping[str, bool] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        _text(self.artifact_id, "artifact_id")
+        if not _DIGEST_RE.fullmatch(
+            _digest_or_empty(self.content_sha256, "content_sha256")
+        ):
+            raise DirectionError(
+                "A sample must name the exact artifact version it shows."
+            )
+
+    @property
+    def passed_checks(self) -> tuple[str, ...]:
+        return tuple(sorted(name for name, ok in self.technical_checks.items() if ok))
+
+    @property
+    def failed_checks(self) -> tuple[str, ...]:
+        return tuple(
+            sorted(name for name, ok in self.technical_checks.items() if not ok)
+        )
+
+    def to_mapping(self) -> dict[str, Any]:
+        return {
+            "artifact_id": self.artifact_id,
+            "content_sha256": self.content_sha256,
+            "technical_checks": dict(
+                sorted((str(k), bool(v)) for k, v in self.technical_checks.items())
+            ),
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class DirectionCheckpoint:
+    """The decision to pause for direction, or the reason not to.
+
+    Built only by :func:`decide`, so the trigger and the evidence behind it cannot be
+    paired up arbitrarily by a caller.
+    """
+
+    task_id: str
+    task_kind: str
+    trigger: str
+    rationale: str
+    sample: SampleArtifact | None
+    feedback_prompt: str
+    feedback_points: tuple[str, ...]
+    benchmark_reference_id: str = ""
+    benchmark_reference_sha256: str = ""
+    escalated_uncertainties: tuple[str, ...] = ()
+
+    # Constants, not fields: there is no supported way to construct a checkpoint in which
+    # a direction answer implies acceptance or permission to publish.
+    direction_approval_is_final_acceptance: bool = field(default=False, init=False)
+    direction_approval_grants_publish_permission: bool = field(
+        default=False, init=False
+    )
+
+    def __post_init__(self) -> None:
+        _text(self.task_id, "task_id")
+        _text(self.task_kind, "task_kind")
+
+    @property
+    def pauses_production(self) -> bool:
+        return self.trigger in {"no_benchmark", "uncertainty_exceeds_coverage"}
+
+    @property
+    def is_resumable_from_checkpoint(self) -> bool:
+        """A pause is only safe if the work behind it is preserved and identifiable."""
+        return self.sample is not None and self.pauses_production
+
+    def to_mapping(self) -> dict[str, Any]:
+        return {
+            "schema_version": SCHEMA_VERSION,
+            "task_id": self.task_id,
+            "task_kind": self.task_kind,
+            "trigger": self.trigger,
+            "rationale": self.rationale,
+            "sample": self.sample.to_mapping() if self.sample else None,
+            "feedback_prompt": self.feedback_prompt,
+            "feedback_points": list(self.feedback_points),
+            "benchmark_reference_id": self.benchmark_reference_id,
+            "benchmark_reference_sha256": self.benchmark_reference_sha256,
+            "escalated_uncertainties": list(self.escalated_uncertainties),
+            "pauses_production": self.pauses_production,
+            "direction_approval_is_final_acceptance": self.direction_approval_is_final_acceptance,
+            "direction_approval_grants_publish_permission": self.direction_approval_grants_publish_permission,
+        }
+
+    def fingerprint(self) -> str:
+        canonical = json.dumps(self.to_mapping(), sort_keys=True, separators=(",", ":"))
+        return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+    @classmethod
+    def from_mapping(cls, recorded: Mapping[str, Any]) -> "DirectionCheckpoint":
+        """Rebuild a checkpoint that was persisted, refusing anything it cannot vouch for.
+
+        The record comes back from durable storage, so it is re-validated rather than
+        trusted: a stored checkpoint whose flags claim acceptance is refused here, which
+        means a forged or edited row cannot be used to turn a direction answer into
+        permission. ``schema_version`` is checked so an older or newer shape is a clear
+        error instead of a silently half-read checkpoint.
+        """
+        if not isinstance(recorded, Mapping):
+            raise DirectionError("a recorded direction checkpoint must be a mapping")
+        version = recorded.get("schema_version")
+        if version != SCHEMA_VERSION:
+            raise DirectionError(
+                f"recorded direction checkpoint has schema {version!r}, expected {SCHEMA_VERSION!r}"
+            )
+        for flag in (
+            "direction_approval_is_final_acceptance",
+            "direction_approval_grants_publish_permission",
+        ):
+            if recorded.get(flag, False) is not False:
+                raise DirectionError(
+                    f"recorded direction checkpoint claims {flag}; a direction answer never carries that"
+                )
+        raw_sample = recorded.get("sample")
+        sample: SampleArtifact | None = None
+        if isinstance(raw_sample, Mapping):
+            checks = raw_sample.get("technical_checks")
+            sample = SampleArtifact(
+                artifact_id=str(raw_sample.get("artifact_id") or ""),
+                content_sha256=str(raw_sample.get("content_sha256") or ""),
+                technical_checks=(
+                    {str(k): bool(v) for k, v in checks.items()}
+                    if isinstance(checks, Mapping)
+                    else {}
+                ),
+            )
+        elif raw_sample is not None:
+            raise DirectionError(
+                "recorded direction checkpoint has an unreadable sample"
+            )
+
+        trigger = str(recorded.get("trigger") or "")
+        if trigger not in TRIGGERS:
+            raise DirectionError(
+                f"recorded direction checkpoint has unknown trigger {trigger!r}"
+            )
+        return cls(
+            task_id=str(recorded.get("task_id") or ""),
+            task_kind=str(recorded.get("task_kind") or ""),
+            trigger=trigger,
+            rationale=str(recorded.get("rationale") or ""),
+            sample=sample,
+            feedback_prompt=str(recorded.get("feedback_prompt") or ""),
+            feedback_points=tuple(
+                str(x) for x in (recorded.get("feedback_points") or ())
+            ),
+            benchmark_reference_id=str(recorded.get("benchmark_reference_id") or ""),
+            benchmark_reference_sha256=str(
+                recorded.get("benchmark_reference_sha256") or ""
+            ),
+            escalated_uncertainties=tuple(
+                str(x) for x in (recorded.get("escalated_uncertainties") or ())
+            ),
+        )
+
+
+def decide(
+    *,
+    task_id: str,
+    task_kind: str,
+    sample: SampleArtifact | None,
+    feedback_points: Sequence[str] = (),
+    benchmarks: Sequence[BenchmarkCoverage] = (),
+    uncertainties: Sequence[str] = (),
+) -> DirectionCheckpoint:
+    """Decide whether this task needs a direction check-in, and say why.
+
+    The ordering matters. Material uncertainty is checked before coverage, because a
+    benchmark that covers the task class does not cover a divergence from it. Coverage is
+    checked next. Only an uncovered task that also has no sample falls through to a
+    refusal -- asking the owner to judge a direction with nothing to look at is not a
+    check-in, it is a prompt.
+    """
+    _text(task_id, "task_id")
+    _text(task_kind, "task_kind")
+
+    unknown = [u for u in uncertainties if u not in MATERIAL_UNCERTAINTIES]
+    if unknown:
+        raise DirectionError(
+            f"unknown material uncertainty {unknown[0]!r}; a free-form string cannot escalate"
+        )
+    escalation = tuple(sorted(set(uncertainties)))
+
+    covering = next((b for b in benchmarks if b.covers(task_kind)), None)
+
+    prompt = _text(_prompt_for(task_kind, escalation), "feedback_prompt")
+    points = tuple(_text(p, "feedback_point") for p in feedback_points)[
+        :MAX_FEEDBACK_POINTS
+    ]
+
+    if covering is not None and not escalation:
+        return DirectionCheckpoint(
+            task_id=task_id,
+            task_kind=task_kind,
+            trigger="benchmark_covered",
+            rationale=(
+                f"An owner-approved reference ({covering.reference_id}) already settles direction for "
+                f"{task_kind!r}; asking again would spend the owner's attention on a settled question."
+            ),
+            sample=None,
+            feedback_prompt="",
+            feedback_points=(),
+            benchmark_reference_id=covering.reference_id,
+            benchmark_reference_sha256=covering.reference_sha256,
+        )
+
+    if sample is None:
+        raise DirectionError(
+            "a direction check-in needs a sample to look at; refusing to pause production on nothing"
+        )
+    if sample.failed_checks:
+        raise DirectionError(
+            "sample failed its own technical checks ("
+            + ", ".join(sample.failed_checks)
+            + "); a direction question about a broken sample is not a direction question"
+        )
+
+    if escalation:
+        trigger = "uncertainty_exceeds_coverage"
+        if covering is None:
+            rationale = (
+                f"No reference covers {task_kind!r}, and the sample raises "
+                + ", ".join(escalation)
+                + "; direction is genuinely undecided."
+            )
+        else:
+            rationale = (
+                f"{covering.reference_id} covers {task_kind!r} but not "
+                + ", ".join(escalation)
+                + ", so the covered direction cannot be assumed to apply."
+            )
+    else:
+        trigger = "no_benchmark"
+        rationale = f"No owner-approved reference covers {task_kind!r}; the sample is the cheapest way to fix direction."
+
+    return DirectionCheckpoint(
+        task_id=task_id,
+        task_kind=task_kind,
+        trigger=trigger,
+        rationale=rationale,
+        sample=sample,
+        feedback_prompt=prompt,
+        feedback_points=points,
+        benchmark_reference_id=covering.reference_id if covering else "",
+        benchmark_reference_sha256=covering.reference_sha256 if covering else "",
+        escalated_uncertainties=escalation,
+    )
+
+
+def _prompt_for(task_kind: str, escalation: Sequence[str]) -> str:
+    """Name what feedback is needed, rather than asking an open "what do you think?"."""
+    base = f"Is this the right direction for {task_kind}? Say keep, redirect, or what to change."
+    if escalation:
+        base += " Unsettled: " + ", ".join(escalation).replace("_", " ") + "."
+    return base
+
+
+def resume(
+    checkpoint: DirectionCheckpoint,
+    *,
+    answer: str,
+    answered_artifact_sha256: str,
+    current_artifact_sha256: str,
+) -> str:
+    """Resolve a direction pause to ``continue`` or ``redirect``, refusing a stale answer.
+
+    An answer given about one version of the sample may not be applied to another. This
+    is the same rule AP-019 applies to scoped feedback, enforced here so the first place
+    a version can drift is caught.
+    """
+    if not checkpoint.pauses_production:
+        raise DirectionError(
+            f"checkpoint {checkpoint.trigger!r} did not pause production; nothing to resume"
+        )
+    if checkpoint.sample is None:
+        raise DirectionError("checkpoint has no sample; it cannot be resumed")
+    answered = _digest_or_empty(answered_artifact_sha256, "answered_artifact_sha256")
+    current = _digest_or_empty(current_artifact_sha256, "current_artifact_sha256")
+    if not answered or not current:
+        raise DirectionError(
+            "resuming needs both the answered and the current artifact digest"
+        )
+    if answered != current:
+        raise DirectionError(
+            "the sample changed after the question was asked; the answer applies to a different version"
+        )
+    if answered != checkpoint.sample.content_sha256:
+        raise DirectionError(
+            "the answered artifact is not the sample this checkpoint showed"
+        )
+
+    verdict = " ".join(str(answer or "").split()).lower()
+    if not verdict:
+        raise DirectionError("a direction answer must say keep or redirect")
+    if verdict in {"keep", "continue", "approve", "yes", "lgtm"}:
+        return "continue"
+    return "redirect"
+
+direction_checkpoints = sys.modules[__name__]
 
 """Durable failure memory, stagnation detection and bounded recovery (M5-P2-05).
 

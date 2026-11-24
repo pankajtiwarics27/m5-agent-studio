@@ -28,7 +28,7 @@
     "module_counts": [
       89,
       79,
-      76
+      77
     ],
     "node_counts": [
       1528,
@@ -140,6 +140,7 @@
     "unfitted_modules": [
       "tests/test_bounded_specialists.py",
       "tests/test_direction_checkpoints.py",
+      "tests/test_direction_checkpoints_routes.py",
       "tests/test_guest_desktop.py",
       "tests/test_harness_ap008_recovery.py",
       "tests/test_mission_authority_envelope.py"
@@ -331,6 +332,7 @@
       "tests/test_compare_provenance.py",
       "tests/test_council_participants.py",
       "tests/test_direction_checkpoints.py",
+      "tests/test_direction_checkpoints_routes.py",
       "tests/test_durable_intent_ledger.py",
       "tests/test_durable_state_contract.py",
       "tests/test_durable_task_state_machine.py",

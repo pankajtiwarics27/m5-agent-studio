@@ -82,10 +82,10 @@
       "a_missing_type_still_draws": true,
       "summary_reads_the_event": true,
       "no_dead_branches": true,
-      "types_emitted": 43,
+      "types_emitted": 45,
       "types_with_a_card": 16,
       "types_described_by_name": 23,
-      "types_with_only_the_generic_preview": 20
+      "types_with_only_the_generic_preview": 22
     },
     "trajectory": {
       "every_card_carries_its_seq": true,
@@ -210,6 +210,8 @@
         "workspace/snapshot_captured",
         "workspace/snapshot_restored",
         "turn/paused",
+        "direction/checkpoint",
+        "direction/answered",
         "turn/cancelled",
         "security/containment",
         "security/grant_issued",
@@ -289,6 +291,8 @@
         "edit/rollback_refused",
         "edit/rollback",
         "harness/paused_uncertain_effect",
+        "direction/checkpoint",
+        "direction/answered",
         "security/grant_issued",
         "security/grant_revoked",
         "handoff/failed_paused",
@@ -311,10 +315,10 @@
     "gap_reasons": 6,
     "strip_controls": 8,
     "functions": 13,
-    "event_types_emitted": 43,
+    "event_types_emitted": 45,
     "event_types_with_a_card": 16,
     "event_types_described_by_name": 23,
-    "event_types_with_only_the_generic_preview": 20,
+    "event_types_with_only_the_generic_preview": 22,
     "checks": 105,
     "findings": 0
   },

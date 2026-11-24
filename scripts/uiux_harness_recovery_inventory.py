@@ -360,9 +360,13 @@ def build_inventory() -> dict:
         and bool(failed_branch) and bool(blocked_branch) and bool(cancelled_branch),
         "one of the branches is missing from harnessRecoveryStory()",
     )
+    # Eight states a run can be left in, each with its own story: prepared, running (followed and
+    # orphaned), paused, failed, blocked, cancelled, and -- since AP-018 -- waiting on a direction.
+    # A story that appears without its title, cause, kept line or action is not a story, and the
+    # count is what keeps a new branch from being added without one.
     check(
         "no story can be drawn without a title, a cause, a kept line and an action",
-        story.count("kind: ") == story.count("cause: ") == story.count("context: ") == story.count("actions: ") == 7,
+        story.count("kind: ") == story.count("cause: ") == story.count("context: ") == story.count("actions: ") == 8,
         f"kind={story.count('kind: ')} cause={story.count('cause: ')} context={story.count('context: ')} actions={story.count('actions: ')}",
     )
     check(

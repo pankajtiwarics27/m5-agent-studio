@@ -26,11 +26,11 @@
     "approved_inputs": null,
     "current_inputs": {
       "ledger_content_sha256": "cb04b1bdf0ec9be6b39d2233496d9e9e53ffb91b0f92397824c9964af333b85f",
-      "source_manifest_sha256": "85795c3755af1ef710c551360e5ec5348c9262d0a647811e36da8d21134faece",
-      "control_inventory_sha256": "86ec3de58fa4fe785d828f02b9cc87bfd0b4da59139ea44d07b5ee186015a8cf",
-      "route_map_sha256": "c1e1249221cae5d6af60bd04a47238c4c20b4437e999507d1fc48a70279fc841",
-      "authorization_trace_sha256": "1c2459923e32e3aad2d98661175d2fa20e708c1f69f1b45a376f8ab0cac467cc",
-      "frontend_sha256": "8c82c5c02093a82b5ccd6019b0a40a26a96657421ed5ba16f10abf668ce25899",
+      "source_manifest_sha256": "da5aca31f49b0745160fb95f227de73085ceeaca4d90db69adc49e0485337eb6",
+      "control_inventory_sha256": "1cbc74b441fe2e3fbfa8111c4fe2a3c6475bc486fef709db56886cb39b88e896",
+      "route_map_sha256": "71a273fd4e806cce0aa5c1e36037b194aab4259e4d0ed30c19d3a8a0e71f5046",
+      "authorization_trace_sha256": "3efc14bacf7ea4a6b280448d8938c0781997f60db12e40b2fa5c1bbed98084a5",
+      "frontend_sha256": "f70cef5c37dac2f5906ce781bdc957e2f07b54735c20ec5575cb120946fb3d30",
       "screenshot_manifest_sha256": "b488bf453ae260b6564ae592f0455e3d70cff3121dca1e7c823c7abb270b44d3",
       "screenshot_index_sha256": "16b0620ca1d02a1b181ad15b3a2b0c6aae9e7aa539654d27ed80d9147189634e",
       "generator_sha256": "6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65",
@@ -40,11 +40,11 @@
   },
   "inputs": {
     "ledger_sha256": "96f9ca873e9d2105935e73c8df6a807095e6b11e4ab48a4d64926941e1ccd28a",
-    "source_manifest_sha256": "85795c3755af1ef710c551360e5ec5348c9262d0a647811e36da8d21134faece",
-    "control_inventory_sha256": "86ec3de58fa4fe785d828f02b9cc87bfd0b4da59139ea44d07b5ee186015a8cf",
-    "route_map_sha256": "c1e1249221cae5d6af60bd04a47238c4c20b4437e999507d1fc48a70279fc841",
-    "authorization_trace_sha256": "1c2459923e32e3aad2d98661175d2fa20e708c1f69f1b45a376f8ab0cac467cc",
-    "frontend_sha256": "8c82c5c02093a82b5ccd6019b0a40a26a96657421ed5ba16f10abf668ce25899"
+    "source_manifest_sha256": "da5aca31f49b0745160fb95f227de73085ceeaca4d90db69adc49e0485337eb6",
+    "control_inventory_sha256": "1cbc74b441fe2e3fbfa8111c4fe2a3c6475bc486fef709db56886cb39b88e896",
+    "route_map_sha256": "71a273fd4e806cce0aa5c1e36037b194aab4259e4d0ed30c19d3a8a0e71f5046",
+    "authorization_trace_sha256": "3efc14bacf7ea4a6b280448d8938c0781997f60db12e40b2fa5c1bbed98084a5",
+    "frontend_sha256": "f70cef5c37dac2f5906ce781bdc957e2f07b54735c20ec5575cb120946fb3d30"
   },
   "approval_request": [
     {
@@ -60,7 +60,7 @@
     {
       "id": 3,
       "ask": "Review route candidates and preserve confirmed browser-reachable routes and their gates",
-      "evidence": "121 routes exist; 75 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 50 state-changing candidates; the lexical scan is not exhaustive"
+      "evidence": "123 routes exist; 77 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 52 state-changing candidates; the lexical scan is not exhaustive"
     },
     {
       "id": 4,
@@ -80,14 +80,14 @@
     "chrome_controls": 163,
     "pane_controls": 113,
     "script_rendered_controls": 74,
-    "routes": 121,
-    "routes_with_resolved_or_possible_caller": 75,
+    "routes": 123,
+    "routes_with_resolved_or_possible_caller": 77,
     "routes_no_caller_observed": 46,
     "routes_unknown_frontend_caller": 0,
     "route_map_unresolved_call_sites": 0,
     "route_map_unresolved_caller_edges": 0,
     "route_map_unresolved_method_edges": 0,
-    "state_changing_routes_traced": 50,
+    "state_changing_routes_traced": 52,
     "pane_routes_reached": 44,
     "pane_routes_excluded": 34,
     "route_walk_depth": 2,
