@@ -5,7 +5,7 @@
   "source": {
     "frontend": "static/index.html",
     "style_block": "#m5-redesign-system",
-    "style_block_sha256": "011d2156ffb994bb78df675d2ff4aa85e19113693fb085c1952ba4202826994b",
+    "style_block_sha256": "cb6df601fc3728652cadee162e88eb3d2b0ca65e989d5741cff651ea2bbe090d",
     "superseded_blocks": [
       "the first <style> block declares an older palette that this one overrides; it is kept only so a stale rule cannot resolve to an undefined name"
     ]
@@ -42,7 +42,7 @@
   "totals": {
     "tokens": 58,
     "groups": 8,
-    "references": 1650,
+    "references": 1654,
     "theme_overrides": 20,
     "density_overrides": 5,
     "contrast_pairs": 28,
@@ -133,7 +133,7 @@
         "light": "#F8F9FB"
       },
       "density_override": null,
-      "references": 23
+      "references": 24
     },
     {
       "name": "--bg-elev",
@@ -193,7 +193,7 @@
         "light": "#DDE2E8"
       },
       "density_override": null,
-      "references": 210
+      "references": 212
     },
     {
       "name": "--border-hi",
@@ -459,7 +459,7 @@
       "value": "6px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 57
+      "references": 58
     },
     {
       "name": "--radius-md",

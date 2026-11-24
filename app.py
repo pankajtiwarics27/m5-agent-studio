@@ -78,6 +78,7 @@ import runtime_persistence
 import sandbox_boundary
 import start_command_center
 import side_effect_ledger
+import direction_checkpoints
 import task_events
 import workflow_checkpoints
 import workflow_state
@@ -14821,6 +14822,69 @@ def _routing_experiments_summary_or_none() -> dict[str, Any]:
         }
 
 
+_DIRECTION_CHECKPOINT_KEY = "direction_checkpoint"
+
+
+def _require_well_formed_session(session_id: str) -> dict[str, Any]:
+    """Read the session row, or refuse with 404 rather than guessing a storage key.
+
+    A path parameter reaches the store, so an id that is not a well-formed session
+    identifier is rejected here instead of being used to build a path.
+    """
+    sid = str(session_id or "").strip()
+    if not sid or len(sid) > 128 or not all(ch.isalnum() or ch in "-_" for ch in sid):
+        raise HTTPException(status_code=404, detail="Harness session not found.")
+    try:
+        return get_harness_session_db(sid)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Harness session {sid!r} not found.") from exc
+
+
+def _latest_direction_checkpoint(transitions: Sequence[Mapping[str, Any]]) -> dict[str, Any] | None:
+    """The most recent direction checkpoint this task recorded, read from its own transitions.
+
+    AP-018 needs somewhere to keep "we asked, here is the sample and the question". A new
+    table would be a second place that can disagree with the task record, so the checkpoint
+    rides in the `evidence_json` of the `running -> waiting_approval` transition that
+    created the pause: same transaction, same log, and a resume cannot leave it behind.
+    It is recovered by scanning that log, newest first, which is also how it is audited.
+    """
+    if not isinstance(transitions, (list, tuple)):
+        return None
+    for row in reversed(transitions):
+        if not isinstance(row, dict):
+            continue
+        evidence = row.get("evidence")
+        if not isinstance(evidence, dict):
+            continue
+        recorded = evidence.get(_DIRECTION_CHECKPOINT_KEY)
+        if isinstance(recorded, dict):
+            return recorded
+    return None
+
+
+def _load_direction_checkpoint(recorded: Mapping[str, Any]) -> direction_checkpoints.DirectionCheckpoint:
+    """Rebuild the checkpoint from its stored form, refusing a record the module cannot vouch for."""
+    return direction_checkpoints.DirectionCheckpoint.from_mapping(recorded)
+
+
+def _direction_checkpoints_taken(transitions: Sequence[Mapping[str, Any]]) -> int:
+    """How many direction checkpoints this task has already taken.
+
+    Counted, never inferred: a second sample is a different decision from the first, so the
+    number is part of what the surface has to be able to show.
+    """
+    if not isinstance(transitions, (list, tuple)):
+        return 0
+    return sum(
+        1
+        for row in transitions
+        if isinstance(row, dict)
+        and isinstance(row.get("evidence"), dict)
+        and isinstance(row["evidence"].get(_DIRECTION_CHECKPOINT_KEY), dict)
+    )
+
+
 @app.get("/api/harness/sessions/{session_id}/task")
 async def api_get_harness_task_state(session_id: str) -> JSONResponse:
     """Return durable root-task state, child milestones, checkpoints, budgets, and transition log."""
@@ -14893,6 +14957,12 @@ async def api_get_harness_task_state(session_id: str) -> JSONResponse:
             "routing_experiments": _routing_experiments_summary_or_none(),
             "latest_checkpoint": latest_ckpt.to_dict() if latest_ckpt is not None else None,
             "checkpoint_integrity_error": integrity_error,
+            "direction_checkpoint": _latest_direction_checkpoint(
+                [_serialize_transition_record(tr) for tr in transitions]
+            ),
+            "direction_checkpoints_taken": _direction_checkpoints_taken(
+                [_serialize_transition_record(tr) for tr in transitions]
+            ),
             "session_artifact_versions": (
                 _session_artifact_versions(latest_ckpt.evidence_refs, session_id=session_id)
                 if latest_ckpt is not None and not integrity_error
@@ -14946,6 +15016,204 @@ async def api_pause_harness_session(session_id: str, request: Request) -> JSONRe
             "deferred_to_safe_boundary": outcome.deferred_to_safe_boundary,
             "task": _serialize_task_record(outcome.task),
             "budget": outcome.budget.to_dict(),
+        }
+    )
+
+
+@app.post("/api/harness/sessions/{session_id}/direction-checkpoint")
+async def api_request_direction_checkpoint(session_id: str, request: Request) -> JSONResponse:
+    """Ask the owner to judge an early sample, when a check-in is worth the interruption.
+
+    The decision belongs to ``direction_checkpoints.decide``; this route only supplies the
+    facts it needs and records the answer in the task's own transition log. Four things are
+    refused here rather than papered over: a check-in on a task that is not running, a
+    sample the caller did not describe, a sample whose digest is not a digest, and a
+    harness that is already waiting on the owner. The last one matters most -- a second
+    pause over a live one would let the first question be answered into a task that has
+    moved on, which is exactly the stale-answer failure the module refuses.
+    """
+    sess = _require_well_formed_session(session_id)
+    sm = get_task_state_machine()
+    task, _ = sm.ensure_root_task(
+        session_id,
+        session_id=session_id,
+        title=str(sess.get("title") or ""),
+        workspace_dir=str(sess.get("worktree_dir") or ""),
+        policy=str(sess.get("policy") or "standard"),
+    )
+    if task.state == "waiting_approval":
+        # Checked before the general running-state rule so the reason is the true one: the
+        # task is waiting, just not on this question. A second pause over a live one would
+        # let the first answer land on work that has moved on.
+        raise HTTPException(
+            status_code=409,
+            detail="this task is already waiting on the owner; answer that question before asking another.",
+        )
+    if task.state != "running":
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"a direction check-in is only taken on a running task; this one is {task.state}. "
+                "Asking the owner to judge a direction for work that is not in progress would be a prompt, not a check-in."
+            ),
+        )
+    try:
+        body = await request.json()
+    except Exception:
+        body = None
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="A direction check-in needs a JSON body describing the sample.")
+
+    task_kind = str(body.get("task_kind") or "").strip()
+    if not task_kind:
+        raise HTTPException(status_code=400, detail="task_kind is required: coverage is decided per task kind, not for the session as a whole.")
+
+    raw_sample = body.get("sample")
+    sample: direction_checkpoints.SampleArtifact | None = None
+    if isinstance(raw_sample, dict):
+        checks = raw_sample.get("technical_checks")
+        try:
+            sample = direction_checkpoints.SampleArtifact(
+                artifact_id=str(raw_sample.get("artifact_id") or "")[:256],
+                content_sha256=str(raw_sample.get("content_sha256") or "").strip().lower(),
+                technical_checks={str(k): bool(v) for k, v in checks.items()} if isinstance(checks, dict) else {},
+            )
+        except direction_checkpoints.DirectionError as exc:
+            # A sample that cannot name its own version cannot be shown for judgement:
+            # the first thing to fix is the record, not the direction.
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    benchmarks: list[direction_checkpoints.BenchmarkCoverage] = []
+    for row in body.get("benchmarks") or ():
+        if not isinstance(row, dict):
+            continue
+        try:
+            benchmarks.append(
+                direction_checkpoints.BenchmarkCoverage(
+                    reference_id=str(row.get("reference_id") or ""),
+                    reference_sha256=str(row.get("reference_sha256") or "").strip().lower(),
+                    covered_task_kinds=tuple(str(k) for k in (row.get("covered_task_kinds") or ())),
+                    measured_checks=tuple(str(c) for c in (row.get("measured_checks") or ())),
+                )
+            )
+        except direction_checkpoints.DirectionError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    try:
+        checkpoint = direction_checkpoints.decide(
+            task_id=session_id,
+            task_kind=task_kind,
+            sample=sample,
+            benchmarks=benchmarks,
+            uncertainties=tuple(str(u) for u in (body.get("uncertainties") or ())),
+        )
+    except direction_checkpoints.DirectionError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    if not checkpoint.pauses_production:
+        # A covered, calm task keeps running. The decision is still reported, because
+        # "we looked and did not need you" is a different fact from "we never looked".
+        return JSONResponse(
+            {
+                "status": "skipped",
+                "direction_checkpoint": checkpoint.to_mapping(),
+                "task": _serialize_task_record(task),
+            }
+        )
+
+    try:
+        updated = sm.transition_task(
+            session_id,
+            "waiting_approval",
+            reason=f"direction_checkpoint:{checkpoint.trigger}"[:240],
+            extra_evidence={_DIRECTION_CHECKPOINT_KEY: checkpoint.to_mapping()},
+        )
+    except workflow_state.WorkflowTransitionRejected as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    _update_harness_session_state(session_id, status="waiting_approval")
+    _append_harness_event(
+        session_id,
+        "direction/checkpoint",
+        {"trigger": checkpoint.trigger, "sample": checkpoint.sample.artifact_id if checkpoint.sample else ""},
+    )
+    return JSONResponse(
+        {
+            "status": "waiting",
+            "direction_checkpoint": checkpoint.to_mapping(),
+            "task": _serialize_task_record(updated),
+        }
+    )
+
+
+@app.post("/api/harness/sessions/{session_id}/direction-answer")
+async def api_answer_direction_checkpoint(session_id: str, request: Request) -> JSONResponse:
+    """Resolve a direction question: continue on an explicit keep, redirect otherwise.
+
+    The answer is refused if it was given about a different version of the artifact than
+    the one the checkpoint showed, and the task is put back to `running` before that
+    version check runs -- so a refused answer leaves neither a stale pause nor a task
+    that quietly moved on. Direction approval is not acceptance: nothing here marks the
+    artifact accepted, publishes it or promotes it to a reference.
+    """
+    sess = _require_well_formed_session(session_id)
+    sm = get_task_state_machine()
+    task, _ = sm.ensure_root_task(
+        session_id,
+        session_id=session_id,
+        title=str(sess.get("title") or ""),
+        workspace_dir=str(sess.get("worktree_dir") or ""),
+        policy=str(sess.get("policy") or "standard"),
+    )
+    recorded = _latest_direction_checkpoint(
+        [_serialize_transition_record(tr) for tr in sm.store.list_transitions(session_id)]
+    )
+    if recorded is None:
+        raise HTTPException(status_code=409, detail="this task recorded no direction check-in to answer.")
+    if task.state != "waiting_approval":
+        raise HTTPException(
+            status_code=409,
+            detail=f"the direction check-in is already resolved; this task is {task.state}.",
+        )
+    try:
+        body = await request.json()
+    except Exception:
+        body = None
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="A direction answer needs a JSON body.")
+    answer = str(body.get("answer") or "").strip()
+    if not answer:
+        raise HTTPException(status_code=400, detail="answer is required; an empty answer is not a direction.")
+    current = str(body.get("current_artifact_sha256") or recorded.get("sample_sha256") or "").strip().lower()
+
+    try:
+        checkpoint = _load_direction_checkpoint(recorded)
+        outcome = direction_checkpoints.resume(
+            checkpoint,
+            answer=answer,
+            answered_artifact_sha256=str(body.get("answered_artifact_sha256") or recorded.get("sample_sha256") or ""),
+            current_artifact_sha256=current,
+        )
+    except direction_checkpoints.DirectionError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    try:
+        updated = sm.transition_task(
+            session_id,
+            "running",
+            reason=f"direction_answered:{outcome}"[:240],
+            extra_evidence={"direction_answer": {"answer": answer[:240], "outcome": outcome}},
+        )
+    except workflow_state.WorkflowTransitionRejected as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    _update_harness_session_state(session_id, status="running")
+    _append_harness_event(session_id, "direction/answered", {"outcome": outcome})
+    return JSONResponse(
+        {
+            "status": outcome,
+            "outcome": outcome,
+            "direction_is_final_acceptance": False,
+            "grants_publish_permission": False,
+            "task": _serialize_task_record(updated),
         }
     )
 

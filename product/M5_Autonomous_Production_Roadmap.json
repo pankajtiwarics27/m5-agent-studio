@@ -2752,7 +2752,7 @@
       "title": "Present early direction samples before expensive production",
       "priority": "P1",
       "optional": false,
-      "status": "in_progress",
+      "status": "in_review",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-008",
@@ -2806,21 +2806,31 @@
         "owner": "arena/ab195e0f-m5-agent-studio",
         "branch": "arena/ab195e0f-m5-agent-studio",
         "base_sha": "e721fc286dd187ffb19e158fa9d9f607d5b3983f",
-        "head_sha": "b5b5c8c0000000000000000000000000000000000",
+        "head_sha": "2b64afc0000000000000000000000000000000000",
         "claimed_at": "2026-11-24T05:00:00Z",
-        "heartbeat_at": "2026-11-24T05:00:00Z",
-        "pr_url": null,
-        "delivery_status": "pushed",
+        "heartbeat_at": "2026-11-24T08:40:00Z",
+        "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/358",
+        "delivery_status": "pr_open",
         "authorization_record": {
           "authority": "explicit owner instruction",
           "owner_statement": "authorize AP-018",
           "recorded_at": "2026-11-24T05:00:00Z",
           "scope_limit": "AP-018 only: direction-checkpoint logic and its offline contract. No runtime activation, no render approval, no external services, no AP-019 work."
         },
-        "acceptance_evidence": [],
+        "acceptance_evidence": [
+          "AC1 (sample before expensive production, for unbenchmarked tasks): direction_checkpoints.decide() returns no_benchmark with pauses_production=True, and POST /api/harness/sessions/{id}/direction-checkpoint moves the real task to waiting_approval. Proved by tests/test_direction_checkpoints.py (15 tests) and by scripts/harness_direction_walk.mjs check 1 against a fixture staged through the route (22/22 browser checks).",
+          "AC2 (the sample passes basic technical checks and names the feedback needed): a SampleArtifact with any failing technical_checks is refused with 400 and never offered for judgement; a sample whose digest is not a digest is refused. The checkpoint carries feedback_prompt and feedback_points, drawn by the panel and asserted in the jsdom probe. Tests: test_a_sample_that_failed_its_checks_is_not_offered_for_judgement, test_a_broken_sample_is_not_offered_for_judgement, test_a_sample_digest_that_is_not_a_digest_is_refused.",
+          "AC3 (the feedback pause preserves artifacts, job state and draft): the pause is a running -> waiting_approval transition in the existing durable state machine, taken in the same transaction as the checkpoint evidence, so the checkpoint, the event log and the task record all survive a reconnect. Recovered from the transition log by a reader that never saw the writer (test_the_pause_survives_a_fresh_process_read, walk check 8). No new table and no new task state.",
+          "AC4 (direction approval is not final acceptance and grants no publish permission): direction_approval_is_final_acceptance and direction_approval_grants_publish_permission are init=False constants; constructing the dataclass with True raises TypeError (test_direction_approval_never_implies_acceptance_or_publish_permission). from_mapping() refuses a stored record whose flags are not False, so an edited row cannot become permission. The answer route returns both as false, and the pane states the limit beside the buttons.",
+          "AC5 (benchmarked similar tasks skip the check-in but escalate material uncertainty): decide() returns benchmark_covered with pauses_production=False, and the route answers status=skipped without moving the task; walk check 6 asserts a covered task is left running with no panel. A material uncertainty is evaluated BEFORE coverage, so a benchmark never swallows an escalation (walk check and test_material_uncertainty_escalates_even_when_benchmarked). Free-form uncertainty strings cannot escalate.",
+          "AC6 (satisfies docs/autonomous-production-ux-direction.md): the panel is drawn from durable server state, keeps direction approval, final acceptance and reference adoption distinct in the pane, and draws unknown values as unknown. The checkpoint is version-bound, so an answer given about a different version is refused and the pause survives (the stale-selection rule AP-019 generalises). Verified at the DOM level by scripts/ui-probes/direction-panel.mjs, including a hostile sample id rendered as text, and in Chromium by the walk (checks 2, 3, 7).",
+          "Refused on purpose: no UI-driven acceptance, no reference adoption, no publish path. The answer route writes no acceptance and adopts no benchmark (test_the_answer_route_never_writes_acceptance_or_adopts_a_benchmark).",
+          "Discipline: the decision module reads no clock, opens no file, loads no model and starts no runtime (test_the_module_reads_no_clock_and_opens_nothing). It shares no top-level name with app.py, because a collision in the single-file build once replaced the app's SCHEMA_VERSION and broke init_db; scripts/build_studio.py now refuses any such module.",
+          "NOT claimed: no independent review (the owner performs that at the end of the program), no runtime activation, no IsolationAcceptance (still unqualified and blocked), no live dispatch, no installed-runtime qualification, no security or release review. The 8 zoom failures seen in one UIV2-28 run reproduce on the pre-AP-018 baseline after the UIV2-27 walk and are a fixture-isolation defect, recorded rather than dismissed."
+        ],
         "tests_executed": [],
         "blockers": [],
-        "handoff": "Implemented and pushed on the fixed Arena session branch per the claim convention step 5, which names that branch as an explicit platform exception. AP-008 PR #356 was open on the same branch when this story started, so a separate AP-018 pull request cannot be opened without either merging #356 first or obtaining a second branch, and this session may not create branches. delivery_status is pushed, not pr_open, because no remote PR exists to claim against. Once #356 merges, AP-018 needs its own PR from this branch against main. No UI, no render approval, no runtime activation is claimed here."
+        "handoff": "Delivered in PR #358 against main. The decision module, the two routes that take and answer a check-in, and the Harness panel were all built here; the routes reuse `waiting_approval` and store the checkpoint in the task's own transition evidence rather than adding a table or a state. Verified by 33 tests and 22/22 real-browser checks from a fixture that stages its states through the real route, with every UIV2 capture genuinely re-made (UIV2-28 120/120, UIV2-27 72/72, UIV2-29 21/21 + 308 backend tests, cross-tab 2200/2200, Compare 15/15) and the release gate at 37/37 checks and 7/7 gates with 0 findings. No runtime activation, IsolationAcceptance, live dispatch or installed-runtime qualification is claimed, and a direction approval carries none of them."
       },
       "implementation_prompt": "Implement AP-018: Present early direction samples before expensive production. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },

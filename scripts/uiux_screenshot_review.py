@@ -87,6 +87,7 @@ CURATED_PRODUCERS = {
     "responsive": "scripts/responsive_walk.mjs",
     "stream-perf": "scripts/stream_perf_walk.mjs",
     "uiux-p5-05": "scripts/uiux_interaction_polish_walk.mjs",
+    "harness-direction": "scripts/harness_direction_walk.mjs",
     "uiux-p6-03": "scripts/capture_screenshots.mjs",
 }
 
@@ -165,6 +166,17 @@ REVIEWS: dict[str, dict[str, object]] = {
         "eye": ["polish-dark-hover-primary.png"],
         "re_taken": False,
         "theme": "dark and light",
+    },
+    "harness-direction": {
+        "story": "AP-018",
+        "note": (
+            "A direction check-in and what it is not: the sample, the digest of the exact version "
+            "shown and the question sit inside their own bounded block, the limit is stated beside "
+            "the buttons, and a hostile sample id is drawn as text rather than markup."
+        ),
+        "eye": ["direction-waiting.png"],
+        "re_taken": True,
+        "theme": "light",
     },
     "harness-recovery": {
         "story": "UIUX-P3-05",

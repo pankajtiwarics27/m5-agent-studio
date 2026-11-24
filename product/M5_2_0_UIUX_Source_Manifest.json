@@ -12,23 +12,23 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "8c82c5c02093a82b5ccd6019b0a40a26a96657421ed5ba16f10abf668ce25899",
-      "bytes": 1087566,
-      "lines": 18499
+      "sha256": "f70cef5c37dac2f5906ce781bdc957e2f07b54735c20ec5575cb120946fb3d30",
+      "bytes": 1097872,
+      "lines": 18676
     },
     {
       "path": "app.py",
       "role": "the FastAPI server the UI talks to; source of the route table",
-      "sha256": "eb86a59bbda3a17d137c63f27ca5da28ec254bc288eb5651215819a6aebf719c",
-      "bytes": 1097358,
-      "lines": 23563
+      "sha256": "e8b4f40ded215b4e0d09eb99af37c20254f591d876f0da8ed0acd442e71f4edb",
+      "bytes": 1109536,
+      "lines": 23831
     },
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "066aee2a32e82dfa77ad6747f91b8f6ded2f1e9dade86a7004bdec6297e9c974",
-      "bytes": 4610662,
-      "lines": 90278
+      "sha256": "a255da9e22fc70c26bedeea5a37a06d1b0800a88c384ce21ed0e3a216904519e",
+      "bytes": 4651055,
+      "lines": 91168
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -68,9 +68,9 @@
     {
       "path": "scripts/build_studio.py",
       "role": "regenerates studio.py from app.py and the inlined modules",
-      "sha256": "f7a485e5dd7e15964ce7bbe4e6832197b2c44eca74125365277e308b8180fc05",
-      "bytes": 11284,
-      "lines": 256
+      "sha256": "ebb5327419da0118dfe7fa7cf06ac555db0a8fc1e73c6c7bd16236cd92164937",
+      "bytes": 12904,
+      "lines": 289
     },
     {
       "path": "scripts/check_frontend_syntax.py",
@@ -96,9 +96,9 @@
     {
       "path": "scripts/uiux_authorization_trace.py",
       "role": "traces the authorization and state behind each state-changing call",
-      "sha256": "cfe3aa4d5b10f36ca91d3355b08d23dd7b40a25af6ae0c89988a8ebb580968a5",
-      "bytes": 37524,
-      "lines": 767
+      "sha256": "cf52cf789b1be094454575dd228a24e82e727e9ac3f3d9147e0d9a1cb5f4138e",
+      "bytes": 37648,
+      "lines": 768
     },
     {
       "path": "scripts/uiux_preservation_signoff.py",
@@ -376,9 +376,9 @@
     {
       "path": "scripts/uiux_preservation_e2e.py",
       "role": "maps each preservation-matrix row to the walk, test, route and control that proves it",
-      "sha256": "e1fa6e757b378a01d6ec91dddb967d004632dd470404a562c687693d9319a053",
-      "bytes": 47298,
-      "lines": 858
+      "sha256": "4b6fb70f006453b592224d6379af75a1874e8dca61260cfd5839a6dab2cc7833",
+      "bytes": 47676,
+      "lines": 859
     },
     {
       "path": "tests/test_uiux_preservation_e2e.py",
@@ -418,9 +418,9 @@
     {
       "path": "scripts/uiux_screenshot_review.py",
       "role": "traces every committed capture to the script that made it and checks that the theme in its name is the theme in its pixels",
-      "sha256": "92c8ba67684914df01539d3eb4d0ccf8e4355edc43166a91f6b489648b339720",
-      "bytes": 82719,
-      "lines": 1520
+      "sha256": "b15ac71993a636f88412363f41b823f8737163d2ea8fb1df2dec0fa453bf4dda",
+      "bytes": 83255,
+      "lines": 1532
     },
     {
       "path": "tests/test_uiux_screenshot_review.py",
@@ -460,8 +460,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "8c82c5c02093a82b5ccd6019b0a40a26a96657421ed5ba16f10abf668ce25899",
-    "lines": 18499,
+    "sha256": "f70cef5c37dac2f5906ce781bdc957e2f07b54735c20ec5575cb120946fb3d30",
+    "lines": 18676,
     "tab_count": 6,
     "tabs": [
       {
@@ -572,13 +572,13 @@
   },
   "api": {
     "path": "app.py",
-    "sha256": "eb86a59bbda3a17d137c63f27ca5da28ec254bc288eb5651215819a6aebf719c",
-    "route_count": 121,
+    "sha256": "e8b4f40ded215b4e0d09eb99af37c20254f591d876f0da8ed0acd442e71f4edb",
+    "route_count": 123,
     "by_method": {
       "DELETE": 7,
       "GET": 40,
       "PATCH": 3,
-      "POST": 71
+      "POST": 73
     },
     "routes": [
       {
@@ -876,6 +876,14 @@
       {
         "method": "POST",
         "path": "/api/harness/sessions/{session_id}/pause"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/sessions/{session_id}/direction-checkpoint"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/sessions/{session_id}/direction-answer"
       },
       {
         "method": "POST",
