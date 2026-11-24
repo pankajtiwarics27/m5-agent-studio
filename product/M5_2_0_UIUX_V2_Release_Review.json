@@ -18,7 +18,7 @@
     "review_scope": "current-browser-sources",
     "current_browser_sources": true,
     "post_handoff_evidence": "current",
-    "evidence_recorded_at": "2026-11-24T16:54:45.525096+00:00",
+    "evidence_recorded_at": "2026-11-24T17:04:12.770837+00:00",
     "note": "The evidence commit may contain only later release docs/tracker changes; executable browser sources are bound by digest and verified inside the implementation commit."
   },
   "program_state": {
@@ -34,7 +34,7 @@
     "status": "completed",
     "conclusion": "success",
     "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45440962641",
-    "evidence_stage": "full",
+    "evidence_stage": "draft-bootstrap",
     "event": "pull_request",
     "createdAt": "2026-11-24T16:46:12Z",
     "updatedAt": "2026-11-24T16:52:44Z",

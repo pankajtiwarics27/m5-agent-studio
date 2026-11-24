@@ -3,7 +3,7 @@
   "document_type": "m5_uiv2_release_evidence",
   "story": "UIV2-30",
   "review_scope": "current-browser-sources",
-  "recorded_at": "2026-11-24T16:54:45.525096+00:00",
+  "recorded_at": "2026-11-24T17:04:12.770837+00:00",
   "source_sha256": {
     "static/index.html": "78a2e62a8e16f7ccc602fa55428dd1e6dfb9ccc04e5963396de501d5b436a467",
     "scripts/compare_continuity_walk.mjs": "a9165a4dc8b9f74a1c643114a0ffe2fb319e18eb2730e6cede2d92c222fc7b4d",
@@ -164,7 +164,7 @@
     "status": "completed",
     "conclusion": "success",
     "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45440962641",
-    "evidence_stage": "full",
+    "evidence_stage": "draft-bootstrap",
     "event": "pull_request",
     "createdAt": "2026-11-24T16:46:12Z",
     "updatedAt": "2026-11-24T16:52:44Z",

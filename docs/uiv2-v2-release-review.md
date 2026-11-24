@@ -15,7 +15,7 @@ The first decision covers only merge/handoff of the UI/UX V2 program. It is not 
 | Evidence scope | `current-browser-sources`; current-browser-sources=`true` |
 | Post-handoff #185 evidence | `current` |
 | Roadmap at generation | 30/30 done, 0 in progress, 0 blocked |
-| Implementation CI | [`aed5a9450732ab1df5da6e6b6f6ccfbb3261ed3b`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45440962641) — success (full) |
+| Implementation CI | [`aed5a9450732ab1df5da6e6b6f6ccfbb3261ed3b`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45440962641) — success (draft-bootstrap) |
 | Local executed checks | 7/7 exit 0 |
 | Production release | `release-blocked`; release_ready=`false` |
 
