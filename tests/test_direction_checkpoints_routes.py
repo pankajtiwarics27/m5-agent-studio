@@ -428,3 +428,33 @@ def test_the_shipped_direction_panel_escapes_data_and_states_the_limit():
     )
     assert result.returncode == 0, result.stdout + result.stderr
     assert "ALL PROBE CHECKS PASSED" in result.stdout
+
+
+def test_the_module_shares_no_top_level_name_with_the_application():
+    """The single-file build inlines this module into app.py's own namespace.
+
+    A module-level `SCHEMA_VERSION` here replaced the application's schema version, and
+    `init_db` then created no `runtime_task_epochs` table -- in `studio.py` only. Every
+    module-level test passed while the shipped artifact was broken, which is exactly the
+    failure the build's own collision guard now refuses. This test pins the module side.
+    """
+    import ast
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    app = ast.parse((root / "app.py").read_text(encoding="utf-8"))
+    module = ast.parse((root / "direction_checkpoints.py").read_text(encoding="utf-8"))
+
+    def names(tree):
+        found: set[str] = set()
+        for node in tree.body:
+            if isinstance(node, ast.Assign):
+                found |= {t.id for t in node.targets if isinstance(t, ast.Name)}
+            elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+                found.add(node.target.id)
+            elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                found.add(node.name)
+        return found
+
+    clash = names(app) & names(module)
+    assert not clash, f"these names would overwrite app.py's in the single-file build: {sorted(clash)}"

@@ -53,6 +53,21 @@ INLINED_MODULES = (
     "routing_experiments",
 )
 
+def _module_level_names(source: str) -> set[str]:
+    """Names a module binds at top level, which is what a shared namespace can collide on."""
+    import ast
+
+    names: set[str] = set()
+    for node in ast.parse(source).body:
+        if isinstance(node, ast.Assign):
+            names |= {t.id for t in node.targets if isinstance(t, ast.Name)}
+        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+            names.add(node.target.id)
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            names.add(node.name)
+    return names
+
+
 AUTH_HELPER = """<script>(function(){const nativeFetch=window.fetch.bind(window);let promptLock=null;window.fetch=async function(input,init={}){const url=typeof input==='string'?input:input.url;const same=new URL(url,location.href).origin===location.origin;const send=async(token)=>{const headers=new Headers(input instanceof Request?input.headers:undefined);new Headers(init.headers||{}).forEach((v,k)=>headers.set(k,v));if(token&&same)headers.set('Authorization','Bearer '+token);return nativeFetch(input,{...init,headers});};let token=sessionStorage.getItem('m5_api_token')||'';let r=await send(token);if(r.status!==401||!same||!url.includes('/api/')&&!url.includes('/v1/'))return r;if(!promptLock)promptLock=new Promise(resolve=>{const v=window.prompt('Studio API token (saved for this browser session):');if(v)sessionStorage.setItem('m5_api_token',v);resolve(v||'');});token=await promptLock;promptLock=null;if(!token)return r;r=await send(token);return r;};})();</script>"""
 
 
@@ -216,6 +231,23 @@ def build() -> None:
     # init_db and the history routes do). The mcp_client/context_store wire and
     # memory boundaries are inlined before the orchestrator and re-aliased so
     # qualified references from the application keep resolving.
+    # An inlined module and the application share one global namespace, so a module-level
+    # name that already exists here silently overwrites it. A small contract module's
+    # `SCHEMA_VERSION` once replaced the app's schema version and broke `init_db` in the
+    # single-file build only, where no per-module test could see it -- every module test
+    # passed and the artifact was wrong. The collision is checked here, where it is created.
+    app_names = _module_level_names(out_text)
+    for module_name in INLINED_MODULES:
+        clash = sorted(
+            app_names & _module_level_names((ROOT / f"{module_name}.py").read_text(encoding="utf-8"))
+        )
+        if clash:
+            raise SystemExit(
+                f"{module_name}.py defines names that already exist in app.py: {', '.join(clash)}. "
+                "Inlined modules share the application's namespace; prefix them rather than letting "
+                "one silently replace the other."
+            )
+
     boundary_texts = []
     for module_name in INLINED_MODULES:
         module_text = (

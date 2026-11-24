@@ -49242,7 +49242,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Mapping, Sequence
 
-SCHEMA_VERSION = 1
+DC_SCHEMA_VERSION = 1
 
 # Reportable reasons a direction checkpoint fired or was skipped. Free-form strings would
 # make the "did we ask too much / too little" question unanswerable later.
@@ -49266,30 +49266,30 @@ MATERIAL_UNCERTAINTIES = frozenset(
     }
 )
 
-MAX_FEEDBACK_POINTS = 5
-MAX_TEXT = 400
-_DIGEST_RE = re.compile(r"^[0-9a-f]{64}$")
-_STEP_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 .:/-]{0,119}$")
+DC_MAX_FEEDBACK_POINTS = 5
+DC_MAX_TEXT = 400
+_DC_DIGEST_RE = re.compile(r"^[0-9a-f]{64}$")
+_DC_STEP_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 .:/-]{0,119}$")
 
 
 class DirectionError(ValueError):
     """Raised when a direction record would state something it cannot support."""
 
 
-def _text(value: object, field_name: str, *, allow_empty: bool = False) -> str:
+def _dc_text(value: object, field_name: str, *, allow_empty: bool = False) -> str:
     text = " ".join(str(value or "").split())
     if not text and not allow_empty:
         raise DirectionError(f"{field_name} must not be empty.")
-    if len(text) > MAX_TEXT:
-        raise DirectionError(f"{field_name} must be at most {MAX_TEXT} characters.")
+    if len(text) > DC_MAX_TEXT:
+        raise DirectionError(f"{field_name} must be at most {DC_MAX_TEXT} characters.")
     return text
 
 
-def _digest_or_empty(value: object, field_name: str) -> str:
+def _dc_digest_or_empty(value: object, field_name: str) -> str:
     text = str(value or "").strip().lower()
     if not text:
         return ""
-    if not _DIGEST_RE.fullmatch(text):
+    if not _DC_DIGEST_RE.fullmatch(text):
         raise DirectionError(f"{field_name} must be a lowercase SHA-256 hex digest.")
     return text
 
@@ -49310,8 +49310,8 @@ class BenchmarkCoverage:
     measured_checks: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
-        _text(self.reference_id, "reference_id")
-        _digest_or_empty(self.reference_sha256, "reference_sha256")
+        _dc_text(self.reference_id, "reference_id")
+        _dc_digest_or_empty(self.reference_sha256, "reference_sha256")
         if not self.reference_sha256:
             raise DirectionError(
                 "A benchmark reference must carry the digest of the version it covers."
@@ -49347,9 +49347,9 @@ class SampleArtifact:
     technical_checks: Mapping[str, bool] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        _text(self.artifact_id, "artifact_id")
-        if not _DIGEST_RE.fullmatch(
-            _digest_or_empty(self.content_sha256, "content_sha256")
+        _dc_text(self.artifact_id, "artifact_id")
+        if not _DC_DIGEST_RE.fullmatch(
+            _dc_digest_or_empty(self.content_sha256, "content_sha256")
         ):
             raise DirectionError(
                 "A sample must name the exact artifact version it shows."
@@ -49402,8 +49402,8 @@ class DirectionCheckpoint:
     )
 
     def __post_init__(self) -> None:
-        _text(self.task_id, "task_id")
-        _text(self.task_kind, "task_kind")
+        _dc_text(self.task_id, "task_id")
+        _dc_text(self.task_kind, "task_kind")
 
     @property
     def pauses_production(self) -> bool:
@@ -49416,7 +49416,7 @@ class DirectionCheckpoint:
 
     def to_mapping(self) -> dict[str, Any]:
         return {
-            "schema_version": SCHEMA_VERSION,
+            "schema_version": DC_SCHEMA_VERSION,
             "task_id": self.task_id,
             "task_kind": self.task_kind,
             "trigger": self.trigger,
@@ -49449,9 +49449,9 @@ class DirectionCheckpoint:
         if not isinstance(recorded, Mapping):
             raise DirectionError("a recorded direction checkpoint must be a mapping")
         version = recorded.get("schema_version")
-        if version != SCHEMA_VERSION:
+        if version != DC_SCHEMA_VERSION:
             raise DirectionError(
-                f"recorded direction checkpoint has schema {version!r}, expected {SCHEMA_VERSION!r}"
+                f"recorded direction checkpoint has schema {version!r}, expected {DC_SCHEMA_VERSION!r}"
             )
         for flag in (
             "direction_approval_is_final_acceptance",
@@ -49521,8 +49521,8 @@ def decide(
     refusal -- asking the owner to judge a direction with nothing to look at is not a
     check-in, it is a prompt.
     """
-    _text(task_id, "task_id")
-    _text(task_kind, "task_kind")
+    _dc_text(task_id, "task_id")
+    _dc_text(task_kind, "task_kind")
 
     unknown = [u for u in uncertainties if u not in MATERIAL_UNCERTAINTIES]
     if unknown:
@@ -49533,9 +49533,9 @@ def decide(
 
     covering = next((b for b in benchmarks if b.covers(task_kind)), None)
 
-    prompt = _text(_prompt_for(task_kind, escalation), "feedback_prompt")
-    points = tuple(_text(p, "feedback_point") for p in feedback_points)[
-        :MAX_FEEDBACK_POINTS
+    prompt = _dc_text(_dc_prompt_for(task_kind, escalation), "feedback_prompt")
+    points = tuple(_dc_text(p, "feedback_point") for p in feedback_points)[
+        :DC_MAX_FEEDBACK_POINTS
     ]
 
     if covering is not None and not escalation:
@@ -49597,7 +49597,7 @@ def decide(
     )
 
 
-def _prompt_for(task_kind: str, escalation: Sequence[str]) -> str:
+def _dc_prompt_for(task_kind: str, escalation: Sequence[str]) -> str:
     """Name what feedback is needed, rather than asking an open "what do you think?"."""
     base = f"Is this the right direction for {task_kind}? Say keep, redirect, or what to change."
     if escalation:
@@ -49624,8 +49624,8 @@ def resume(
         )
     if checkpoint.sample is None:
         raise DirectionError("checkpoint has no sample; it cannot be resumed")
-    answered = _digest_or_empty(answered_artifact_sha256, "answered_artifact_sha256")
-    current = _digest_or_empty(current_artifact_sha256, "current_artifact_sha256")
+    answered = _dc_digest_or_empty(answered_artifact_sha256, "answered_artifact_sha256")
+    current = _dc_digest_or_empty(current_artifact_sha256, "current_artifact_sha256")
     if not answered or not current:
         raise DirectionError(
             "resuming needs both the answered and the current artifact digest"
