@@ -5,7 +5,7 @@
   "source": {
     "frontend": "static/index.html",
     "style_block": "#m5-redesign-system",
-    "style_block_sha256": "cb6df601fc3728652cadee162e88eb3d2b0ca65e989d5741cff651ea2bbe090d",
+    "style_block_sha256": "a44de012ad8e2f76632aa5f4e2846c1a0cc2a4fe50a603010d341a82ddd3aa68",
     "superseded_blocks": [
       "the first <style> block declares an older palette that this one overrides; it is kept only so a stale rule cannot resolve to an undefined name"
     ]
@@ -42,7 +42,7 @@
   "totals": {
     "tokens": 58,
     "groups": 8,
-    "references": 1654,
+    "references": 1666,
     "theme_overrides": 20,
     "density_overrides": 5,
     "contrast_pairs": 28,
@@ -183,7 +183,7 @@
         "light": "#F1F3F5"
       },
       "density_override": null,
-      "references": 14
+      "references": 16
     },
     {
       "name": "--border",
@@ -193,7 +193,7 @@
         "light": "#DDE2E8"
       },
       "density_override": null,
-      "references": 212
+      "references": 213
     },
     {
       "name": "--border-hi",
@@ -213,7 +213,7 @@
         "light": "#1B2430"
       },
       "density_override": null,
-      "references": 110
+      "references": 111
     },
     {
       "name": "--text-dim",
@@ -283,7 +283,7 @@
         "light": "#286e50"
       },
       "density_override": null,
-      "references": 44
+      "references": 45
     },
     {
       "name": "--amber",
@@ -293,7 +293,7 @@
         "light": "#80580e"
       },
       "density_override": null,
-      "references": 62
+      "references": 63
     },
     {
       "name": "--rose",
@@ -303,7 +303,7 @@
         "light": "#a4313a"
       },
       "density_override": null,
-      "references": 46
+      "references": 47
     },
     {
       "name": "--purple",
@@ -323,7 +323,7 @@
         "light": "#4F5FE8"
       },
       "density_override": null,
-      "references": 14
+      "references": 17
     },
     {
       "name": "--text-2xs",
@@ -459,7 +459,7 @@
       "value": "6px",
       "theme_overrides": {},
       "density_override": null,
-      "references": 58
+      "references": 60
     },
     {
       "name": "--radius-md",

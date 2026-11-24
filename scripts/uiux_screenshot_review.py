@@ -88,6 +88,7 @@ CURATED_PRODUCERS = {
     "stream-perf": "scripts/stream_perf_walk.mjs",
     "uiux-p5-05": "scripts/uiux_interaction_polish_walk.mjs",
     "harness-direction": "scripts/harness_direction_walk.mjs",
+    "harness-feedback": "scripts/harness_feedback_walk.mjs",
     "uiux-p6-03": "scripts/capture_screenshots.mjs",
 }
 
@@ -177,6 +178,21 @@ REVIEWS: dict[str, dict[str, object]] = {
         "eye": ["direction-waiting.png"],
         "re_taken": True,
         "theme": "light",
+    },
+    "harness-feedback": {
+        "story": "AP-019",
+        "note": (
+            "Feedback as a record, not a chat message: each comment states the reach it was given "
+            "(\"only the region you selected\" beside \"this artifact, this version\"), the owner's own "
+            "words are shown rather than a paraphrase, the exact version digest is bound above them, "
+            "an ambiguous reading is marked as waiting on the owner, and the pair of contradictory "
+            "comments on one region is shown as a contradiction instead of being averaged into a "
+            "change nobody asked for. The stale set places the earlier comment under its own heading "
+            "with the words it was given in, and the hostile capture draws markup as text."
+        ),
+        "eye": ["feedback-pane.png", "feedback-confirmed.png", "feedback-stale.png"],
+        "re_taken": True,
+        "theme": "dark",
     },
     "harness-recovery": {
         "story": "UIUX-P3-05",

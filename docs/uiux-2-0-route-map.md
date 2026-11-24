@@ -6,7 +6,7 @@ functions and structural route candidates, derived from the inline script and th
 route table, not from handler names.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4`.
-* Frontend digest: `0bd932ef67708ed0…` · `app.py` digest: `a039ad7bef243bac…`.
+* Frontend digest: `78a2e62a8e16f7cc…` · `app.py` digest: `a039ad7bef243bac…`.
 * 77 call sites resolve to 85 URLs — exact: 83, dynamic URL: 2, unknown method: 0, forwarded through a helper: 1, findings: 0, unresolved sites: 0, unresolved edges: 0 (0 method).
 * 128 routes exist; 81 have a resolved or possible caller (70 unique structural matches, 11 only possible candidates); 47 have none observed and 0 are unknown due to unresolved edges.
 
@@ -39,91 +39,91 @@ Line numbers appear in two frames: `Script` is the line inside the inline `<scri
 
 | Handler | Script | Document | Method | Resolved from | Via | URL | Match | Route |
 |---|---|---|---|---|---|---|---|---|
-| `refreshStartCommand` | 1020 | 5131 | GET | assignment | — | `/api/start/command-center?{param}` | exact | `/api/start/command-center` |
-| `refreshStartCommand` | 1020 | 5131 | GET | assignment | — | `/api/start/command-center` | exact | `/api/start/command-center` |
-| `loadStartRecent` | 1199 | 5310 | GET | literal | — | `/api/harness/sessions` | exact | `/api/harness/sessions` |
-| `loadProviders` | 2318 | 6429 | GET | literal | — | `/api/providers` | exact | `/api/providers` |
-| `fetchRemoteModels` | 2402 | 6513 | POST | literal | — | `/api/providers/fetch-models` | exact | `/api/providers/fetch-models` |
-| `saveProvider` | 2426 | 6537 | POST | literal | — | `/api/providers` | exact | `/api/providers` |
-| `removeProvider` | 2451 | 6562 | DELETE | literal | — | `/api/providers/{param}` | exact | `/api/providers/{alias}` |
-| `saveCombo` | 2461 | 6572 | POST | literal | — | `/api/combos` | exact | `/api/combos` |
-| `removeCombo` | 2478 | 6589 | DELETE | literal | — | `/api/combos/{param}` | exact | `/api/combos/{alias}` |
-| `loadSkills` | 2497 | 6608 | GET | literal | — | `/api/skills` | exact | `/api/skills` |
-| `installSkill` | 2622 | 6733 | POST | literal | — | `/api/skills/install` | exact | `/api/skills/install` |
-| `openSpawnModal` | 2638 | 6749 | GET | literal | — | `/api/workspace/files` | exact | `/api/workspace/files` |
-| `confirmSpawnSession` | 2666 | 6777 | POST | literal | — | `/api/hall/sessions` | exact | `/api/hall/sessions` |
-| `refreshHallSessions` | 2683 | 6794 | GET | literal | — | `/api/hall/sessions` | exact | `/api/hall/sessions` |
-| `deleteHallSession` | 2847 | 6958 | DELETE | literal | — | `/api/hall/sessions/{param}` | exact | `/api/hall/sessions/{session_id}` |
-| `clearAllHallSessions` | 2867 | 6978 | DELETE | literal | — | `/api/hall/sessions` | exact | `/api/hall/sessions` |
-| `readHallSession` | 2916 | 7027 | GET | literal | — | `/api/hall/sessions/{param}` | exact | `/api/hall/sessions/{session_id}` |
-| `postHumanHallMessage` | 3549 | 7660 | POST | literal | — | `/api/hall/sessions` | exact | `/api/hall/sessions` |
-| `postHumanHallMessage` | 3563 | 7674 | POST | literal | — | `/api/hall/sessions/{param}/message` | exact | `/api/hall/sessions/{session_id}/message` |
-| `councilSeatAction` | 4044 | 8155 | POST | literal | — | `/api/models/{param}/load` | exact | `/api/models/{model_id:path}/load` |
-| `refreshTelemetry` | 4972 | 9083 | GET | literal | — | `/api/telemetry` | exact | `/api/telemetry` |
-| `modelAction` | 5070 | 9181 | POST | literal | — | `/api/models/{param}/{param}` | dynamic | `/api/models/{model_id:path}/load or /api/models/{model_id:path}/unload` |
-| `unloadAllModels` | 5078 | 9189 | POST | literal | — | `/api/models/unload-all` | exact | `/api/models/unload-all` |
-| `clearSsdCache` | 5086 | 9197 | POST | literal | — | `/api/cache/clear-ssd` | exact | `/api/cache/clear-ssd` |
-| `consumeSSE` | 5103 | 9214 | POST | forwarded | `consumeSSE` → `summonAgentPromise` | `/api/hall/sessions/{param}/summon` | exact | `/api/hall/sessions/{session_id}/summon` |
-| `consumeSSE` | 5103 | 9214 | POST | forwarded | `consumeSSE` → `startPipelineRun` | `/api/council/stream` | exact | `/api/council/stream` |
-| `consumeSSE` | 5103 | 9214 | POST | forwarded | `consumeSSE` → `runDebate` | `/api/debate/stream` | exact | `/api/debate/stream` |
-| `consumeSSE` | 5103 | 9214 | POST | forwarded | `consumeSSE` → `sendChatRequest` | `/api/chat/stream` | exact | `/api/chat/stream` |
-| `consumeSSE` | 5103 | 9214 | POST | forwarded | `consumeSSE` → `runHarnessTurn` | `/api/harness/run` | exact | `/api/harness/run` |
-| `consumeSSE` | 5103 | 9214 | POST | forwarded | `consumeSSE` → `runGsdWaveTurn` | `/api/harness/gsd-wave` | exact | `/api/harness/gsd-wave` |
-| `consumeSSE` | 5103 | 9214 | POST | forwarded | `consumeSSE` → `_streamSdlcEndpoint` → `startSdlcRun` | `/api/harness/sdlc/run` | exact | `/api/harness/sdlc/run` |
-| `consumeSSE` | 5103 | 9214 | POST | forwarded | `consumeSSE` → `_streamSdlcEndpoint` → `submitSdlcFeedback` | `/api/harness/sdlc/feedback` | exact | `/api/harness/sdlc/feedback` |
-| `reloadSavedPipelineRun` | 6120 | 10231 | GET | literal | — | `/api/history/export` | exact | `/api/history/export` |
-| `debateFetchHistoryBundle` | 7029 | 11140 | GET | literal | — | `/api/history/export` | exact | `/api/history/export` |
-| `debateReadServerRecord` | 7344 | 11455 | GET | literal | — | `/api/history/export` | exact | `/api/history/export` |
-| `openExternalHarnessModal` | 8940 | 13051 | GET | literal | — | `/api/harness/external-configs` | exact | `/api/harness/external-configs` |
-| `saveWorkspaceDirectory` | 9054 | 13165 | POST | literal | — | `/api/workspace/directory` | exact | `/api/workspace/directory` |
-| `loadPathPicker` | 9147 | 13258 | GET | literal | — | `/api/workspace/picker?path={param}&kind={param}&query={param}` | exact | `/api/workspace/picker` |
-| `createPathPickerFolder` | 9194 | 13305 | POST | literal | — | `/api/workspace/picker/folders` | exact | `/api/workspace/picker/folders` |
-| `askPathPickerModel` | 9224 | 13335 | POST | literal | — | `/api/workspace/picker/suggest` | exact | `/api/workspace/picker/suggest` |
-| `loadHarnessSessions` | 9288 | 13399 | GET | literal | — | `/api/harness/sessions` | exact | `/api/harness/sessions` |
-| `selectHarnessSession` | 9464 | 13575 | GET | literal | — | `/api/harness/sessions/{param}` | exact | `/api/harness/sessions/{session_id}` |
-| `patchActiveHarnessSettings` | 9486 | 13597 | PATCH | literal | — | `/api/harness/sessions/{param}` | exact | `/api/harness/sessions/{session_id}` |
-| `deleteHarnessSession` | 9510 | 13621 | DELETE | literal | — | `/api/harness/sessions/{param}` | exact | `/api/harness/sessions/{session_id}` |
-| `harnessFetchEventPage` | 9917 | 14028 | GET | literal | — | `/api/harness/sessions/{param}/events?cursor={param}&limit={param}` | exact | `/api/harness/sessions/{session_id}/events` |
-| `refreshHarnessWorkspaceSnapshots` | 10003 | 14114 | GET | literal | — | `/api/harness/sessions/{param}/snapshots` | exact | `/api/harness/sessions/{session_id}/snapshots` |
-| `refreshHarnessWorkspaceReview` | 10036 | 14147 | GET | literal | — | `/api/harness/sessions/{param}/diff` | exact | `/api/harness/sessions/{session_id}/diff` |
-| `harnessResyncFromSnapshot` | 10107 | 14218 | GET | literal | — | `/api/harness/sessions/{param}/state` | exact | `/api/harness/sessions/{session_id}/state` |
-| `refreshHarnessSnapshotAfterOutcome` | 10141 | 14252 | GET | literal | — | `/api/harness/sessions/{param}/state` | exact | `/api/harness/sessions/{session_id}/state` |
-| `openHarnessEventStream` | 10176 | 14287 | GET | literal | — | `/api/harness/sessions/{param}/events/stream?cursor={param}` | exact | `/api/harness/sessions/{session_id}/events/stream` |
-| `refreshHarnessGrants` | 10451 | 14562 | GET | literal | — | `/api/harness/sessions/{param}/grants` | exact | `/api/harness/sessions/{session_id}/grants` |
-| `revokeHarnessGrant` | 10588 | 14699 | POST | literal | — | `/api/harness/sessions/{param}/grants/revoke` | exact | `/api/harness/sessions/{session_id}/grants/revoke` |
-| `confirmLiveHarnessApproval` | 10960 | 15071 | GET | literal | — | `/api/harness/sessions/{param}/state` | exact | `/api/harness/sessions/{session_id}/state` |
-| `resolveHarnessApproval` | 11025 | 15136 | POST | literal | — | `/api/harness/approve` | exact | `/api/harness/approve` |
-| `abortHarnessRun` | 11061 | 15172 | POST | literal | — | `/api/harness/abort/{param}` | exact | `/api/harness/abort/{session_id}` |
-| `openHarnessDiffModal` | 11086 | 15197 | GET | literal | — | `/api/harness/sessions/{param}/diff` | exact | `/api/harness/sessions/{session_id}/diff` |
-| `applyHarnessWorktree` | 11121 | 15232 | POST | literal | — | `/api/harness/sessions/{param}/apply` | exact | `/api/harness/sessions/{session_id}/apply` |
-| `refreshHarnessEvidence` | 11436 | 15547 | GET | literal | — | `/api/harness/sessions/{param}/task` | exact | `/api/harness/sessions/{session_id}/task` |
-| `refreshHarnessEvidence` | 11444 | 15555 | GET | literal | — | `/api/harness/sessions/{param}/diff` | exact | `/api/harness/sessions/{session_id}/diff` |
-| `loadHarnessFeedback` | 11711 | 15822 | GET | assignment | — | `/api/harness/sessions/{param}/feedback?artifact_id={param}&artifact_sha256={param}` | exact | `/api/harness/sessions/{session_id}/feedback` |
-| `confirmHarnessFeedback` | 11791 | 15902 | POST | literal | — | `/api/harness/sessions/{param}/feedback/{param}/confirm` | exact | `/api/harness/sessions/{session_id}/feedback/{feedback_id}/confirm` |
-| `withdrawHarnessFeedback` | 11814 | 15925 | DELETE | literal | — | `/api/harness/sessions/{param}/feedback/{param}` | exact | `/api/harness/sessions/{session_id}/feedback/{feedback_id}` |
-| `submitHarnessFeedback` | 11842 | 15953 | POST | literal | — | `/api/harness/sessions/{param}/feedback` | exact | `/api/harness/sessions/{session_id}/feedback` |
-| `refreshHarnessRecovery` | 12614 | 16725 | GET | literal | — | `/api/harness/sessions/{param}/task` | exact | `/api/harness/sessions/{session_id}/task` |
-| `refreshHarnessRecovery` | 12623 | 16734 | GET | literal | — | `/api/harness/sessions/{param}/state` | exact | `/api/harness/sessions/{session_id}/state` |
-| `harnessRecoveryPost` | 12653 | 16764 | POST | literal | — | `/api/harness/sessions/{param}/{param}` | dynamic | `/api/harness/sessions/{session_id}/apply or /api/harness/sessions/{session_id}/compact or /api/harness/sessions/{session_id}/snapshots or /api/harness/sessions/{session_id}/pause or /api/harness/sessions/{session_id}/direction-checkpoint or /api/harness/sessions/{session_id}/direction-answer or /api/harness/sessions/{session_id}/feedback or /api/harness/sessions/{session_id}/cancel or /api/harness/sessions/{session_id}/contain or /api/harness/sessions/{session_id}/grants or /api/harness/sessions/{session_id}/switch-model or /api/harness/sessions/{session_id}/delegations or /api/harness/sessions/{session_id}/resume` |
-| `loadMcpServers` | 13605 | 17716 | GET | literal | — | `/api/mcp/servers` | exact | `/api/mcp/servers` |
-| `saveMcpServer` | 14157 | 18268 | POST | literal | — | `/api/mcp/servers` | exact | `/api/mcp/servers` |
-| `importMcpJson` | 14191 | 18302 | POST | literal | — | `/api/mcp/import-json` | exact | `/api/mcp/import-json` |
-| `syncMcpServer` | 14205 | 18316 | POST | literal | — | `/api/mcp/servers/{param}/sync` | exact | `/api/mcp/servers/{alias}/sync` |
-| `toggleMcpServerEnabled` | 14221 | 18332 | PATCH | literal | — | `/api/mcp/servers/{param}` | exact | `/api/mcp/servers/{alias}` |
-| `changeMcpApprovalPolicy` | 14236 | 18347 | PATCH | literal | — | `/api/mcp/servers/{param}` | exact | `/api/mcp/servers/{alias}` |
-| `toggleMcpSingleTool` | 14254 | 18365 | PATCH | literal | — | `/api/mcp/servers/{param}` | exact | `/api/mcp/servers/{alias}` |
-| `deleteMcpServer` | 14269 | 18380 | DELETE | literal | — | `/api/mcp/servers/{param}` | exact | `/api/mcp/servers/{alias}` |
-| `runMcpPlayground` | 14304 | 18415 | POST | literal | — | `/api/mcp/servers/{param}/call` | exact | `/api/mcp/servers/{alias}/call` |
-| `compactActiveHarness` | 14351 | 18462 | POST | literal | — | `/api/harness/sessions/{param}/compact` | exact | `/api/harness/sessions/{session_id}/compact` |
-| `loadOpenContextDocs` | 14514 | 18625 | GET | literal | — | `/api/opencontext/docs` | exact | `/api/opencontext/docs` |
-| `searchOpenContextUI` | 14523 | 18634 | GET | literal | — | `/api/opencontext/search?q={param}` | exact | `/api/opencontext/search` |
-| `saveOpenContextDoc` | 14577 | 18688 | POST | literal | — | `/api/opencontext/docs` | exact | `/api/opencontext/docs` |
-| `togglePinOpenContextDoc` | 14591 | 18702 | PATCH | literal | — | `/api/opencontext/docs/{param}` | exact | `/api/opencontext/docs/{doc_id}` |
-| `deleteOpenContextDoc` | 14604 | 18715 | DELETE | literal | — | `/api/opencontext/docs/{param}` | exact | `/api/opencontext/docs/{doc_id}` |
-| `runOpenContextLintUI` | 14616 | 18727 | GET | literal | — | `/api/opencontext/lint` | exact | `/api/opencontext/lint` |
-| `refreshCodeGraphOverview` | 14630 | 18741 | GET | literal | — | `/api/codegraph/analyze?workspace_dir={param}` | exact | `/api/codegraph/analyze` |
-| `runCodeGraphPlayground` | 14655 | 18766 | POST | literal | — | `/api/codegraph/query` | exact | `/api/codegraph/query` |
-| `refreshSdlcBoard` | 14703 | 18814 | GET | literal | — | `/api/harness/sessions/{param}/sdlc` | exact | `/api/harness/sessions/{session_id}/sdlc` |
+| `refreshStartCommand` | 1020 | 5134 | GET | assignment | — | `/api/start/command-center?{param}` | exact | `/api/start/command-center` |
+| `refreshStartCommand` | 1020 | 5134 | GET | assignment | — | `/api/start/command-center` | exact | `/api/start/command-center` |
+| `loadStartRecent` | 1199 | 5313 | GET | literal | — | `/api/harness/sessions` | exact | `/api/harness/sessions` |
+| `loadProviders` | 2318 | 6432 | GET | literal | — | `/api/providers` | exact | `/api/providers` |
+| `fetchRemoteModels` | 2402 | 6516 | POST | literal | — | `/api/providers/fetch-models` | exact | `/api/providers/fetch-models` |
+| `saveProvider` | 2426 | 6540 | POST | literal | — | `/api/providers` | exact | `/api/providers` |
+| `removeProvider` | 2451 | 6565 | DELETE | literal | — | `/api/providers/{param}` | exact | `/api/providers/{alias}` |
+| `saveCombo` | 2461 | 6575 | POST | literal | — | `/api/combos` | exact | `/api/combos` |
+| `removeCombo` | 2478 | 6592 | DELETE | literal | — | `/api/combos/{param}` | exact | `/api/combos/{alias}` |
+| `loadSkills` | 2497 | 6611 | GET | literal | — | `/api/skills` | exact | `/api/skills` |
+| `installSkill` | 2622 | 6736 | POST | literal | — | `/api/skills/install` | exact | `/api/skills/install` |
+| `openSpawnModal` | 2638 | 6752 | GET | literal | — | `/api/workspace/files` | exact | `/api/workspace/files` |
+| `confirmSpawnSession` | 2666 | 6780 | POST | literal | — | `/api/hall/sessions` | exact | `/api/hall/sessions` |
+| `refreshHallSessions` | 2683 | 6797 | GET | literal | — | `/api/hall/sessions` | exact | `/api/hall/sessions` |
+| `deleteHallSession` | 2847 | 6961 | DELETE | literal | — | `/api/hall/sessions/{param}` | exact | `/api/hall/sessions/{session_id}` |
+| `clearAllHallSessions` | 2867 | 6981 | DELETE | literal | — | `/api/hall/sessions` | exact | `/api/hall/sessions` |
+| `readHallSession` | 2916 | 7030 | GET | literal | — | `/api/hall/sessions/{param}` | exact | `/api/hall/sessions/{session_id}` |
+| `postHumanHallMessage` | 3549 | 7663 | POST | literal | — | `/api/hall/sessions` | exact | `/api/hall/sessions` |
+| `postHumanHallMessage` | 3563 | 7677 | POST | literal | — | `/api/hall/sessions/{param}/message` | exact | `/api/hall/sessions/{session_id}/message` |
+| `councilSeatAction` | 4044 | 8158 | POST | literal | — | `/api/models/{param}/load` | exact | `/api/models/{model_id:path}/load` |
+| `refreshTelemetry` | 4972 | 9086 | GET | literal | — | `/api/telemetry` | exact | `/api/telemetry` |
+| `modelAction` | 5070 | 9184 | POST | literal | — | `/api/models/{param}/{param}` | dynamic | `/api/models/{model_id:path}/load or /api/models/{model_id:path}/unload` |
+| `unloadAllModels` | 5078 | 9192 | POST | literal | — | `/api/models/unload-all` | exact | `/api/models/unload-all` |
+| `clearSsdCache` | 5086 | 9200 | POST | literal | — | `/api/cache/clear-ssd` | exact | `/api/cache/clear-ssd` |
+| `consumeSSE` | 5103 | 9217 | POST | forwarded | `consumeSSE` → `summonAgentPromise` | `/api/hall/sessions/{param}/summon` | exact | `/api/hall/sessions/{session_id}/summon` |
+| `consumeSSE` | 5103 | 9217 | POST | forwarded | `consumeSSE` → `startPipelineRun` | `/api/council/stream` | exact | `/api/council/stream` |
+| `consumeSSE` | 5103 | 9217 | POST | forwarded | `consumeSSE` → `runDebate` | `/api/debate/stream` | exact | `/api/debate/stream` |
+| `consumeSSE` | 5103 | 9217 | POST | forwarded | `consumeSSE` → `sendChatRequest` | `/api/chat/stream` | exact | `/api/chat/stream` |
+| `consumeSSE` | 5103 | 9217 | POST | forwarded | `consumeSSE` → `runHarnessTurn` | `/api/harness/run` | exact | `/api/harness/run` |
+| `consumeSSE` | 5103 | 9217 | POST | forwarded | `consumeSSE` → `runGsdWaveTurn` | `/api/harness/gsd-wave` | exact | `/api/harness/gsd-wave` |
+| `consumeSSE` | 5103 | 9217 | POST | forwarded | `consumeSSE` → `_streamSdlcEndpoint` → `startSdlcRun` | `/api/harness/sdlc/run` | exact | `/api/harness/sdlc/run` |
+| `consumeSSE` | 5103 | 9217 | POST | forwarded | `consumeSSE` → `_streamSdlcEndpoint` → `submitSdlcFeedback` | `/api/harness/sdlc/feedback` | exact | `/api/harness/sdlc/feedback` |
+| `reloadSavedPipelineRun` | 6120 | 10234 | GET | literal | — | `/api/history/export` | exact | `/api/history/export` |
+| `debateFetchHistoryBundle` | 7029 | 11143 | GET | literal | — | `/api/history/export` | exact | `/api/history/export` |
+| `debateReadServerRecord` | 7344 | 11458 | GET | literal | — | `/api/history/export` | exact | `/api/history/export` |
+| `openExternalHarnessModal` | 8940 | 13054 | GET | literal | — | `/api/harness/external-configs` | exact | `/api/harness/external-configs` |
+| `saveWorkspaceDirectory` | 9054 | 13168 | POST | literal | — | `/api/workspace/directory` | exact | `/api/workspace/directory` |
+| `loadPathPicker` | 9147 | 13261 | GET | literal | — | `/api/workspace/picker?path={param}&kind={param}&query={param}` | exact | `/api/workspace/picker` |
+| `createPathPickerFolder` | 9194 | 13308 | POST | literal | — | `/api/workspace/picker/folders` | exact | `/api/workspace/picker/folders` |
+| `askPathPickerModel` | 9224 | 13338 | POST | literal | — | `/api/workspace/picker/suggest` | exact | `/api/workspace/picker/suggest` |
+| `loadHarnessSessions` | 9288 | 13402 | GET | literal | — | `/api/harness/sessions` | exact | `/api/harness/sessions` |
+| `selectHarnessSession` | 9464 | 13578 | GET | literal | — | `/api/harness/sessions/{param}` | exact | `/api/harness/sessions/{session_id}` |
+| `patchActiveHarnessSettings` | 9486 | 13600 | PATCH | literal | — | `/api/harness/sessions/{param}` | exact | `/api/harness/sessions/{session_id}` |
+| `deleteHarnessSession` | 9510 | 13624 | DELETE | literal | — | `/api/harness/sessions/{param}` | exact | `/api/harness/sessions/{session_id}` |
+| `harnessFetchEventPage` | 9917 | 14031 | GET | literal | — | `/api/harness/sessions/{param}/events?cursor={param}&limit={param}` | exact | `/api/harness/sessions/{session_id}/events` |
+| `refreshHarnessWorkspaceSnapshots` | 10003 | 14117 | GET | literal | — | `/api/harness/sessions/{param}/snapshots` | exact | `/api/harness/sessions/{session_id}/snapshots` |
+| `refreshHarnessWorkspaceReview` | 10036 | 14150 | GET | literal | — | `/api/harness/sessions/{param}/diff` | exact | `/api/harness/sessions/{session_id}/diff` |
+| `harnessResyncFromSnapshot` | 10107 | 14221 | GET | literal | — | `/api/harness/sessions/{param}/state` | exact | `/api/harness/sessions/{session_id}/state` |
+| `refreshHarnessSnapshotAfterOutcome` | 10141 | 14255 | GET | literal | — | `/api/harness/sessions/{param}/state` | exact | `/api/harness/sessions/{session_id}/state` |
+| `openHarnessEventStream` | 10176 | 14290 | GET | literal | — | `/api/harness/sessions/{param}/events/stream?cursor={param}` | exact | `/api/harness/sessions/{session_id}/events/stream` |
+| `refreshHarnessGrants` | 10451 | 14565 | GET | literal | — | `/api/harness/sessions/{param}/grants` | exact | `/api/harness/sessions/{session_id}/grants` |
+| `revokeHarnessGrant` | 10588 | 14702 | POST | literal | — | `/api/harness/sessions/{param}/grants/revoke` | exact | `/api/harness/sessions/{session_id}/grants/revoke` |
+| `confirmLiveHarnessApproval` | 10960 | 15074 | GET | literal | — | `/api/harness/sessions/{param}/state` | exact | `/api/harness/sessions/{session_id}/state` |
+| `resolveHarnessApproval` | 11025 | 15139 | POST | literal | — | `/api/harness/approve` | exact | `/api/harness/approve` |
+| `abortHarnessRun` | 11061 | 15175 | POST | literal | — | `/api/harness/abort/{param}` | exact | `/api/harness/abort/{session_id}` |
+| `openHarnessDiffModal` | 11086 | 15200 | GET | literal | — | `/api/harness/sessions/{param}/diff` | exact | `/api/harness/sessions/{session_id}/diff` |
+| `applyHarnessWorktree` | 11121 | 15235 | POST | literal | — | `/api/harness/sessions/{param}/apply` | exact | `/api/harness/sessions/{session_id}/apply` |
+| `refreshHarnessEvidence` | 11436 | 15550 | GET | literal | — | `/api/harness/sessions/{param}/task` | exact | `/api/harness/sessions/{session_id}/task` |
+| `refreshHarnessEvidence` | 11444 | 15558 | GET | literal | — | `/api/harness/sessions/{param}/diff` | exact | `/api/harness/sessions/{session_id}/diff` |
+| `loadHarnessFeedback` | 11711 | 15825 | GET | assignment | — | `/api/harness/sessions/{param}/feedback?artifact_id={param}&artifact_sha256={param}` | exact | `/api/harness/sessions/{session_id}/feedback` |
+| `confirmHarnessFeedback` | 11791 | 15905 | POST | literal | — | `/api/harness/sessions/{param}/feedback/{param}/confirm` | exact | `/api/harness/sessions/{session_id}/feedback/{feedback_id}/confirm` |
+| `withdrawHarnessFeedback` | 11814 | 15928 | DELETE | literal | — | `/api/harness/sessions/{param}/feedback/{param}` | exact | `/api/harness/sessions/{session_id}/feedback/{feedback_id}` |
+| `submitHarnessFeedback` | 11842 | 15956 | POST | literal | — | `/api/harness/sessions/{param}/feedback` | exact | `/api/harness/sessions/{session_id}/feedback` |
+| `refreshHarnessRecovery` | 12614 | 16728 | GET | literal | — | `/api/harness/sessions/{param}/task` | exact | `/api/harness/sessions/{session_id}/task` |
+| `refreshHarnessRecovery` | 12623 | 16737 | GET | literal | — | `/api/harness/sessions/{param}/state` | exact | `/api/harness/sessions/{session_id}/state` |
+| `harnessRecoveryPost` | 12653 | 16767 | POST | literal | — | `/api/harness/sessions/{param}/{param}` | dynamic | `/api/harness/sessions/{session_id}/apply or /api/harness/sessions/{session_id}/compact or /api/harness/sessions/{session_id}/snapshots or /api/harness/sessions/{session_id}/pause or /api/harness/sessions/{session_id}/direction-checkpoint or /api/harness/sessions/{session_id}/direction-answer or /api/harness/sessions/{session_id}/feedback or /api/harness/sessions/{session_id}/cancel or /api/harness/sessions/{session_id}/contain or /api/harness/sessions/{session_id}/grants or /api/harness/sessions/{session_id}/switch-model or /api/harness/sessions/{session_id}/delegations or /api/harness/sessions/{session_id}/resume` |
+| `loadMcpServers` | 13605 | 17719 | GET | literal | — | `/api/mcp/servers` | exact | `/api/mcp/servers` |
+| `saveMcpServer` | 14157 | 18271 | POST | literal | — | `/api/mcp/servers` | exact | `/api/mcp/servers` |
+| `importMcpJson` | 14191 | 18305 | POST | literal | — | `/api/mcp/import-json` | exact | `/api/mcp/import-json` |
+| `syncMcpServer` | 14205 | 18319 | POST | literal | — | `/api/mcp/servers/{param}/sync` | exact | `/api/mcp/servers/{alias}/sync` |
+| `toggleMcpServerEnabled` | 14221 | 18335 | PATCH | literal | — | `/api/mcp/servers/{param}` | exact | `/api/mcp/servers/{alias}` |
+| `changeMcpApprovalPolicy` | 14236 | 18350 | PATCH | literal | — | `/api/mcp/servers/{param}` | exact | `/api/mcp/servers/{alias}` |
+| `toggleMcpSingleTool` | 14254 | 18368 | PATCH | literal | — | `/api/mcp/servers/{param}` | exact | `/api/mcp/servers/{alias}` |
+| `deleteMcpServer` | 14269 | 18383 | DELETE | literal | — | `/api/mcp/servers/{param}` | exact | `/api/mcp/servers/{alias}` |
+| `runMcpPlayground` | 14304 | 18418 | POST | literal | — | `/api/mcp/servers/{param}/call` | exact | `/api/mcp/servers/{alias}/call` |
+| `compactActiveHarness` | 14351 | 18465 | POST | literal | — | `/api/harness/sessions/{param}/compact` | exact | `/api/harness/sessions/{session_id}/compact` |
+| `loadOpenContextDocs` | 14514 | 18628 | GET | literal | — | `/api/opencontext/docs` | exact | `/api/opencontext/docs` |
+| `searchOpenContextUI` | 14523 | 18637 | GET | literal | — | `/api/opencontext/search?q={param}` | exact | `/api/opencontext/search` |
+| `saveOpenContextDoc` | 14577 | 18691 | POST | literal | — | `/api/opencontext/docs` | exact | `/api/opencontext/docs` |
+| `togglePinOpenContextDoc` | 14591 | 18705 | PATCH | literal | — | `/api/opencontext/docs/{param}` | exact | `/api/opencontext/docs/{doc_id}` |
+| `deleteOpenContextDoc` | 14604 | 18718 | DELETE | literal | — | `/api/opencontext/docs/{param}` | exact | `/api/opencontext/docs/{doc_id}` |
+| `runOpenContextLintUI` | 14616 | 18730 | GET | literal | — | `/api/opencontext/lint` | exact | `/api/opencontext/lint` |
+| `refreshCodeGraphOverview` | 14630 | 18744 | GET | literal | — | `/api/codegraph/analyze?workspace_dir={param}` | exact | `/api/codegraph/analyze` |
+| `runCodeGraphPlayground` | 14655 | 18769 | POST | literal | — | `/api/codegraph/query` | exact | `/api/codegraph/query` |
+| `refreshSdlcBoard` | 14703 | 18817 | GET | literal | — | `/api/harness/sessions/{param}/sdlc` | exact | `/api/harness/sessions/{session_id}/sdlc` |
 
 ## Findings
 
