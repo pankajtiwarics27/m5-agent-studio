@@ -3,7 +3,7 @@
   "document_type": "m5_uiv2_release_evidence",
   "story": "UIV2-30",
   "review_scope": "current-browser-sources",
-  "recorded_at": "2026-11-24T11:00:15.183368+00:00",
+  "recorded_at": "2026-11-24T11:46:44.108123+00:00",
   "source_sha256": {
     "static/index.html": "f70cef5c37dac2f5906ce781bdc957e2f07b54735c20ec5575cb120946fb3d30",
     "scripts/compare_continuity_walk.mjs": "a9165a4dc8b9f74a1c643114a0ffe2fb319e18eb2730e6cede2d92c222fc7b4d",
@@ -50,10 +50,10 @@
     ]
   },
   "visual": {
-    "run": "/tmp/xtab5/check-manifest.json",
-    "manifest_sha256": "db45a89e8e9e68fa003b2ea3ee63b48445ecb5cf3b8d7e675a809e9c0386c3c8",
+    "run": "/tmp/xtab6/check-manifest.json",
+    "manifest_sha256": "eabefe6f61222f3f7aea0808049728124564f128b0ac232f275935f4f98cee18",
     "git": {
-      "head": "df79521550d0702e3807f2e630d8b9b649b6c435",
+      "head": "198e411237f3dfdc7e1a5f712ca6626d299a032c",
       "dirty": false
     },
     "contract_sha256": "caf0e5543c6e644eae4a12a6db0ed38a169ad361a96af75cdb04cbfa0f4c2435",
@@ -160,38 +160,38 @@
     "external_provider_calls": false
   },
   "ci": {
-    "headSha": "df79521550d0702e3807f2e630d8b9b649b6c435",
+    "headSha": "198e411237f3dfdc7e1a5f712ca6626d299a032c",
     "status": "completed",
     "conclusion": "success",
-    "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45377481082",
+    "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45384756740",
     "evidence_stage": "draft-bootstrap",
     "event": "pull_request",
-    "createdAt": "2026-11-24T10:43:29Z",
-    "updatedAt": "2026-11-24T10:50:27Z",
+    "createdAt": "2026-11-24T11:30:14Z",
+    "updatedAt": "2026-11-24T11:36:53Z",
     "jobs": [
       {
         "name": "Browser safety regressions",
         "status": "completed",
         "conclusion": "success",
-        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45377481082/job/138389349531"
-      },
-      {
-        "name": "test (3.11)",
-        "status": "completed",
-        "conclusion": "success",
-        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45377481082/job/138391191172"
-      },
-      {
-        "name": "test (3.12)",
-        "status": "completed",
-        "conclusion": "success",
-        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45377481082/job/138391191269"
+        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45384756740/job/138414463447"
       },
       {
         "name": "test (3.13)",
         "status": "completed",
         "conclusion": "success",
-        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45377481082/job/138391191431"
+        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45384756740/job/138416146044"
+      },
+      {
+        "name": "test (3.11)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45384756740/job/138416146100"
+      },
+      {
+        "name": "test (3.12)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45384756740/job/138416146185"
       }
     ]
   }
