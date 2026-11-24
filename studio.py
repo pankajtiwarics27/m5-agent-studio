@@ -5386,9 +5386,12 @@ summary:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--ring)
 .harness-feedback-form textarea:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
 .harness-feedback-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .harness-feedback-actions #harnessFeedbackSelection { margin: 0; flex: 1 1 auto; min-width: 120px; }
-.harness-feedback [data-tone="danger"] { color: var(--danger, #e5484d); }
-.harness-feedback [data-tone="ok"] { color: var(--ok, #30a46c); }
-.harness-feedback [data-tone="warn"] { color: var(--warn, #f5a623); }
+/* The pane states its own outcome with the declared status colours. Inventing --danger or
+   --warn would have rendered as nothing at all: a var() that names no token is not a fallback,
+   it is an absence. */
+.harness-feedback [data-tone="danger"] { color: var(--rose); }
+.harness-feedback [data-tone="ok"] { color: var(--emerald); }
+.harness-feedback [data-tone="warn"] { color: var(--amber); }
 .harness-direction .ev-note { display: block; margin: 6px 0 8px; padding-top: 6px; border-top: 1px solid var(--border); }
 .harness-recovery-note[data-tone="ok"] { color: #6ee7b7; }
 .harness-recovery-note[data-tone="warn"] { color: #fde68a; }
