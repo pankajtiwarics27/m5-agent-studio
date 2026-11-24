@@ -1,4 +1,5 @@
 """AP-008: the existing Harness must not hide stale state or overwrite a draft."""
+import json
 from pathlib import Path
 import subprocess
 
@@ -622,3 +623,115 @@ def test_the_shipped_fact_row_renderer_turns_data_into_text_never_markup():
     )
     assert result.returncode == 0, result.stdout + result.stderr
     assert "ALL PROBE CHECKS PASSED" in result.stdout
+
+
+def test_legacy_checkpoint_references_keep_their_exact_serialized_shape():
+    """Provenance may not be bolted onto records that were hashed without it.
+
+    payload_hash is computed over ``ref.to_dict()``. If a new field appeared in the
+    serialization of an older reference, every existing checkpoint would fail its own
+    integrity check on upgrade -- the worst possible failure mode for a resume path.
+    """
+    legacy = workflow_checkpoints.EvidenceRef(kind="artifact", ref_id="src/a.py", sha256="a" * 64, summary="12B")
+    assert legacy.to_dict() == {
+        "kind": "artifact",
+        "ref_id": "src/a.py",
+        "sha256": "a" * 64,
+        "summary": "12B",
+    }
+    assert legacy.provenance() == {}
+
+
+def test_provenance_is_committed_hashed_and_round_trips():
+    import app as studio
+
+    ref = workflow_checkpoints.EvidenceRef(
+        kind="artifact",
+        ref_id="dist/index.html",
+        sha256="b" * 64,
+        producer="website_builder",
+        producer_version="1.4.0",
+        input_versions=(("brief", "sha256:aaa"), ("style_tokens", "sha256:bbb")),
+    )
+    serialized = ref.to_dict()
+    assert serialized["producer"] == "website_builder"
+    assert serialized["inputs"] == {"brief": "sha256:aaa", "style_tokens": "sha256:bbb"}
+    assert workflow_checkpoints.EvidenceRef.from_dict(serialized) == ref
+
+    version = studio._session_artifact_versions([ref], session_id="s")[0]
+    # With provenance present the identity is the real thing, and it says so.
+    assert version["identity_basis"] == "content+provenance"
+    assert "producer" in version["identity_axes_recorded"]
+    assert "inputs" in version["identity_axes_recorded"]
+    # This reference recorded no configuration digest, and the record still says so
+    # rather than quietly implying one was checked.
+    assert version["identity_axes_absent"] == ["config"]
+
+
+def test_identical_bytes_from_different_producers_are_different_versions():
+    import app as studio
+
+    base = dict(kind="artifact", ref_id="out.js", sha256="c" * 64)
+    one = workflow_checkpoints.EvidenceRef(**base, producer="bundler_a", producer_version="1")
+    two = workflow_checkpoints.EvidenceRef(**base, producer="bundler_b", producer_version="1")
+    no_prov = workflow_checkpoints.EvidenceRef(**base)
+
+    a = studio._session_artifact_versions([one], session_id="s")[0]
+    b = studio._session_artifact_versions([two], session_id="s")[0]
+    n = studio._session_artifact_versions([no_prov], session_id="s")[0]
+
+    # This is the whole point of recording provenance: same bytes, different producer,
+    # different version. Without it the two collapse into one identity.
+    assert a["identity_sha256"] != b["identity_sha256"]
+    assert a["identity_sha256"] != n["identity_sha256"]
+    assert n["identity_basis"] == "content_only"
+    assert a["identity_basis"] == "content+provenance"
+
+
+def test_a_malformed_config_digest_is_refused_not_stored():
+    with pytest.raises(workflow_checkpoints.CheckpointError):
+        workflow_checkpoints.EvidenceRef(kind="artifact", ref_id="a", sha256="a" * 64, config_sha256="not-a-digest")
+
+
+def test_a_checkpoint_written_before_provenance_still_verifies():
+    """The upgrade must not invalidate a single existing checkpoint.
+
+    The digest is computed over the serialized refs, so this hashes the exact bytes a
+    pre-upgrade checkpoint committed and re-derives them through the new round trip.
+    """
+    legacy_refs = [
+        {"kind": "artifact", "ref_id": "a.py", "sha256": "a" * 64, "summary": "12B"},
+        {"kind": "action", "ref_id": "act-1", "sha256": "c" * 64, "summary": ""},
+    ]
+    payload = {"note": "old"}
+    canonical_payload = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    legacy_serialized = json.dumps(legacy_refs, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    old_digest = workflow_checkpoints.compute_task_checkpoint_digest(canonical_payload, legacy_serialized)
+
+    reloaded = [workflow_checkpoints.EvidenceRef.from_dict(ref) for ref in legacy_refs]
+    new_serialized = json.dumps(
+        [ref.to_dict() for ref in reloaded], sort_keys=True, separators=(",", ":"), ensure_ascii=False
+    )
+    new_digest = workflow_checkpoints.compute_task_checkpoint_digest(canonical_payload, new_serialized)
+
+    assert new_digest == old_digest
+
+
+def test_recorded_artifacts_carry_the_step_that_produced_them(tmp_path):
+    """The producer the checkpoint genuinely knows is the step, not a guessed tool name."""
+    import app as studio
+
+    studio.init_db()
+    ws = tmp_path / "ws"
+    ws.mkdir()
+    art = ws / "plan.json"
+    art.write_text('{"ok": true}', encoding="utf-8")
+
+    refs = studio._collect_step_evidence_refs("sess-step", epoch=7, wt_dir=ws, extra_artifacts=(art,))
+    artifact_refs = [r for r in refs if r.kind == "artifact"]
+    assert artifact_refs, "the artifact was not recorded at all"
+    recorded = artifact_refs[0]
+    assert recorded.producer_version == "step:7"
+    # No producer name is invented: the tool that wrote the file is not in the record.
+    assert recorded.producer == ""
+    assert recorded.to_dict()["producer_version"] == "step:7"

@@ -12300,6 +12300,11 @@ def _collect_step_evidence_refs(
                     ref_id=rel,
                     sha256=digest,
                     summary=f"{len(data)}B",
+                    # The checkpoint knows one true provenance axis: the step that
+                    # produced this artifact. Recording it lets the version identity
+                    # distinguish the same bytes produced at different steps, and it is
+                    # a fact of the record rather than an inferred producer name.
+                    producer_version=f"step:{epoch}",
                 )
             )
     diff_info = _compute_git_diff(wt_dir)
@@ -14666,6 +14671,33 @@ def _containment_summary_or_none(session_id: str) -> dict[str, Any]:
         }
 
 
+def _recorded_provenance(ref: Any) -> dict[str, Any]:
+    """The provenance axes a checkpoint reference actually recorded, empties dropped."""
+    if isinstance(ref, dict):
+        producer = str(ref.get("producer") or "").strip()
+        producer_version = str(ref.get("producer_version") or "").strip()
+        config = str(ref.get("config_sha256") or "").strip().lower()
+        raw_inputs = ref.get("inputs") or {}
+        inputs = {str(k): str(v) for k, v in raw_inputs.items()} if isinstance(raw_inputs, dict) else {}
+    elif hasattr(ref, "provenance"):
+        return dict(ref.provenance())
+    else:
+        producer = str(getattr(ref, "producer", "") or "").strip()
+        producer_version = str(getattr(ref, "producer_version", "") or "").strip()
+        config = str(getattr(ref, "config_sha256", "") or "").strip().lower()
+        inputs = dict(getattr(ref, "input_versions", ()) or ())
+    recorded: dict[str, Any] = {}
+    if producer:
+        recorded["producer"] = producer
+    if producer_version:
+        recorded["producer_version"] = producer_version
+    if config:
+        recorded["config_sha256"] = config
+    if inputs:
+        recorded["inputs"] = dict(sorted(inputs.items()))
+    return recorded
+
+
 def _session_artifact_versions(
     refs: Sequence[workflow_checkpoints.EvidenceRef] | Sequence[dict[str, Any]],
     *,
@@ -14709,18 +14741,30 @@ def _session_artifact_versions(
         if not artifact_lineage._al_is_digest(sha):  # noqa: SLF001 - reusing the module's own check
             # A reference with no usable digest is a pointer, not a version.
             continue
+        # Provenance is used only when the checkpoint actually recorded it. Otherwise the
+        # identity is content-only and says which axes it lacks, rather than borrowing
+        # confidence from values this function would have to invent.
+        recorded = _recorded_provenance(ref)
         try:
-            identity = artifact_lineage.artifact_identity_sha256(sha)
+            identity = artifact_lineage.artifact_identity_sha256(
+                sha,
+                producer=recorded.get("producer", ""),
+                producer_version=recorded.get("producer_version", ""),
+                config_sha256=recorded.get("config_sha256", ""),
+                inputs=recorded.get("inputs") or None,
+            )
         except (artifact_lineage.ArtifactLineageError, ValueError):
             continue
+        axes_recorded = ["content_sha256", *sorted(recorded)]
+        axes_absent = [axis for axis in ("producer", "producer_version", "config", "inputs") if axis not in recorded]
         versions.append(
             {
                 "artifact_id": ref_id,
                 "content_sha256": sha,
                 "identity_sha256": identity,
-                "identity_basis": "content_only",
-                "identity_axes_recorded": ["content_sha256"],
-                "identity_axes_absent": ["producer", "producer_version", "config", "inputs"],
+                "identity_basis": "content+provenance" if recorded else "content_only",
+                "identity_axes_recorded": axes_recorded,
+                "identity_axes_absent": axes_absent,
                 "session_id": session_id,
                 "summary": summary,
                 "contributes_a_verified_version": True,

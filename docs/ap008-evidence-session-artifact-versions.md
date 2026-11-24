@@ -133,3 +133,26 @@ What it does not prove: layout, focus order, theming, 200% zoom, or anything a s
 would show. It proves data becomes text. It is not a substitute for the Chromium walks
 that produce the source-bound captures, and it does not restore the missing render
 evidence described above.
+
+## Recording the provenance instead of inferring it
+
+The `content_only` basis above was honest but weak, and the weakness was structural: a
+checkpoint recorded no producer, no configuration and no input versions, so no surface
+could ever state a real version identity. The fix is to record those facts at the point
+they are known, not to guess them later.
+
+`workflow_checkpoints.EvidenceRef` now carries `producer`, `producer_version`,
+`config_sha256` and `input_versions`. Two rules make that safe:
+
+* **Empty axes are omitted from `to_dict()`.** A checkpoint's `payload_hash` is computed
+  over the serialized refs, so a field appearing in a legacy record would invalidate every
+  existing checkpoint on upgrade. A test hashes the exact pre-upgrade bytes and asserts the
+  new round trip reproduces the same digest.
+* **Nothing is invented.** The one provenance axis `_collect_step_evidence_refs` genuinely
+  knows is the step that produced the artifact, so it records `producer_version="step:N"`.
+  It does not claim a producer *name* it was never told.
+
+`_session_artifact_versions` now uses recorded provenance when it exists:
+`identity_basis` becomes `content+provenance` with the remaining axes still listed in
+`identity_axes_absent`. Identical bytes from two different producers now produce two
+different identities — the case that `content_only` could not distinguish.

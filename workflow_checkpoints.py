@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import re
 import sqlite3
 import time
 from dataclasses import dataclass
@@ -198,6 +199,14 @@ class WorkflowCheckpointStore:
         return tuple(AuditEntry(row["workflow_id"], row["step"], row["event"], row["detail"], row["created_at"]) for row in rows)
 
 
+_DIGEST_RE = re.compile(r"^[0-9a-f]{64}$")
+
+
+def _is_digest(value: str) -> bool:
+    """True for a lowercase SHA-256 hex digest; anything else is not one."""
+    return bool(_DIGEST_RE.fullmatch(value))
+
+
 def hmac_compare(left: str, right: str) -> bool:
     """Constant-time comparison for checkpoint integrity digests."""
     return hmac.compare_digest(left, right)
@@ -205,36 +214,86 @@ def hmac_compare(left: str, right: str) -> bool:
 
 @dataclass(frozen=True, slots=True)
 class EvidenceRef:
-    """Typed durable evidence pointer attached to a task checkpoint or transition."""
+    """Typed durable evidence pointer attached to a task checkpoint or transition.
+
+    An artifact reference answers "what are the bytes" via ``sha256``. It does not, on
+    its own, answer "which version of which thing" -- that needs the producer, the
+    producer's configuration and the versions of the inputs the artifact was built from,
+    because two runs of the same producer over the same inputs can share content while
+    different producers can converge on identical bytes.
+
+    Checkpoints saved before this field existed recorded none of that, and their
+    ``payload_hash`` was computed over these very dictionaries. So every provenance field
+    is omitted from ``to_dict()`` when it is empty: a legacy record serializes exactly as
+    it always did and its digest still verifies, while a new record that does supply
+    provenance has it committed and hash-protected. Unset is recorded as absent, never as
+    a placeholder -- a fabricated producer is worse than an unknown one.
+    """
 
     kind: str
     ref_id: str
     sha256: str = ""
     summary: str = ""
+    producer: str = ""
+    producer_version: str = ""
+    config_sha256: str = ""
+    input_versions: tuple[tuple[str, str], ...] = ()
 
     def __post_init__(self) -> None:
         if not isinstance(self.kind, str) or not self.kind.strip() or "\x00" in self.kind:
             raise CheckpointError("EvidenceRef.kind must be a non-empty string.")
         if not isinstance(self.ref_id, str) or not self.ref_id.strip() or "\x00" in self.ref_id:
             raise CheckpointError("EvidenceRef.ref_id must be a non-empty string.")
+        if self.config_sha256 and not _is_digest(str(self.config_sha256).strip().lower()):
+            raise CheckpointError("EvidenceRef.config_sha256 must be a lowercase SHA-256 hex string.")
+        for pair in self.input_versions:
+            if not isinstance(pair, tuple) or len(pair) != 2:
+                raise CheckpointError("EvidenceRef.input_versions entries must be (name, version) tuples.")
+            name, version = pair
+            if not str(name).strip() or not str(version).strip():
+                raise CheckpointError("EvidenceRef.input_versions needs a name and a version for every input.")
+
+    def provenance(self) -> dict[str, Any]:
+        """The provenance this reference actually records, with empty axes left out."""
+        recorded: dict[str, Any] = {}
+        if str(self.producer or "").strip():
+            recorded["producer"] = self.producer.strip()
+        if str(self.producer_version or "").strip():
+            recorded["producer_version"] = self.producer_version.strip()
+        if str(self.config_sha256 or "").strip():
+            recorded["config_sha256"] = self.config_sha256.strip().lower()
+        if self.input_versions:
+            recorded["inputs"] = dict(sorted({str(k).strip(): str(v).strip() for k, v in self.input_versions}.items()))
+        return recorded
 
     def to_dict(self) -> dict[str, str]:
-        return {
+        payload: dict[str, Any] = {
             "kind": self.kind.strip()[:64],
             "ref_id": self.ref_id.strip()[:256],
             "sha256": str(self.sha256 or "").strip()[:128],
             "summary": str(self.summary or "").strip()[:240],
         }
+        # Only present when it was recorded. See the class docstring: adding a key to a
+        # legacy record would change the string its payload_hash was computed over.
+        payload.update(self.provenance())
+        return payload
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> EvidenceRef:
         if not isinstance(data, dict):
             raise CheckpointError("EvidenceRef entry must be a JSON object.")
+        raw_inputs = data.get("inputs") or {}
+        if not isinstance(raw_inputs, dict):
+            raise CheckpointError("EvidenceRef.inputs must be a JSON object of name -> version.")
         return cls(
             kind=str(data.get("kind", "")),
             ref_id=str(data.get("ref_id", "")),
             sha256=str(data.get("sha256", "")),
             summary=str(data.get("summary", "")),
+            producer=str(data.get("producer", "")),
+            producer_version=str(data.get("producer_version", "")),
+            config_sha256=str(data.get("config_sha256", "")),
+            input_versions=tuple(sorted((str(k), str(v)) for k, v in raw_inputs.items())),
         )
 
 
