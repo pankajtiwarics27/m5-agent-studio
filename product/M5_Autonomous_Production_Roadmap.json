@@ -2802,8 +2802,8 @@
         "head_sha": "b5b5c8c0000000000000000000000000000000000",
         "claimed_at": "2026-11-24T05:00:00Z",
         "heartbeat_at": "2026-11-24T05:00:00Z",
-        "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/357",
-        "delivery_status": "pr_open",
+        "pr_url": null,
+        "delivery_status": "pushed",
         "authorization_record": {
           "authority": "explicit owner instruction",
           "owner_statement": "authorize AP-018",
@@ -2813,7 +2813,7 @@
         "acceptance_evidence": [],
         "tests_executed": [],
         "blockers": [],
-        "handoff": null
+        "handoff": "Implemented and pushed on the fixed Arena session branch per the claim convention step 5, which names that branch as an explicit platform exception. AP-008 PR #356 was open on the same branch when this story started, so a separate AP-018 pull request cannot be opened without either merging #356 first or obtaining a second branch, and this session may not create branches. delivery_status is pushed, not pr_open, because no remote PR exists to claim against. Once #356 merges, AP-018 needs its own PR from this branch against main. No UI, no render approval, no runtime activation is claimed here."
       },
       "implementation_prompt": "Implement AP-018: Present early direction samples before expensive production. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
