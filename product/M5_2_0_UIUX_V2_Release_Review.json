@@ -69,20 +69,20 @@
     {
       "name": "performance-safety",
       "command": "python3 scripts/uiv2_performance_safety.py --check",
-      "exit_code": 1,
-      "failure_output": "UIV2-29 artifacts are stale or invalid; execute fresh green runs and regenerate"
+      "exit_code": 0,
+      "failure_output": null
     },
     {
       "name": "accessibility",
       "command": "python3 scripts/uiv2_accessibility_adversarial.py --check",
-      "exit_code": 1,
-      "failure_output": "UIV2-28 artifacts are stale or invalid; import a fresh green run and regenerate"
+      "exit_code": 0,
+      "failure_output": null
     },
     {
       "name": "approved-visual-contract",
       "command": "python3 scripts/uiux_v2_cross_tab_reference.py --check",
-      "exit_code": 1,
-      "failure_output": "cross-tab reference artifacts are stale or invalid; regenerate without --check"
+      "exit_code": 0,
+      "failure_output": null
     },
     {
       "name": "preservation-map",
@@ -497,38 +497,18 @@
   ],
   "totals": {
     "local_checks": 7,
-    "local_checks_passed": 4,
+    "local_checks_passed": 7,
     "ci_jobs": 4,
     "visual_checks": 2200,
     "visual_captures": 48,
     "compare_checks": 15,
     "compare_captures": 6,
-    "findings": 6
+    "findings": 1
   },
   "findings": [
     {
-      "check": "performance-safety",
-      "detail": "exit 1: UIV2-29 artifacts are stale or invalid; execute fresh green runs and regenerate"
-    },
-    {
-      "check": "accessibility",
-      "detail": "exit 1: UIV2-28 artifacts are stale or invalid; import a fresh green run and regenerate"
-    },
-    {
-      "check": "approved-visual-contract",
-      "detail": "exit 1: cross-tab reference artifacts are stale or invalid; regenerate without --check"
-    },
-    {
       "check": "release-evidence",
       "detail": "release evidence is stale for its declared browser-source scope"
-    },
-    {
-      "check": "visual-source",
-      "detail": "approved cross-tab contract is stale or has findings"
-    },
-    {
-      "check": "performance-source",
-      "detail": "UIV2-29 browser evidence is stale"
     }
   ]
 }

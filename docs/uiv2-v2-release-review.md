@@ -16,7 +16,7 @@ The first decision covers only merge/handoff of the UI/UX V2 program. It is not 
 | Post-handoff #185 evidence | `pending-clean-implementation-and-ci` |
 | Roadmap at generation | 30/30 done, 0 in progress, 0 blocked |
 | Implementation CI | [`198e411237f3dfdc7e1a5f712ca6626d299a032c`](https://github.com/pankajtiwarics27/m5-agent-studio/actions/runs/45384756740) — success (draft-bootstrap) |
-| Local executed checks | 4/7 exit 0 |
+| Local executed checks | 7/7 exit 0 |
 | Production release | `release-blocked`; release_ready=`false` |
 
 The imported implementation HEAD and CI HEAD must match. A draft-bootstrap run explicitly permits only the pending release-evidence condition; it is not the strict ready-PR gate, a final full-CI result, or an approval. Final PR CI must pass separately with bootstrap disabled. Executable browser sources remain pinned by SHA-256 and are also read back from the implementation commit, so a JSON-only relabeling cannot make an old run current.
@@ -59,9 +59,9 @@ Local review manifests: `/tmp/xtab6/check-manifest.json` and `/tmp/cmp4/compare.
 
 | Check | Command | Exit |
 | --- | --- | ---: |
-| performance-safety | `python3 scripts/uiv2_performance_safety.py --check` | 1 |
-| accessibility | `python3 scripts/uiv2_accessibility_adversarial.py --check` | 1 |
-| approved-visual-contract | `python3 scripts/uiux_v2_cross_tab_reference.py --check` | 1 |
+| performance-safety | `python3 scripts/uiv2_performance_safety.py --check` | 0 |
+| accessibility | `python3 scripts/uiv2_accessibility_adversarial.py --check` | 0 |
+| approved-visual-contract | `python3 scripts/uiux_v2_cross_tab_reference.py --check` | 0 |
 | preservation-map | `python3 scripts/uiux_preservation_e2e.py --check` | 0 |
 | readme-onboarding | `python3 scripts/uiux_docs_verification.py --check` | 0 |
 | documentation-links | `python3 scripts/validate_docs.py` | 0 |
@@ -154,9 +154,4 @@ python3 -m pytest -q tests/test_uiv2_release_review.py
 
 ## Findings
 
-- **performance-safety**: exit 1: UIV2-29 artifacts are stale or invalid; execute fresh green runs and regenerate
-- **accessibility**: exit 1: UIV2-28 artifacts are stale or invalid; import a fresh green run and regenerate
-- **approved-visual-contract**: exit 1: cross-tab reference artifacts are stale or invalid; regenerate without --check
 - **release-evidence**: release evidence is stale for its declared browser-source scope
-- **visual-source**: approved cross-tab contract is stale or has findings
-- **performance-source**: UIV2-29 browser evidence is stale

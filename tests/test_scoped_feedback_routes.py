@@ -8,8 +8,6 @@ written here can be read later as acceptance or permission.
 
 from __future__ import annotations
 
-import pytest
-
 SHA_A = "a" * 64
 SHA_B = "b" * 64
 
@@ -29,13 +27,19 @@ def _session(studio) -> str:
 
 
 def _capture(client, sid: str, **body):
-    payload = {"artifact_id": "hero.html", "artifact_sha256": SHA_A, "verbatim": "this heading is too loud"}
+    payload = {
+        "artifact_id": "hero.html",
+        "artifact_sha256": SHA_A,
+        "verbatim": "this heading is too loud",
+    }
     payload.update(body)
     return client.post(f"/api/harness/sessions/{sid}/feedback", json=payload)
 
 
 def _list(client, sid: str, sha: str = SHA_A, artifact: str = "hero.html"):
-    return client.get(f"/api/harness/sessions/{sid}/feedback?artifact_id={artifact}&artifact_sha256={sha}")
+    return client.get(
+        f"/api/harness/sessions/{sid}/feedback?artifact_id={artifact}&artifact_sha256={sha}"
+    )
 
 
 def test_a_comment_is_recorded_against_exactly_one_version(tmp_path, monkeypatch):
@@ -57,14 +61,20 @@ def test_a_comment_is_recorded_against_exactly_one_version(tmp_path, monkeypatch
     assert listed["revision"]["ready"] is False  # words are material until confirmed
 
 
-def test_a_selection_makes_it_element_scoped_and_never_blocks_the_comment(tmp_path, monkeypatch):
+def test_a_selection_makes_it_element_scoped_and_never_blocks_the_comment(
+    tmp_path, monkeypatch
+):
     studio, client = _harness_client(tmp_path, monkeypatch)
     sid = _session(studio)
 
     scoped = _capture(
         client,
         sid,
-        selection={"locator_kind": "element", "locator": "h1.hero", "artifact_sha256": SHA_A},
+        selection={
+            "locator_kind": "element",
+            "locator": "h1.hero",
+            "artifact_sha256": SHA_A,
+        },
     )
     assert scoped.status_code == 200, scoped.text
     assert scoped.json()["feedback"]["scope_kind"] == "element"
@@ -75,7 +85,9 @@ def test_a_selection_makes_it_element_scoped_and_never_blocks_the_comment(tmp_pa
     assert plain.json()["feedback"]["scope_kind"] == "artifact"
 
 
-def test_a_preference_cannot_be_written_through_the_capture_route(tmp_path, monkeypatch):
+def test_a_preference_cannot_be_written_through_the_capture_route(
+    tmp_path, monkeypatch
+):
     studio, client = _harness_client(tmp_path, monkeypatch)
     sid = _session(studio)
 
@@ -89,7 +101,8 @@ def test_feedback_without_a_version_is_refused(tmp_path, monkeypatch):
     sid = _session(studio)
 
     response = client.post(
-        f"/api/harness/sessions/{sid}/feedback", json={"artifact_id": "hero.html", "verbatim": "x"}
+        f"/api/harness/sessions/{sid}/feedback",
+        json={"artifact_id": "hero.html", "verbatim": "x"},
     )
     assert response.status_code == 400
     assert "pinned to the version" in response.json()["detail"]
@@ -104,7 +117,13 @@ def test_a_selection_from_a_different_version_is_refused(tmp_path, monkeypatch):
     sid = _session(studio)
 
     response = _capture(
-        client, sid, selection={"locator_kind": "element", "locator": "h1", "artifact_sha256": SHA_B}
+        client,
+        sid,
+        selection={
+            "locator_kind": "element",
+            "locator": "h1",
+            "artifact_sha256": SHA_B,
+        },
     )
     assert response.status_code == 400
     assert "different artifact version" in response.json()["detail"]
@@ -116,7 +135,11 @@ def test_a_bare_quick_action_records_without_typing(tmp_path, monkeypatch):
 
     response = client.post(
         f"/api/harness/sessions/{sid}/feedback",
-        json={"artifact_id": "hero.html", "artifact_sha256": SHA_A, "quick_action": "shorter"},
+        json={
+            "artifact_id": "hero.html",
+            "artifact_sha256": SHA_A,
+            "quick_action": "shorter",
+        },
     )
     assert response.status_code == 200, response.text
     feedback = response.json()["feedback"]
@@ -133,7 +156,8 @@ def test_confirming_the_reading_unblocks_the_revision(tmp_path, monkeypatch):
     assert recorded["needs_confirmation"] if "needs_confirmation" in recorded else True
 
     confirmed = client.post(
-        f"/api/harness/sessions/{sid}/feedback/{recorded['feedback_id']}/confirm", json={"confirmed_by": "owner"}
+        f"/api/harness/sessions/{sid}/feedback/{recorded['feedback_id']}/confirm",
+        json={"confirmed_by": "owner"},
     )
     assert confirmed.status_code == 200, confirmed.text
     assert confirmed.json()["feedback"]["confirmed"] is True
@@ -144,7 +168,9 @@ def test_confirming_the_reading_unblocks_the_revision(tmp_path, monkeypatch):
 def test_confirming_a_missing_record_is_404(tmp_path, monkeypatch):
     studio, client = _harness_client(tmp_path, monkeypatch)
     sid = _session(studio)
-    response = client.post(f"/api/harness/sessions/{sid}/feedback/nope/confirm", json={"confirmed_by": "o"})
+    response = client.post(
+        f"/api/harness/sessions/{sid}/feedback/nope/confirm", json={"confirmed_by": "o"}
+    )
     assert response.status_code == 404
 
 
@@ -153,28 +179,43 @@ def test_promotion_requires_a_basis_and_is_the_only_way_to_widen(tmp_path, monke
     sid = _session(studio)
     recorded = client.post(
         f"/api/harness/sessions/{sid}/feedback",
-        json={"artifact_id": "hero.html", "artifact_sha256": SHA_A, "quick_action": "shorter", "material": False},
+        json={
+            "artifact_id": "hero.html",
+            "artifact_sha256": SHA_A,
+            "quick_action": "shorter",
+            "material": False,
+        },
     ).json()["feedback"]
 
-    missing = client.post(f"/api/harness/sessions/{sid}/feedback/{recorded['feedback_id']}/promote", json={"basis": ""})
+    missing = client.post(
+        f"/api/harness/sessions/{sid}/feedback/{recorded['feedback_id']}/promote",
+        json={"basis": ""},
+    )
     assert missing.status_code == 400
     assert "basis" in missing.json()["detail"]
 
     promoted = client.post(
         f"/api/harness/sessions/{sid}/feedback/{recorded['feedback_id']}/promote",
-        json={"basis": "they asked for the same in three artifacts", "promoted_by": "owner"},
+        json={
+            "basis": "they asked for the same in three artifacts",
+            "promoted_by": "owner",
+        },
     )
     assert promoted.status_code == 200, promoted.text
     assert promoted.json()["feedback"]["scope_kind"] == "preference"
     assert promoted.json()["feedback"]["confirmed_by"] == "owner"
 
 
-def test_withdrawing_feedback_keeps_the_record_and_clears_the_live_set(tmp_path, monkeypatch):
+def test_withdrawing_feedback_keeps_the_record_and_clears_the_live_set(
+    tmp_path, monkeypatch
+):
     studio, client = _harness_client(tmp_path, monkeypatch)
     sid = _session(studio)
     recorded = _capture(client, sid).json()["feedback"]
 
-    removed = client.delete(f"/api/harness/sessions/{sid}/feedback/{recorded['feedback_id']}")
+    removed = client.delete(
+        f"/api/harness/sessions/{sid}/feedback/{recorded['feedback_id']}"
+    )
     assert removed.status_code == 200, removed.text
     assert removed.json()["feedback"]["deleted"] is True
     assert removed.json()["live"] == []
@@ -185,7 +226,9 @@ def test_withdrawing_feedback_keeps_the_record_and_clears_the_live_set(tmp_path,
     assert again.status_code == 404
 
 
-def test_feedback_on_an_older_version_is_reported_stale_not_applied(tmp_path, monkeypatch):
+def test_feedback_on_an_older_version_is_reported_stale_not_applied(
+    tmp_path, monkeypatch
+):
     studio, client = _harness_client(tmp_path, monkeypatch)
     sid = _session(studio)
     _capture(client, sid)
@@ -196,7 +239,9 @@ def test_feedback_on_an_older_version_is_reported_stale_not_applied(tmp_path, mo
     assert current["revision"]["ready"] is False
 
 
-def test_two_opposing_corrections_are_reported_rather_than_merged(tmp_path, monkeypatch):
+def test_two_opposing_corrections_are_reported_rather_than_merged(
+    tmp_path, monkeypatch
+):
     studio, client = _harness_client(tmp_path, monkeypatch)
     sid = _session(studio)
     selection = {"locator_kind": "element", "locator": "h1", "artifact_sha256": SHA_A}
@@ -240,7 +285,10 @@ def test_the_routes_never_write_acceptance_or_a_benchmark(tmp_path, monkeypatch)
 
     assert flags, "the record should carry the flags it refuses, not omit them"
     assert all(value is False for value in flags.values()), flags
-    assert "benchmark_reference_id" not in str(listed_keys := confirmed) or True
+    assert (
+        "benchmark_reference_id" not in confirmed
+        and "benchmark_adoption" not in confirmed
+    )
 
 
 def test_one_run_cannot_confirm_or_withdraw_another_runs_comment(tmp_path, monkeypatch):
@@ -255,9 +303,15 @@ def test_one_run_cannot_confirm_or_withdraw_another_runs_comment(tmp_path, monke
     assert listed.status_code == 200
     assert [item["feedback_id"] for item in listed.json()["items"]] == []
     for path in ("confirm", "promote"):
-        response = client.post(f"/api/harness/sessions/{other}/feedback/fb-owner/{path}", json={"basis": "b", "confirmed_by": "owner"})
+        response = client.post(
+            f"/api/harness/sessions/{other}/feedback/fb-owner/{path}",
+            json={"basis": "b", "confirmed_by": "owner"},
+        )
         assert response.status_code == 404, (path, response.status_code)
-    assert client.delete(f"/api/harness/sessions/{other}/feedback/fb-owner").status_code == 404
+    assert (
+        client.delete(f"/api/harness/sessions/{other}/feedback/fb-owner").status_code
+        == 404
+    )
 
     # And it is still the owner run's feedback, untouched: a refused request changed nothing.
     still = _list(client, owner).json()

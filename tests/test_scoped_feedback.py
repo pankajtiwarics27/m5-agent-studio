@@ -16,7 +16,9 @@ SHA_A = "a" * 64
 SHA_B = "b" * 64
 
 
-def _selection(locator: str = "h1.hero", sha: str = SHA_A, kind: str = "element") -> ps.ElementSelection:
+def _selection(
+    locator: str = "h1.hero", sha: str = SHA_A, kind: str = "element"
+) -> ps.ElementSelection:
     return ps.ElementSelection(locator_kind=kind, locator=locator, artifact_sha256=sha)
 
 
@@ -98,7 +100,10 @@ def test_a_quick_action_is_a_complete_statement_without_typing():
 def test_an_empty_record_is_refused():
     with pytest.raises(ps.FeedbackError, match="needs either words or a quick action"):
         ps.capture(
-            feedback_id="f3", session_id="hns-run-a", artifact_id="hero.html", artifact_sha256=SHA_A
+            feedback_id="f3",
+            session_id="hns-run-a",
+            artifact_id="hero.html",
+            artifact_sha256=SHA_A,
         )
 
 
@@ -120,14 +125,18 @@ def test_words_are_material_by_default_and_block_a_revision():
     record = _feedback()
     assert record.material is True
     assert record.needs_confirmation is True
-    revision = ps.plan_revision(artifact_id="hero.html", base_sha256=SHA_A, feedback=[record])
+    revision = ps.plan_revision(
+        artifact_id="hero.html", base_sha256=SHA_A, feedback=[record]
+    )
     assert revision.ready is False
     assert revision.awaiting_confirmation == ("f1",)
 
 
 def test_confirming_the_interpretation_unblocks_the_revision():
     confirmed = ps.confirm(_feedback(), confirmed_by="owner")
-    revision = ps.plan_revision(artifact_id="hero.html", base_sha256=SHA_A, feedback=[confirmed])
+    revision = ps.plan_revision(
+        artifact_id="hero.html", base_sha256=SHA_A, feedback=[confirmed]
+    )
     assert revision.ready is True
     assert revision.awaiting_confirmation == ()
 
@@ -154,24 +163,34 @@ def test_two_different_changes_to_one_region_conflict():
     second = _feedback(feedback_id="f2", selection=_selection(), verbatim="too large")
     pairs = ps.conflicts([first, second])
     assert len(pairs) == 1
-    revision = ps.plan_revision(artifact_id="hero.html", base_sha256=SHA_A, feedback=[first, second])
+    revision = ps.plan_revision(
+        artifact_id="hero.html", base_sha256=SHA_A, feedback=[first, second]
+    )
     assert revision.ready is False
     assert revision.conflicts
 
 
 def test_keep_and_change_on_one_region_conflict():
-    keep = _feedback(feedback_id="f1", selection=_selection(), quick_action="keep", material=False)
-    change = _feedback(feedback_id="f2", selection=_selection(), verbatim="make it louder")
+    keep = _feedback(
+        feedback_id="f1", selection=_selection(), quick_action="keep", material=False
+    )
+    change = _feedback(
+        feedback_id="f2", selection=_selection(), verbatim="make it louder"
+    )
     assert ps.conflicts([keep, change])
 
 
 def test_the_same_comment_twice_is_not_a_conflict():
-    assert ps.conflicts([_feedback(feedback_id="f1"), _feedback(feedback_id="f2")]) == []
+    assert (
+        ps.conflicts([_feedback(feedback_id="f1"), _feedback(feedback_id="f2")]) == []
+    )
 
 
 def test_comments_about_different_regions_do_not_conflict():
     first = _feedback(feedback_id="f1", selection=_selection("h1"), verbatim="louder")
-    second = _feedback(feedback_id="f2", selection=_selection("footer"), verbatim="shorter")
+    second = _feedback(
+        feedback_id="f2", selection=_selection("footer"), verbatim="shorter"
+    )
     assert ps.conflicts([first, second]) == []
 
 
@@ -180,8 +199,12 @@ def test_comments_about_different_regions_do_not_conflict():
 
 def test_feedback_on_an_older_version_is_stale_not_applied():
     record = _feedback()
-    assert ps.stale_for(feedback=[record], artifact_id="hero.html", current_sha256=SHA_B) == [record]
-    revision = ps.plan_revision(artifact_id="hero.html", base_sha256=SHA_B, feedback=[record])
+    assert ps.stale_for(
+        feedback=[record], artifact_id="hero.html", current_sha256=SHA_B
+    ) == [record]
+    revision = ps.plan_revision(
+        artifact_id="hero.html", base_sha256=SHA_B, feedback=[record]
+    )
     assert revision.changes == ()
     assert revision.ready is False
 
@@ -218,7 +241,9 @@ def test_promotion_requires_a_stated_basis_and_a_person():
         ps.promote(record, basis="  ", promoted_by="owner")
     with pytest.raises(ps.FeedbackError, match="promoted_by"):
         ps.promote(record, basis="they said it twice", promoted_by="")
-    promoted = ps.promote(record, basis="said the same about three artifacts", promoted_by="owner")
+    promoted = ps.promote(
+        record, basis="said the same about three artifacts", promoted_by="owner"
+    )
     assert promoted.scope_kind == "preference"
     assert promoted.feedback_id.endswith("@preference")
     assert promoted.confirmed is True
@@ -226,21 +251,34 @@ def test_promotion_requires_a_stated_basis_and_a_person():
 
 def test_promotion_of_an_unconfirmed_interpretation_is_refused():
     """Widening a guess multiplies it, which is the worst version of this failure."""
-    with pytest.raises(ps.FeedbackError, match="confirm what the feedback means before widening"):
+    with pytest.raises(
+        ps.FeedbackError, match="confirm what the feedback means before widening"
+    ):
         ps.promote(_feedback(), basis="seems general", promoted_by="owner")
 
 
 def test_a_selection_bound_correction_cannot_be_promoted():
     with pytest.raises(ps.FeedbackError, match="selection would be lost"):
-        ps.promote(_feedback(selection=_selection(), material=False), basis="general", promoted_by="owner")
+        ps.promote(
+            _feedback(selection=_selection(), material=False),
+            basis="general",
+            promoted_by="owner",
+        )
 
 
 def test_promoting_something_already_general_is_refused():
-    promoted = ps.promote(_feedback(material=False), basis="stated", promoted_by="owner")
+    promoted = ps.promote(
+        _feedback(material=False), basis="stated", promoted_by="owner"
+    )
     with pytest.raises(ps.FeedbackError, match="already a preference"):
         ps.promote(promoted, basis="again", promoted_by="owner")
     with pytest.raises(ps.FeedbackError, match="already applies to the whole artifact"):
-        ps.promote(_feedback(feedback_id="a1", material=False), basis="x", promoted_by="o", scope_kind="artifact")
+        ps.promote(
+            _feedback(feedback_id="a1", material=False),
+            basis="x",
+            promoted_by="o",
+            scope_kind="artifact",
+        )
 
 
 # ── correction, deletion and supersession ────────────────────────────────────────────────
@@ -283,7 +321,9 @@ def test_no_record_claims_acceptance_or_permission():
     payload = record.to_mapping()
     assert payload["is_final_acceptance"] is False
     assert payload["grants_publish_permission"] is False
-    revision = ps.plan_revision(artifact_id="hero.html", base_sha256=SHA_A, feedback=[record])
+    revision = ps.plan_revision(
+        artifact_id="hero.html", base_sha256=SHA_A, feedback=[record]
+    )
     assert revision.to_mapping()["is_final_acceptance"] is False
     assert revision.to_mapping()["grants_publish_permission"] is False
 
@@ -297,8 +337,14 @@ def test_a_forged_stored_flag_is_refused_on_read():
 
 def test_a_record_round_trips_through_its_stored_form():
     record = _feedback(selection=_selection())
-    assert ps.Feedback.from_mapping(record.to_mapping()).to_mapping() == record.to_mapping()
-    assert ps.Feedback.from_mapping(record.to_mapping()).fingerprint() == record.fingerprint()
+    assert (
+        ps.Feedback.from_mapping(record.to_mapping()).to_mapping()
+        == record.to_mapping()
+    )
+    assert (
+        ps.Feedback.from_mapping(record.to_mapping()).fingerprint()
+        == record.fingerprint()
+    )
 
 
 def test_the_module_reads_no_clock_and_opens_nothing():
@@ -306,8 +352,17 @@ def test_the_module_reads_no_clock_and_opens_nothing():
     import pathlib
 
     text = pathlib.Path(ps.__file__).read_text(encoding="utf-8")
-    for forbidden in ("time.time", "datetime.now", "os.environ", "subprocess", "requests", "httpx"):
-        assert forbidden not in text, f"scoped_feedback must stay pure: found {forbidden}"
+    for forbidden in (
+        "time.time",
+        "datetime.now",
+        "os.environ",
+        "subprocess",
+        "requests",
+        "httpx",
+    ):
+        assert forbidden not in text, (
+            f"scoped_feedback must stay pure: found {forbidden}"
+        )
 
 
 def test_the_module_shares_no_top_level_name_with_the_application():
@@ -326,12 +381,16 @@ def test_the_module_shares_no_top_level_name_with_the_application():
                 found |= {t.id for t in node.targets if isinstance(t, ast.Name)}
             elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
                 found.add(node.target.id)
-            elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            elif isinstance(
+                node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+            ):
                 found.add(node.name)
         return found
 
     clash = names(app) & names(module)
-    assert not clash, f"these names would overwrite app.py's in the single-file build: {sorted(clash)}"
+    assert not clash, (
+        f"these names would overwrite app.py's in the single-file build: {sorted(clash)}"
+    )
 
 
 # ── persistence ─────────────────────────────────────────────────────────────────────────
@@ -397,7 +456,12 @@ def test_a_store_created_before_runs_were_recorded_is_migrated_not_dropped(tmp_p
 
     store = ps.FeedbackStore(database)
     store.put(_feedback(feedback_id="new-1", session_id="hns-a"))
-    columns = {row[1] for row in sqlite3.connect(database).execute("PRAGMA table_info(scoped_feedback)")}
+    columns = {
+        row[1]
+        for row in sqlite3.connect(database).execute(
+            "PRAGMA table_info(scoped_feedback)"
+        )
+    }
     assert "session_id" in columns
     # The legacy row survives; it simply belongs to no run, so no session's listing shows it.
     assert [item.feedback_id for item in store.list(session_id="hns-a")] == ["new-1"]
@@ -429,7 +493,11 @@ def test_deleting_keeps_the_record_and_drops_it_from_the_live_set(tmp_path):
 def test_a_retained_preference_can_be_inspected_and_removed(tmp_path):
     """The criterion in plain terms: what does this preference apply to, and can I undo it."""
     store = ps.FeedbackStore(tmp_path / "feedback.db")
-    preference = ps.promote(_feedback(material=False), basis="said it about three artifacts", promoted_by="owner")
+    preference = ps.promote(
+        _feedback(material=False),
+        basis="said it about three artifacts",
+        promoted_by="owner",
+    )
     store.put(preference)
 
     recorded = store.get(preference.feedback_id)
