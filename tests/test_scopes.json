@@ -88,6 +88,7 @@
       "test_capability_negotiation.py",
       "test_chat_tool_protocol.py",
       "test_continuation_contracts.py",
+      "test_direction_checkpoints.py",
       "test_lmstudio_*.py",
       "test_local_*.py",
       "test_macos_hardware_profiler.py",
@@ -501,6 +502,9 @@
     "guest_desktop.py": [
       "security.execution",
       "quality.docs-ci"
+    ],
+    "direction_checkpoints.py": [
+      "models.providers"
     ]
   }
 }

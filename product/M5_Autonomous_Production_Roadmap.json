@@ -2745,7 +2745,7 @@
       "title": "Present early direction samples before expensive production",
       "priority": "P1",
       "optional": false,
-      "status": "not_started",
+      "status": "in_progress",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-008",
@@ -2796,14 +2796,20 @@
         "Push/PR state; owner/independent approvals where required"
       ],
       "tracking": {
-        "owner": null,
-        "branch": null,
-        "base_sha": null,
-        "head_sha": null,
-        "claimed_at": null,
-        "heartbeat_at": null,
+        "owner": "arena/ab195e0f-m5-agent-studio",
+        "branch": "arena/ab195e0f-m5-agent-studio",
+        "base_sha": "e721fc286dd187ffb19e158fa9d9f607d5b3983f",
+        "head_sha": "6d63c3d7c17dec95be1512cf3ab309ab0d36e9d4",
+        "claimed_at": "2026-11-24T05:00:00Z",
+        "heartbeat_at": "2026-11-24T05:00:00Z",
         "pr_url": null,
-        "delivery_status": "not_pushed",
+        "delivery_status": "delivery_pending",
+        "authorization_record": {
+          "authority": "explicit owner instruction",
+          "owner_statement": "authorize AP-018",
+          "recorded_at": "2026-11-24T05:00:00Z",
+          "scope_limit": "AP-018 only: direction-checkpoint logic and its offline contract. No runtime activation, no render approval, no external services, no AP-019 work."
+        },
         "acceptance_evidence": [],
         "tests_executed": [],
         "blockers": [],
