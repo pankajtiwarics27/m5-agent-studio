@@ -88,7 +88,7 @@ file.
 * `pass` every click target is a native control or carries the role, the tab stop and the activation hook
 * `pass` the click targets that take no tab stop are only the declared dismiss-only backdrops
 * `pass` the backdrops are declared, with the reason and the keyboard path beside them
-* `pass` the remaining seven non-native controls retain delegated keyboard activation
+* `pass` the remaining eight non-native controls retain delegated keyboard activation
 * `pass` configured integration toggles are native pressed-state buttons
 * `pass` a chip that was already a button stays a button, and is not given the attributes it does not need
 * `pass` one delegated keydown turns Enter and Space into the click the pointer would have made

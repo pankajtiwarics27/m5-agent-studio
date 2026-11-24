@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "f70cef5c37dac2f5906ce781bdc957e2f07b54735c20ec5575cb120946fb3d30",
+  "frontend_sha256": "0bd932ef67708ed05d438e0497199b983c33ae46782c158763578f34d657a934",
   "panes": [
     {
       "dom_id": "start",
@@ -902,13 +902,13 @@
     }
   ],
   "chrome": {
-    "control_count": 163,
+    "control_count": 166,
     "counts": {
-      "button": 97,
+      "button": 99,
       "input": 37,
       "select": 14,
       "summary": 8,
-      "textarea": 7
+      "textarea": 8
     },
     "controls": [
       {
@@ -1649,6 +1649,26 @@
         "text": "Close"
       },
       {
+        "tag": "textarea",
+        "id": "harnessFeedbackText",
+        "placeholder": "Say what should change. A region you select narrows this to that region; without a selection it applies to this artifact version only.",
+        "rows": "2"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn btn-xs btn-primary",
+        "onclick": "submitHarnessFeedback(event)",
+        "text": "Record feedback"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "class": "btn btn-xs",
+        "onclick": "clearHarnessFeedbackSelection()",
+        "text": "Clear selection"
+      },
+      {
         "tag": "button",
         "class": "btn btn-xs",
         "onclick": "refreshHarnessGrants()",
@@ -2046,15 +2066,16 @@
   },
   "totals": {
     "panes": 6,
-    "markup_controls": 276,
+    "markup_controls": 279,
     "pane_controls": 113,
-    "chrome_controls": 163,
-    "script_rendered_controls": 74,
+    "chrome_controls": 166,
+    "script_rendered_controls": 76,
     "script_rendered_by_function": {
       "debateModelPageFooter": 2,
       "ensureStageCardMounted": 1,
       "hallClearScopeNoteHtml": 2,
       "harnessEvidenceChangeHtml": 1,
+      "harnessFeedbackHtml": 2,
       "mcpCatalogCardHtml": 1,
       "mcpToolRowHtml": 3,
       "openSpawnModal": 1,

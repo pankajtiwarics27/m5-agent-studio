@@ -15667,7 +15667,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     const added = files.reduce((total, file) => total + file.added, 0);
     const deleted = files.reduce((total, file) => total + file.deleted, 0);
     const rows = files.length
-      ? files.map(file => `<div class="ev-file" role="button" tabindex="0" title="Narrow feedback to this file" aria-pressed="${harnessFeedbackSelection && harnessFeedbackSelection.locator === file.path ? "true" : "false"}" data-feedback-region="${escapeHtml(file.path)}" onclick="selectHarnessFeedbackRegion(this.dataset.feedbackRegion)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectHarnessFeedbackRegion(this.dataset.feedbackRegion);}">
+      ? files.map(file => `<div class="ev-file" role="button" tabindex="0" data-key-activate title="Narrow feedback to this file" aria-pressed="${harnessFeedbackSelection && harnessFeedbackSelection.locator === file.path ? "true" : "false"}" data-feedback-region="${escapeHtml(file.path)}" onclick="selectHarnessFeedbackRegion(this.dataset.feedbackRegion)">
           <span class="ev-file-path mono">${escapeHtml(file.path)}</span>
           <span class="ev-file-add mono">+${escapeHtml(String(file.added))}</span>
           <span class="ev-file-del mono">-${escapeHtml(String(file.deleted))}</span>

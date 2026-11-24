@@ -12,8 +12,8 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "bb3376e5c8cf533c0c17bb0b7752a6f70a670ae974f9d52b9d4b06d84d871d7b",
-      "bytes": 1117803,
+      "sha256": "0bd932ef67708ed05d438e0497199b983c33ae46782c158763578f34d657a934",
+      "bytes": 1117686,
       "lines": 19025
     },
     {
@@ -26,8 +26,8 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "a03fe691807c359fd40b289b384aef8add832ec56f96f0a4dc296161f8948ff8",
-      "bytes": 4714714,
+      "sha256": "cb7d1391ae337d1167872c3cdd2f466fce33c1b648dd35e90add11a8cd8deeaa",
+      "bytes": 4714597,
       "lines": 92515
     },
     {
@@ -96,9 +96,9 @@
     {
       "path": "scripts/uiux_authorization_trace.py",
       "role": "traces the authorization and state behind each state-changing call",
-      "sha256": "cf52cf789b1be094454575dd228a24e82e727e9ac3f3d9147e0d9a1cb5f4138e",
-      "bytes": 37648,
-      "lines": 768
+      "sha256": "af1e0e1af5285bbe6276773cbaff8840d99e5447d7807fb14c757765f904e8d6",
+      "bytes": 37860,
+      "lines": 769
     },
     {
       "path": "scripts/uiux_preservation_signoff.py",
@@ -460,7 +460,7 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "bb3376e5c8cf533c0c17bb0b7752a6f70a670ae974f9d52b9d4b06d84d871d7b",
+    "sha256": "0bd932ef67708ed05d438e0497199b983c33ae46782c158763578f34d657a934",
     "lines": 19025,
     "tab_count": 6,
     "tabs": [

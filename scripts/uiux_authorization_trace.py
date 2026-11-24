@@ -94,6 +94,7 @@ SUBSYSTEM_ROLES: dict[str, tuple[str, str]] = {
     "evidence_lessons": ("state", "retained lessons and their provenance"),
     "workflow_checkpoints": ("state", "checkpoints a run resumes from"),
     "direction_checkpoints": ("authority", "whether to ask the owner about direction, and what an answer does not permit"),
+    "scoped_feedback": ("authority", "what a correction is allowed to mean: its scope, whether an interpretation must be confirmed, and that confirming one is not accepting an artifact or granting publication"),
     "verification_evidence": ("state", "verification results attached to a task"),
     "recovery_guard": ("state", "crash-recovery state"),
     "child_delegation": ("support", "delegation runs and their benchmarks"),

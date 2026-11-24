@@ -6,9 +6,9 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 re-derived from the markup on every run.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
-* Frontend digest: `f70cef5c37dac2f5906ce781bdc957e2f07b54735c20ec5575cb120946fb3d30`.
+* Frontend digest: `0bd932ef67708ed05d438e0497199b983c33ae46782c158763578f34d657a934`.
 * Panes: 6 · controls in panes: 113 · controls in the
-  shared chrome: 163 · script-rendered: 74.
+  shared chrome: 166 · script-rendered: 76.
 
 ## What this page is, and is not
 
@@ -27,13 +27,13 @@ the end, attributed to the function that renders them — a heuristic, not a cal
 | council | `pane-council` | 17 | 2 | 0 | button 9, input 1, select 5, summary 1, textarea 1 |
 | debate | `pane-debate` | 10 | 1 | 0 | button 5, input 1, select 2, summary 1, textarea 1 |
 | chat | `pane-chat` | 13 | 0 | 0 | button 5, input 3, select 4, textarea 1 |
-| (chrome) | outside the panes | 163 | 65 | 0 | button 97, input 37, select 14, summary 8, textarea 7 |
+| (chrome) | outside the panes | 166 | 67 | 0 | button 99, input 37, select 14, summary 8, textarea 8 |
 
 ## What the numbers already say
 
-* 276 controls are in the markup and 74 more are built by script — a checklist written from the markup alone would miss 21% of the interactive surface.
-* The shared chrome carries 163 controls; all six panes together carry 113. Most of the clicking happens in the shell, not inside a tab.
-* 96 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
+* 279 controls are in the markup and 76 more are built by script — a checklist written from the markup alone would miss 21% of the interactive surface.
+* The shared chrome carries 166 controls; all six panes together carry 113. Most of the clicking happens in the shell, not inside a tab.
+* 98 controls have no `id`, so they cannot be reached by selector in a test until one is added or a stable hook is introduced. That is a constraint on the P5 accessibility and regression work, not a cosmetic detail.
 
 ## Pane `start`
 
@@ -192,7 +192,7 @@ Section `pane-chat`, 13 interactive elements.
 
 ## Shared chrome
 
-163 interactive elements outside every pane (tab bar,
+166 interactive elements outside every pane (tab bar,
 top bar and monitor rail). These are reachable from all six tabs, which is why they are not
 attributed to one.
 
@@ -298,73 +298,76 @@ attributed to one.
 | 98 | button | — | — | Close | closeHarnessDiffModal() |
 | 99 | button | — | — | Refresh | refreshHarnessEvidence() |
 | 100 | button | — | — | Close | closeHarnessEvidenceModal() |
-| 101 | button | — | — | Refresh | refreshHarnessGrants() |
-| 102 | button | — | — | Close | closeHarnessGrants() |
-| 103 | button | — | — | Close | closeProvidersModal() |
-| 104 | input | provAlias | text | openrouter | — |
-| 105 | input | provName | text | OpenRouter | — |
-| 106 | select | provWire | — | OpenAI Compatible (/chat/completions) Anthropic Native (/v1/messages SSE) | — |
-| 107 | input | provUrl | text | https://openrouter.ai/api/v1 | — |
-| 108 | input | provKey | password | sk-... (optional for Pollinations / OmniRoute) | — |
-| 109 | button | fetchModelsBtn | — | Fetch Live Models from Endpoint | fetchRemoteModels() |
-| 110 | textarea | provModels | — | claude-sonnet-4-5, gemini-2.5-pro, qwen/qwen3-coder:free | — |
-| 111 | button | — | — | Save & Enable Provider | saveProvider() |
-| 112 | input | comboAlias | text | — | — |
-| 113 | input | comboName | text | — | — |
-| 114 | input | comboTargets | text | openrouter::qwen/qwen3-coder:free, Qwen3.8-27B-oQ4e-mtp | — |
-| 115 | button | — | — | Save Combo | saveCombo() |
-| 116 | button | — | — | Rescan | loadSkills() |
-| 117 | button | — | — | Close | closeSkillsModal() |
-| 118 | input | skillInstallInput | text | — | — |
-| 119 | button | skillInstallBtn | — | Install | installSkill() |
-| 120 | button | — | — | Refresh | refreshSdlcBoard() |
-| 121 | button | — | — | Close | closeSdlcModal() |
-| 122 | input | sdlcWorkspaceInput | text | ~/Projects/my-new-app | syncProjectDirInputs(this.value) |
-| 123 | button | — | button | Browse Studio host workspace folders | openPathPicker('sdlcWorkspaceInput', {workspace:true}) |
-| 124 | button | — | button | Set Directory | saveWorkspaceDirectory(document.getElementById('sdlcWorkspaceInput').value) |
-| 125 | textarea | sdlcVisionInput | — | e.g. Build a modern full-stack E-Commerce storefront with live search, filterable catalog, slide-over cart drawer, promo codes, SQLite order persistence, and unit/E2E tests — OR an end-to-end HTML5 Canvas survival roguelike game with wave progression, upgrades, spatial audio, and 60fps loop. | — |
-| 126 | select | sdlcMaxStories | — | 3 stories 5 stories 8 stories | — |
-| 127 | select | sdlcRunModeSelect | — | SDLC execution mode | — |
-| 128 | button | — | — | Launch SDLC | startSdlcSelectedMode() |
-| 129 | button | — | — | Research | switchSdlcArtifact('RESEARCH.md') |
-| 130 | button | — | — | PRD | switchSdlcArtifact('PRD.md') |
-| 131 | button | — | — | Arch | switchSdlcArtifact('ARCHITECTURE.md') |
-| 132 | button | — | — | Feedback | switchSdlcArtifact('FEEDBACK_LOG.md') |
-| 133 | input | sdlcFeedbackAutoImpl | checkbox | — | — |
-| 134 | input | sdlcFeedbackInput | text | e.g. Checkout feels clunky — research 1-page Stripe/Shopify cart drawers & add instant validation | — |
-| 135 | input | sdlcInspirationQuery | text | e.g. modern ecommerce slide-over cart ux | — |
-| 136 | button | — | — | Research & Iterate | submitSdlcFeedback() |
-| 137 | button | — | — | Close | closeSpawnModal() |
-| 138 | textarea | spawnRequestInput | — | Design an event-sourced local-first task queue on macOS with crash-safe SQLite WAL persistence, zero-polling wakeups, and backpressure. | — |
-| 139 | button | — | — | Cancel | closeSpawnModal() |
-| 140 | button | — | — | Open Empty Room | confirmSpawnSession(false) |
-| 141 | button | spawnConveneBtn | — | Spawn & Convene 4-LLM Council | confirmSpawnSession(true) |
-| 142 | summary | — | — | Run evidenceContracts, handoffs and measured verdicts | — |
-| 143 | button | — | button | Close inspector | toggleMonitorRail(true) |
-| 144 | button | — | button | Close path picker | closePathPicker() |
-| 145 | select | pathPickerRoots | — | Approved locations… | if(this.value)loadPathPicker(this.value) |
-| 146 | button | — | button | Default location | loadPathPicker('') |
-| 147 | button | pathPickerUp | button | Up | — |
-| 148 | input | pathPickerLocation | text | — | — |
-| 149 | button | — | button | Go | loadPathPicker(document.getElementById('pathPickerLocation').value) |
-| 150 | input | pathPickerSearch | search | — | — |
-| 151 | button | — | button | Filter | loadPathPicker(pathPickerState.path) |
-| 152 | input | pathPickerEnvKey | text | PROJECT_DIRECTORY | — |
-| 153 | summary | — | — | New folder… (optional) | — |
-| 154 | input | pathPickerNewName | text | — | pathPickerNameChanged() |
-| 155 | input | pathPickerCreateConfirm | checkbox | — | pathPickerCreateReady() |
-| 156 | button | pathPickerCreateBtn | button | Create folder | createPathPickerFolder() |
-| 157 | summary | — | — | Ask a model for a name (optional) | — |
-| 158 | select | pathPickerModel | — | Choose a model… | — |
-| 159 | textarea | pathPickerDescription | — | — | — |
-| 160 | button | pathPickerAskModel | button | Ask model for a name | askPathPickerModel() |
-| 161 | button | pathPickerUseSuggestion | button | Use suggested name | usePathPickerSuggestion() |
-| 162 | button | — | button | Cancel | closePathPicker() |
-| 163 | button | pathPickerApplyBtn | button | Choose folder | applyPathPicker() |
+| 101 | textarea | harnessFeedbackText | — | Say what should change. A region you select narrows this to that region; without a selection it applies to this artifact version only. | — |
+| 102 | button | — | button | Record feedback | submitHarnessFeedback(event) |
+| 103 | button | — | button | Clear selection | clearHarnessFeedbackSelection() |
+| 104 | button | — | — | Refresh | refreshHarnessGrants() |
+| 105 | button | — | — | Close | closeHarnessGrants() |
+| 106 | button | — | — | Close | closeProvidersModal() |
+| 107 | input | provAlias | text | openrouter | — |
+| 108 | input | provName | text | OpenRouter | — |
+| 109 | select | provWire | — | OpenAI Compatible (/chat/completions) Anthropic Native (/v1/messages SSE) | — |
+| 110 | input | provUrl | text | https://openrouter.ai/api/v1 | — |
+| 111 | input | provKey | password | sk-... (optional for Pollinations / OmniRoute) | — |
+| 112 | button | fetchModelsBtn | — | Fetch Live Models from Endpoint | fetchRemoteModels() |
+| 113 | textarea | provModels | — | claude-sonnet-4-5, gemini-2.5-pro, qwen/qwen3-coder:free | — |
+| 114 | button | — | — | Save & Enable Provider | saveProvider() |
+| 115 | input | comboAlias | text | — | — |
+| 116 | input | comboName | text | — | — |
+| 117 | input | comboTargets | text | openrouter::qwen/qwen3-coder:free, Qwen3.8-27B-oQ4e-mtp | — |
+| 118 | button | — | — | Save Combo | saveCombo() |
+| 119 | button | — | — | Rescan | loadSkills() |
+| 120 | button | — | — | Close | closeSkillsModal() |
+| 121 | input | skillInstallInput | text | — | — |
+| 122 | button | skillInstallBtn | — | Install | installSkill() |
+| 123 | button | — | — | Refresh | refreshSdlcBoard() |
+| 124 | button | — | — | Close | closeSdlcModal() |
+| 125 | input | sdlcWorkspaceInput | text | ~/Projects/my-new-app | syncProjectDirInputs(this.value) |
+| 126 | button | — | button | Browse Studio host workspace folders | openPathPicker('sdlcWorkspaceInput', {workspace:true}) |
+| 127 | button | — | button | Set Directory | saveWorkspaceDirectory(document.getElementById('sdlcWorkspaceInput').value) |
+| 128 | textarea | sdlcVisionInput | — | e.g. Build a modern full-stack E-Commerce storefront with live search, filterable catalog, slide-over cart drawer, promo codes, SQLite order persistence, and unit/E2E tests — OR an end-to-end HTML5 Canvas survival roguelike game with wave progression, upgrades, spatial audio, and 60fps loop. | — |
+| 129 | select | sdlcMaxStories | — | 3 stories 5 stories 8 stories | — |
+| 130 | select | sdlcRunModeSelect | — | SDLC execution mode | — |
+| 131 | button | — | — | Launch SDLC | startSdlcSelectedMode() |
+| 132 | button | — | — | Research | switchSdlcArtifact('RESEARCH.md') |
+| 133 | button | — | — | PRD | switchSdlcArtifact('PRD.md') |
+| 134 | button | — | — | Arch | switchSdlcArtifact('ARCHITECTURE.md') |
+| 135 | button | — | — | Feedback | switchSdlcArtifact('FEEDBACK_LOG.md') |
+| 136 | input | sdlcFeedbackAutoImpl | checkbox | — | — |
+| 137 | input | sdlcFeedbackInput | text | e.g. Checkout feels clunky — research 1-page Stripe/Shopify cart drawers & add instant validation | — |
+| 138 | input | sdlcInspirationQuery | text | e.g. modern ecommerce slide-over cart ux | — |
+| 139 | button | — | — | Research & Iterate | submitSdlcFeedback() |
+| 140 | button | — | — | Close | closeSpawnModal() |
+| 141 | textarea | spawnRequestInput | — | Design an event-sourced local-first task queue on macOS with crash-safe SQLite WAL persistence, zero-polling wakeups, and backpressure. | — |
+| 142 | button | — | — | Cancel | closeSpawnModal() |
+| 143 | button | — | — | Open Empty Room | confirmSpawnSession(false) |
+| 144 | button | spawnConveneBtn | — | Spawn & Convene 4-LLM Council | confirmSpawnSession(true) |
+| 145 | summary | — | — | Run evidenceContracts, handoffs and measured verdicts | — |
+| 146 | button | — | button | Close inspector | toggleMonitorRail(true) |
+| 147 | button | — | button | Close path picker | closePathPicker() |
+| 148 | select | pathPickerRoots | — | Approved locations… | if(this.value)loadPathPicker(this.value) |
+| 149 | button | — | button | Default location | loadPathPicker('') |
+| 150 | button | pathPickerUp | button | Up | — |
+| 151 | input | pathPickerLocation | text | — | — |
+| 152 | button | — | button | Go | loadPathPicker(document.getElementById('pathPickerLocation').value) |
+| 153 | input | pathPickerSearch | search | — | — |
+| 154 | button | — | button | Filter | loadPathPicker(pathPickerState.path) |
+| 155 | input | pathPickerEnvKey | text | PROJECT_DIRECTORY | — |
+| 156 | summary | — | — | New folder… (optional) | — |
+| 157 | input | pathPickerNewName | text | — | pathPickerNameChanged() |
+| 158 | input | pathPickerCreateConfirm | checkbox | — | pathPickerCreateReady() |
+| 159 | button | pathPickerCreateBtn | button | Create folder | createPathPickerFolder() |
+| 160 | summary | — | — | Ask a model for a name (optional) | — |
+| 161 | select | pathPickerModel | — | Choose a model… | — |
+| 162 | textarea | pathPickerDescription | — | — | — |
+| 163 | button | pathPickerAskModel | button | Ask model for a name | askPathPickerModel() |
+| 164 | button | pathPickerUseSuggestion | button | Use suggested name | usePathPickerSuggestion() |
+| 165 | button | — | button | Cancel | closePathPicker() |
+| 166 | button | pathPickerApplyBtn | button | Choose folder | applyPathPicker() |
 
 ## Controls built by script
 
-74 interactive tags appear as template strings inside the
+76 interactive tags appear as template strings inside the
 inline script rather than in the markup. They are attributed to the nearest preceding function
 and are **not** in the tables above:
 
@@ -374,6 +377,7 @@ and are **not** in the tables above:
 | `ensureStageCardMounted` | 1 |
 | `hallClearScopeNoteHtml` | 2 |
 | `harnessEvidenceChangeHtml` | 1 |
+| `harnessFeedbackHtml` | 2 |
 | `mcpCatalogCardHtml` | 1 |
 | `mcpToolRowHtml` | 3 |
 | `openSpawnModal` | 1 |
