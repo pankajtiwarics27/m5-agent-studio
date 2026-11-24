@@ -67,6 +67,7 @@ files = [
   "context_reassembly.py",
   "context_store.py",
   "continuation_contracts.py",
+  "direction_checkpoints.py",
   "demo_tour.py",
   "edit_transactions.py",
   "evidence_lessons.py",
