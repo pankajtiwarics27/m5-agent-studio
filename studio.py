@@ -19780,9 +19780,8 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
       return;
     }
     try {
-      const response = await fetch(
-        `/api/harness/sessions/${encodeURIComponent(target.sessionId)}/feedback?artifact_id=${encodeURIComponent(target.artifactId)}&artifact_sha256=${target.digest}`,
-      );
+      const url = `/api/harness/sessions/${encodeURIComponent(target.sessionId)}/feedback?artifact_id=${encodeURIComponent(target.artifactId)}&artifact_sha256=${target.digest}`;
+      const response = await fetch(url);
       const data = response.ok ? await response.json() : { error: `HTTP ${response.status}` };
       // A response for a session that is no longer active must not be drawn over the new one.
       if (String(target.sessionId) !== String(activeHarnessId || "")) return;

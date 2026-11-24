@@ -12,23 +12,23 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "f70cef5c37dac2f5906ce781bdc957e2f07b54735c20ec5575cb120946fb3d30",
-      "bytes": 1097872,
-      "lines": 18676
+      "sha256": "bb3376e5c8cf533c0c17bb0b7752a6f70a670ae974f9d52b9d4b06d84d871d7b",
+      "bytes": 1117803,
+      "lines": 19025
     },
     {
       "path": "app.py",
       "role": "the FastAPI server the UI talks to; source of the route table",
-      "sha256": "e8b4f40ded215b4e0d09eb99af37c20254f591d876f0da8ed0acd442e71f4edb",
-      "bytes": 1109536,
-      "lines": 23831
+      "sha256": "a039ad7bef243bac90ae76661ae7b99554b3098785b46634ca8758f644f27901",
+      "bytes": 1120492,
+      "lines": 24050
     },
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "a255da9e22fc70c26bedeea5a37a06d1b0800a88c384ce21ed0e3a216904519e",
-      "bytes": 4651055,
-      "lines": 91168
+      "sha256": "a03fe691807c359fd40b289b384aef8add832ec56f96f0a4dc296161f8948ff8",
+      "bytes": 4714714,
+      "lines": 92515
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -68,9 +68,9 @@
     {
       "path": "scripts/build_studio.py",
       "role": "regenerates studio.py from app.py and the inlined modules",
-      "sha256": "ebb5327419da0118dfe7fa7cf06ac555db0a8fc1e73c6c7bd16236cd92164937",
-      "bytes": 12904,
-      "lines": 289
+      "sha256": "a5ebe86d220d5357563b1d9552f0720f81603cdfeff411a6b73216c79b770beb",
+      "bytes": 12927,
+      "lines": 290
     },
     {
       "path": "scripts/check_frontend_syntax.py",
@@ -376,9 +376,9 @@
     {
       "path": "scripts/uiux_preservation_e2e.py",
       "role": "maps each preservation-matrix row to the walk, test, route and control that proves it",
-      "sha256": "4b6fb70f006453b592224d6379af75a1874e8dca61260cfd5839a6dab2cc7833",
-      "bytes": 47676,
-      "lines": 859
+      "sha256": "ba617fb922978eae22e3d9152a9e6205b53519a18e3a3fc2d225ceb760421d5f",
+      "bytes": 48485,
+      "lines": 860
     },
     {
       "path": "tests/test_uiux_preservation_e2e.py",
@@ -460,8 +460,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "f70cef5c37dac2f5906ce781bdc957e2f07b54735c20ec5575cb120946fb3d30",
-    "lines": 18676,
+    "sha256": "bb3376e5c8cf533c0c17bb0b7752a6f70a670ae974f9d52b9d4b06d84d871d7b",
+    "lines": 19025,
     "tab_count": 6,
     "tabs": [
       {
@@ -507,8 +507,8 @@
         "onclick_target": "chat"
       }
     ],
-    "fetch_call_count": 73,
-    "api_literal_count": 58,
+    "fetch_call_count": 77,
+    "api_literal_count": 62,
     "api_literals": [
       "/api/cache/clear-ssd",
       "/api/chat/stream",
@@ -535,6 +535,10 @@
       "/api/harness/sessions/{param}/compact",
       "/api/harness/sessions/{param}/diff",
       "/api/harness/sessions/{param}/events/stream?cursor={param}",
+      "/api/harness/sessions/{param}/feedback",
+      "/api/harness/sessions/{param}/feedback/{param}",
+      "/api/harness/sessions/{param}/feedback/{param}/confirm",
+      "/api/harness/sessions/{param}/feedback?artifact_id={param}&artifact_sha256={param}",
       "/api/harness/sessions/{param}/grants",
       "/api/harness/sessions/{param}/grants/revoke",
       "/api/harness/sessions/{param}/sdlc",
@@ -572,13 +576,13 @@
   },
   "api": {
     "path": "app.py",
-    "sha256": "e8b4f40ded215b4e0d09eb99af37c20254f591d876f0da8ed0acd442e71f4edb",
-    "route_count": 123,
+    "sha256": "a039ad7bef243bac90ae76661ae7b99554b3098785b46634ca8758f644f27901",
+    "route_count": 128,
     "by_method": {
-      "DELETE": 7,
-      "GET": 40,
+      "DELETE": 8,
+      "GET": 41,
       "PATCH": 3,
-      "POST": 73
+      "POST": 76
     },
     "routes": [
       {
@@ -884,6 +888,26 @@
       {
         "method": "POST",
         "path": "/api/harness/sessions/{session_id}/direction-answer"
+      },
+      {
+        "method": "GET",
+        "path": "/api/harness/sessions/{session_id}/feedback"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/sessions/{session_id}/feedback"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/sessions/{session_id}/feedback/{feedback_id}/confirm"
+      },
+      {
+        "method": "POST",
+        "path": "/api/harness/sessions/{session_id}/feedback/{feedback_id}/promote"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/harness/sessions/{session_id}/feedback/{feedback_id}"
       },
       {
         "method": "POST",
