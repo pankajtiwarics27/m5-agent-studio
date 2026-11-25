@@ -56,11 +56,27 @@ if (!chrome) throw new Error("STUDIO_SCREENSHOT_CHROME is required");
 const extraArgs = (process.env.STUDIO_SCREENSHOT_CHROME_ARGS || "").split(/\s+/).filter(Boolean);
 const browser = await puppeteer.launch({ executablePath: chrome, headless: true, args: ["--no-sandbox", "--disable-dev-shm-usage", ...extraArgs] });
 const page = await browser.newPage();
-// A bare `WaitTask.js:46` says a wait timed out but not which one, which made a real
-// intermittent failure in CI indistinguishable from a flake worth ignoring. Bound every wait
-// and name the step in the message so the next failure is diagnosable.
-page.setDefaultTimeout(30000);
-page.setDefaultNavigationTimeout(30000);
+// A bare `WaitTask.js:46` says a wait timed out but not which one, and this repository's CI log
+// blob is not reachable from every environment that has to triage a failure. Every wait is bounded
+// and runs through `step`, whose message names the condition that never became true.
+const pageTimeoutMs = 30000;
+async function step(name, run) {
+  try {
+    return await run();
+  } catch (error) {
+    const message = String((error && error.message) || error).split("\n")[0];
+    throw new Error(`chat walk step "${name}" failed: ${message}`);
+  }
+}
+page.setDefaultTimeout(pageTimeoutMs);
+page.setDefaultNavigationTimeout(pageTimeoutMs);
+// A wait that throws must not end the walk with only a puppeteer frame: the message is what the
+// CI annotation and the pytest assertion both show, so it names the step.
+process.on("uncaughtException", (error) => {
+  console.error(`chat walk aborted: ${(error && error.message) || error}`);
+  process.exitCode = 1;
+  void browser.close().finally(() => process.exit(1));
+});
 await page.setViewport({ width: 1280, height: 900, deviceScaleFactor: 1 });
 const pageErrors = [];
 const externalRequests = [];
@@ -125,7 +141,7 @@ await page.evaluateOnNewDocument((token) => {
 try {
   const response = await page.goto(options.url.href, { waitUntil: "domcontentloaded", timeout: 15000 });
   assert.equal(response?.status(), 200, "demo document must load directly");
-  await page.waitForSelector("#chatMessages .chat-empty-state");
+  await step("the demo document shows the empty transcript", () => page.waitForSelector("#chatMessages .chat-empty-state"));
   await page.evaluate(() => switchTab("chat"));
 
   const empty = await page.evaluate(() => ({
@@ -151,14 +167,14 @@ try {
   check("Shift+Enter inserts a newline", /\n$/.test(await input.evaluate(element => element.value)));
   await input.evaluate(element => { element.value = "desktop keyboard send"; });
   await page.keyboard.press("Enter");
-  await page.waitForFunction(() => document.querySelector('#chatMessages [data-state="streaming"]'));
+  await step("a send enters the streaming state", () => page.waitForFunction(() => document.querySelector('#chatMessages [data-state="streaming"]')));
   const streaming = await page.evaluate(() => ({
     stopVisible: getComputedStyle(document.getElementById("chatStopBtn")).display !== "none",
     sendDisabled: document.getElementById("chatSendBtn").disabled,
     busy: document.getElementById("chatMessages").getAttribute("aria-busy"),
   }));
   check("streaming exposes Stop and prevents a duplicate send", streaming.stopVisible && streaming.sendDisabled && streaming.busy === "true");
-  await page.waitForFunction(() => [...document.querySelectorAll('#chatMessages [data-role="assistant"]')].at(-1)?.dataset.state === "complete" && !document.getElementById("chatSendBtn").disabled);
+  await step("the reply completes and the send button re-enables", () => page.waitForFunction(() => [...document.querySelectorAll('#chatMessages [data-role="assistant"]')].at(-1)?.dataset.state === "complete" && !document.getElementById("chatSendBtn").disabled));
   const success = await page.evaluate(() => {
     const assistant = [...document.querySelectorAll('#chatMessages [data-role="assistant"]')].at(-1);
     const body = window.__chatRequests.at(-1);
@@ -179,7 +195,7 @@ try {
   await new Promise(resolve => setTimeout(resolve, 250));
   await page.focus("#chatStopBtn");
   await page.click("#chatStopBtn");
-  await page.waitForFunction(() => [...document.querySelectorAll('#chatMessages [data-role="assistant"]')].at(-1)?.dataset.state === "stopped" && !document.getElementById("chatSendBtn").disabled);
+  await step("Stop finalizes the reply as stopped", () => page.waitForFunction(() => [...document.querySelectorAll('#chatMessages [data-role="assistant"]')].at(-1)?.dataset.state === "stopped" && !document.getElementById("chatSendBtn").disabled));
   const stopped = await page.evaluate(() => ({
     text: [...document.querySelectorAll('#chatMessages [data-role="assistant"]')].at(-1)?.textContent || "",
     focus: document.activeElement?.id,
@@ -192,7 +208,7 @@ try {
   await input.evaluate(element => { element.value = "retry without duplication"; });
   await input.focus();
   await page.keyboard.press("Enter");
-  await page.waitForSelector('#chatState .presentation[role="alert"]');
+  await step("a partial failure raises an alert", () => page.waitForSelector('#chatState .presentation[role="alert"]'));
   const failure = await page.evaluate(() => ({
     state: [...document.querySelectorAll('#chatMessages [data-role="assistant"]')].at(-1)?.dataset.state,
     text: [...document.querySelectorAll('#chatMessages [data-role="assistant"]')].at(-1)?.textContent || "",
@@ -202,7 +218,7 @@ try {
 
   await page.evaluate(() => { window.__chatTestMode = "success"; });
   await page.click("#chatState .presentation-actions button:first-child");
-  await page.waitForFunction(() => window.__chatRequests.length >= 4 && [...document.querySelectorAll('#chatMessages [data-role="assistant"]')].at(-1)?.dataset.state === "complete" && !document.getElementById("chatSendBtn").disabled);
+  await step("Retry sends a fourth request that completes", () => page.waitForFunction(() => window.__chatRequests.length >= 4 && [...document.querySelectorAll('#chatMessages [data-role="assistant"]')].at(-1)?.dataset.state === "complete" && !document.getElementById("chatSendBtn").disabled));
   const retry = await page.evaluate(() => {
     const prompt = "retry without duplication";
     const body = window.__chatRequests.at(-1);
@@ -216,16 +232,16 @@ try {
   await page.evaluate(() => { window.__chatTestMode = "eof"; });
   await input.evaluate(element => { element.value = "incomplete stream"; });
   await page.click("#chatSendBtn");
-  await page.waitForSelector('#chatState .presentation[role="alert"]');
+  await step("an unexpected stream close raises an alert", () => page.waitForSelector('#chatState .presentation[role="alert"]'));
   check("unexpected stream close is reported as a recoverable failure", /stream closed/.test(await page.$eval("#chatState .presentation-cause", element => element.textContent)));
 
   await page.evaluate(() => { window.__chatTestMode = "slow-fail"; });
   await input.evaluate(element => { element.value = "clear while failure finalizes"; });
   await input.focus();
   await page.keyboard.press("Enter");
-  await page.waitForFunction(() => [...document.querySelectorAll('#chatMessages [data-role="assistant"]')].at(-1)?.dataset.state === "failed");
+  await step("a delayed failure finalizes the reply as failed", () => page.waitForFunction(() => [...document.querySelectorAll('#chatMessages [data-role="assistant"]')].at(-1)?.dataset.state === "failed"));
   await page.click("#chatClearBtn");
-  await page.waitForFunction(() => document.querySelector("#chatMessages .chat-empty-state") && !document.getElementById("chatSendBtn").disabled);
+  await step("Clear restores the empty transcript", () => page.waitForFunction(() => document.querySelector("#chatMessages .chat-empty-state") && !document.getElementById("chatSendBtn").disabled));
   await new Promise(resolve => setTimeout(resolve, 550));
   const afterClear = await page.evaluate(() => ({
     empty: Boolean(document.querySelector("#chatMessages .chat-empty-state")),
