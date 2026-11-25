@@ -28,7 +28,7 @@
     "module_counts": [
       89,
       80,
-      85
+      86
     ],
     "node_counts": [
       1528,
@@ -392,6 +392,7 @@
       "tests/test_routing_experiments.py",
       "tests/test_scoped_feedback.py",
       "tests/test_scoped_feedback_routes.py",
+      "tests/test_skill_extraction.py",
       "tests/test_start_recent.py",
       "tests/test_status_components.py",
       "tests/test_task_layout.py",

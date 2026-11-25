@@ -3363,7 +3363,7 @@
       "title": "Qualify video technical and editorial quality",
       "priority": "P1",
       "optional": false,
-      "status": "in_review",
+      "status": "done",
       "authorization": "normal_story_authorization_plus_owner_editorial_acceptance",
       "dependencies": [
         "AP-020",
@@ -3443,7 +3443,7 @@
         ],
         "blockers": [],
         "handoff": "AP-024's rubric and record are delivered and merged (PR #369): video_quality.py plus 46 tests and a doc page, every acceptance criterion mapped to executed tests. Three limits are named rather than hidden. (1) No route, pane or orchestrator consumes video_quality.py yet. (2) No real ffprobe, frame-scan or loudness implementation ships with it — the suite uses a recording probe, so none of these rules has yet met a real file. (3) No real pilot was watched and no editorial score in this story is evidence: the scores in the tests are fixtures exercising the record's rules. Owner and independent editorial acceptance remain human acts, platform constraints are recorded rather than guaranteed, and the production security release remains blocked pending independent AS-031 sign-off.",
-        "status": "in_review",
+        "status": "done",
         "changed_files": [
           "video_quality.py: the qualification record — media checks, frame and audio measurements, subtitle scan, editorial axes with anchors, watched coverage on the timeline, platform constraints and a derived readiness verdict",
           "tests/test_video_quality.py: 46 tests, mostly refusals",
@@ -3453,7 +3453,7 @@
         "visual_evidence": [
           "No new screen: this story adds a decision module and no pane, so no screenshot is claimed for it."
         ],
-        "merge_commit": "de76304574"
+        "merge_commit": "e7725bdf35"
       },
       "implementation_prompt": "Implement AP-024: Qualify video technical and editorial quality. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
@@ -3463,7 +3463,7 @@
       "title": "Extract evidence-backed reusable skills from work",
       "priority": "P1",
       "optional": false,
-      "status": "not_started",
+      "status": "in_review",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-012",
