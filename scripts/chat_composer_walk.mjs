@@ -175,10 +175,52 @@ try {
   await page.keyboard.press("Enter");
   await page.keyboard.up("Shift");
   check("Shift+Enter inserts a newline", /\n$/.test(await input.evaluate(element => element.value)));
+  // Enter only sends when the composer says it can: a catalogue read that has not landed leaves the
+  // model picker empty, Send disabled and the hint reporting "no-model", and the walk used to press
+  // Enter anyway and then report a missing streaming badge 30s later. Wait for the stated
+  // precondition rather than assuming it, so a genuinely broken composer still fails - with a step
+  // name that says which precondition never became true.
+  await step("the composer reports itself ready to send", async () => {
+    try {
+      // What actually gates Enter: a model is selected and Send is enabled. The hint may legitimately
+      // read "runtime-offline" (the demo has no local runtime, and the probe says so), which is a
+      // warning, not a refusal - so requiring "ready" would assert something the composer does not.
+      await page.waitForFunction(() => Boolean(String(document.getElementById("chatModel")?.value || "").trim())
+        && !document.getElementById("chatSendBtn").disabled);
+    } catch (error) {
+      const state = await page.evaluate(() => ({
+        reason: document.getElementById("chatComposerHint")?.dataset.reason,
+        hint: document.getElementById("chatComposerHint")?.textContent || "",
+        model: document.getElementById("chatModel")?.value || "",
+        modelOptions: document.getElementById("chatModel")?.options.length ?? 0,
+      }));
+      throw new Error(`${(error && error.message) || error} :: composer=${JSON.stringify(state)}`);
+    }
+  });
   await input.evaluate(element => { element.value = "desktop keyboard send"; });
   await page.evaluate(() => { window.__chatReleaseSuccess = false; });
   await page.keyboard.press("Enter");
-  await step("a send enters the streaming state", () => page.waitForFunction(() => document.querySelector('#chatMessages [data-state="streaming"]')));
+  // A wait that times out must say what the pane was doing, not only that the selector never
+  // matched: the send is gated by the composer's own reason (no model selected, busy, ...), and a
+  // 30s timeout with no diagnosis cost three CI cycles to triage.
+  await step("a send enters the streaming state", async () => {
+    try {
+      await page.waitForFunction(() => document.querySelector('#chatMessages [data-state="streaming"]'));
+    } catch (error) {
+      const state = await page.evaluate(() => ({
+        reason: document.getElementById("chatComposerHint")?.dataset.reason,
+        hint: document.getElementById("chatComposerHint")?.textContent || "",
+        model: document.getElementById("chatModel")?.value || "",
+        modelOptions: document.getElementById("chatModel")?.options.length ?? 0,
+        inputValue: document.getElementById("chatInput")?.value || "",
+        sendDisabled: document.getElementById("chatSendBtn")?.disabled,
+        requests: window.__chatRequests?.length ?? -1,
+        turns: [...document.querySelectorAll("#chatMessages [data-role]")].map(node => `${node.dataset.role}:${node.dataset.state || ""}`),
+        presentation: document.querySelector("#chatState .presentation-title")?.textContent || "",
+      }));
+      throw new Error(`${(error && error.message) || error} :: composer=${JSON.stringify(state)}`);
+    }
+  });
   const streaming = await page.evaluate(() => ({
     stopVisible: getComputedStyle(document.getElementById("chatStopBtn")).display !== "none",
     sendDisabled: document.getElementById("chatSendBtn").disabled,
