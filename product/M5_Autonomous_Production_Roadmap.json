@@ -3634,7 +3634,7 @@
         "head_sha": "0125e6e",
         "claimed_at": "2026-11-10T00:00:00Z",
         "heartbeat_at": "2026-11-10T00:00:00Z",
-        "pr_url": null,
+        "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/373",
         "delivery_status": "in_review",
         "acceptance_evidence": [
           "AC1 (no implicit startup/background outbound requests; schedules require explicit grant): WatchSchedule refuses to exist without a WatchGrant, whose granted_by must be namespaced to a human (owner:/user:/reviewer:) and whose hosts must be a subset of autonomous_production_research.PUBLIC_READ_ALLOWLIST; Watcher exposes no start/daemon/loop and only ticks a supplied schedule with an injected fetcher, reporting starts_itself: False. assert_no_implicit_egress parses this module's own source (AST, not substring, because the function's text names what it forbids) and refuses socket/ssl/threading/asyncio/sched/schedule/requests/httpx/urllib/subprocess imports, create_task/ensure_future/Thread/Timer/sleep calls and while True. Tests: test_a_schedule_cannot_exist_without_a_grant, test_a_grant_needs_a_named_human_author, test_a_grant_cannot_authorise_a_host_outside_the_public_read_allowlist, test_the_watcher_has_no_start_and_no_loop, test_the_module_carries_no_network_or_background_machinery, test_the_module_reads_no_clock_and_opens_no_socket, test_a_round_gets_its_time_from_the_caller.",
