@@ -3723,10 +3723,10 @@
         "owner": "arena/ab195e0f-m5-agent-studio",
         "branch": "arena/ab195e0f-m5-agent-studio",
         "base_sha": "688b25d",
-        "head_sha": null,
+        "head_sha": "7142c98",
         "claimed_at": "2026-11-10T00:00:00Z",
         "heartbeat_at": "2026-11-10T00:00:00Z",
-        "pr_url": null,
+        "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/375",
         "delivery_status": "in_review",
         "acceptance_evidence": [
           "AC1 (unchanged output is always an eligible candidate): RefinementSession.start() requires an incumbent Variant (origin='incumbent', revision 0) and starts with it accepted; RefinementRound is refused unless the incumbent appears exactly once on the ballot with this session's id and digest; a revision/synthesis carrying the incumbent's content digest raises SelectionRefused; the currently accepted version must be present with unchanged content in every round; every ballot entry needs at least one verdict. Tests: test_the_incumbent_starts_as_the_accepted_version, test_a_session_cannot_start_from_a_revision, test_a_ballot_without_the_incumbent_is_refused, test_a_ballot_with_two_incumbents_is_refused, test_a_revision_that_did_not_change_anything_is_not_a_revision, test_the_accepted_version_must_defend_itself_in_every_round, test_an_unjudged_variant_is_not_a_candidate, test_every_ballot_entry_is_reported_with_its_own_verdict.",
