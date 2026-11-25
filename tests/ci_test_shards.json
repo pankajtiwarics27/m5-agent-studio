@@ -27,13 +27,13 @@
     ],
     "module_counts": [
       89,
-      79,
-      79
+      80,
+      80
     ],
     "node_counts": [
       1528,
-      1884,
-      1907
+      1933,
+      1931
     ],
     "input_partition_observed": {
       "basis": "Run deterministic pytest shard step seconds summed across the three interpreters",
@@ -146,7 +146,11 @@
       "tests/test_mission_authority_envelope.py",
       "tests/test_scoped_feedback.py",
       "tests/test_scoped_feedback_routes.py"
-    ]
+    ],
+    "post_fit_additions": {
+      "note": "Two modules were added after the fit above: tests/test_reference_benchmark_routes.py (49 nodes) to shard 2 and tests/test_reference_benchmarks.py (24 nodes) to shard 3, each on the least-loaded shard. Their own duration was measured locally at under a second each, far below the 0.5s quantization floor. The projections below were NOT re-derived: the fit run above records shard totals, not per-module seconds, so recomputing them here would be an invented number. A run with per-module timing should re-fit.",
+      "node_counts_source": "collected locally at this tree: 73 nodes across the two new modules"
+    }
   },
   "shards": {
     "1": [
@@ -287,6 +291,7 @@
       "tests/test_pipeline_recovery.py",
       "tests/test_private_network_gateway.py",
       "tests/test_recovery_guard.py",
+      "tests/test_reference_benchmark_routes.py",
       "tests/test_release_manager.py",
       "tests/test_request_fit.py",
       "tests/test_responsive.py",
@@ -380,6 +385,7 @@
       "tests/test_provider_adapters.py",
       "tests/test_qualify_environment.py",
       "tests/test_redirect_safety.py",
+      "tests/test_reference_benchmarks.py",
       "tests/test_request_fit_interruptions.py",
       "tests/test_resource_admission.py",
       "tests/test_routing_experiments.py",

@@ -155,6 +155,7 @@ def _subsystem(path: str) -> str:
         ("/api/opencontext/", "OpenContext memory"),
         ("/api/codegraph/", "Workspace code analysis"),
         ("/api/harness/", "Harness, GSD, and SDLC workflows"),
+        ("/api/reference-benchmarks", "Owner-approved reference benchmarks"),
         ("/api/security/", "Security incident containment and qualification"),
     )
     for prefix, label in prefixes:

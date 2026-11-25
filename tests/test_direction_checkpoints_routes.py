@@ -54,6 +54,61 @@ def _sample(sha: str = SHA_A, checks: dict | None = None) -> dict:
     }
 
 
+def _project_scope(studio) -> str:
+    """The project scope the server derives for this workspace.
+
+    AP-020 made the direction route derive the scope from the session's own project root
+    rather than accept one in the body, so coverage tests seed under the derived id.
+    """
+    return studio.evidence_lessons.derive_project_scope_id(studio.WORKSPACE_ROOT)
+
+
+def _seed_reference(
+    client,
+    scope: str,
+    *,
+    task_kind: str = "website",
+    sha: str = SHA_B,
+    reference_id: str = "ref/website-v1",
+    checks: tuple[str, ...] = ("layout",),
+    measured: dict | None = None,
+):
+    """Record an owner-approved reference the way the app actually records one.
+
+    AP-020 moved coverage onto stored records: a benchmark row in the request body used to be
+    accepted as proof that the owner had approved a reference, which let a caller assert
+    approval. These tests now have to seed the record instead of asserting it.
+    """
+    response = client.post(
+        "/api/reference-benchmarks",
+        json={
+            "reference_id": reference_id,
+            "version": 1,
+            "project_scope_id": scope,
+            "task_kind": task_kind,
+            "brief": "a landing page for the ledger app, for consumers",
+            "artifact": {
+                "artifact_id": "benchmarks/website-v1.html",
+                "content_sha256": sha,
+                "measured_checks": measured
+                if measured is not None
+                else {"layout": True},
+            },
+            "approval": {
+                "actor": "owner:pankaj",
+                "statement": "this is the calm, plain tone I meant",
+                "granted": ["use_as_reference", "final_acceptance"],
+            },
+            "audience": "consumer",
+            "language": "en",
+            "style_tags": ["calm", "plain"],
+            "checks": list(checks),
+        },
+    )
+    assert response.status_code == 200, response.text
+    return response.json()["reference"]
+
+
 def _checkpoint(client, sid: str, **body):
     payload = {"task_kind": "website", "sample": _sample()}
     payload.update(body)
@@ -100,18 +155,8 @@ def test_a_covered_task_is_not_interrupted_but_the_decision_is_still_reported(
     studio, client = _harness_client(tmp_path, monkeypatch)
     sid = _running_session(studio)
 
-    response = _checkpoint(
-        client,
-        sid,
-        benchmarks=[
-            {
-                "reference_id": "ref/website-v1",
-                "reference_sha256": "c" * 64,
-                "covered_task_kinds": ["website"],
-                "measured_checks": ["layout"],
-            }
-        ],
-    )
+    _seed_reference(client, _project_scope(studio))
+    response = _checkpoint(client, sid)
     assert response.status_code == 200, response.text
     data = response.json()
     assert data["status"] == "skipped"
@@ -131,18 +176,8 @@ def test_material_uncertainty_escalates_even_with_a_covering_benchmark(
     studio, client = _harness_client(tmp_path, monkeypatch)
     sid = _running_session(studio)
 
-    response = _checkpoint(
-        client,
-        sid,
-        benchmarks=[
-            {
-                "reference_id": "ref/website-v1",
-                "reference_sha256": "c" * 64,
-                "covered_task_kinds": ["website"],
-            }
-        ],
-        uncertainties=["new_format"],
-    )
+    _seed_reference(client, _project_scope(studio))
+    response = _checkpoint(client, sid, uncertainties=["new_format"])
     assert response.status_code == 200, response.text
     assert (
         response.json()["direction_checkpoint"]["trigger"]
@@ -452,9 +487,99 @@ def test_the_module_shares_no_top_level_name_with_the_application():
                 found |= {t.id for t in node.targets if isinstance(t, ast.Name)}
             elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
                 found.add(node.target.id)
-            elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            elif isinstance(
+                node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+            ):
                 found.add(node.name)
         return found
 
     clash = names(app) & names(module)
-    assert not clash, f"these names would overwrite app.py's in the single-file build: {sorted(clash)}"
+    assert not clash, (
+        f"these names would overwrite app.py's in the single-file build: {sorted(clash)}"
+    )
+
+
+# ── AP-020: coverage comes from the store, never from the request body ──────────────────
+
+
+def test_a_typed_reference_id_cannot_assert_coverage(tmp_path, monkeypatch):
+    """The hole AP-020 closed: coverage used to be whatever the caller wrote in the body.
+
+    A caller could previously name a reference and a digest it invented and be told the owner
+    had already approved the direction. Now the record has to exist, be approved and be live.
+    """
+    studio, client = _harness_client(tmp_path, monkeypatch)
+    sid = _running_session(studio)
+
+    response = client.post(
+        f"/api/harness/sessions/{sid}/direction-checkpoint",
+        json={
+            "task_kind": "website",
+            "sample": _sample(),
+            "benchmarks": [
+                {
+                    "reference_id": "ref/website-v1",
+                    "reference_sha256": "c" * 64,
+                    "covered_task_kinds": ["website"],
+                    "measured_checks": ["layout"],
+                }
+            ],
+        },
+    )
+    # `benchmarks` is no longer a field the route reads at all; the task pauses for a real
+    # judgement because nothing in the store covers it.
+    assert response.status_code == 200, response.text
+    assert response.json()["status"] == "waiting"
+    assert response.json()["direction_checkpoint"]["trigger"] == "no_benchmark"
+
+
+def test_relying_on_a_reference_the_project_does_not_hold_is_refused(
+    tmp_path, monkeypatch
+):
+    studio, client = _harness_client(tmp_path, monkeypatch)
+    sid = _running_session(studio)
+
+    response = _checkpoint(client, sid, reference_ids=["ref/website-v1"])
+    assert response.status_code == 400
+    assert "no owner-approved reference" in response.json()["detail"]
+
+
+def test_a_revoked_reference_stops_covering_and_the_task_is_asked_about(
+    tmp_path, monkeypatch
+):
+    studio, client = _harness_client(tmp_path, monkeypatch)
+    sid = _running_session(studio)
+    _seed_reference(client, _project_scope(studio))
+    assert _checkpoint(client, sid).json()["status"] == "skipped"
+
+    revoked = client.post(
+        "/api/reference-benchmarks/ref/website-v1/revoke",
+        json={"version": 1, "reason": "the audience changed", "actor": "owner:pankaj"},
+    )
+    assert revoked.status_code == 200, revoked.text
+
+    after = _checkpoint(client, sid)
+    assert after.status_code == 200, after.text
+    assert after.json()["status"] == "waiting"
+    assert after.json()["direction_checkpoint"]["trigger"] == "no_benchmark"
+
+
+def test_a_reference_for_another_project_does_not_cover_this_one(tmp_path, monkeypatch):
+    studio, client = _harness_client(tmp_path, monkeypatch)
+    sid = _running_session(studio)
+    _seed_reference(client, "proj-" + "0" * 32)  # a valid id for a different project
+
+    response = _checkpoint(client, sid)
+    assert response.json()["status"] == "waiting"
+    assert response.json()["direction_checkpoint"]["trigger"] == "no_benchmark"
+
+
+def test_a_reference_for_another_task_kind_does_not_cover_this_task(
+    tmp_path, monkeypatch
+):
+    studio, client = _harness_client(tmp_path, monkeypatch)
+    sid = _running_session(studio)
+    _seed_reference(client, _project_scope(studio), task_kind="document")
+
+    response = _checkpoint(client, sid)
+    assert response.json()["status"] == "waiting"

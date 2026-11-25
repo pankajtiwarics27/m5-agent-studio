@@ -113,7 +113,9 @@
       "test_shared_memory_admission.py",
       "test_scoped_feedback.py",
       "test_scoped_feedback_routes.py",
-      "test_workflow_coordinated.py"
+      "test_workflow_coordinated.py",
+      "test_reference_benchmarks.py",
+      "test_reference_benchmark_routes.py"
     ],
     "storage.history": [
       "test_audit_log.py",
@@ -510,6 +512,9 @@
       "models.providers"
     ],
     "scoped_feedback.py": [
+      "models.providers"
+    ],
+    "reference_benchmarks.py": [
       "models.providers"
     ]
   }

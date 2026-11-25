@@ -89,6 +89,7 @@ CURATED_PRODUCERS = {
     "uiux-p5-05": "scripts/uiux_interaction_polish_walk.mjs",
     "harness-direction": "scripts/harness_direction_walk.mjs",
     "harness-feedback": "scripts/harness_feedback_walk.mjs",
+    "harness-reference": "scripts/harness_reference_walk.mjs",
     "uiux-p6-03": "scripts/capture_screenshots.mjs",
 }
 
@@ -193,6 +194,21 @@ REVIEWS: dict[str, dict[str, object]] = {
         "eye": ["feedback-pane.png", "feedback-confirmed.png", "feedback-stale.png"],
         "re_taken": True,
         "theme": "dark",
+    },
+    "harness-reference": {
+        "story": "AP-020",
+        "note": (
+            "A reference as a decision, not a style guide: each row names the exact artifact version "
+            "the owner approved, quotes their own words beside it, and prints why it was offered. "
+            "The superseded row still shows the earlier approval as it was given and points forward "
+            "to the version that replaced it, the revoked row keeps its record and states its status, "
+            "and the hostile row draws markup as text. Every state closes with what a reference never "
+            "settles, and the form beneath it asks the owner to name themselves rather than borrowing "
+            "an identity the app does not have."
+        ),
+        "eye": ["1440x960-light/reference-pane.png"],
+        "re_taken": True,
+        "theme": "light",
     },
     "harness-recovery": {
         "story": "UIUX-P3-05",

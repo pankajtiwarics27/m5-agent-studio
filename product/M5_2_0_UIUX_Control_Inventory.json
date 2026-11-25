@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "78a2e62a8e16f7ccc602fa55428dd1e6dfb9ccc04e5963396de501d5b436a467",
+  "frontend_sha256": "848af209461f2a56227f818208f644cca89ab99e1fd85a71a547c699fac0d3ea",
   "panes": [
     {
       "dom_id": "start",
@@ -902,13 +902,13 @@
     }
   ],
   "chrome": {
-    "control_count": 166,
+    "control_count": 169,
     "counts": {
-      "button": 99,
-      "input": 37,
+      "button": 100,
+      "input": 38,
       "select": 14,
       "summary": 8,
-      "textarea": 8
+      "textarea": 9
     },
     "controls": [
       {
@@ -1669,6 +1669,25 @@
         "text": "Clear selection"
       },
       {
+        "tag": "input",
+        "id": "harnessReferenceApprover",
+        "type": "text",
+        "placeholder": "e.g. Priya"
+      },
+      {
+        "tag": "textarea",
+        "id": "harnessReferenceStatement",
+        "placeholder": "What you are approving, in your own words. Reusing this as an example is not accepting or publishing the next piece of work.",
+        "rows": "2"
+      },
+      {
+        "tag": "button",
+        "id": "harnessReferenceSubmit",
+        "type": "submit",
+        "class": "btn btn-xs",
+        "text": "Record approval"
+      },
+      {
         "tag": "button",
         "class": "btn btn-xs",
         "onclick": "refreshHarnessGrants()",
@@ -2066,9 +2085,9 @@
   },
   "totals": {
     "panes": 6,
-    "markup_controls": 279,
+    "markup_controls": 282,
     "pane_controls": 113,
-    "chrome_controls": 166,
+    "chrome_controls": 169,
     "script_rendered_controls": 76,
     "script_rendered_by_function": {
       "debateModelPageFooter": 2,

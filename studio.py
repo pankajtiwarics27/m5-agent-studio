@@ -881,6 +881,37 @@ def _reset_scoped_feedback_store(store: scoped_feedback.FeedbackStore | None = N
         _SCOPED_FEEDBACK_STORE_PATH = Path(DB_PATH).resolve() if store is not None else None
 
 
+_REFERENCE_STORE: reference_benchmarks.ReferenceStore | None = None
+_REFERENCE_STORE_PATH: Path | None = None
+_REFERENCE_STORE_LOCK = threading.Lock()
+
+
+def get_reference_store() -> reference_benchmarks.ReferenceStore:
+    """Return the durable AP-020 reference-benchmark store, in the application's own database.
+
+    Same reasoning as the feedback store next door: a reference is a record about an artifact
+    this app produced, so it lives beside the work rather than in a second file that could
+    drift out of step with it.
+    """
+    global _REFERENCE_STORE, _REFERENCE_STORE_PATH
+    cur_path = Path(DB_PATH).resolve()
+    with _REFERENCE_STORE_LOCK:
+        if _REFERENCE_STORE is None or _REFERENCE_STORE_PATH != cur_path:
+            _REFERENCE_STORE = reference_benchmarks.ReferenceStore(cur_path)
+            _REFERENCE_STORE_PATH = cur_path
+        return _REFERENCE_STORE
+
+
+def _reset_reference_store(
+    store: reference_benchmarks.ReferenceStore | None = None,
+) -> None:
+    """Replace or clear the cached reference store (tests / clock injection)."""
+    global _REFERENCE_STORE, _REFERENCE_STORE_PATH
+    with _REFERENCE_STORE_LOCK:
+        _REFERENCE_STORE = store
+        _REFERENCE_STORE_PATH = Path(DB_PATH).resolve() if store is not None else None
+
+
 def _reset_scoped_grant_store(store: scoped_grants.ScopedGrantStore | None = None) -> None:
     """Replace or clear the cached scoped grant store (tests / clock injection)."""
     global _SCOPED_GRANT_STORE, _SCOPED_GRANT_STORE_DIR
@@ -5393,6 +5424,36 @@ summary:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--ring)
 .harness-feedback [data-tone="ok"] { color: var(--emerald); }
 .harness-feedback [data-tone="warn"] { color: var(--amber); }
 .harness-direction .ev-note { display: block; margin: 6px 0 8px; padding-top: 6px; border-top: 1px solid var(--border); }
+/* AP-020: the reference pane. Four things are drawn apart on purpose, because the failure this
+   pane exists to prevent is a reader collapsing them: what the owner approved, what that
+   settles about a *new* artifact, what it does not settle, and the separate decisions
+   (final acceptance, publish) that are still nobody's but the owner's. */
+.harness-reference { margin: 0 0 9px; padding: 9px 10px 2px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); }
+.harness-reference[hidden] { display: none; }
+.harness-reference-list { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.harness-reference-row { display: flex; flex-direction: column; gap: 3px; padding: 7px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-elev); }
+.harness-reference-row[data-status="revoked"] { border-left: 3px solid var(--rose); }
+.harness-reference-row[data-status="superseded"] { border-left: 3px solid var(--amber); }
+.harness-reference-head { display: flex; gap: 7px; align-items: baseline; flex-wrap: wrap; }
+.harness-reference-name { font-size: 12.2px; font-weight: 700; color: var(--text); overflow-wrap: anywhere; }
+.harness-reference-version { font-size: 10.8px; color: var(--text-faint); font-family: var(--mono); }
+.harness-reference-badge { font-size: 10.4px; font-weight: var(--weight-medium); padding: 1px 7px; border-radius: var(--radius-pill); border: 1px solid var(--border); color: var(--text-dim); }
+.harness-reference-badge[data-status="active"] { color: var(--emerald); border-color: var(--emerald); }
+.harness-reference-badge[data-status="revoked"] { color: var(--rose); border-color: var(--rose); }
+.harness-reference-badge[data-status="superseded"] { color: var(--amber); border-color: var(--amber); }
+.harness-reference-brief { margin: 0; font-size: 11.4px; line-height: 1.5; color: var(--text-dim); overflow-wrap: anywhere; }
+.harness-reference-approval { margin: 0; font-size: 11.2px; line-height: 1.5; color: var(--text); overflow-wrap: anywhere; }
+.harness-reference-meta { margin: 0; font-size: 10.8px; line-height: 1.45; color: var(--text-faint); font-family: var(--mono); overflow-wrap: anywhere; }
+.harness-reference-why { margin: 0; font-size: 10.8px; line-height: 1.45; color: var(--text-faint); }
+.harness-reference-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 4px; }
+.harness-reference-form { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); }
+.harness-reference-form label { font-size: 11.2px; font-weight: var(--weight-medium); color: var(--text-dim); }
+.harness-reference-form textarea { width: 100%; min-height: 40px; resize: vertical; padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-code); color: var(--text); font: inherit; font-size: 12px; line-height: 1.5; }
+.harness-reference-form textarea:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
+.harness-reference [data-tone="danger"], .harness-reference-form [data-tone="danger"] { color: var(--rose); }
+.harness-reference [data-tone="ok"], .harness-reference-form [data-tone="ok"] { color: var(--emerald); }
+.harness-reference [data-tone="warn"], .harness-reference-form [data-tone="warn"] { color: var(--amber); }
+.harness-reference-cannot { margin: 8px 0 0; padding-top: 6px; border-top: 1px solid var(--border); font-size: 11.2px; line-height: 1.5; color: var(--text-dim); }
 .harness-recovery-note[data-tone="ok"] { color: #6ee7b7; }
 .harness-recovery-note[data-tone="warn"] { color: #fde68a; }
 .harness-recovery-note[data-tone="danger"] { color: #fda4af; }
@@ -7060,6 +7121,20 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
             <span id="harnessFeedbackSelection" class="ev-note" role="status"></span>
           </div>
           <p class="ev-note">Recording a comment is not accepting the artifact and does not publish anything. A preference is never inferred from one comment; widening is a separate decision with a stated reason.</p>
+        </form>
+      </div>
+      <div class="ev-block harness-reference" id="harnessReferenceBlock">
+        <div id="harnessReferencePanel" role="status" aria-live="polite"></div>
+        <form id="harnessReferenceForm" class="harness-reference-form" onsubmit="return submitHarnessReference(event)">
+          <label for="harnessReferenceApprover">Your name (recorded as the approver)</label>
+          <input id="harnessReferenceApprover" type="text" maxlength="60" autocomplete="name" placeholder="e.g. Priya" style="padding:6px 8px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--bg-code); color:var(--text); font:inherit; font-size:12px;">
+          <label for="harnessReferenceStatement">Adopt this artifact as a reference</label>
+          <textarea id="harnessReferenceStatement" rows="2" maxlength="500" placeholder="What you are approving, in your own words. Reusing this as an example is not accepting or publishing the next piece of work."></textarea>
+          <div class="harness-reference-actions">
+            <button type="submit" class="btn btn-xs" id="harnessReferenceSubmit">Record approval</button>
+            <span id="harnessReferenceNote" class="ev-note" role="status"></span>
+          </div>
+          <p class="ev-note">Recording this needs a real approval from you. An agent cannot write one, and it does not grant final acceptance or publish permission for anything.</p>
         </form>
       </div>
       <div id="harnessEvidenceLimits" class="ev-block"></div>
@@ -19967,6 +20042,10 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
       harnessFeedbackPayload = null;
       renderHarnessFeedback();
     }
+    // AP-020: references belong to the project, not to the artifact, so they are read from the
+    // session's own scope even when this session has no artifact version of its own yet. The
+    // target is passed only to decide whether adopting one is even offered.
+    loadHarnessReferences(payload.sessionId, target);
   }
 
   function harnessEvidenceObservedHtml(payload) {
@@ -21150,6 +21229,239 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
   document.getElementById("harnessStream").addEventListener("scroll", () => updateHarnessTimelineJump(), { passive: true });
   renderChatMessages();
   document.getElementById("hallHumanInput").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitHallComposer(); } });
+
+
+  // ================= AP-020: VERSIONED OWNER-APPROVED REFERENCES =================
+  // A reference answers one question: "the owner already approved this kind of artifact, so
+  // may we reuse its tone?" It answers nothing else. The pane therefore draws four separate
+  // facts and never lets them collapse:
+  //
+  //   1. what the owner approved      (the exact artifact version, and their own words)
+  //   2. what that settles            (a style to reuse -- visible in `why_offered`)
+  //   3. what it does not settle      (new code, new facts, screenshots, security)
+  //   4. what only the owner can grant (final acceptance, publish permission)
+  //
+  // It also refuses to pretend to be the owner. The approver name is typed by the human and
+  // recorded as `owner:<name>`; there is no stored identity this pane could borrow, and an
+  // invented one would be exactly the fabricated approval the module exists to reject.
+  let harnessReferencePayload = null; // {scope, data, error}
+  let harnessReferenceNote = null;    // {tone, text}
+
+  const HARNESS_REFERENCE_CANNOT_SETTLE_DEFAULT = [
+    "new code working",
+    "new facts being true",
+    "security sign-off",
+    "screenshot approval",
+    "final acceptance of this work",
+    "publish permission",
+  ];
+
+  function harnessReferenceText(value, max) {
+    return typeof value === "string" ? value.slice(0, max || 300) : "";
+  }
+
+  function harnessReferenceModel(payload) {
+    if (!payload || typeof payload !== "object") return null;
+    const items = Array.isArray(payload.items) ? payload.items : [];
+    const cannot = Array.isArray(payload.cannot_settle) ? payload.cannot_settle : HARNESS_REFERENCE_CANNOT_SETTLE_DEFAULT;
+    return {
+      scope: harnessReferenceText(payload.project_scope_id, 64),
+      cannot: cannot.map(entry => harnessReferenceText(String(entry).replace(/_/g, " "), 80)),
+      items: items.map(item => ({
+        id: harnessReferenceText(item.reference_id, 160),
+        version: Number(item.version) || 0,
+        status: harnessReferenceText(item.status, 16) || "active",
+        brief: harnessReferenceText(item.brief, 600),
+        taskKind: harnessReferenceText(item.task_kind, 40),
+        audience: harnessReferenceText(item.audience, 40),
+        language: harnessReferenceText(item.language, 24),
+        styles: Array.isArray(item.style_tags) ? item.style_tags.map(tag => harnessReferenceText(tag, 32)).filter(Boolean) : [],
+        digest: harnessReferenceText(item.artifact && item.artifact.content_sha256, 64),
+        approvalActor: harnessReferenceText(item.approval && item.approval.actor, 80),
+        approvalWords: harnessReferenceText(item.approval && item.approval.statement, 600),
+        // Restated from the record, not assumed: a record that claimed either would have been
+        // refused at read time, so these are always false and are drawn as such.
+        finalAcceptance: item.is_final_acceptance === true,
+        publishPermission: item.grants_publish_permission === true,
+        why: Array.isArray(item.why_offered) ? item.why_offered.map(reason => harnessReferenceText(reason, 120)).filter(Boolean) : [],
+        supersededBy: harnessReferenceText(item.superseded_by, 160),
+      })),
+    };
+  }
+
+  function harnessReferenceRowHtml(item) {
+    const approval = item.approvalActor
+      ? `Approved by ${escapeHtml(item.approvalActor)}${item.approvalWords ? `: &ldquo;${escapeHtml(item.approvalWords)}&rdquo;` : ""}`
+      : "No approval is recorded on this row, so it is not a reference anyone may rely on.";
+    const why = item.why.length
+      ? `<p class="harness-reference-why">Offered because: ${escapeHtml(item.why.join("; "))}</p>`
+      : "";
+    const facts = [
+      item.taskKind ? `task ${item.taskKind}` : "",
+      item.audience ? `audience ${item.audience}` : "",
+      item.language ? `language ${item.language}` : "",
+      item.styles.length ? `style ${item.styles.join(", ")}` : "",
+      item.digest ? `artifact ${item.digest.slice(0, 12)}` : "",
+    ].filter(Boolean).join(" · ");
+    const staleLink = item.supersededBy
+      ? `<p class="harness-reference-meta">Replaced by ${escapeHtml(item.supersededBy)}. The earlier approval is still shown as it was given.</p>`
+      : "";
+    return `<li class="harness-reference-row" data-status="${escapeHtml(item.status)}">
+      <div class="harness-reference-head">
+        <span class="harness-reference-name">${escapeHtml(item.id)}</span>
+        <span class="harness-reference-version">v${item.version}</span>
+        <span class="harness-reference-badge" data-status="${escapeHtml(item.status)}">${escapeHtml(item.status)}</span>
+      </div>
+      <p class="harness-reference-brief">${escapeHtml(item.brief)}</p>
+      <p class="harness-reference-approval">${approval}</p>
+      ${facts ? `<p class="harness-reference-meta">${escapeHtml(facts)}</p>` : ""}
+      ${why}
+      ${staleLink}
+    </li>`;
+  }
+
+  function harnessReferenceHtml(payload) {
+    const model = harnessReferenceModel(payload);
+    if (!model) return "";
+    const cannot = model.cannot.length
+      ? `<p class="harness-reference-cannot"><strong>What a reference never settles:</strong> ${escapeHtml(model.cannot.join(", "))}. Those stay separate decisions, made about the new work.</p>`
+      : "";
+    if (!model.items.length) {
+      return `<div class="ev-heading">References</div>
+        <p class="ev-note">Nothing has been adopted as a reference in this project yet. Until something is, the agent has no approved example to reuse and will ask you about direction instead of inventing one.</p>${cannot}`;
+    }
+    return `<div class="ev-heading">References</div>
+      <ul class="harness-reference-list">${model.items.map(harnessReferenceRowHtml).join("")}</ul>
+      ${cannot}`;
+  }
+
+  function renderHarnessReference() {
+    const host = document.getElementById("harnessReferencePanel");
+    if (!host) return;
+    const note = harnessReferenceNote;
+    const noteHtml = note
+      ? `<p class="ev-note" data-tone="${escapeHtml(note.tone)}">${escapeHtml(note.text)}</p>`
+      : "";
+    if (!harnessReferencePayload) {
+      host.innerHTML = `<div class="ev-heading">References</div>
+        <p class="ev-note">No project is open, so there are no references to show.</p>${noteHtml}`;
+      return;
+    }
+    if (harnessReferencePayload.error) {
+      host.innerHTML = `<div class="ev-heading">References</div>
+        <p class="ev-note" data-tone="danger">The reference record could not be read: ${escapeHtml(harnessReferencePayload.error)}</p>${noteHtml}`;
+      return;
+    }
+    host.innerHTML = harnessReferenceHtml(harnessReferencePayload.data) + noteHtml;
+  }
+
+  // A refusal is answered where the control that caused it is. Re-rendering only the panel above
+  // would put the reason somewhere the reader who pressed the button is not looking, which is
+  // the same mistake AP-019's composer avoids.
+  function harnessReferenceSay(text, tone) {
+    const inline = document.getElementById("harnessReferenceNote");
+    if (inline) {
+      inline.textContent = text ? String(text) : "";
+      inline.dataset.tone = text ? String(tone || "info") : "";
+    }
+    if (!text) return;
+    // A read failure still belongs in the panel: it is about the records, not about the form.
+    if (String(tone) === "danger") {
+      harnessReferenceNote = { tone: "danger", text: String(text) };
+      renderHarnessReference();
+    }
+  }
+
+  // The target is the recorded artifact version of the session, exactly as AP-019 binds
+  // feedback to it: a reference to a version nobody recorded is a reference to a rumour.
+  async function loadHarnessReferences(sessionId, target) {
+    if (!sessionId || !target) {
+      harnessReferencePayload = null;
+      renderHarnessReference();
+      return;
+    }
+    try {
+      const response = await fetch(`/api/reference-benchmarks?session_id=${encodeURIComponent(sessionId)}`);
+      const data = await response.json().catch(() => null);
+      if (String(sessionId) !== String(activeHarnessId || "")) return; // a stale answer never lands on the new session
+      harnessReferencePayload = {
+        scope: data && data.project_scope_id ? data.project_scope_id : "",
+        data: response.ok ? data : null,
+        error: response.ok ? "" : ((data && (data.detail || data.error)) || `HTTP ${response.status}`),
+      };
+    } catch (error) {
+      if (String(sessionId) !== String(activeHarnessId || "")) return;
+      harnessReferencePayload = { scope: "", data: null, error: `the request never reached the server: ${error.message}` };
+    }
+    renderHarnessReference();
+  }
+
+  // Recording a reference is the owner's decision. If they have not typed who they are, the
+  // pane says so and sends nothing: a name taken from elsewhere in the UI would be a guess,
+  // and a guessed approver is a fabricated one.
+  async function submitHarnessReference(event) {
+    if (event && event.preventDefault) event.preventDefault();
+    const payload = harnessReferencePayload;
+    const target = harnessFeedbackPayload;
+    const approverField = document.getElementById("harnessReferenceApprover");
+    const statementField = document.getElementById("harnessReferenceStatement");
+    const approver = approverField ? String(approverField.value || "").trim() : "";
+    const statement = statementField ? String(statementField.value || "").trim() : "";
+
+    if (!payload || payload.error || !payload.scope) {
+      harnessReferenceSay("This project's references could not be read, so nothing was recorded. Reload the pane first.", "warn");
+      return false;
+    }
+    if (!target || target.error || !target.digest) {
+      harnessReferenceSay("No artifact version is recorded for this session yet, so there is nothing to adopt as a reference.", "warn");
+      return false;
+    }
+    if (!approver) {
+      harnessReferenceSay("Nothing was recorded: type your name. The record has to name the person who approved it, and the pane will not fill that in for you.", "warn");
+      return false;
+    }
+    if (!statement) {
+      harnessReferenceSay("Nothing was recorded: say in your own words what you are approving, or the record would be a click the agent wrote for you.", "warn");
+      return false;
+    }
+    try {
+      const response = await fetch("/api/reference-benchmarks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reference_id: `ref/${String(target.artifactId || "artifact").replace(/^\/+/, "")}`.slice(0, 160),
+          version: 1,
+          project_scope_id: payload.scope,
+          task_kind: "artifact",
+          brief: statement,
+          artifact: {
+            artifact_id: String(target.artifactId || ""),
+            content_sha256: target.digest,
+            measured_checks: {},
+          },
+          approval: { actor: `owner:${approver}`, statement: statement, granted: ["use_as_reference"] },
+          audience: "",
+          language: "",
+          style_tags: [],
+          checks: [],
+        }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        harnessReferenceSay(`The record was refused: ${(data && (data.detail || data.error)) || `HTTP ${response.status}`}`, "danger");
+        return false;
+      }
+      if (statementField) statementField.value = "";
+      harnessReferenceNote = {
+        tone: "ok",
+        text: "Recorded as a reference, with your words as the approval. It settles reuse of this style, not the next artifact, and it does not accept or publish anything.",
+      };
+      await loadHarnessReferences(payload.sessionId || activeHarnessId, target);
+    } catch (error) {
+      harnessReferenceSay(`The request never reached the server: ${error.message}`, "danger");
+    }
+    return false;
+  }
 
   // ================= UNIVERSAL CLOUD + CUSTOM MCP HUB (v6.0) =================
   let mcpPresets = {};
@@ -34106,21 +34418,52 @@ async def api_request_direction_checkpoint(session_id: str, request: Request) ->
             # the first thing to fix is the record, not the direction.
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    benchmarks: list[direction_checkpoints.BenchmarkCoverage] = []
-    for row in body.get("benchmarks") or ():
-        if not isinstance(row, dict):
-            continue
-        try:
-            benchmarks.append(
-                direction_checkpoints.BenchmarkCoverage(
-                    reference_id=str(row.get("reference_id") or ""),
-                    reference_sha256=str(row.get("reference_sha256") or "").strip().lower(),
-                    covered_task_kinds=tuple(str(k) for k in (row.get("covered_task_kinds") or ())),
-                    measured_checks=tuple(str(c) for c in (row.get("measured_checks") or ())),
+    # Coverage is read from the project's stored, owner-approved references. It is deliberately
+    # *not* built from the request body: a caller who could type a reference id could announce
+    # that the owner had already approved work they never saw, which is the exact thing a
+    # reference benchmark exists to prevent. A caller may name a reference it relies on, and
+    # naming one the project does not hold is refused rather than ignored.
+    claimed = body.get("reference_ids") or ()
+    if not isinstance(claimed, (list, tuple)):
+        raise HTTPException(
+            status_code=400,
+            detail="reference_ids must be a list of reference ids the caller is relying on.",
+        )
+    # The scope is derived from the session's own project root. A caller cannot name one: a
+    # reference approved for another project must never cover this task.
+    project_scope = evidence_lessons.derive_project_scope_id(
+        Path(str(sess.get("worktree_dir") or sess.get("workspace_dir") or WORKSPACE_ROOT)).resolve(),
+        owning_workspace_root=Path(str(sess.get("workspace_dir"))).resolve()
+        if str(sess.get("workspace_dir") or "").strip()
+        else None,
+    )
+    # The missing checks are not consulted here: the check-in is decided per task kind, and a
+    # partial reference still counts as one. What must not happen is a *caller* deciding that.
+    coverage_rows, _ = _reference_coverage(
+        project_scope_id=project_scope, task_kind=task_kind
+    )
+    held = {str(row["reference_id"]) for row in coverage_rows}
+    try:
+        for name in (str(r) for r in claimed):
+            if name not in held:
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        f"no owner-approved reference {name!r} covers task kind {task_kind!r} in this "
+                        "project. A reference has to be recorded and approved before it can be relied on."
+                    ),
                 )
+        benchmarks = [
+            direction_checkpoints.BenchmarkCoverage(
+                reference_id=str(row["reference_id"]),
+                reference_sha256=str(row["reference_sha256"]),
+                covered_task_kinds=tuple(row["_covered_task_kinds"]),
+                measured_checks=tuple(row["measured_checks"]),
             )
-        except direction_checkpoints.DirectionError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
+            for row in coverage_rows
+        ]
+    except direction_checkpoints.DirectionError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     try:
         checkpoint = direction_checkpoints.decide(
@@ -34268,6 +34611,433 @@ def _feedback_state(session_id: str, artifact_id: str, artifact_sha256: str) -> 
         "conflicts": [list(pair) for pair in revision.conflicts],
         "stale": [item.to_mapping() for item in stale],
     }
+
+
+def _reference_mapping(record: reference_benchmarks.Reference) -> dict[str, Any]:
+    """One reference as the API reports it, with its own digest of the recorded facts."""
+    mapping = record.to_mapping()
+    mapping["fingerprint"] = record.fingerprint()
+    return mapping
+
+
+def _reference_project_scope(
+    *, project_scope_id: str = "", session_id: str = "", workspace_dir: str = ""
+) -> str:
+    """Resolve which project a reference belongs to, by the same rule lessons use.
+
+    A reference is project-scoped, and the scope is derived from the project root rather than
+    accepted as a nickname -- otherwise "proj-1" in a request would be enough to read another
+    project's approved references. An explicit id is accepted only in the derived form.
+    """
+    explicit = str(project_scope_id or "").strip()
+    if explicit:
+        if not explicit.startswith("proj-") or len(explicit) != 37:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "project_scope_id must be the derived 'proj-' identifier; name a session_id or "
+                    "workspace_dir and the server will resolve the project it belongs to."
+                ),
+            )
+        return explicit
+    if not str(session_id or "").strip() and not str(workspace_dir or "").strip():
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "a reference belongs to one project: supply session_id, workspace_dir or the "
+                "project_scope_id the session reports."
+            ),
+        )
+    ws, own_ws = _resolve_lesson_workspace_roots(
+        session_id=str(session_id or ""), workspace_dir=str(workspace_dir or "")
+    )
+    return evidence_lessons.derive_project_scope_id(ws, owning_workspace_root=own_ws)
+
+
+def _reference_coverage(
+    *, project_scope_id: str, task_kind: str, checks: Sequence[str] = ()
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """Coverage this project actually holds, read from stored and owner-approved records.
+
+    The direction route must never build ``BenchmarkCoverage`` from the request body: a caller
+    who can type a reference id can assert that the owner approved work they never saw, which
+    is the one thing a reference benchmark exists to rule out. So the rows come from here.
+
+    Two narrowing rules are applied before a stored row counts:
+
+    * a referenced artifact version whose sha no longer holds on disk is reported as
+      missing, because "we built something once" is not "we still have it";
+    * a requested check that the record never measured is reported as missing, not quietly
+      dropped -- partial coverage has to be visible to be honest.
+    """
+    store = get_reference_store()
+    live = [row for row in store.list(project_scope_id=project_scope_id, status="active")]
+    rows: list[dict[str, Any]] = []
+    missing: list[str] = []
+    for record in live:
+        if record.task_kind != task_kind:
+            continue
+        covered, absent = record.covers(task_kind=task_kind, checks=checks)
+        row = {
+            "reference_id": record.reference_id,
+            "version": record.version,
+            "reference_sha256": record.artifact.content_sha256,
+            "task_kind": record.task_kind,
+            "audience": record.audience,
+            "language": record.language,
+            "style_tags": list(record.style_tags),
+            "measured_checks": list(record.artifact.passed_checks),
+            "approval_actor": record.approval.actor,
+            "_covered_task_kinds": [record.task_kind],
+        }
+        rows.append(row)
+        missing.extend(absent)
+    # Reported as a set of obligations, not once per reference: three references that all lack
+    # `a11y` mean one thing is unmeasured, not three.
+    return rows, list(dict.fromkeys(missing))
+
+
+@app.get("/api/reference-benchmarks")
+async def api_list_reference_benchmarks(
+    project_scope_id: str = "",
+    session_id: str = "",
+    workspace_dir: str = "",
+    status: str = "",
+    task_kind: str = "",
+    audience: str = "",
+    language: str = "",
+    style_tags: str = "",
+) -> JSONResponse:
+    """List owner-approved references for a project, best match first.
+
+    Retrieval is by audience, language, task and style, and it returns the *reference* -- never
+    a layout to copy. Ranking reports why a row was offered, so a caller can see that a
+    reference for another audience or language was chosen knowingly rather than by accident.
+    """
+    scope = _reference_project_scope(
+        project_scope_id=project_scope_id, session_id=session_id, workspace_dir=workspace_dir
+    )
+    kind = str(task_kind or "").strip()
+    wanted_status = str(status or "").strip()
+    if wanted_status and wanted_status not in reference_benchmarks.REFERENCE_STATUSES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"unknown status {wanted_status!r}; a reference is one of {', '.join(reference_benchmarks.REFERENCE_STATUSES)}.",
+        )
+    try:
+        stored = get_reference_store().list(
+            project_scope_id=scope, status=wanted_status or None
+        )
+    except reference_benchmarks.ReferenceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    if kind:
+        # Ranking is only meaningful against a task; an unfiltered list is a catalogue.
+        ranked = reference_benchmarks.rank(
+            stored,
+            task_kind=kind,
+            audience=str(audience or "").strip(),
+            language=str(language or "").strip(),
+            style_tags=[t.strip() for t in str(style_tags or "").split(",") if t.strip()],
+        )
+        items = [
+            {**_reference_mapping(record), "why_offered": list(reasons)}
+            for record, reasons in ranked
+        ]
+    else:
+        items = [_reference_mapping(record) for record in stored]
+    return JSONResponse(
+        {
+            "project_scope_id": scope,
+            "count": len(items),
+            "items": items,
+            # Named once here so a pane does not have to re-derive them per row: a reference
+            # settles reuse of a style, and nothing about the new work's own correctness.
+            "cannot_settle": list(reference_benchmarks.REFERENCE_CANNOT_SETTLE),
+            "grants_publish_permission": False,
+            "is_final_acceptance": False,
+        }
+    )
+
+
+@app.get("/api/reference-benchmarks/{reference_id:path}")
+async def api_get_reference_benchmark(reference_id: str, version: int = 0) -> JSONResponse:
+    """One reference version, or the whole append-only history of the reference."""
+    store = get_reference_store()
+    try:
+        if version:
+            record = store.get(reference_id, version)
+            if record is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"no recorded reference {reference_id!r} at version {version}.",
+                )
+            return JSONResponse(
+                {
+                    "reference": _reference_mapping(record),
+                    "cannot_settle": list(reference_benchmarks.REFERENCE_CANNOT_SETTLE),
+                }
+            )
+        history = store.history(reference_id)
+    except reference_benchmarks.ReferenceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if not history:
+        raise HTTPException(
+            status_code=404, detail=f"no recorded reference {reference_id!r}."
+        )
+    return JSONResponse(
+        {
+            "reference_id": reference_id,
+            "versions": [_reference_mapping(record) for record in history],
+            "cannot_settle": list(reference_benchmarks.REFERENCE_CANNOT_SETTLE),
+        }
+    )
+
+
+@app.post("/api/reference-benchmarks")
+async def api_record_reference_benchmark(request: Request) -> JSONResponse:
+    """Record an owner-approved reference version.
+
+    The approval is the whole point, so it is supplied by the caller as the owner's own words
+    and a person's namespaced identity; a machine actor is refused by the module, and this
+    route does not offer a way around that. Re-recording an existing version is refused when
+    the acceptance would change -- an improvement arrives as a new version.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        body = None
+    if not isinstance(body, dict):
+        raise HTTPException(
+            status_code=400,
+            detail="Recording a reference needs a JSON body describing the approved artifact and approval.",
+        )
+
+    raw_artifact = body.get("artifact")
+    raw_approval = body.get("approval")
+    if not isinstance(raw_artifact, dict) or not isinstance(raw_approval, dict):
+        raise HTTPException(
+            status_code=400,
+            detail="artifact and approval are both required: a reference is an exact artifact plus the owner's decision about it.",
+        )
+    checks = raw_artifact.get("measured_checks")
+    try:
+        artifact = reference_benchmarks.ArtifactVersion(
+            artifact_id=str(raw_artifact.get("artifact_id") or ""),
+            content_sha256=str(raw_artifact.get("content_sha256") or ""),
+            identity_sha256=str(raw_artifact.get("identity_sha256") or ""),
+            identity_basis=str(raw_artifact.get("identity_basis") or "content_only"),
+            producer=str(raw_artifact.get("producer") or ""),
+            producer_version=str(raw_artifact.get("producer_version") or ""),
+            config_sha256=str(raw_artifact.get("config_sha256") or ""),
+            measured_checks={str(k): bool(v) for k, v in checks.items()}
+            if isinstance(checks, dict)
+            else {},
+        )
+        approval = reference_benchmarks.OwnerApproval(
+            actor=str(raw_approval.get("actor") or ""),
+            statement=str(raw_approval.get("statement") or ""),
+            granted=tuple(str(g) for g in (raw_approval.get("granted") or ())),
+        )
+        record = reference_benchmarks.accept(
+            reference_id=str(body.get("reference_id") or ""),
+            version=int(body.get("version") or 0),
+            project_scope_id=_reference_project_scope(
+                project_scope_id=str(body.get("project_scope_id") or ""),
+                session_id=str(body.get("session_id") or ""),
+                workspace_dir=str(body.get("workspace_dir") or ""),
+            ),
+            task_kind=str(body.get("task_kind") or ""),
+            brief=str(body.get("brief") or ""),
+            artifact=artifact,
+            approval=approval,
+            audience=str(body.get("audience") or ""),
+            language=str(body.get("language") or ""),
+            style_tags=[str(t) for t in (body.get("style_tags") or ())],
+            checks=[str(c) for c in (body.get("checks") or ())],
+        )
+    except (reference_benchmarks.ReferenceError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    try:
+        get_reference_store().put(record)
+    except reference_benchmarks.AcceptanceRewriteRefused as exc:
+        # 409, not 400: the request is well formed, it just contradicts a decision already made.
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except reference_benchmarks.ReferenceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return JSONResponse(
+        {
+            "status": "recorded",
+            "reference": _reference_mapping(record),
+            "cannot_settle": list(reference_benchmarks.REFERENCE_CANNOT_SETTLE),
+            # Restated on every write so no client has to guess: reuse of a style is not
+            # permission to ship the new work.
+            "grants_publish_permission": False,
+            "is_final_acceptance": False,
+        }
+    )
+
+
+@app.post("/api/reference-benchmarks/{reference_id:path}/enhance")
+async def api_enhance_reference_benchmark(reference_id: str, request: Request) -> JSONResponse:
+    """Record a new version of a reference, with its own fresh owner approval."""
+    store = get_reference_store()
+    try:
+        body = await request.json()
+    except Exception:
+        body = None
+    if not isinstance(body, dict):
+        raise HTTPException(
+            status_code=400,
+            detail="Enhancing a reference needs a JSON body with the new version, artifact and approval.",
+        )
+    version = int(body.get("version") or 0) or int(body.get("from_version") or 0)
+    if not version:
+        raise HTTPException(
+            status_code=400,
+            detail="from_version is required: an enhancement replaces one specific accepted version.",
+        )
+    base = store.get(reference_id, version)
+    if base is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"no recorded reference {reference_id!r} at version {version}; a new version has to improve on a recorded one.",
+        )
+    raw_artifact = body.get("artifact")
+    raw_approval = body.get("approval")
+    if not isinstance(raw_artifact, dict) or not isinstance(raw_approval, dict):
+        raise HTTPException(
+            status_code=400,
+            detail="artifact and approval are both required: a new version needs its own decision, not the previous one's.",
+        )
+    try:
+        checks = raw_artifact.get("measured_checks")
+        artifact = reference_benchmarks.ArtifactVersion(
+            artifact_id=str(raw_artifact.get("artifact_id") or ""),
+            content_sha256=str(raw_artifact.get("content_sha256") or ""),
+            identity_sha256=str(raw_artifact.get("identity_sha256") or ""),
+            identity_basis=str(raw_artifact.get("identity_basis") or "content_only"),
+            producer=str(raw_artifact.get("producer") or ""),
+            producer_version=str(raw_artifact.get("producer_version") or ""),
+            config_sha256=str(raw_artifact.get("config_sha256") or ""),
+            measured_checks={str(k): bool(v) for k, v in checks.items()}
+            if isinstance(checks, dict)
+            else {},
+        )
+        approval = reference_benchmarks.OwnerApproval(
+            actor=str(raw_approval.get("actor") or ""),
+            statement=str(raw_approval.get("statement") or ""),
+            granted=tuple(str(g) for g in (raw_approval.get("granted") or ())),
+        )
+        enhanced = reference_benchmarks.enhance(
+            base,
+            new_version=int(body.get("new_version") or 0),
+            artifact=artifact,
+            approval=approval,
+            brief=str(body.get("brief") or base.brief),
+            style_tags=[str(t) for t in (body.get("style_tags") or ())] or None,
+            checks=[str(c) for c in (body.get("checks") or ())] or None,
+        )
+        store.put(enhanced)
+        retired = reference_benchmarks.supersede(base, enhanced)
+        store.put(retired)
+    except reference_benchmarks.AcceptanceRewriteRefused as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except (reference_benchmarks.ReferenceError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return JSONResponse(
+        {
+            "status": "enhanced",
+            "reference": _reference_mapping(enhanced),
+            "superseded": _reference_mapping(retired),
+            # The earlier version is still readable with the approval it actually had.
+            "history": [_reference_mapping(row) for row in store.history(reference_id)],
+        }
+    )
+
+
+@app.post("/api/reference-benchmarks/{reference_id:path}/revoke")
+async def api_revoke_reference_benchmark(reference_id: str, request: Request) -> JSONResponse:
+    """Revoke a reference so it stops being offered -- without deleting what was decided."""
+    store = get_reference_store()
+    try:
+        body = await request.json()
+    except Exception:
+        body = None
+    if not isinstance(body, dict):
+        raise HTTPException(
+            status_code=400,
+            detail="Revoking a reference needs a JSON body naming who revoked it and why.",
+        )
+    version = int(body.get("version") or 0)
+    if not version:
+        raise HTTPException(
+            status_code=400, detail="version is required: revocation applies to one accepted version."
+        )
+    base = store.get(reference_id, version)
+    if base is None:
+        raise HTTPException(
+            status_code=404, detail=f"no recorded reference {reference_id!r} at version {version}."
+        )
+    try:
+        revoked = reference_benchmarks.revoke(
+            base,
+            reason=str(body.get("reason") or ""),
+            actor=str(body.get("actor") or ""),
+        )
+        store.put(revoked)
+    except reference_benchmarks.AcceptanceRewriteRefused as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except (reference_benchmarks.ReferenceError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return JSONResponse({"status": "revoked", "reference": _reference_mapping(revoked)})
+
+
+@app.post("/api/reference-benchmarks/coverage")
+async def api_reference_benchmark_coverage(request: Request) -> JSONResponse:
+    """Report whether the project's stored references cover a task, and what they leave open.
+
+    Read-only: a caller supplies the task it is about to produce, and gets back what the owner
+    has already settled plus what still needs verifying. It cannot widen coverage, only ask.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        body = None
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="coverage needs a JSON body naming the task.")
+    scope = _reference_project_scope(
+        project_scope_id=str(body.get("project_scope_id") or ""),
+        session_id=str(body.get("session_id") or ""),
+        workspace_dir=str(body.get("workspace_dir") or ""),
+    )
+    kind = str(body.get("task_kind") or "").strip()
+    if not kind:
+        raise HTTPException(
+            status_code=400,
+            detail="task_kind is required: coverage is a statement about one project's tasks.",
+        )
+    checks = [str(c) for c in (body.get("checks") or ())]
+    rows, missing = _reference_coverage(project_scope_id=scope, task_kind=kind, checks=checks)
+    return JSONResponse(
+        {
+            "project_scope_id": scope,
+            "task_kind": kind,
+            "covered": bool(rows) and not missing,
+            "references": rows,
+            "missing": missing,
+            # What coverage cannot discharge, listed beside the coverage itself so a caller
+            # cannot read "covered" as "approved to ship".
+            "still_required": list(
+                reference_benchmarks.verification_still_required(
+                    changed=[str(c) for c in (body.get("changed") or ())]
+                )
+            ),
+            "grants_publish_permission": False,
+            "is_final_acceptance": False,
+        }
+    )
 
 
 @app.get("/api/harness/sessions/{session_id}/feedback")
@@ -56979,6 +57749,776 @@ class FeedbackStore:
         return self.put(replace(existing, deleted=True))
 
 scoped_feedback = sys.modules[__name__]
+
+"""AP-020: versioned, owner-approved reference benchmarks.
+
+A reference is an accepted example the system may reuse. The thing that makes it worth
+reusing is not that it exists; it is that **an owner accepted it, for a stated scope, at a
+stated version**. Everything in this module exists to keep those three facts from decaying.
+
+Four rules shape it, and each one closes a specific way the reuse of examples goes wrong:
+
+1. *An agent cannot approve anything.* :func:`accept` requires a named human and a statement
+   they actually made. There is no code path that fabricates one -- no default approver, no
+   "system" actor, and :meth:`Reference.from_mapping` refuses a stored record whose approval
+   was not given by a person. A reference whose approval cannot be traced is not a reference.
+
+2. *Approval is scoped, and the scopes do not imply each other.* Continuing in a direction,
+   finally accepting an artifact, adopting it as a reference, and being allowed to publish it
+   are four separate grants. Approving a reference says only "this may be shown as an example
+   of this kind of thing" -- it does not accept future work, does not adopt anything else, and
+   carries no publish permission.
+
+3. *History is appended to, never rewritten.* An improvement is a **new version** with its own
+   id; the version it came from keeps its acceptance exactly as recorded. Superseding links
+   forward, so the old version stays readable and its acceptance stays true of the version it
+   was given for.
+
+4. *A matching style reference is not evidence about changed facts.* :meth:`Reference.covers`
+   answers "was this kind of thing approved, and were these specific checks measured on it",
+   and :func:`verification_still_required` names what a reference can never stand in for.
+   A reference can settle a look; it cannot settle whether new code works.
+
+Retrieval follows the same discipline: :func:`rank` filters by audience, language, task kind
+and style, so a reference approved for a Hindi consumer audience is not offered for an English
+internal document. It returns the references and the reasons, never a mandate -- nothing here
+forces a new artifact to resemble an old one.
+"""
+
+
+import hashlib
+import json
+import re
+from dataclasses import dataclass, field, replace
+from typing import Any, Iterable, Mapping, Sequence
+
+RB_SCHEMA_VERSION = 1
+RB_MAX_TEXT = 2000
+RB_MAX_ID = 120
+RB_MAX_TAGS = 24
+
+_DIGEST_RE = re.compile(r"^[0-9a-f]{64}$")
+
+#: The four grants. They are separate fields on every record and no function here derives one
+#: from another; a caller that wants two of them must record two of them.
+APPROVAL_KINDS: tuple[str, ...] = (
+    "continue_direction",  # carry on in this direction for this run
+    "final_acceptance",  # this artifact is accepted as delivered
+    "use_as_reference",  # this may be reused as an example
+    "publish",  # this may be published, deployed or spent on
+)
+
+REFERENCE_STATUSES: tuple[str, ...] = ("active", "superseded", "revoked")
+
+#: Checks a reference can ever speak to. A reference is visual/craft evidence, so these are the
+#: axes an accepted example can legitimately settle.
+REFERENCE_SETTLES: tuple[str, ...] = (
+    "audience",
+    "language",
+    "layout_style",
+    "tone",
+    "structure",
+)
+
+#: What a reference can never stand in for, whatever it was approved for. Named explicitly so
+#: "we have a reference for this" cannot be heard as "we do not need to test this".
+REFERENCE_CANNOT_SETTLE: tuple[str, ...] = (
+    "changed_code_works",
+    "changed_facts_are_true",
+    "changed_assets_are_licensed",
+    "security_sign_off",
+    "screenshot_approval",
+    "final_acceptance_of_new_work",
+    "publish_permission",
+)
+
+
+class ReferenceError(ValueError):
+    """A reference was malformed, out of scope, or was asked to stand in for something it cannot."""
+
+
+class ApprovalRefused(ReferenceError):
+    """An approval was missing, unnamed, or claimed by something that is not a person."""
+
+
+class AcceptanceRewriteRefused(ReferenceError):
+    """A change tried to alter an acceptance that was already given for a version."""
+
+
+def _rb_text(value: object, field_name: str, limit: int = RB_MAX_TEXT) -> str:
+    if not isinstance(value, str):
+        raise ReferenceError(f"{field_name} must be a string.")
+    if "\x00" in value:
+        raise ReferenceError(f"{field_name} must not contain NUL characters.")
+    stripped = value.strip()
+    if not stripped:
+        raise ReferenceError(f"{field_name} must not be empty.")
+    if len(stripped) > limit:
+        raise ReferenceError(f"{field_name} must be at most {limit} characters.")
+    return stripped
+
+
+def _rb_digest(value: object, field_name: str) -> str:
+    if not isinstance(value, str) or not _DIGEST_RE.fullmatch(value.strip().lower()):
+        raise ReferenceError(f"{field_name} must be a lowercase SHA-256 hex digest.")
+    return value.strip().lower()
+
+
+def _rb_tuple(
+    values: Iterable[object], field_name: str, *, limit: int = RB_MAX_TAGS
+) -> tuple[str, ...]:
+    out: list[str] = []
+    for raw in values or ():
+        text = _rb_text(raw, field_name, 80)
+        if text not in out:
+            out.append(text)
+    if len(out) > limit:
+        raise ReferenceError(f"{field_name} must have at most {limit} entries.")
+    return tuple(sorted(out))
+
+
+def _rb_canonical(payload: Mapping[str, Any]) -> str:
+    return hashlib.sha256(
+        json.dumps(dict(payload), sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+
+
+@dataclass(frozen=True, slots=True)
+class OwnerApproval:
+    """Who accepted this, in their own words, and for what.
+
+    ``statement`` is the owner's actual wording, kept verbatim so a later reader can judge what
+    was agreed rather than trusting a label. ``actor`` is always a human identifier; the module
+    refuses "agent", "system", "automation" and an empty value, because the whole point of the
+    record is that a person, not the system, approved the example.
+    """
+
+    actor: str
+    statement: str
+    granted: tuple[str, ...]
+    scope_note: str = ""
+    recorded_at: str = ""
+
+    def __post_init__(self) -> None:
+        who = _rb_text(self.actor, "approval actor", 120).lower()
+        if who in {"agent", "system", "automation", "assistant", "model", "scheduler"}:
+            raise ApprovalRefused(
+                f"{self.actor!r} is not a person; an approval names the human who gave it"
+            )
+        if not who.startswith(("owner:", "user:", "reviewer:")):
+            raise ApprovalRefused(
+                "an approval actor must be namespaced as owner:, user: or reviewer:, so a "
+                "machine-written record cannot pass for a person's decision"
+            )
+        _rb_text(self.statement, "approval statement")
+        if not self.granted:
+            raise ApprovalRefused("an approval must grant at least one thing")
+        for kind in self.granted:
+            if kind not in APPROVAL_KINDS:
+                raise ApprovalRefused(
+                    f"unknown approval kind {kind!r}; expected one of {APPROVAL_KINDS}"
+                )
+
+    def grants(self, kind: str) -> bool:
+        return kind in self.granted
+
+    def to_mapping(self) -> dict[str, Any]:
+        return {
+            "actor": self.actor,
+            "statement": self.statement,
+            "granted": list(self.granted),
+            "scope_note": self.scope_note,
+            "recorded_at": self.recorded_at,
+        }
+
+    @classmethod
+    def from_mapping(cls, data: Mapping[str, Any]) -> "OwnerApproval":
+        if not isinstance(data, Mapping):
+            raise ApprovalRefused("a recorded approval must be a mapping")
+        return cls(
+            actor=str(data.get("actor") or ""),
+            statement=str(data.get("statement") or ""),
+            granted=tuple(str(g) for g in (data.get("granted") or ())),
+            scope_note=str(data.get("scope_note") or ""),
+            recorded_at=str(data.get("recorded_at") or ""),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class ArtifactVersion:
+    """The exact artifact a reference points at, and the checks actually measured on it.
+
+    ``content_sha256`` alone answers "what are the bytes". ``identity_sha256`` is the version
+    identity derived from content plus producer provenance, when the producer supplied it, and
+    ``identity_basis`` says which of the two this record is entitled to claim -- a content-only
+    identity never presents itself as a full one.
+    """
+
+    artifact_id: str
+    content_sha256: str
+    identity_sha256: str = ""
+    identity_basis: str = "content_only"
+    producer: str = ""
+    producer_version: str = ""
+    config_sha256: str = ""
+    measured_checks: Mapping[str, bool] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        _rb_text(self.artifact_id, "artifact_id", RB_MAX_ID)
+        _rb_digest(self.content_sha256, "content_sha256")
+        if self.identity_sha256:
+            _rb_digest(self.identity_sha256, "identity_sha256")
+        if self.identity_basis not in {"content_only", "content+provenance"}:
+            raise ReferenceError(
+                f"unknown identity basis {self.identity_basis!r}; expected content_only or content+provenance"
+            )
+        if self.identity_basis == "content+provenance" and not self.identity_sha256:
+            raise ReferenceError(
+                "a content+provenance identity must carry its identity digest"
+            )
+        if self.config_sha256:
+            _rb_digest(self.config_sha256, "config_sha256")
+
+    @property
+    def passed_checks(self) -> tuple[str, ...]:
+        return tuple(sorted(k for k, ok in self.measured_checks.items() if ok))
+
+    @property
+    def failed_checks(self) -> tuple[str, ...]:
+        return tuple(sorted(k for k, ok in self.measured_checks.items() if not ok))
+
+    def to_mapping(self) -> dict[str, Any]:
+        return {
+            "artifact_id": self.artifact_id,
+            "content_sha256": self.content_sha256,
+            "identity_sha256": self.identity_sha256,
+            "identity_basis": self.identity_basis,
+            "producer": self.producer,
+            "producer_version": self.producer_version,
+            "config_sha256": self.config_sha256,
+            "measured_checks": dict(
+                sorted((str(k), bool(v)) for k, v in self.measured_checks.items())
+            ),
+        }
+
+    @classmethod
+    def from_mapping(cls, data: Mapping[str, Any]) -> "ArtifactVersion":
+        if not isinstance(data, Mapping):
+            raise ReferenceError("a recorded artifact version must be a mapping")
+        checks = data.get("measured_checks") or {}
+        if not isinstance(checks, Mapping):
+            raise ReferenceError("measured_checks must be a mapping")
+        return cls(
+            artifact_id=str(data.get("artifact_id") or ""),
+            content_sha256=str(data.get("content_sha256") or ""),
+            identity_sha256=str(data.get("identity_sha256") or ""),
+            identity_basis=str(data.get("identity_basis") or "content_only"),
+            producer=str(data.get("producer") or ""),
+            producer_version=str(data.get("producer_version") or ""),
+            config_sha256=str(data.get("config_sha256") or ""),
+            measured_checks={str(k): bool(v) for k, v in checks.items()},
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class Reference:
+    """One accepted example, at one version, with the brief that produced it.
+
+    ``brief`` is the original request, kept as it was written: a reference without its brief
+    teaches a look without teaching what it was for, and the next task that reuses it inherits
+    a style whose reason nobody recorded.
+    """
+
+    reference_id: str
+    version: int
+    project_scope_id: str
+    task_kind: str
+    brief: str
+    artifact: ArtifactVersion
+    approval: OwnerApproval
+    audience: str = ""
+    language: str = ""
+    style_tags: tuple[str, ...] = ()
+    checks: tuple[str, ...] = ()
+    status: str = "active"
+    supersedes: str = ""
+    superseded_by: str = ""
+    revocation_reason: str = ""
+    is_final_acceptance: bool = False  # for the *reference*, never for the artifact
+    grants_publish_permission: bool = False
+    schema_version: int = RB_SCHEMA_VERSION
+
+    def __post_init__(self) -> None:
+        _rb_text(self.reference_id, "reference_id", RB_MAX_ID)
+        if not isinstance(self.version, int) or self.version < 1:
+            raise ReferenceError("a reference version is a positive integer")
+        _rb_text(self.project_scope_id, "project_scope_id", RB_MAX_ID)
+        _rb_text(self.task_kind, "task_kind", 80)
+        _rb_text(self.brief, "brief")
+        if self.status not in REFERENCE_STATUSES:
+            raise ReferenceError(f"unknown reference status {self.status!r}")
+        # A reference never carries permission over future work. These two fields exist so the
+        # refusal is visible in the record rather than implied by its absence.
+        if self.is_final_acceptance or self.grants_publish_permission:
+            raise ReferenceError(
+                "a reference carries no acceptance of new work and no publish permission"
+            )
+        if not self.approval.grants("use_as_reference"):
+            raise ApprovalRefused(
+                "this approval does not grant use_as_reference; accepting an artifact is not "
+                "the same decision as adopting it as an example"
+            )
+        _rb_tuple(self.checks, "checks", limit=64)
+        _rb_tuple(self.style_tags, "style_tags")
+
+    # -- identity -------------------------------------------------------------------------
+
+    @property
+    def is_live(self) -> bool:
+        return self.status == "active"
+
+    def fingerprint(self) -> str:
+        return _rb_canonical(self.to_mapping())
+
+    def to_mapping(self) -> dict[str, Any]:
+        return {
+            "schema_version": self.schema_version,
+            "reference_id": self.reference_id,
+            "version": self.version,
+            "project_scope_id": self.project_scope_id,
+            "task_kind": self.task_kind,
+            "brief": self.brief,
+            "artifact": self.artifact.to_mapping(),
+            "approval": self.approval.to_mapping(),
+            "audience": self.audience,
+            "language": self.language,
+            "style_tags": list(self.style_tags),
+            "checks": list(self.checks),
+            "status": self.status,
+            "supersedes": self.supersedes,
+            "superseded_by": self.superseded_by,
+            "revocation_reason": self.revocation_reason,
+            "is_final_acceptance": False,
+            "grants_publish_permission": False,
+        }
+
+    @classmethod
+    def from_mapping(cls, data: Mapping[str, Any]) -> "Reference":
+        if not isinstance(data, Mapping):
+            raise ReferenceError("a recorded reference must be a mapping")
+        version = data.get("schema_version")
+        if version != RB_SCHEMA_VERSION:
+            raise ReferenceError(
+                f"recorded reference has schema {version!r}, expected {RB_SCHEMA_VERSION!r}"
+            )
+        # A stored record that claims permission over future work is refused rather than read:
+        # a hand-edited row must not become authority.
+        for flag in ("is_final_acceptance", "grants_publish_permission"):
+            if data.get(flag, False) is not False:
+                raise ReferenceError(
+                    f"recorded reference claims {flag}; a reference never carries that"
+                )
+        artifact = data.get("artifact")
+        approval = data.get("approval")
+        if not isinstance(artifact, Mapping):
+            raise ReferenceError(
+                "a reference must record the exact artifact it points at"
+            )
+        if not isinstance(approval, Mapping):
+            raise ReferenceError("a reference must record its approval")
+        return cls(
+            reference_id=str(data.get("reference_id") or ""),
+            version=int(data.get("version") or 0),
+            project_scope_id=str(data.get("project_scope_id") or ""),
+            task_kind=str(data.get("task_kind") or ""),
+            brief=str(data.get("brief") or ""),
+            artifact=ArtifactVersion.from_mapping(artifact),
+            approval=OwnerApproval.from_mapping(approval),
+            audience=str(data.get("audience") or ""),
+            language=str(data.get("language") or ""),
+            style_tags=tuple(str(t) for t in (data.get("style_tags") or ())),
+            checks=tuple(str(c) for c in (data.get("checks") or ())),
+            status=str(data.get("status") or "active"),
+            supersedes=str(data.get("supersedes") or ""),
+            superseded_by=str(data.get("superseded_by") or ""),
+            revocation_reason=str(data.get("revocation_reason") or ""),
+        )
+
+    # -- what a reference may and may not settle ------------------------------------------
+
+    def covers(
+        self, *, task_kind: str, checks: Sequence[str] = ()
+    ) -> tuple[bool, tuple[str, ...]]:
+        """Whether this reference settles ``task_kind``, and which requested checks it does not.
+
+        Coverage is deliberately narrow: the task kind must match, and every check the caller
+        wants settled must have been *measured and passed* on this exact version. The second
+        return value names what is missing, so a caller can say "covered except layout" instead
+        of treating a partial match as no match or as a full one.
+        """
+        missing: list[str] = []
+        if task_kind != self.task_kind:
+            missing.append(f"task_kind:{task_kind}")
+        for name in checks:
+            if name not in self.artifact.passed_checks:
+                missing.append(f"check:{name}")
+        return (not missing, tuple(missing))
+
+
+def accept(
+    *,
+    reference_id: str,
+    version: int,
+    project_scope_id: str,
+    task_kind: str,
+    brief: str,
+    artifact: ArtifactVersion,
+    approval: OwnerApproval,
+    audience: str = "",
+    language: str = "",
+    style_tags: Sequence[str] = (),
+    checks: Sequence[str] = (),
+    supersedes: str = "",
+) -> Reference:
+    """Record an owner's decision to reuse one accepted artifact as an example.
+
+    The approval must name a person and must include ``use_as_reference``. An approval that
+    accepted the artifact but did not adopt it as a reference is refused, because those are
+    different decisions and conflating them is how "the owner liked it" becomes "we may copy it".
+    """
+    if version < 1:
+        raise ReferenceError("a reference version is a positive integer")
+    if not artifact.passed_checks and checks:
+        raise ReferenceError(
+            "checks cannot be claimed for a version that recorded no passed checks"
+        )
+    for name in checks:
+        if name not in artifact.passed_checks:
+            raise ReferenceError(
+                f"check {name!r} was not measured and passed on this artifact version"
+            )
+    return Reference(
+        reference_id=reference_id,
+        version=version,
+        project_scope_id=project_scope_id,
+        task_kind=task_kind,
+        brief=brief,
+        artifact=artifact,
+        approval=approval,
+        audience=audience,
+        language=language,
+        style_tags=tuple(style_tags),
+        checks=tuple(checks),
+        supersedes=supersedes,
+    )
+
+
+def enhance(
+    previous: Reference,
+    *,
+    new_version: int,
+    artifact: ArtifactVersion,
+    approval: OwnerApproval,
+    brief: str = "",
+    style_tags: Sequence[str] | None = None,
+    checks: Sequence[str] | None = None,
+) -> Reference:
+    """Produce the next version of a reference, leaving the previous one's acceptance intact.
+
+    The new version needs **its own** approval: an owner who accepted version 1 did not thereby
+    accept version 2, and the previous record is returned unchanged for the caller to keep. What
+    changes is what the owner approved; what stays is that version 1 was approved, by whom, and
+    for what.
+    """
+    if new_version <= previous.version:
+        raise ReferenceError(
+            f"new version {new_version} must be greater than {previous.version}; a reference "
+            "is amended by adding a version, never by overwriting one"
+        )
+    if previous.status != "active":
+        raise ReferenceError(
+            f"reference version {previous.version} is {previous.status}; only an active version can be enhanced"
+        )
+    successor = accept(
+        reference_id=previous.reference_id,
+        version=new_version,
+        project_scope_id=previous.project_scope_id,
+        task_kind=previous.task_kind,
+        brief=brief or previous.brief,
+        artifact=artifact,
+        approval=approval,
+        audience=previous.audience,
+        language=previous.language,
+        style_tags=previous.style_tags if style_tags is None else style_tags,
+        checks=previous.checks if checks is None else checks,
+        supersedes=f"{previous.reference_id}@v{previous.version}",
+    )
+    return successor
+
+
+def supersede(previous: Reference, successor: Reference) -> Reference:
+    """Return the *previous* version marked superseded-by a successor, acceptance untouched.
+
+    Only the link forward changes. The previous version's artifact, approval, brief and checks
+    are exactly what they were -- that is what "prior acceptance cannot be silently rewritten"
+    means in practice.
+    """
+    if successor.reference_id != previous.reference_id:
+        raise ReferenceError(
+            "a successor must be another version of the same reference"
+        )
+    if successor.version <= previous.version:
+        raise ReferenceError("a successor must have a greater version")
+    if previous.status == "superseded" and previous.superseded_by:
+        raise AcceptanceRewriteRefused(
+            f"version {previous.version} is already superseded by {previous.superseded_by}; "
+            "the link forward is part of the record and does not move"
+        )
+    return replace(
+        previous,
+        status="superseded",
+        superseded_by=f"{successor.reference_id}@v{successor.version}",
+    )
+
+
+def revoke(reference: Reference, *, reason: str, actor: str) -> Reference:
+    """Withdraw a reference from use. The record stays; only its status changes."""
+    who = _rb_text(actor, "actor", 120).lower()
+    if not who.startswith(("owner:", "user:", "reviewer:")):
+        raise ApprovalRefused("a revocation names the person who made it")
+    if reference.status == "superseded":
+        raise ReferenceError(
+            "a superseded version is already out of use; revoke the version that replaced it"
+        )
+    return replace(
+        reference, status="revoked", revocation_reason=_rb_text(reason, "reason", 500)
+    )
+
+
+def verification_still_required(*, changed: Sequence[str]) -> tuple[str, ...]:
+    """What a reference cannot stand in for, given what actually changed.
+
+    This is the function that keeps "we have a reference for this kind of page" from being heard
+    as "this page is fine". Any change to code, facts or assets brings obligations a style
+    reference can never discharge, and they are returned rather than assumed.
+    """
+    required: list[str] = []
+    for name in changed or ():
+        if name in {"code", "implementation", "behaviour", "behavior"}:
+            required.extend(["changed_code_works", "security_sign_off"])
+        elif name in {"facts", "data", "copy", "claims"}:
+            required.append("changed_facts_are_true")
+        elif name in {"assets", "images", "media", "fonts"}:
+            required.append("changed_assets_are_licensed")
+        elif name in {"screenshots", "screenshot"}:
+            required.append("screenshot_approval")
+    required.extend(["final_acceptance_of_new_work", "publish_permission"])
+    seen: list[str] = []
+    for item in required:
+        if item not in seen:
+            seen.append(item)
+    return tuple(seen)
+
+
+def rank(
+    references: Sequence[Reference],
+    *,
+    task_kind: str,
+    audience: str = "",
+    language: str = "",
+    style_tags: Sequence[str] = (),
+) -> list[tuple[Reference, tuple[str, ...]]]:
+    """Order live references by how well they match, with the reasons for each score.
+
+    Nothing is excluded for a soft mismatch: a reference approved for another audience is still
+    returned, ranked lower and labelled with why, so a caller can decide. Hard mismatches --
+    task kind and language -- are labelled too rather than dropped, because a caller asking for
+    an English page should be told that the only references it has are in Hindi.
+
+    The return value is a *reading order*, not an instruction: layout is explicitly not a
+    criterion, so a caller cannot be pushed toward reproducing a previous design.
+    """
+    scored: list[tuple[int, Reference, tuple[str, ...]]] = []
+    wanted_tags = {t.strip().lower() for t in style_tags if t and t.strip()}
+    for reference in references:
+        if not reference.is_live:
+            continue
+        reasons: list[str] = []
+        score = 0
+        if reference.task_kind == task_kind:
+            score += 4
+            reasons.append("same task kind")
+        else:
+            reasons.append(f"different task kind ({reference.task_kind})")
+        if language:
+            if reference.language.lower() == language.lower():
+                score += 2
+                reasons.append("same language")
+            else:
+                reasons.append(
+                    f"different language ({reference.language or 'unrecorded'})"
+                )
+        if audience:
+            if reference.audience.lower() == audience.lower():
+                score += 2
+                reasons.append("same audience")
+            else:
+                reasons.append(
+                    f"different audience ({reference.audience or 'unrecorded'})"
+                )
+        shared = wanted_tags & {tag.lower() for tag in reference.style_tags}
+        if shared:
+            score += len(shared)
+            reasons.append("shared style: " + ", ".join(sorted(shared)))
+        # `layout` is never scored: a reference supplies a direction, not a template.
+        scored.append((score, reference, tuple(reasons)))
+    scored.sort(key=lambda row: (-row[0], row[1].reference_id, -row[1].version))
+    return [(reference, reasons) for _score, reference, reasons in scored]
+
+
+def latest_by_reference(references: Sequence[Reference]) -> dict[str, Reference]:
+    """The current version of each reference id, which is what a caller normally wants."""
+    newest: dict[str, Reference] = {}
+    for reference in references:
+        current = newest.get(reference.reference_id)
+        if current is None or reference.version > current.version:
+            newest[reference.reference_id] = reference
+    return newest
+
+
+class ReferenceStore:
+    """Durable reference records, one row per (reference id, version).
+
+    Versions are never updated in place. :meth:`put` refuses to replace a row whose acceptance
+    differs from what is stored, so an improvement has to arrive as a new version -- the storage
+    layer is where "prior acceptance cannot be silently rewritten" is actually enforced, not
+    just where it is described.
+    """
+
+    def __init__(self, database: Any) -> None:
+        import sqlite3
+        from pathlib import Path
+
+        self.database = Path(database)
+        self.database.parent.mkdir(parents=True, exist_ok=True)
+        with sqlite3.connect(self.database) as connection:
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS reference_benchmarks (
+                    reference_id TEXT NOT NULL,
+                    version INTEGER NOT NULL,
+                    project_scope_id TEXT NOT NULL,
+                    task_kind TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    artifact_sha256 TEXT NOT NULL,
+                    record_json TEXT NOT NULL,
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (reference_id, version),
+                    CHECK (version >= 1),
+                    CHECK (status IN ('active', 'superseded', 'revoked')),
+                    CHECK (length(artifact_sha256) = 64)
+                )
+                """
+            )
+            connection.execute(
+                "CREATE INDEX IF NOT EXISTS reference_benchmarks_scope "
+                "ON reference_benchmarks (project_scope_id, task_kind, status)"
+            )
+
+    def _connect(self):
+        import sqlite3
+
+        connection = sqlite3.connect(self.database, timeout=5.0)
+        connection.row_factory = sqlite3.Row
+        return connection
+
+    def put(self, record: Reference) -> Reference:
+        """Insert one version, or re-state an identical one. A changed acceptance is refused."""
+        payload = json.dumps(record.to_mapping(), sort_keys=True)
+        with self._connect() as connection:
+            existing = connection.execute(
+                "SELECT record_json FROM reference_benchmarks WHERE reference_id = ? AND version = ?",
+                (record.reference_id, record.version),
+            ).fetchone()
+            if existing is not None:
+                stored = Reference.from_mapping(json.loads(existing["record_json"]))
+                if stored.approval.to_mapping() != record.approval.to_mapping():
+                    raise AcceptanceRewriteRefused(
+                        f"{record.reference_id}@v{record.version} already records an approval by "
+                        f"{stored.approval.actor}; an acceptance is not amended in place -- add a version"
+                    )
+                if stored.artifact.content_sha256 != record.artifact.content_sha256:
+                    raise AcceptanceRewriteRefused(
+                        f"{record.reference_id}@v{record.version} points at a different artifact "
+                        "version; add a version rather than redirecting an accepted one"
+                    )
+            connection.execute(
+                """
+                INSERT INTO reference_benchmarks (
+                    reference_id, version, project_scope_id, task_kind, status,
+                    artifact_sha256, record_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(reference_id, version) DO UPDATE SET
+                    status = excluded.status,
+                    record_json = excluded.record_json,
+                    updated_at = CURRENT_TIMESTAMP
+                """,
+                (
+                    record.reference_id,
+                    record.version,
+                    record.project_scope_id,
+                    record.task_kind,
+                    record.status,
+                    record.artifact.content_sha256,
+                    payload,
+                ),
+            )
+        return record
+
+    def get(self, reference_id: str, version: int) -> Reference | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT record_json FROM reference_benchmarks WHERE reference_id = ? AND version = ?",
+                (_rb_text(reference_id, "reference_id", RB_MAX_ID), int(version)),
+            ).fetchone()
+        return (
+            None
+            if row is None
+            else Reference.from_mapping(json.loads(row["record_json"]))
+        )
+
+    def history(self, reference_id: str) -> list[Reference]:
+        """Every version of one reference, oldest first. An append-only history, by definition."""
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT record_json FROM reference_benchmarks WHERE reference_id = ? ORDER BY version",
+                (_rb_text(reference_id, "reference_id", RB_MAX_ID),),
+            ).fetchall()
+        return [Reference.from_mapping(json.loads(row["record_json"])) for row in rows]
+
+    def list(
+        self, *, project_scope_id: str | None = None, status: str | None = None
+    ) -> list[Reference]:
+        clauses: list[str] = []
+        params: list[Any] = []
+        if project_scope_id is not None:
+            clauses.append("project_scope_id = ?")
+            params.append(_rb_text(project_scope_id, "project_scope_id", RB_MAX_ID))
+        if status is not None:
+            if status not in REFERENCE_STATUSES:
+                raise ReferenceError(f"unknown reference status {status!r}")
+            clauses.append("status = ?")
+            params.append(status)
+        where = f" WHERE {' AND '.join(clauses)}" if clauses else ""
+        with self._connect() as connection:
+            rows = connection.execute(
+                f"SELECT record_json FROM reference_benchmarks{where} ORDER BY reference_id, version",
+                tuple(params),
+            ).fetchall()
+        return [Reference.from_mapping(json.loads(row["record_json"])) for row in rows]
+
+reference_benchmarks = sys.modules[__name__]
 
 """Bounded child subagent delegation, authority subsets, mutation locks, and durable parent joins (M5-P4-03).
 

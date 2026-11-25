@@ -12,23 +12,23 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "78a2e62a8e16f7ccc602fa55428dd1e6dfb9ccc04e5963396de501d5b436a467",
-      "bytes": 1117874,
-      "lines": 19028
+      "sha256": "848af209461f2a56227f818208f644cca89ab99e1fd85a71a547c699fac0d3ea",
+      "bytes": 1135005,
+      "lines": 19309
     },
     {
       "path": "app.py",
       "role": "the FastAPI server the UI talks to; source of the route table",
-      "sha256": "a039ad7bef243bac90ae76661ae7b99554b3098785b46634ca8758f644f27901",
-      "bytes": 1120492,
-      "lines": 24050
+      "sha256": "64a4c11591a984553c46bd65f868e32738a8420bb11a96e2352fde864cdbbb3b",
+      "bytes": 1142535,
+      "lines": 24540
     },
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "78cbf83c5d9f0129cdfe7f6224adcbb16705e74a0d3de4417458778e5d643dd6",
-      "bytes": 4714785,
-      "lines": 92518
+      "sha256": "cfb2cfd80369d3354e63539cae5a7da70e89dd4b336e1aedc99dfcf4582d8c66",
+      "bytes": 4786969,
+      "lines": 94058
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -68,9 +68,9 @@
     {
       "path": "scripts/build_studio.py",
       "role": "regenerates studio.py from app.py and the inlined modules",
-      "sha256": "a5ebe86d220d5357563b1d9552f0720f81603cdfeff411a6b73216c79b770beb",
-      "bytes": 12927,
-      "lines": 290
+      "sha256": "03aede839bd46a7cc83a914b498bdc026d0879cea610415cc6f0ccf73dd6d7bf",
+      "bytes": 12955,
+      "lines": 291
     },
     {
       "path": "scripts/check_frontend_syntax.py",
@@ -96,9 +96,9 @@
     {
       "path": "scripts/uiux_authorization_trace.py",
       "role": "traces the authorization and state behind each state-changing call",
-      "sha256": "af1e0e1af5285bbe6276773cbaff8840d99e5447d7807fb14c757765f904e8d6",
-      "bytes": 37860,
-      "lines": 769
+      "sha256": "18b6954610a65ec9d30a2205ab557bc7407f7aa3325ce779b2b5b3522a437302",
+      "bytes": 38101,
+      "lines": 774
     },
     {
       "path": "scripts/uiux_preservation_signoff.py",
@@ -376,9 +376,9 @@
     {
       "path": "scripts/uiux_preservation_e2e.py",
       "role": "maps each preservation-matrix row to the walk, test, route and control that proves it",
-      "sha256": "ba617fb922978eae22e3d9152a9e6205b53519a18e3a3fc2d225ceb760421d5f",
-      "bytes": 48485,
-      "lines": 860
+      "sha256": "d00d4aaddfcd9174de35e18136b967d09c88ab0172637de8e519205530694a7c",
+      "bytes": 49402,
+      "lines": 861
     },
     {
       "path": "tests/test_uiux_preservation_e2e.py",
@@ -390,9 +390,9 @@
     {
       "path": "scripts/uiux_adversarial_inventory.py",
       "role": "maps every refusal a write can meet to the words the pane uses and the proof that both halves hold",
-      "sha256": "401f4f74a97bf71f12de504e21e419ef8daf99d454af01f000ebeb0d1f5f141c",
-      "bytes": 34092,
-      "lines": 626
+      "sha256": "e644d1bd3415ad6e3e5e72eb4c610e9a4c8ec99e24a95309e8f996e038fced57",
+      "bytes": 34397,
+      "lines": 628
     },
     {
       "path": "scripts/adversarial_walk.mjs",
@@ -418,9 +418,9 @@
     {
       "path": "scripts/uiux_screenshot_review.py",
       "role": "traces every committed capture to the script that made it and checks that the theme in its name is the theme in its pixels",
-      "sha256": "a7c3b5f385134ebfad9af8dca5080c756ea9ab0418d4449ab9eefc47e21093d9",
-      "bytes": 84246,
-      "lines": 1548
+      "sha256": "b6486d61e9fb496b0295835b307b6c66f434e36451bc1c829109c120bc65b7b3",
+      "bytes": 85171,
+      "lines": 1564
     },
     {
       "path": "tests/test_uiux_screenshot_review.py",
@@ -460,8 +460,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "78a2e62a8e16f7ccc602fa55428dd1e6dfb9ccc04e5963396de501d5b436a467",
-    "lines": 19028,
+    "sha256": "848af209461f2a56227f818208f644cca89ab99e1fd85a71a547c699fac0d3ea",
+    "lines": 19309,
     "tab_count": 6,
     "tabs": [
       {
@@ -507,8 +507,8 @@
         "onclick_target": "chat"
       }
     ],
-    "fetch_call_count": 77,
-    "api_literal_count": 62,
+    "fetch_call_count": 79,
+    "api_literal_count": 64,
     "api_literals": [
       "/api/cache/clear-ssd",
       "/api/chat/stream",
@@ -562,6 +562,8 @@
       "/api/providers",
       "/api/providers/fetch-models",
       "/api/providers/{param}",
+      "/api/reference-benchmarks",
+      "/api/reference-benchmarks?session_id={param}",
       "/api/skills",
       "/api/skills/install",
       "/api/start/command-center",
@@ -576,13 +578,13 @@
   },
   "api": {
     "path": "app.py",
-    "sha256": "a039ad7bef243bac90ae76661ae7b99554b3098785b46634ca8758f644f27901",
-    "route_count": 128,
+    "sha256": "64a4c11591a984553c46bd65f868e32738a8420bb11a96e2352fde864cdbbb3b",
+    "route_count": 134,
     "by_method": {
       "DELETE": 8,
-      "GET": 41,
+      "GET": 43,
       "PATCH": 3,
-      "POST": 76
+      "POST": 80
     },
     "routes": [
       {
@@ -888,6 +890,30 @@
       {
         "method": "POST",
         "path": "/api/harness/sessions/{session_id}/direction-answer"
+      },
+      {
+        "method": "GET",
+        "path": "/api/reference-benchmarks"
+      },
+      {
+        "method": "GET",
+        "path": "/api/reference-benchmarks/{reference_id:path}"
+      },
+      {
+        "method": "POST",
+        "path": "/api/reference-benchmarks"
+      },
+      {
+        "method": "POST",
+        "path": "/api/reference-benchmarks/{reference_id:path}/enhance"
+      },
+      {
+        "method": "POST",
+        "path": "/api/reference-benchmarks/{reference_id:path}/revoke"
+      },
+      {
+        "method": "POST",
+        "path": "/api/reference-benchmarks/coverage"
       },
       {
         "method": "GET",

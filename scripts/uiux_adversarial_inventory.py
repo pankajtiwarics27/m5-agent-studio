@@ -196,6 +196,8 @@ REPORTING_WRITES = {
     "confirmHarnessFeedback": "states the server's detail in the pane and leaves the item still waiting on the owner's reading",
     "withdrawHarnessFeedback": "states the server's detail in the pane and leaves the comment listed as still applying",
     "revokeHarnessGrant": "renders the refusal in the grants panel and keeps the grant listed",
+    "submitHarnessReference": "states the server's detail above the form and keeps the typed approval words, so a refused reference is not silently lost",
+    "loadHarnessReferences": "draws the read failure in the reference pane and offers nothing to rely on until the project's references can be read",
     "abortHarnessRun": "states that the server did not confirm the abort and refreshes the recovery panel",
     "harnessRecoveryPost": "returns {ok, status, data} to its caller and never claims a resume it did not get",
     "saveProvider": "toasts the server's detail and leaves the form filled",

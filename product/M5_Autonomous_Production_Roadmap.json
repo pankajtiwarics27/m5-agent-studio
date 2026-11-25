@@ -2928,7 +2928,7 @@
       "title": "Create versioned owner-approved reference benchmarks",
       "priority": "P1",
       "optional": false,
-      "status": "not_started",
+      "status": "in_review",
       "authorization": "normal_story_authorization_plus_real_owner_approval_for_reference_records",
       "dependencies": [
         "AP-006",
@@ -2983,15 +2983,25 @@
         "Push/PR state; owner/independent approvals where required"
       ],
       "tracking": {
-        "owner": null,
-        "branch": null,
-        "base_sha": null,
+        "owner": "arena/ab195e0f-m5-agent-studio",
+        "branch": "arena/ab195e0f-m5-agent-studio",
+        "base_sha": "ae79a75",
         "head_sha": null,
-        "claimed_at": null,
-        "heartbeat_at": null,
+        "claimed_at": "2026-11-10T00:00:00Z",
+        "heartbeat_at": "2026-11-10T00:00:00Z",
         "pr_url": null,
         "delivery_status": "not_pushed",
-        "acceptance_evidence": [],
+        "acceptance_evidence": [
+          "AC1 (record the original brief, exact artifact, user provenance, approval scope, checks and configuration): ArtifactVersion carries content_sha256 plus optional identity_sha256/identity_basis/producer/producer_version/config_sha256; a 'content+provenance' identity without its digest is refused rather than downgraded and 'content_only' never presents itself as full provenance. Proved by tests/test_reference_benchmarks.py::test_a_reference_records_the_brief_artifact_provenance_scope_and_checks, ::test_a_content_only_identity_never_presents_itself_as_a_full_one and ::test_a_provenance_identity_without_its_digest_is_refused, plus tests/test_reference_benchmark_routes.py::test_a_reference_needs_the_exact_artifact_and_its_digest.",
+          "AC2 (continue-direction, final-acceptance, use-as-reference and publish grants are separate): APPROVAL_KINDS names all four; Reference raises if it carries is_final_acceptance or grants_publish_permission and from_mapping refuses a stored row claiming either; accept() refuses an approval that accepted the artifact but did not grant use_as_reference. Proved by test_approving_a_reference_is_not_approving_the_artifact_or_publishing_it, test_an_approval_that_accepted_the_artifact_but_did_not_adopt_it_is_refused and test_a_stored_record_claiming_publish_permission_is_refused_at_read_time.",
+          "AC3 (enhancements create a new version; prior acceptance cannot be silently rewritten): enhance() refuses a version that does not increase and requires a fresh approval; supersede() writes only the forward link; ReferenceStore.put() refuses a changed approval or a redirected artifact digest. Proved by test_enhancing_creates_a_new_version_with_its_own_approval, test_superseding_links_forward_without_altering_the_earlier_acceptance, test_the_store_refuses_to_rewrite_an_acceptance and the route test test_an_enhancement_adds_a_version_and_leaves_the_first_acceptance_intact.",
+          "AC4 (retrieval by relevant audience/language/task/style, never forcing identical layouts): rank() scores task kind, audience, language and style tags, labels a language mismatch instead of hiding it, skips revoked and superseded versions, and never scores layout. Proved by test_retrieval_prefers_a_reference_for_the_same_audience_language_and_task, test_retrieval_never_scores_layout_because_layout_must_not_be_copied and test_a_reference_for_another_language_is_labelled_rather_than_silently_offered, plus scripts/ui-probes/reference-panel.mjs.",
+          "AC5 (the agent cannot synthesize owner approval, security sign-off or screenshot approval): OwnerApproval requires an actor namespaced owner:/user:/reviewer: and refuses six machine names at construction and again at from_mapping; the pane has no stored identity it could borrow, requires a typed approver name and the owner's own words, and sends nothing without them. Proved by test_a_machine_actor_cannot_approve_anything, test_a_stored_record_with_a_machine_approver_is_refused_at_read_time, test_an_agent_cannot_record_its_own_approval and the probe's refusal check.",
+          "AC6 (changed facts/code/assets still require new verification despite a style reference): verification_still_required() maps code/facts/assets/screenshots/any change to the obligations a reference can never discharge, REFERENCE_CANNOT_SETTLE names them once, and every coverage answer returns the list beside the coverage. Proved by test_a_style_reference_does_not_settle_changed_code, test_changed_facts_and_assets_carry_their_own_obligations, test_coverage_names_the_obligations_a_changed_artifact_brings and the probe check that the pane names what a reference never settles.",
+          "AC7 (docs/autonomous-production-ux-direction.md satisfied, existing features preserved, actual implementation review): direction approval, final acceptance, reference adoption and publish permission stay distinct in the record, the routes and the pane's own words; the pane writes no task state so a paused-for-direction task is untouched; the reference pane in the evidence dialog is the shipped implementation, probed at the DOM level by scripts/ui-probes/reference-panel.mjs. Regenerated artifacts: source manifest, control inventory, route map, authorization trace, preservation matrix/signoff/E2E, adversarial inventory, keyboard a11y inventory, release gate (37/37 checks, 7/7 gates, 0 findings).",
+          "Discipline: reference_benchmarks.py is a pure decision module (no clock, no environment, no network, no file at import); a test enforces it, and another enforces that it shares no top-level name with app.py because a collision in the single-file build once replaced the app's SCHEMA_VERSION.",
+          "Hole closed: app.py's direction route built BenchmarkCoverage from the request body and silently skipped non-dict rows, so a caller could assert that the owner had approved a reference. It now reads the project's live references from ReferenceStore, derives the project scope from the session's own root, and refuses an unknown reference with 400 rather than treating it as no benchmark."
+        ],
         "tests_executed": [],
         "blockers": [],
         "handoff": null
