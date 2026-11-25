@@ -98,14 +98,18 @@ AS source/status record rather than a fourth interchangeable claim ledger.
   docs/ledger completion record records AP-007 `done` for this authorized
   scope only. No production caller, live dispatch, activation, or installed-
   runtime qualification is claimed. **Status correction (ledger revision
-  3.2):** AP-001…AP-032 are all recorded `done`/`merged` — AP-029 as `4f292f4c`
+  3.3):** AP-001…AP-032 are all recorded `done`/`merged` — AP-029 as `4f292f4c`
   (PR #379), AP-031 as `e99d30d` (PR #381), AP-032 as `b072d09` (PR #382) — so
   read status from the ledger, not from this paragraph. A `done` story records a
   merged bounded contract and its tests, **not** a released product or a
   satisfied launch gate: AP-031 ships values that no route serves and no markup
   renders, and AP-032 ships qualification machinery with no qualification
   performed, so the correct pack decision for the current build remains
-  `release-blocked`. Product runtime activation, destructive resets, real
+  `release-blocked`. AP-031 and AP-032 additionally carry an
+  `acceptance_outstanding` marker (`owner_acceptance: pending`, the deliverables
+  each did not deliver, and the actions that remain), checked by
+  `tests/test_autonomous_production_decisions.py`, so `done` cannot be read as
+  delivered. Product runtime activation, destructive resets, real
   external services, external accounts/credentials/spend/publish, and the
   owner's launch actions (selecting or deferring the launch specialisation,
   running the pilot at a real head, obtaining independent security and

@@ -405,3 +405,143 @@ def test_cli_validates_repository_bundle_without_host_or_network_probe() -> None
     assert payload["decision_states"] == {
         decision_id: "resolved" for decision_id in [f"U{n:02d}" for n in range(1, 7)]
     }
+
+
+def _marker(story: dict[str, object]) -> dict[str, object]:
+    tracking = story.get("tracking")
+    assert isinstance(tracking, dict)
+    marker = tracking.get("acceptance_outstanding")
+    assert isinstance(marker, dict)
+    return marker
+
+
+def test_owner_acceptance_pending_is_never_silently_done() -> None:
+    """A story may be done with acceptance outstanding, but only if it says so.
+
+    Revision 3.3 records AP-031 and AP-032 as done because their bounded
+    contracts and tests merged, while their own deliverables and owner
+    acceptance are outstanding. The marker is what keeps that honest: a done
+    story carrying it must name the owner as pending, the deliverables it did
+    not deliver, the actions that remain, and the release effect. If any of
+    that disappears, "done" starts reading as "delivered", which is the
+    exact defect the marker exists to prevent.
+    """
+    roadmap = _read(ROADMAP)
+    stories = roadmap["stories"]
+    assert isinstance(stories, list)
+    marked = 0
+    for story in stories:
+        assert isinstance(story, dict)
+        tracking = story.get("tracking")
+        assert isinstance(tracking, dict)
+        if "acceptance_outstanding" not in tracking:
+            continue
+        marked += 1
+        assert story["status"] == "done", f"{story['id']}: marker on a story that is not done"
+        assert tracking["delivery_status"] == "merged"
+        marker = _marker(story)
+        assert marker["owner_acceptance"] == "pending"
+        assert marker["release_effect"] == "release-blocked"
+        assert marker["recorded_by"] and marker["recorded_at"]
+        assert marker["deliverables_not_delivered"], (
+            f"{story['id']}: an outstanding-acceptance marker that names nothing undelivered is decoration"
+        )
+        assert marker["outstanding_actions"]
+        for item in marker["deliverables_not_delivered"]:
+            assert item in story["deliverables"], (
+                f"{story['id']}: {item!r} is not one of this story's deliverables, so the marker is describing "
+                "some other story's gap"
+            )
+    assert marked == 2, f"expected AP-031 and AP-032 to carry the marker, found {marked}"
+
+
+def _check_marker(story: dict[str, object]) -> None:
+    """The rule itself, applied to any story so mutations can be tested against it."""
+    tracking = story["tracking"]
+    assert isinstance(tracking, dict)
+    marker = tracking.get("acceptance_outstanding")
+    if marker is None:
+        return
+    assert isinstance(marker, dict)
+    assert story["status"] == "done", f"{story['id']}: marker on a story that is not done"
+    assert tracking["delivery_status"] == "merged"
+    assert marker["recorded_by"] and marker["recorded_at"]
+    if marker["owner_acceptance"] == "pending":
+        assert marker["release_effect"] == "release-blocked", (
+            f"{story['id']}: owner acceptance is pending but the release effect says otherwise"
+        )
+        assert marker["deliverables_not_delivered"], (
+            f"{story['id']}: an outstanding-acceptance marker that names nothing undelivered is decoration"
+        )
+        assert marker["outstanding_actions"], f"{story['id']}: pending acceptance with no next action is a dead end"
+        known = story["deliverables"]
+        for item in marker["deliverables_not_delivered"]:
+            assert item in known, (
+                f"{story['id']}: {item!r} is not one of this story's deliverables, so the marker is describing "
+                "some other story's gap"
+            )
+    else:
+        assert marker["release_effect"] != "release-blocked", (
+            f"{story['id']}: acceptance recorded as given but the release is still marked blocked"
+        )
+        assert not marker["outstanding_actions"], (
+            f"{story['id']}: acceptance recorded as given while actions are still outstanding"
+        )
+
+
+def test_acceptance_outstanding_markers_are_self_consistent() -> None:
+    """Revision 3.3: AP-031 and AP-032 are done because their contracts merged, not their deliveries."""
+    roadmap = _read(ROADMAP)
+    stories = roadmap["stories"]
+    assert isinstance(stories, list)
+    marked = [story for story in stories if isinstance(story, dict) and "acceptance_outstanding" in story["tracking"]]
+    for story in marked:
+        _check_marker(story)
+    assert [story["id"] for story in marked] == ["AP-031", "AP-032"], (
+        f"expected exactly AP-031 and AP-032 to carry the marker, found {[s['id'] for s in marked]}"
+    )
+
+
+def test_the_marker_rule_rejects_acceptance_claimed_without_removal() -> None:
+    """The rule must catch the mutation that matters: acceptance marked given while the gap stays open."""
+    roadmap = copy.deepcopy(_read(ROADMAP))
+    story = next(s for s in roadmap["stories"] if isinstance(s, dict) and s["id"] == "AP-032")
+    marker = story["tracking"]["acceptance_outstanding"]
+    marker["owner_acceptance"] = "given"
+
+    with pytest.raises(AssertionError, match="still marked blocked"):
+        _check_marker(story)
+
+    marker["release_effect"] = "release-qualified"
+    with pytest.raises(AssertionError, match="actions are still outstanding"):
+        _check_marker(story)
+
+    marker["outstanding_actions"] = []
+    _check_marker(story)  # acceptance given, nothing outstanding: consistent
+
+
+def test_a_marker_naming_a_foreign_deliverable_is_rejected() -> None:
+    roadmap = copy.deepcopy(_read(ROADMAP))
+    story = next(s for s in roadmap["stories"] if isinstance(s, dict) and s["id"] == "AP-031")
+    story["tracking"]["acceptance_outstanding"]["deliverables_not_delivered"].append("Land on the moon")
+
+    with pytest.raises(AssertionError, match="not one of this story's deliverables"):
+        _check_marker(story)
+
+
+def test_unmarked_done_stories_do_not_claim_outstanding_owner_acceptance() -> None:
+    """The inverse: a story without the marker must not disclose pending acceptance in prose only."""
+    roadmap = _read(ROADMAP)
+    stories = roadmap["stories"]
+    assert isinstance(stories, list)
+    for story in stories:
+        assert isinstance(story, dict)
+        tracking = story["tracking"]
+        assert isinstance(tracking, dict)
+        if story["status"] != "done" or "acceptance_outstanding" in tracking:
+            continue
+        handoff = str(tracking.get("handoff") or "")
+        assert "must be completed by the owner" not in handoff, (
+            f"{story['id']}: discloses owner acceptance as incomplete in prose while carrying no marker; "
+            "either record the marker or stop claiming the disclosure where nothing checks it"
+        )
