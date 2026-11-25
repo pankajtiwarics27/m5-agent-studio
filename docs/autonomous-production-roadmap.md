@@ -13,6 +13,37 @@
 
 **Precedence:** repository `AGENTS.md`, accepted security decisions, existing program ownership and signed approvals remain binding. This program does not replace the AS, M5 runtime, UIUX/UIV2, or LC ledgers, and does not reopen their completed stories. Reconcile overlapping work in AP-001. Drafting this roadmap does not grant automatic execution authority to its stories or to downloaded tools.
 
+## Revision 3.2 — AP-031 and AP-032 recorded done; program stories all merged (2026-11-10; AP-031, AP-032 only)
+
+Three PRs closed the last open stories: **AP-029** merged as
+`4f292f4cfd3835fc638d77f1ca86dc3d4e08face` (PR #379), **AP-031** as `e99d30d`
+(PR #381) and **AP-032** as `b072d09` (PR #382), each recorded by a following
+ledger PR. The companion ledger now reports **32 of 32 stories `done`/`merged`**.
+
+What shipped in these two stories is deliberately narrower than their titles, and
+this record must not be read as a launch announcement:
+
+- **AP-031** ships `operations_surface.py` as **values only**. No route serves it
+  and no markup renders it; nothing a user currently sees changed. Wiring it into
+  `static/index.html` remains its own story behind the existing UI/UX gates.
+- **AP-032** ships `release_qualification.py` as **machinery, not a
+  qualification**. No pilot, held-out suite, artifact review or
+  rollback/migration/restore drill was run; no security or screenshot approval
+  exists, and under owner policy U03 this agent cannot sign or substitute one.
+
+Consequently a `done` story here means the bounded contract and its tests are
+merged — **not** that the autonomous production program is released. For the
+current build the correct qualification-pack decision is `release-blocked`, and
+`release_qualification.py` reports it that way rather than assuming readiness.
+The remaining launch actions are owner actions: select or defer the launch
+specialisation in the ledger, run the pilot at a real head, obtain the
+independent security and screenshot approvals, exercise the drills and supply a
+green CI run at that head.
+
+`runtime_activation_authorized` remains `false`; ADR-0040–0045 remain
+`not-reviewed`; no external account, credential, spend or publish action was
+used or granted.
+
 ## Revision 3.1 — AP-008 claim coordinates reconciled (2026-11-23; no status change)
 
 `main` described an AP-008 claim that no longer existed: it still named branch
@@ -705,7 +736,7 @@ User approval is valuable preference evidence, but cannot waive factual/security
 
 ## 10. Delivery program
 
-The companion ledger defines **AP-001…AP-032** with dependencies and acceptance criteria. All begin `not_started`; no story is claimed complete because a similar module exists. AP-001 reconciles evidence and may mark a requirement satisfied-by-existing only with actual consumer tests and owner-program coordination.
+The companion ledger defines **AP-001…AP-032** with dependencies and acceptance criteria. Every story is now `done`/`merged` in the ledger (revision 3.2); status is evidence-backed per story, and no story is claimed complete because a similar module exists. A `done` story records a merged bounded contract and its tests, not a released product: AP-031 ships values with no rendering surface, and AP-032 ships qualification machinery with no qualification performed. AP-001 reconciles evidence and may mark a requirement satisfied-by-existing only with actual consumer tests and owner-program coordination.
 
 | Phase | Stories | Exit |
 |---|---|---|
@@ -849,7 +880,7 @@ Feature-flag each adapter/workflow/promotion. Revoke grants and quiesce workers 
 
 ## Appendix A — Story cards (ledger revision 1.1)
 
-Generated from the companion JSON. Tracking lives in JSON; regenerate cards when requirements change. All initial stories remain not_started.
+Generated from the companion JSON. Tracking lives in JSON; regenerate cards when requirements change. Initial state was `not_started` for every card; the ledger now records all 32 as `done`/`merged`, and the cards below are the original requirement text, not current status. Read status from the JSON ledger and the change history above.
 
 ### AP-001 — Reconcile programs and trace current production gaps
 
