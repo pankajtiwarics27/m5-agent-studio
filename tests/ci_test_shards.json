@@ -28,7 +28,7 @@
     "module_counts": [
       89,
       81,
-      87
+      88
     ],
     "node_counts": [
       1528,
@@ -148,7 +148,7 @@
       "tests/test_scoped_feedback_routes.py"
     ],
     "post_fit_additions": {
-      "note": "Modules added after the fit above, each to the least-loaded shard at the time: tests/test_reference_benchmark_routes.py (49 nodes) to shard 2 and tests/test_reference_benchmarks.py (24 nodes) to shard 3, each on the least-loaded shard. Their own duration was measured locally at under a second each, far below the 0.5s quantization floor. The projections below were NOT re-derived: the fit run above records shard totals, not per-module seconds, so recomputing them here would be an invented number. A run with per-module timing should re-fit. tests/test_improvement_lab.py (45 nodes) was added to shard 3 and tests/test_refinement_bounds.py (45 nodes) to shard 2; both run in well under a second locally.",
+      "note": "Modules added after the fit above, each to the least-loaded shard at the time: tests/test_reference_benchmark_routes.py (49 nodes) to shard 2 and tests/test_reference_benchmarks.py (24 nodes) to shard 3, each on the least-loaded shard. Their own duration was measured locally at under a second each, far below the 0.5s quantization floor. The projections below were NOT re-derived: the fit run above records shard totals, not per-module seconds, so recomputing them here would be an invented number. A run with per-module timing should re-fit. tests/test_improvement_lab.py (45 nodes) was added to shard 3 and tests/test_refinement_bounds.py (45 nodes) to shard 2; both run in well under a second locally. tests/test_promotion_policy.py (65 nodes) was added to shard 3; it loads the operating-envelope register and runs in under a second.",
       "node_counts_source": "collected locally at this tree: 73 nodes across the reference-benchmark modules, 45 each across test_improvement_lab.py and test_refinement_bounds.py"
     }
   },
@@ -384,6 +384,7 @@
       "tests/test_polish.py",
       "tests/test_portable_handoff_and_switching.py",
       "tests/test_presentations.py",
+      "tests/test_promotion_policy.py",
       "tests/test_prompt_injection_adversarial.py",
       "tests/test_provider_adapters.py",
       "tests/test_qualify_environment.py",
