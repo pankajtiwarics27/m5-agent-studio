@@ -165,6 +165,7 @@
     ],
     "autonomous.production": [
       "test_autonomous_production_*.py",
+      "test_improvement_lab.py",
       "test_skill_extraction.py",
       "test_video_draft.py",
       "test_video_quality.py",
@@ -546,6 +547,12 @@
     "skill_extraction.py": [
       "autonomous.production",
       "security.execution",
+      "quality.docs-ledger"
+    ],
+    "improvement_lab.py": [
+      "autonomous.production",
+      "security.execution",
+      "security.network",
       "quality.docs-ledger"
     ]
   }

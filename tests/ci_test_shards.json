@@ -28,7 +28,7 @@
     "module_counts": [
       89,
       80,
-      86
+      87
     ],
     "node_counts": [
       1528,
@@ -351,6 +351,7 @@
       "tests/test_harness_ap_walks_browser.py",
       "tests/test_harness_permissions.py",
       "tests/test_harness_timeline.py",
+      "tests/test_improvement_lab.py",
       "tests/test_keyboard_a11y.py",
       "tests/test_lmstudio_lifecycle_bridge.py",
       "tests/test_lmstudio_native_protocol.py",
