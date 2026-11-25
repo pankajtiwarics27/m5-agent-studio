@@ -165,6 +165,7 @@
     ],
     "autonomous.production": [
       "test_autonomous_production_*.py",
+      "test_governed_missions.py",
       "test_improvement_lab.py",
       "test_promotion_policy.py",
       "test_refinement_bounds.py",
@@ -565,6 +566,11 @@
       "autonomous.production",
       "security.execution",
       "quality.docs-ledger"
+    ],
+    "governed_missions.py": [
+      "autonomous.production",
+      "security.execution",
+      "security.network"
     ]
   }
 }

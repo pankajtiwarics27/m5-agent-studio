@@ -3852,7 +3852,7 @@
       "title": "Add governed recurring missions and external delivery",
       "priority": "P1",
       "optional": false,
-      "status": "not_started",
+      "status": "in_review",
       "authorization": "normal_story_authorization_plus_explicit_external_action_grants",
       "dependencies": [
         "AP-007",
@@ -3905,18 +3905,31 @@
         "Push/PR state; owner/independent approvals where required"
       ],
       "tracking": {
-        "owner": null,
-        "branch": null,
-        "base_sha": null,
-        "head_sha": null,
-        "claimed_at": null,
-        "heartbeat_at": null,
-        "pr_url": null,
-        "delivery_status": "not_pushed",
-        "acceptance_evidence": [],
-        "tests_executed": [],
+        "owner": "arena/ab195e0f-m5-agent-studio",
+        "branch": "arena/ab195e0f-m5-agent-studio",
+        "base_sha": "4ed6932",
+        "head_sha": "75107b9",
+        "claimed_at": "2026-11-10T00:00:00Z",
+        "heartbeat_at": "2026-11-10T00:00:00Z",
+        "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/379",
+        "delivery_status": "in_review",
+        "acceptance_evidence": [
+          "AC1 (schedules grant only their explicit purpose; draft creation never implies publication): ScheduleGrant requires a named human granter, a project, a real expiry, a positive run cap and specific purposes from SCHEDULE_PURPOSES (draft/publish/deploy); permits() is the only ask and is false for another purpose, an expired grant or a spent cap. RecurringMission cannot exist without a grant, cannot borrow another project's grant, and cannot carry a purpose its grant omits. DraftArtifact has no published field or send method and to_mapping() states published: false; the only bridge to an external effect is requires_external_action(), which needs a separate grant carrying the matching purpose (publish vs deploy). Tests: test_a_schedule_needs_a_named_human_grant, test_a_grant_must_name_its_purposes, test_an_unknown_purpose_is_refused, test_a_grant_only_permits_its_own_purpose, test_an_expired_grant_permits_nothing, test_a_spent_grant_permits_nothing, test_a_grant_with_no_expiry_is_refused, test_a_mission_cannot_exist_without_a_grant, test_a_mission_cannot_borrow_another_projects_grant, test_a_mission_cannot_exceed_its_grants_purposes, test_a_draft_is_not_a_publication, test_a_draft_grant_cannot_produce_an_external_action, test_a_publish_grant_can_produce_an_external_action, test_a_deploy_needs_its_own_purpose, test_an_external_action_needs_an_expiry, test_the_intent_expiry_never_outlives_its_grant.",
+          "AC2 (external action binds account/destination/content hash/policy/expiry and invalidates on changes): ExternalActionIntent pins account, destination, content_digest, policy_revision and expires_at, derives an idempotency key when none is supplied, and is_current() returns false if any bound term differs or the intent expired; changed_since() names which term moved. Tests: test_an_intent_binds_account_destination_content_policy_and_expiry, test_changing_one_byte_of_content_invalidates_the_intent, test_a_repointed_destination_invalidates_the_intent, test_a_newer_policy_revision_invalidates_the_intent, test_an_expired_intent_is_not_current, test_an_unchanged_world_keeps_the_intent_current, test_a_malformed_comparison_is_not_current_rather_than_an_exception, test_an_intent_derives_an_idempotency_key, test_an_unknown_external_effect_kind_is_refused.",
+          "AC3 (provider-supported idempotency and local ledger handle retries; unknown outcome reconciles rather than resends): decide_retry() reuses side_effect_ledger's ReplayPolicy/ReconciliationVerdict vocabulary: unknown states reconcile, an unresolved probe stops, verified_committed stops, verified_not_applied retries only when the provider supports idempotency, committed/abandoned stop. RunLedger records action states and idempotency keys, refusing a key reused for a different action, a committed action reopened as prepared, a state advanced from nothing, and an action re-recorded under a new key. Tests: test_an_unknown_outcome_is_reconciled_not_resent, test_a_dispatched_action_is_not_resent, test_an_unresolved_reconciliation_stops_rather_than_guesses, test_a_verified_commit_stops_without_retrying, test_a_verified_absence_may_retry_only_with_idempotency, test_a_committed_action_is_never_sent_again, test_an_abandoned_action_is_not_resurrected, test_a_failed_send_retries_only_with_idempotency, test_a_reconciliation_must_state_its_evidence, test_a_recorded_idempotency_key_cannot_stand_for_a_second_action, test_a_different_action_under_one_key_is_refused_by_construction, test_a_committed_action_cannot_be_reopened_as_prepared, test_an_unknown_action_state_cannot_be_advanced_from_nothing, test_re_recording_the_same_action_in_a_new_state_keeps_one_key.",
+          "AC4 (restart/missed schedule/revocation tests avoid duplicate effects): run ids are derived from mission, purpose and cadence slot, so a restart inside a slot yields the same id and claim_run() refuses it as a duplicate delivery; finish_run() may run exactly once and only for a claimed run; record_missed() writes a missed slot down instead of back-filling it, and runs_used() does not count it against the grant. Tests: test_a_restart_in_the_same_slot_is_the_same_run, test_a_different_slot_is_a_different_run, test_a_run_claimed_twice_is_a_duplicate_delivery, test_a_run_may_be_finished_once, test_a_run_that_was_never_claimed_cannot_be_finished, test_a_missed_slot_is_recorded_rather_than_backfilled, test_a_missed_slot_does_not_double_count_as_a_run, test_a_revoked_grant_stops_the_next_run, test_the_ledger_is_append_only_by_construction, test_the_ledger_fingerprint_is_reproducible.",
+          "AC5 (global pause, per-project stop and notification thresholds prevent runaway activity): Governor refuses when globally_paused, when the project is stopped, or when runs_in_window reached notify_after_runs; a notification threshold requires a named human recipient so a threshold that fires produces a message rather than silence. Tests: test_the_global_pause_stops_all_scheduled_work, test_a_stopped_project_does_not_run, test_another_project_still_runs, test_a_notification_threshold_names_a_recipient, test_reaching_the_threshold_requires_a_notification_before_the_next_run, test_an_idle_governor_refuses_nothing.",
+          "AC6 (metrics/analytics suggestions do not claim causal business success or silently change public output): Suggestion refuses causal language (caused/causes/resulted in/drove/because of/led to/grew revenue) without a named experiment_id, and changes_public_output is a constant False; a suggestion can only become a DraftArtifact. Tests: test_a_suggestion_cannot_claim_causation_without_an_experiment, test_a_measured_suggestion_may_name_its_experiment, test_a_suggestion_never_changes_public_output, test_a_suggestion_becomes_a_draft_not_a_publication, test_an_unknown_suggestion_kind_is_refused.",
+          "Discipline: test_the_module_reads_no_clock_and_opens_no_socket and test_no_function_takes_a_clock_or_a_provider (AST checks); every time value is a caller-supplied epoch second and the module imports only hashlib/json/re/dataclasses/typing."
+        ],
+        "tests_executed": [
+          "pytest tests/test_governed_missions.py -> 62 passed",
+          "pytest tests/test_ci_test_shard.py tests/test_scoped_tests.py -> 20 passed",
+          "ruff check . -> clean; mypy (100 modules) -> clean",
+          "scripts/validate_docs.py -> passed (329 files)"
+        ],
         "blockers": [],
-        "handoff": null
+        "handoff": "Authorization note: AP-029 is normal_story_authorization_plus_explicit_external_action_grants, and NO explicit external action grant is recorded in this repository: owner decision U03 grants public read-only research only and explicitly excludes credentialed services, accounts, writes and spending. This story therefore ships the governor and the contract and activates nothing -- no provider, account, destination or credential is configured, and no external action can exist without a grant the owner has not given. Wiring a real destination remains blocked on that owner decision, which is a genuine external prerequisite rather than an implementation gap. Shipped with no caller: no route or orchestrator consumes governed_missions.py, nothing was scheduled and nothing was sent, and RunLedger is in memory (durability belongs to DurableActionLedger/runtime_persistence). Limits a later story must close: (1) the ledger defines rules for a caller to apply to the existing durable store, it is not that store; (2) Reconciliation records what a probe reported -- this module decides what that report permits and cannot verify the probe; (3) a suggestion naming an experiment id is not checked to have been run; (4) cadence slots are derived from a fixed table, so a future custom cadence needs a slot derivation that stays stable across restarts."
       },
       "implementation_prompt": "Implement AP-029: Add governed recurring missions and external delivery. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
