@@ -109,10 +109,20 @@ await page.evaluateOnNewDocument((token) => {
         controller = streamController;
         const later = (fn, delay) => timers.push(setTimeout(fn, delay));
         if (mode === "success") {
-          later(() => event("token", { kind: "content", text: "A verified " }), 80);
-          later(() => event("token", { kind: "content", text: "answer." }), 150);
-          later(() => event("done", { usage: { completion_tokens: 24, decode_tps: 12.5 } }), 230);
-          later(() => controller.close(), 250);
+          // The first token arrives immediately and the rest of the reply waits for the walk to
+          // release it. The streaming state is what this walk inspects, and it is transient: on a
+          // loaded runner the whole reply can finish between pressing Enter and the first poll, so a
+          // fixed 250ms window raced the walk rather than testing it. Holding the stream open makes
+          // "a send enters the streaming state" a real assertion instead of a timing assumption.
+          later(() => event("token", { kind: "content", text: "A verified " }), 0);
+          const finish = () => {
+            if (window.__chatReleaseSuccess) {
+              event("token", { kind: "content", text: "answer." });
+              event("done", { usage: { completion_tokens: 24, decode_tps: 12.5 } });
+              controller.close();
+            } else timers.push(setTimeout(finish, 10));
+          };
+          timers.push(setTimeout(finish, 10));
         } else if (mode === "partial-fail") {
           later(() => event("token", { kind: "content", text: "Partial answer retained." }), 50);
           later(() => event("error", { message: "synthetic provider refusal" }), 100);
@@ -166,6 +176,7 @@ try {
   await page.keyboard.up("Shift");
   check("Shift+Enter inserts a newline", /\n$/.test(await input.evaluate(element => element.value)));
   await input.evaluate(element => { element.value = "desktop keyboard send"; });
+  await page.evaluate(() => { window.__chatReleaseSuccess = false; });
   await page.keyboard.press("Enter");
   await step("a send enters the streaming state", () => page.waitForFunction(() => document.querySelector('#chatMessages [data-state="streaming"]')));
   const streaming = await page.evaluate(() => ({
@@ -174,6 +185,8 @@ try {
     busy: document.getElementById("chatMessages").getAttribute("aria-busy"),
   }));
   check("streaming exposes Stop and prevents a duplicate send", streaming.stopVisible && streaming.sendDisabled && streaming.busy === "true");
+  // Release the held reply only after the streaming state has been inspected.
+  await page.evaluate(() => { window.__chatReleaseSuccess = true; });
   await step("the reply completes and the send button re-enables", () => page.waitForFunction(() => [...document.querySelectorAll('#chatMessages [data-role="assistant"]')].at(-1)?.dataset.state === "complete" && !document.getElementById("chatSendBtn").disabled));
   const success = await page.evaluate(() => {
     const assistant = [...document.querySelectorAll('#chatMessages [data-role="assistant"]')].at(-1);

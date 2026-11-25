@@ -313,9 +313,9 @@
     {
       "path": "scripts/chat_composer_walk.mjs",
       "role": "exercises supplemental Chat stream and recovery states against a throwaway loopback demo",
-      "sha256": "5ac58fcda54d165ba4a5d7d08ff137fc0445d37bd604edb76012c37c730ddd45",
-      "bytes": 17116,
-      "lines": 269
+      "sha256": "5c9fada2c5bd6a80ec39372a4f2923e5397825dd6354cab072b62f5e17420fbf",
+      "bytes": 17986,
+      "lines": 282
     },
     {
       "path": "tests/test_uiux_chat_composer.py",
