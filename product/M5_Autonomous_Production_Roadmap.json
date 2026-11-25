@@ -4036,7 +4036,7 @@
       "title": "Ship progressive configuration, onboarding and operations",
       "priority": "P1",
       "optional": false,
-      "status": "in_review",
+      "status": "done",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-008",
@@ -4094,11 +4094,11 @@
         "owner": "arena/ab195e0f-m5-agent-studio",
         "branch": "arena/ab195e0f-m5-agent-studio",
         "base_sha": "30611ab",
-        "head_sha": null,
+        "head_sha": "9d2ffb3e0bc2bbad1051fd1268ba984bb2116bc1",
         "claimed_at": "2026-11-10T00:00:00Z",
         "heartbeat_at": "2026-11-10T00:00:00Z",
-        "pr_url": null,
-        "delivery_status": "in_review",
+        "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/381",
+        "delivery_status": "merged",
         "acceptance_evidence": [
           "AC1 (configured, tested, qualified, experimental, blocked and unavailable states are distinct): CAPABILITY_STATES is a closed set and status_for() collapses one CapabilityObservation into exactly one state worst-first (blocked > unavailable > experimental > configured > tested > qualified). The observation refuses qualified-without-tested, tested-without-configured and blocked-plus-unavailable; an unconfigured capability reports unavailable rather than ready, experimental is usable but not promised, blocked is not usable, and evidence is carried into the reason. Tests: test_the_states_are_a_closed_ordered_set, test_configured_without_a_test_is_not_tested, test_tested_without_qualification_is_not_qualified, test_qualification_requires_a_test, test_a_test_requires_something_configured, test_blocked_beats_configured, test_unavailable_beats_experimental, test_blocked_and_unavailable_are_different_answers, test_an_unconfigured_capability_is_unavailable_not_ready, test_experimental_is_usable_but_not_promised, test_a_blocked_capability_is_not_usable, test_evidence_appears_in_the_reason, test_a_qualified_capability_says_it_was_measured_here.",
           "AC2 (users can inspect/revoke grants and correct/export/delete preferences/references): GrantView requires the human granter, named capabilities, scopes, expiry, remaining uses, and either revocability or a stated reason it is not revocable; a revocable grant exposes its revoke route. PreferenceStore implements correct/export (with a stable digest)/delete for preferences and references, delete takes exactly one target, and actions_available() reports the operations. Tests: test_a_grant_names_who_granted_it, test_a_grant_with_no_capabilities_describes_nothing, test_a_irrevocable_grant_must_say_why, test_an_irrevocable_grant_with_a_reason_is_viewable, test_a_revocable_grant_exposes_its_revoke_route, test_preferences_can_be_corrected, test_preferences_can_be_exported_with_a_digest, test_preferences_can_be_deleted, test_deleting_an_unknown_preference_is_refused, test_a_reference_can_be_deleted_by_id, test_delete_takes_exactly_one_target, test_the_reader_is_told_which_actions_exist.",
@@ -4115,7 +4115,11 @@
           "scripts/validate_docs.py -> passed (330 files)"
         ],
         "blockers": [],
-        "handoff": "Shipped as values only: no route serves operations_surface.py, no markup renders it, and nothing a user currently sees has changed. Wiring it into static/index.html and the app routes is a separate story that must pass the existing UI/UX gates (source manifest, preservation sign-off, control inventory, screenshot review) -- this module deliberately renders nothing so that change is reviewed on its own. Not measured: no provider, runtime or gateway was probed for this story; every readiness row in the tests is a fixture, and qualified=True is a claim the caller must already have measured elsewhere. Limits a later story must close: (1) the disclosure levels describe a proposed grouping over the existing control inventory rather than a reorganisation that has happened; (2) readiness composition from the preflight is one-directional -- it does not yet read the app's live runtime observation objects; (3) the module does not itself emit notifications for pause/failure, it only states them in words; (4) nothing here enforces revocation -- GrantView exposes the route the existing scoped_grant store already provides."
+        "handoff": "Shipped as values only: no route serves operations_surface.py, no markup renders it, and nothing a user currently sees has changed. Wiring it into static/index.html and the app routes is a separate story that must pass the existing UI/UX gates (source manifest, preservation sign-off, control inventory, screenshot review) -- this module deliberately renders nothing so that change is reviewed on its own. Not measured: no provider, runtime or gateway was probed for this story; every readiness row in the tests is a fixture, and qualified=True is a claim the caller must already have measured elsewhere. Limits a later story must close: (1) the disclosure levels describe a proposed grouping over the existing control inventory rather than a reorganisation that has happened; (2) readiness composition from the preflight is one-directional -- it does not yet read the app's live runtime observation objects; (3) the module does not itself emit notifications for pause/failure, it only states them in words; (4) nothing here enforces revocation -- GrantView exposes the route the existing scoped_grant store already provides.",
+        "merge_commit": "e99d30d",
+        "ci_run_id": 45636519428,
+        "ci_conclusion": "success",
+        "merged_at": "2026-11-10T00:00:00Z"
       },
       "implementation_prompt": "Implement AP-031: Ship progressive configuration, onboarding and operations. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
@@ -4125,7 +4129,7 @@
       "title": "Qualify the production release and independent-agent handoff",
       "priority": "P1",
       "optional": false,
-      "status": "not_started",
+      "status": "in_review",
       "authorization": "owner_release_acceptance_and_existing_independent_security_visual_gates",
       "dependencies": [
         "AP-022",
@@ -4180,18 +4184,31 @@
         "Push/PR state; owner/independent approvals where required"
       ],
       "tracking": {
-        "owner": null,
-        "branch": null,
-        "base_sha": null,
+        "owner": "arena/ab195e0f-m5-agent-studio",
+        "branch": "arena/ab195e0f-m5-agent-studio",
+        "base_sha": "e99d30d",
         "head_sha": null,
-        "claimed_at": null,
-        "heartbeat_at": null,
+        "claimed_at": "2026-11-10T00:00:00Z",
+        "heartbeat_at": "2026-11-10T00:00:00Z",
         "pr_url": null,
-        "delivery_status": "not_pushed",
-        "acceptance_evidence": [],
-        "tests_executed": [],
+        "delivery_status": "in_review",
+        "acceptance_evidence": [
+          "AC1 (if only one specialisation is owner-selected, explicitly defer the other through an authorised ledger revision rather than fake completion): DeferredSpecialisation requires a human owner:/user: granter (a reviewer: is refused because a reviewer may gate quality but cannot decide what ships), a reason and a timestamp; QualificationPack refuses a specialisation deferred twice or both selected and deferred, and unaccounted_specialisations names any specialisation neither selected nor deferred, which blocks with 'leaving it unmentioned is not the same as deferring it'. Tests: test_the_unselected_pilot_must_be_deferred_not_omitted, test_a_deferral_names_a_human_owner, test_a_reviewer_cannot_decide_what_ships, test_a_deferral_needs_a_reason, test_an_unknown_specialisation_cannot_be_deferred, test_the_same_specialisation_cannot_be_deferred_twice, test_a_specialisation_cannot_be_both_selected_and_deferred, test_deferring_the_shipped_pilot_leaves_nothing_selected.",
+          "AC2 (existing API/UI/session/workspace features and standalone remain verified): PreservationSurface requires an explicit verdict from verified/partially-verified/missing/not-applicable with no default; a verified or partially-verified surface needs an evidence id, not-applicable needs a reason, a missing or partially-verified surface blocks, and reporting no preserved surfaces at all blocks because unverified is not preserved. Tests: test_every_preserved_surface_carries_an_explicit_verdict, test_a_verified_surface_needs_evidence, test_not_applicable_needs_an_argument, test_a_missing_surface_blocks_an_otherwise_green_release, test_a_partially_verified_surface_blocks, test_reporting_no_preserved_surface_at_all_blocks.",
+          "AC3 (selected workflows pass versioned held-out/hostile/failure/restart/resource cases and actual artifact review): WorkflowQualification requires all five case families at one version, refuses mixed versions, an empty suite list, a suite filed under the wrong workflow, and more passes than cases; the artifact review evidence id and artifact digest are filed with the workflow; missing families and any failing case block with their names. Tests: test_a_suite_tuned_against_its_own_version_cannot_be_held_out, test_a_tuned_suite_may_be_any_other_kind, test_held_out_requires_no_tuning, test_a_workflow_mixing_case_versions_is_refused, test_a_workflow_with_no_cases_is_refused, test_a_suite_filed_under_the_wrong_workflow_is_refused, test_a_suite_cannot_pass_more_than_it_ran, test_missing_case_families_block_the_pack, test_a_failing_case_blocks_the_pack, test_the_artifact_review_is_filed_with_the_workflow.",
+          "AC4 (independent security/screenshot approvals are real and current; author evidence is not substituted): Approval refuses the author as approver, an agent-looking approver name, a non-human approver and an approval outside its TTL or dated after now; security and screenshot are separate kinds, two signatures of one kind do not replace the other, and handoff.author_can_approve is always false. Tests: test_the_author_cannot_approve_their_own_release, test_an_agent_name_cannot_be_the_approver, test_an_approver_must_be_a_named_human, test_a_stale_approval_blocks, test_an_approval_from_the_future_is_not_current, test_both_approval_kinds_are_required, test_two_signatures_of_one_kind_do_not_replace_the_other, test_screenshot_review_is_a_separate_gate_from_security, test_the_approval_mapping_states_current_and_expiry, test_an_unknown_approval_kind_is_refused, test_the_handoff_states_that_the_author_cannot_approve.",
+          "AC5 (CI is green at the implementation head and docs claim no more than tested scope): CiVerdict.qualifies requires conclusion success AND the SHA it ran against, so a green run elsewhere blocks with 'a green run elsewhere is a different build'; Claim refuses a scope wider than its evidence, an empty scope, absent evidence, and a duplicate evidence id; published_claims require passing evidence at this head covering the claim, uncovered claims are named and counted, and base==head is refused. Tests: test_ci_at_another_commit_does_not_qualify_the_head, test_a_failing_ci_run_blocks_even_at_the_right_head, test_a_claim_cannot_be_wider_than_its_evidence, test_wildcard_evidence_covers_every_scope, test_a_claim_citing_absent_evidence_is_refused, test_failing_evidence_publishes_no_claim, test_evidence_at_another_head_publishes_no_claim, test_the_pack_reports_claimed_against_published_counts, test_an_empty_scope_claim_is_refused, test_the_same_evidence_id_cannot_be_used_twice, test_base_and_head_must_differ.",
+          "AC6 (rollback/migration/restore exercised; branch/PR and owner acceptance recorded; no secrets/unlicensed outputs committed): DrillRecord requires rollback, migration and restore to be recorded as exercised, and a restore only counts when both digests are present and equal ('a restore drill that was not compared against the source proves only that a command ran'); ArtifactCheck requires a digest, refuses unknown/none/unlicensed/TBD licences and blocks on any secret finding; every blocking reason is reported rather than only the first. Branch/PR state and owner acceptance are recorded in this ledger entry and the story PR. Tests: test_rollback_migration_and_restore_must_be_exercised, test_a_restore_that_was_not_compared_proves_nothing, test_a_restore_with_mismatched_digests_does_not_prove_restore, test_a_documented_but_unexercised_drill_does_not_count, test_an_unlicensed_artifact_cannot_ship, test_a_secret_finding_blocks_the_pack, test_an_artifact_needs_a_digest, test_every_blocking_reason_is_reported_not_just_the_first.",
+          "Discipline: test_the_module_reads_no_clock_and_opens_no_socket (AST import allowlist __future__, hashlib, json, re, dataclasses, typing; no time import) and test_now_is_a_required_parameter; the pack is reproducible and JSON-serializable (test_the_pack_is_reproducible_and_serializable)."
+        ],
+        "tests_executed": [
+          "pytest tests/test_release_qualification.py -> 59 passed",
+          "pytest tests/test_ci_test_shard.py tests/test_scoped_tests.py -> 20 passed",
+          "ruff check . -> clean; mypy (102 modules) -> clean",
+          "scripts/validate_docs.py -> passed (331 files)"
+        ],
         "blockers": [],
-        "handoff": null
+        "handoff": "Ships the qualification machinery, not a qualification. Explicitly NOT claimed: no end-to-end pilot, held-out suite, website/video artifact review or rollback/migration/restore drill was run for this story -- the fixtures are constructed values, so a real pack must be assembled by a release run that actually performs them; no security or screenshot approval exists and, per owner policy U03 (public read-only research only), this agent cannot sign or substitute one -- Approval exists so an omitted signature blocks, never so one can be invented; the module is additive and does not wire into, weaken, bypass or replace security_release_gate.py, which keeps its own sign-off and prerequisite evaluation (where they overlap, the stricter reading applies in each); CiVerdict is supplied by a caller, no GitHub API call happens in the module; and the one-specialisation decision remains an owner decision recorded in this ledger. Owner acceptance for this story is therefore partial by construction and must be completed by the owner: the remaining release actions are to select or defer the launch specialisation in this ledger, run the pilot cases and artifact review at a real head, obtain the independent security and screenshot approvals, exercise rollback/migration/restore, and supply the green CI run id at that head. Until then the correct pack decision for the current build is release-blocked and this module reports it that way rather than assuming readiness."
       },
       "implementation_prompt": "Implement AP-032: Qualify the production release and independent-agent handoff. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     }

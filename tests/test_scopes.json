@@ -143,6 +143,7 @@
       "test_mcp_*.py",
       "test_process_supervision.py",
       "test_prompt_injection_adversarial.py",
+      "test_release_qualification.py",
       "test_remote_protections.py",
       "test_sandbox_boundary.py",
       "test_scoped_grants.py",
@@ -575,6 +576,10 @@
     ],
     "operations_surface.py": [
       "autonomous.production",
+      "quality.docs-ledger"
+    ],
+    "release_qualification.py": [
+      "security.execution",
       "quality.docs-ledger"
     ]
   }
