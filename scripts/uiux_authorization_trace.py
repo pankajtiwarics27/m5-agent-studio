@@ -95,6 +95,11 @@ SUBSYSTEM_ROLES: dict[str, tuple[str, str]] = {
     "workflow_checkpoints": ("state", "checkpoints a run resumes from"),
     "direction_checkpoints": ("authority", "whether to ask the owner about direction, and what an answer does not permit"),
     "scoped_feedback": ("authority", "what a correction is allowed to mean: its scope, whether an interpretation must be confirmed, and that confirming one is not accepting an artifact or granting publication"),
+    "reference_benchmarks": (
+        "authority",
+        "which accepted artifacts the owner has adopted as reusable examples, and that adopting one grants "
+        "neither final acceptance nor publish permission for later work",
+    ),
     "verification_evidence": ("state", "verification results attached to a task"),
     "recovery_guard": ("state", "crash-recovery state"),
     "child_delegation": ("support", "delegation runs and their benchmarks"),

@@ -24,26 +24,26 @@ is a bug in the caller, and the `error` kind is already how bugs are shown.
 
 | Container | Pane | Kind | Actions | Line |
 |---|---|---|---|---|
-| `#onboardingState` | Start | `error` | `Re-check`, `Providers` | 5194 |
-| `#startRecentState` | Start | `empty` | `Start a session`, `Open Harness` | 5259 |
-| `#startRecentState` | Start | `error` | `Retry`, `Open Harness` | 5334 |
-| `#startHealthState` | Start | `error` | `Re-check`, `Monitor rail` | 5432 |
-| `#startWorkspaceState` | Start | `error` | `Retry`, `Open Harness` | 5516 |
-| `#hallStream` | Council | `empty` | `Start a round`, `Ask one model`, `Configure providers` | 6049 |
-| `#debateSynthesisArea` | Compare | `empty` | `Start Compare` | 6063 |
-| `#chatState` | Chat | `error` | `Dismiss` | 6112 |
-| `#harnessStreamState` | Harness | `recovery` | `Reconnect now`, `Reload from snapshot` | 6135 |
-| `#hallSummonState` | Council | `error` | `Start a new session`, `Reload the session list` | 7041 |
-| `#hallSummonState` | Council | `recovery` | `Read it again`, `Reload the session list` | 7054 |
-| `#hallSummonState` | Council | `recovery` | `Write a note to reopen`, `Read the conclusion`, `Start a new session` | 7068 |
-| `#hallSummonState` | Council | `recovery` | `Read it now`, `Stop watching` | 7084 |
-| `#hallSummonState` | Council | `error` | `Ask this seat again`, `Read the session`, `Check readiness` | 7100 |
-| `#hallSummonState` | Council | `recovery` | `Read the old conclusion`, `Convene the round` | 7694 |
-| `#hallSummonState` | Council | `error` | `Retry the round`, `Check readiness`, `Ask one model` | 8362 |
-| `#chatState` | Chat | `error` | `Retry`, `Dismiss` | 12664 |
-| `#chatState` | Chat | `recovery` | `Back to Chat`, `Open Harness` | 12690 |
-| `#chatState` | Chat | `recovery` | `Undo`, `Dismiss` | 12874 |
-| `#harnessSnapshotState` | Harness | `error` | `Retry status` | 14196 |
+| `#onboardingState` | Start | `error` | `Re-check`, `Providers` | 5238 |
+| `#startRecentState` | Start | `empty` | `Start a session`, `Open Harness` | 5303 |
+| `#startRecentState` | Start | `error` | `Retry`, `Open Harness` | 5378 |
+| `#startHealthState` | Start | `error` | `Re-check`, `Monitor rail` | 5476 |
+| `#startWorkspaceState` | Start | `error` | `Retry`, `Open Harness` | 5560 |
+| `#hallStream` | Council | `empty` | `Start a round`, `Ask one model`, `Configure providers` | 6093 |
+| `#debateSynthesisArea` | Compare | `empty` | `Start Compare` | 6107 |
+| `#chatState` | Chat | `error` | `Dismiss` | 6156 |
+| `#harnessStreamState` | Harness | `recovery` | `Reconnect now`, `Reload from snapshot` | 6179 |
+| `#hallSummonState` | Council | `error` | `Start a new session`, `Reload the session list` | 7085 |
+| `#hallSummonState` | Council | `recovery` | `Read it again`, `Reload the session list` | 7098 |
+| `#hallSummonState` | Council | `recovery` | `Write a note to reopen`, `Read the conclusion`, `Start a new session` | 7112 |
+| `#hallSummonState` | Council | `recovery` | `Read it now`, `Stop watching` | 7128 |
+| `#hallSummonState` | Council | `error` | `Ask this seat again`, `Read the session`, `Check readiness` | 7144 |
+| `#hallSummonState` | Council | `recovery` | `Read the old conclusion`, `Convene the round` | 7738 |
+| `#hallSummonState` | Council | `error` | `Retry the round`, `Check readiness`, `Ask one model` | 8406 |
+| `#chatState` | Chat | `error` | `Retry`, `Dismiss` | 12708 |
+| `#chatState` | Chat | `recovery` | `Back to Chat`, `Open Harness` | 12734 |
+| `#chatState` | Chat | `recovery` | `Undo`, `Dismiss` | 12918 |
+| `#harnessSnapshotState` | Harness | `error` | `Retry status` | 14240 |
 
 20 call sites across 10 of 10 containers: 3 empty, 10 error, 7 recovery.
 
@@ -69,8 +69,8 @@ should not quietly become a pane rewrite:
 
 | Handler | Line |
 |---|---|
-| `installSkill()` | 6744 |
-| `openHarnessDiffModal()` | 15220 |
+| `installSkill()` | 6788 |
+| `openHarnessDiffModal()` | 15264 |
 
 ## Checks and limits
 

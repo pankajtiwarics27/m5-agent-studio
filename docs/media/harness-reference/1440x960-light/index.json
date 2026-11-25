@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "captured_at": "2026-11-24T19:23:23.952Z",
+  "viewport": {
+    "width": 1440,
+    "height": 960,
+    "device_scale_factor": 1
+  },
+  "variant": {
+    "theme": "light",
+    "interaction": "reference pane in the Verification & artifacts dialog"
+  },
+  "checks": {
+    "total": 40,
+    "passed": 40
+  },
+  "shots": [
+    {
+      "id": "reference-pane",
+      "file": "reference-pane.png",
+      "folder": "1440x960-light",
+      "label": "approved, superseded, revoked and hostile references",
+      "bytes": 214287,
+      "sha256": "6b243cad8a560584c0d4eb2a8e4c99f4fb0c027aee80e6f4c3861b485037a5dd",
+      "viewport": {
+        "width": 1440,
+        "height": 960,
+        "device_scale_factor": 1
+      },
+      "theme": "light"
+    }
+  ]
+}

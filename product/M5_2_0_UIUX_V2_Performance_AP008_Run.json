@@ -1,14 +1,14 @@
 {
   "story": "UIV2-29",
   "git": {
-    "head": "a293be6b4b143b687f594a12301d0dfa2b9204e4",
-    "dirty": false
+    "head": "fca7eb047089b7fa59472cf60e6597c53ac40505",
+    "dirty": true
   },
   "source_sha256": {
-    "static/index.html": "78a2e62a8e16f7ccc602fa55428dd1e6dfb9ccc04e5963396de501d5b436a467",
+    "static/index.html": "848af209461f2a56227f818208f644cca89ab99e1fd85a71a547c699fac0d3ea",
     "scripts/uiv2_performance_safety_walk.mjs": "db65e34744d881132250aba25da39f6d239adcf43c407ac4ebaf85f840070643"
   },
-  "generated_at": "2026-11-24T15:04:18.595Z",
+  "generated_at": "2026-11-25T04:50:10.588Z",
   "environment": {
     "node": "v22.22.3",
     "platform": "linux",
@@ -54,45 +54,45 @@
       },
       "fast": {
         "model": "Gemma-4-21B-REAP-4bit",
-        "elapsed_ms": 326.19999999552965,
+        "elapsed_ms": 336.30000000447035,
         "renders": 18,
         "schedules": 58,
         "model_tokens": 58,
-        "sse_per_second": 177.805,
+        "sse_per_second": 172.465,
         "complete_chars": 330
       }
     },
     "harness": {
       "memory": {
         "baseline": {
-          "Nodes": 8622,
+          "Nodes": 8660,
           "Documents": 2,
-          "JSEventListeners": 342,
-          "JSHeapUsedSize": 3408244,
-          "JSHeapTotalSize": 3932160,
+          "JSEventListeners": 343,
+          "JSHeapUsedSize": 3410696,
+          "JSHeapTotalSize": 4194304,
           "LayoutCount": 1,
           "RecalcStyleCount": 3
         },
         "after_cycle_1": {
-          "Nodes": 8622,
+          "Nodes": 8660,
           "Documents": 2,
-          "JSEventListeners": 342,
-          "JSHeapUsedSize": 3348584,
-          "JSHeapTotalSize": 4165632,
+          "JSEventListeners": 343,
+          "JSHeapUsedSize": 3369464,
+          "JSHeapTotalSize": 3641344,
           "LayoutCount": 123,
           "RecalcStyleCount": 245
         },
         "after_cycle_2": {
-          "Nodes": 8622,
+          "Nodes": 8660,
           "Documents": 2,
-          "JSEventListeners": 342,
-          "JSHeapUsedSize": 3371756,
-          "JSHeapTotalSize": 3903488,
+          "JSEventListeners": 343,
+          "JSHeapUsedSize": 3379740,
+          "JSHeapTotalSize": 3641344,
           "LayoutCount": 245,
           "RecalcStyleCount": 487
         },
         "cycle_1": {
-          "elapsed_ms": 4199.29999999702,
+          "elapsed_ms": 3983.89999999851,
           "cursor": 18000,
           "cached": 5000,
           "cards": 300,
@@ -100,7 +100,7 @@
           "last": 18000
         },
         "cycle_2": {
-          "elapsed_ms": 4058.6999999955297,
+          "elapsed_ms": 3973.7999999970198,
           "cursor": 30000,
           "cached": 5000,
           "cards": 300,
@@ -111,9 +111,9 @@
       },
       "steady": {
         "calls": 20,
-        "mean_ms": 2.345000000298023,
-        "p95_ms": 3.399999998509884,
-        "max_ms": 4.300000004470348,
+        "mean_ms": 1.749999998509884,
+        "p95_ms": 2.1999999955296516,
+        "max_ms": 2.5,
         "cards": 300
       }
     },
@@ -193,10 +193,10 @@
       {
         "viewport": "390x844",
         "theme": "light",
-        "cls_total": 0.65698,
-        "cls_internal_stream": 0.65698,
+        "cls_total": 0.56313,
+        "cls_internal_stream": 0.56313,
         "cls_external_shell": 0,
-        "shifts": 7,
+        "shifts": 6,
         "overflow": 0,
         "max_geometry_delta": 0,
         "cards": 300,
@@ -245,7 +245,7 @@
       "group": "sse",
       "step": "the measured fast fixture actually exceeds fifty scheduled SSE updates per second",
       "passed": true,
-      "detail": "rate=177.8/s elapsed=326.2ms schedules=58"
+      "detail": "rate=172.5/s elapsed=336.3ms schedules=58"
     },
     {
       "group": "dom-memory",
@@ -269,13 +269,13 @@
       "group": "dom-memory",
       "step": "post-GC document nodes plateau instead of growing with the event count",
       "passed": true,
-      "detail": "baseline=8622 cycle1=8622 cycle2=8622 delta=0"
+      "detail": "baseline=8660 cycle1=8660 cycle2=8660 delta=0"
     },
     {
       "group": "dom-memory",
       "step": "post-GC JS heap remains within the declared repeated-cycle plateau budgets",
       "passed": true,
-      "detail": "baseline=3408244 cycle1=3348584 cycle2=3371756 cycle_delta=23172 baseline_delta=-36488"
+      "detail": "baseline=3410696 cycle1=3369464 cycle2=3379740 cycle_delta=10276 baseline_delta=-30956"
     },
     {
       "group": "dom-memory",
@@ -287,7 +287,7 @@
       "group": "dom-memory",
       "step": "ten-event frames retain the existing four-millisecond full-window budget",
       "passed": true,
-      "detail": "{\"calls\":20,\"mean_ms\":2.345000000298023,\"p95_ms\":3.399999998509884,\"max_ms\":4.300000004470348,\"cards\":300}"
+      "detail": "{\"calls\":20,\"mean_ms\":1.749999998509884,\"p95_ms\":2.1999999955296516,\"max_ms\":2.5,\"cards\":300}"
     },
     {
       "group": "layout",
@@ -347,7 +347,7 @@
       "group": "layout",
       "step": "390x844 light: streaming shifts neither shell geometry nor the page",
       "passed": true,
-      "detail": "{\"cls_total\":0.65698,\"cls_internal_stream\":0.65698,\"cls_external_shell\":0,\"shifts\":7,\"overflow\":0,\"max_geometry_delta\":0,\"cards\":300,\"cursor\":30902}",
+      "detail": "{\"cls_total\":0.56313,\"cls_internal_stream\":0.56313,\"cls_external_shell\":0,\"shifts\":6,\"overflow\":0,\"max_geometry_delta\":0,\"cards\":300,\"cursor\":30902}",
       "viewport": "390x844",
       "theme": "light",
       "pane": "harness"
@@ -371,7 +371,7 @@
   "captures": [
     {
       "path": "chat-midstream.png",
-      "sha256": "668dc5cbf54cfb91df64c83527c50ffd7b6558edfbbcdb9c90119d09c9545bf6",
+      "sha256": "43ad718862280f0c4d0f2522fb792465485d31eb08ad52ee1ce6a84f16487708",
       "group": "sse",
       "viewport": "1440x900",
       "theme": "dark",
@@ -380,7 +380,7 @@
     },
     {
       "path": "chat-complete.png",
-      "sha256": "9d450eb49da65cf5c35aea592105174b2162dec190974cb095a7dfcb6285ca30",
+      "sha256": "4e5ea711d6650ac4259b5b6be52ba20d9e08dad13ebf0aa5906e79183f2408b4",
       "group": "sse",
       "viewport": "1440x900",
       "theme": "dark",
@@ -389,7 +389,7 @@
     },
     {
       "path": "chat-high-frequency-complete.png",
-      "sha256": "3859b166eb964a3c7290f5f0ff14b76c9f070432c1df7b55a6b7099d0394e805",
+      "sha256": "1c88b9b40702d123c8bb65503d78f1a1d3d65c43eb8d345cdaa8adb1bf48f724",
       "group": "sse",
       "viewport": "1440x900",
       "theme": "dark",
@@ -398,7 +398,7 @@
     },
     {
       "path": "layout/light/1640x900-harness.png",
-      "sha256": "8b22e282536bba5ae4914d1f3baf087bc48652f1604a70f7714bb4ceb02d8ed9",
+      "sha256": "9e28261082bfb0ca4228767658a079898547ac8193d18d8deb6d01da48f31cfe",
       "group": "layout",
       "viewport": "1640x900",
       "theme": "light",
@@ -407,7 +407,7 @@
     },
     {
       "path": "layout/dark/1640x900-harness.png",
-      "sha256": "3f374d4c912724ceaa8b51315267e613a0a7882915879c6f70f0d0e70f500a0d",
+      "sha256": "c26776a673ce3ec3a95431abdeebe15ddcbce2e1d8dbb8befe59e4e69c43407d",
       "group": "layout",
       "viewport": "1640x900",
       "theme": "dark",
@@ -416,7 +416,7 @@
     },
     {
       "path": "layout/light/1440x900-harness.png",
-      "sha256": "f6ed841207bb460d0b690a258edb704f63f43357370cf07565a801a8defcb593",
+      "sha256": "dd9d357ce499afa132362f625d76509de290c6c1e6272824c63a26a143be3ae2",
       "group": "layout",
       "viewport": "1440x900",
       "theme": "light",
@@ -425,7 +425,7 @@
     },
     {
       "path": "layout/dark/1440x900-harness.png",
-      "sha256": "da4c75f26edc6c11e130e0a6185a2c216d703c1df4ff354d7c570a3ea317ac17",
+      "sha256": "d28a3b842539f435f5f08a8cf28775cd213900d34f44b2efcc5bb465b22ab66d",
       "group": "layout",
       "viewport": "1440x900",
       "theme": "dark",
@@ -434,7 +434,7 @@
     },
     {
       "path": "layout/light/1280x800-harness.png",
-      "sha256": "6c35a1216f8cf947e857b9996d32bd7c276b459fc4461535a0dd4ef2d35ebd42",
+      "sha256": "f5cd568b1f80a40430feb088aa30497a2fa9533d132ec9eadaa357159f46142b",
       "group": "layout",
       "viewport": "1280x800",
       "theme": "light",
@@ -443,7 +443,7 @@
     },
     {
       "path": "layout/dark/1280x800-harness.png",
-      "sha256": "12a07b11d9276a06973440e2e112ce38c0eb27771e07c0c2090ea7ba83631411",
+      "sha256": "7aa561ce642052586355fbb2bef3abc0b8dc3a8e6d2bc19cea9786a3edcf8414",
       "group": "layout",
       "viewport": "1280x800",
       "theme": "dark",

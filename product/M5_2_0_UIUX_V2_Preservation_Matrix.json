@@ -8,10 +8,10 @@
   "check_with": "python3 scripts/uiux_v2_preservation_matrix.py --check",
   "statement": "Control -> DOM handler -> API route -> test coverage for every interactive control in static/index.html, plus the three UIV2-02 contract investigations. api_status is existing when every call the handler makes resolves to a mounted @app route, absent-route when a call matches no mounted route, unknown when the resolver left an edge open, no-api for handlers that never fetch, and no-handler for controls without an inline handler. The contracts distinguish existing / partial / absent / unknown and cite file evidence; the generator hard-fails if the sources drift from the classification, so --check is a gate.",
   "pinned_source_commit": "9a584a36f1fbe29ba467562dd12a705626769f00",
-  "frontend_sha256": "0bd932ef67708ed05d438e0497199b983c33ae46782c158763578f34d657a934",
-  "app_sha256": "a039ad7bef243bac90ae76661ae7b99554b3098785b46634ca8758f644f27901",
+  "frontend_sha256": "848af209461f2a56227f818208f644cca89ab99e1fd85a71a547c699fac0d3ea",
+  "app_sha256": "64a4c11591a984553c46bd65f868e32738a8420bb11a96e2352fde864cdbbb3b",
   "totals": {
-    "controls": 279,
+    "controls": 282,
     "by_pane": {
       "start": 15,
       "harness": 38,
@@ -20,14 +20,14 @@
       "debate": 10,
       "chat": 13
     },
-    "chrome_controls": 166,
+    "chrome_controls": 169,
     "api_status_counts": {
       "existing": 39,
       "no-api": 145,
-      "no-handler": 95
+      "no-handler": 98
     },
-    "mounted_routes": 128,
-    "fetch_call_sites": 77
+    "mounted_routes": 134,
+    "fetch_call_sites": 79
   },
   "controls": [
     {
@@ -2586,6 +2586,36 @@
     },
     {
       "pane": "chrome",
+      "id": "harnessReferenceApprover",
+      "tag": "input",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "harnessReferenceStatement",
+      "tag": "textarea",
+      "text": null,
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
+      "id": "harnessReferenceSubmit",
+      "tag": "button",
+      "text": "Record approval",
+      "handler": null,
+      "calls": [],
+      "api_status": "no-handler",
+      "tests": []
+    },
+    {
+      "pane": "chrome",
       "id": null,
       "tag": "button",
       "text": "Refresh",
@@ -3402,7 +3432,7 @@
       "classification": "present_registry__picker_rendered_from_it",
       "picker": {
         "status": "rendered_from_registry",
-        "evidence": "select#chatPersona at static/index.html:4011 ships no <option>; renderChatPersonaPicker() fills it from CHAT_PERSONAS on load and on every filter",
+        "evidence": "select#chatPersona at static/index.html:4058 ships no <option>; renderChatPersonaPicker() fills it from CHAT_PERSONAS on load and on every filter",
         "option_source": "CHAT_PERSONAS"
       },
       "registry": {

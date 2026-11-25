@@ -77,6 +77,7 @@ import recovery_guard
 import runtime_persistence
 import sandbox_boundary
 import scoped_feedback
+import reference_benchmarks
 import start_command_center
 import side_effect_ledger
 import direction_checkpoints
@@ -917,6 +918,37 @@ def _reset_scoped_feedback_store(store: scoped_feedback.FeedbackStore | None = N
     with _SCOPED_FEEDBACK_STORE_LOCK:
         _SCOPED_FEEDBACK_STORE = store
         _SCOPED_FEEDBACK_STORE_PATH = Path(DB_PATH).resolve() if store is not None else None
+
+
+_REFERENCE_STORE: reference_benchmarks.ReferenceStore | None = None
+_REFERENCE_STORE_PATH: Path | None = None
+_REFERENCE_STORE_LOCK = threading.Lock()
+
+
+def get_reference_store() -> reference_benchmarks.ReferenceStore:
+    """Return the durable AP-020 reference-benchmark store, in the application's own database.
+
+    Same reasoning as the feedback store next door: a reference is a record about an artifact
+    this app produced, so it lives beside the work rather than in a second file that could
+    drift out of step with it.
+    """
+    global _REFERENCE_STORE, _REFERENCE_STORE_PATH
+    cur_path = Path(DB_PATH).resolve()
+    with _REFERENCE_STORE_LOCK:
+        if _REFERENCE_STORE is None or _REFERENCE_STORE_PATH != cur_path:
+            _REFERENCE_STORE = reference_benchmarks.ReferenceStore(cur_path)
+            _REFERENCE_STORE_PATH = cur_path
+        return _REFERENCE_STORE
+
+
+def _reset_reference_store(
+    store: reference_benchmarks.ReferenceStore | None = None,
+) -> None:
+    """Replace or clear the cached reference store (tests / clock injection)."""
+    global _REFERENCE_STORE, _REFERENCE_STORE_PATH
+    with _REFERENCE_STORE_LOCK:
+        _REFERENCE_STORE = store
+        _REFERENCE_STORE_PATH = Path(DB_PATH).resolve() if store is not None else None
 
 
 def _reset_scoped_grant_store(store: scoped_grants.ScopedGrantStore | None = None) -> None:
@@ -15113,21 +15145,52 @@ async def api_request_direction_checkpoint(session_id: str, request: Request) ->
             # the first thing to fix is the record, not the direction.
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    benchmarks: list[direction_checkpoints.BenchmarkCoverage] = []
-    for row in body.get("benchmarks") or ():
-        if not isinstance(row, dict):
-            continue
-        try:
-            benchmarks.append(
-                direction_checkpoints.BenchmarkCoverage(
-                    reference_id=str(row.get("reference_id") or ""),
-                    reference_sha256=str(row.get("reference_sha256") or "").strip().lower(),
-                    covered_task_kinds=tuple(str(k) for k in (row.get("covered_task_kinds") or ())),
-                    measured_checks=tuple(str(c) for c in (row.get("measured_checks") or ())),
+    # Coverage is read from the project's stored, owner-approved references. It is deliberately
+    # *not* built from the request body: a caller who could type a reference id could announce
+    # that the owner had already approved work they never saw, which is the exact thing a
+    # reference benchmark exists to prevent. A caller may name a reference it relies on, and
+    # naming one the project does not hold is refused rather than ignored.
+    claimed = body.get("reference_ids") or ()
+    if not isinstance(claimed, (list, tuple)):
+        raise HTTPException(
+            status_code=400,
+            detail="reference_ids must be a list of reference ids the caller is relying on.",
+        )
+    # The scope is derived from the session's own project root. A caller cannot name one: a
+    # reference approved for another project must never cover this task.
+    project_scope = evidence_lessons.derive_project_scope_id(
+        Path(str(sess.get("worktree_dir") or sess.get("workspace_dir") or WORKSPACE_ROOT)).resolve(),
+        owning_workspace_root=Path(str(sess.get("workspace_dir"))).resolve()
+        if str(sess.get("workspace_dir") or "").strip()
+        else None,
+    )
+    # The missing checks are not consulted here: the check-in is decided per task kind, and a
+    # partial reference still counts as one. What must not happen is a *caller* deciding that.
+    coverage_rows, _ = _reference_coverage(
+        project_scope_id=project_scope, task_kind=task_kind
+    )
+    held = {str(row["reference_id"]) for row in coverage_rows}
+    try:
+        for name in (str(r) for r in claimed):
+            if name not in held:
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        f"no owner-approved reference {name!r} covers task kind {task_kind!r} in this "
+                        "project. A reference has to be recorded and approved before it can be relied on."
+                    ),
                 )
+        benchmarks = [
+            direction_checkpoints.BenchmarkCoverage(
+                reference_id=str(row["reference_id"]),
+                reference_sha256=str(row["reference_sha256"]),
+                covered_task_kinds=tuple(row["_covered_task_kinds"]),
+                measured_checks=tuple(row["measured_checks"]),
             )
-        except direction_checkpoints.DirectionError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
+            for row in coverage_rows
+        ]
+    except direction_checkpoints.DirectionError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     try:
         checkpoint = direction_checkpoints.decide(
@@ -15275,6 +15338,433 @@ def _feedback_state(session_id: str, artifact_id: str, artifact_sha256: str) -> 
         "conflicts": [list(pair) for pair in revision.conflicts],
         "stale": [item.to_mapping() for item in stale],
     }
+
+
+def _reference_mapping(record: reference_benchmarks.Reference) -> dict[str, Any]:
+    """One reference as the API reports it, with its own digest of the recorded facts."""
+    mapping = record.to_mapping()
+    mapping["fingerprint"] = record.fingerprint()
+    return mapping
+
+
+def _reference_project_scope(
+    *, project_scope_id: str = "", session_id: str = "", workspace_dir: str = ""
+) -> str:
+    """Resolve which project a reference belongs to, by the same rule lessons use.
+
+    A reference is project-scoped, and the scope is derived from the project root rather than
+    accepted as a nickname -- otherwise "proj-1" in a request would be enough to read another
+    project's approved references. An explicit id is accepted only in the derived form.
+    """
+    explicit = str(project_scope_id or "").strip()
+    if explicit:
+        if not explicit.startswith("proj-") or len(explicit) != 37:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "project_scope_id must be the derived 'proj-' identifier; name a session_id or "
+                    "workspace_dir and the server will resolve the project it belongs to."
+                ),
+            )
+        return explicit
+    if not str(session_id or "").strip() and not str(workspace_dir or "").strip():
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "a reference belongs to one project: supply session_id, workspace_dir or the "
+                "project_scope_id the session reports."
+            ),
+        )
+    ws, own_ws = _resolve_lesson_workspace_roots(
+        session_id=str(session_id or ""), workspace_dir=str(workspace_dir or "")
+    )
+    return evidence_lessons.derive_project_scope_id(ws, owning_workspace_root=own_ws)
+
+
+def _reference_coverage(
+    *, project_scope_id: str, task_kind: str, checks: Sequence[str] = ()
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """Coverage this project actually holds, read from stored and owner-approved records.
+
+    The direction route must never build ``BenchmarkCoverage`` from the request body: a caller
+    who can type a reference id can assert that the owner approved work they never saw, which
+    is the one thing a reference benchmark exists to rule out. So the rows come from here.
+
+    Two narrowing rules are applied before a stored row counts:
+
+    * a referenced artifact version whose sha no longer holds on disk is reported as
+      missing, because "we built something once" is not "we still have it";
+    * a requested check that the record never measured is reported as missing, not quietly
+      dropped -- partial coverage has to be visible to be honest.
+    """
+    store = get_reference_store()
+    live = [row for row in store.list(project_scope_id=project_scope_id, status="active")]
+    rows: list[dict[str, Any]] = []
+    missing: list[str] = []
+    for record in live:
+        if record.task_kind != task_kind:
+            continue
+        covered, absent = record.covers(task_kind=task_kind, checks=checks)
+        row = {
+            "reference_id": record.reference_id,
+            "version": record.version,
+            "reference_sha256": record.artifact.content_sha256,
+            "task_kind": record.task_kind,
+            "audience": record.audience,
+            "language": record.language,
+            "style_tags": list(record.style_tags),
+            "measured_checks": list(record.artifact.passed_checks),
+            "approval_actor": record.approval.actor,
+            "_covered_task_kinds": [record.task_kind],
+        }
+        rows.append(row)
+        missing.extend(absent)
+    # Reported as a set of obligations, not once per reference: three references that all lack
+    # `a11y` mean one thing is unmeasured, not three.
+    return rows, list(dict.fromkeys(missing))
+
+
+@app.get("/api/reference-benchmarks")
+async def api_list_reference_benchmarks(
+    project_scope_id: str = "",
+    session_id: str = "",
+    workspace_dir: str = "",
+    status: str = "",
+    task_kind: str = "",
+    audience: str = "",
+    language: str = "",
+    style_tags: str = "",
+) -> JSONResponse:
+    """List owner-approved references for a project, best match first.
+
+    Retrieval is by audience, language, task and style, and it returns the *reference* -- never
+    a layout to copy. Ranking reports why a row was offered, so a caller can see that a
+    reference for another audience or language was chosen knowingly rather than by accident.
+    """
+    scope = _reference_project_scope(
+        project_scope_id=project_scope_id, session_id=session_id, workspace_dir=workspace_dir
+    )
+    kind = str(task_kind or "").strip()
+    wanted_status = str(status or "").strip()
+    if wanted_status and wanted_status not in reference_benchmarks.REFERENCE_STATUSES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"unknown status {wanted_status!r}; a reference is one of {', '.join(reference_benchmarks.REFERENCE_STATUSES)}.",
+        )
+    try:
+        stored = get_reference_store().list(
+            project_scope_id=scope, status=wanted_status or None
+        )
+    except reference_benchmarks.ReferenceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    if kind:
+        # Ranking is only meaningful against a task; an unfiltered list is a catalogue.
+        ranked = reference_benchmarks.rank(
+            stored,
+            task_kind=kind,
+            audience=str(audience or "").strip(),
+            language=str(language or "").strip(),
+            style_tags=[t.strip() for t in str(style_tags or "").split(",") if t.strip()],
+        )
+        items = [
+            {**_reference_mapping(record), "why_offered": list(reasons)}
+            for record, reasons in ranked
+        ]
+    else:
+        items = [_reference_mapping(record) for record in stored]
+    return JSONResponse(
+        {
+            "project_scope_id": scope,
+            "count": len(items),
+            "items": items,
+            # Named once here so a pane does not have to re-derive them per row: a reference
+            # settles reuse of a style, and nothing about the new work's own correctness.
+            "cannot_settle": list(reference_benchmarks.REFERENCE_CANNOT_SETTLE),
+            "grants_publish_permission": False,
+            "is_final_acceptance": False,
+        }
+    )
+
+
+@app.get("/api/reference-benchmarks/{reference_id:path}")
+async def api_get_reference_benchmark(reference_id: str, version: int = 0) -> JSONResponse:
+    """One reference version, or the whole append-only history of the reference."""
+    store = get_reference_store()
+    try:
+        if version:
+            record = store.get(reference_id, version)
+            if record is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"no recorded reference {reference_id!r} at version {version}.",
+                )
+            return JSONResponse(
+                {
+                    "reference": _reference_mapping(record),
+                    "cannot_settle": list(reference_benchmarks.REFERENCE_CANNOT_SETTLE),
+                }
+            )
+        history = store.history(reference_id)
+    except reference_benchmarks.ReferenceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if not history:
+        raise HTTPException(
+            status_code=404, detail=f"no recorded reference {reference_id!r}."
+        )
+    return JSONResponse(
+        {
+            "reference_id": reference_id,
+            "versions": [_reference_mapping(record) for record in history],
+            "cannot_settle": list(reference_benchmarks.REFERENCE_CANNOT_SETTLE),
+        }
+    )
+
+
+@app.post("/api/reference-benchmarks")
+async def api_record_reference_benchmark(request: Request) -> JSONResponse:
+    """Record an owner-approved reference version.
+
+    The approval is the whole point, so it is supplied by the caller as the owner's own words
+    and a person's namespaced identity; a machine actor is refused by the module, and this
+    route does not offer a way around that. Re-recording an existing version is refused when
+    the acceptance would change -- an improvement arrives as a new version.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        body = None
+    if not isinstance(body, dict):
+        raise HTTPException(
+            status_code=400,
+            detail="Recording a reference needs a JSON body describing the approved artifact and approval.",
+        )
+
+    raw_artifact = body.get("artifact")
+    raw_approval = body.get("approval")
+    if not isinstance(raw_artifact, dict) or not isinstance(raw_approval, dict):
+        raise HTTPException(
+            status_code=400,
+            detail="artifact and approval are both required: a reference is an exact artifact plus the owner's decision about it.",
+        )
+    checks = raw_artifact.get("measured_checks")
+    try:
+        artifact = reference_benchmarks.ArtifactVersion(
+            artifact_id=str(raw_artifact.get("artifact_id") or ""),
+            content_sha256=str(raw_artifact.get("content_sha256") or ""),
+            identity_sha256=str(raw_artifact.get("identity_sha256") or ""),
+            identity_basis=str(raw_artifact.get("identity_basis") or "content_only"),
+            producer=str(raw_artifact.get("producer") or ""),
+            producer_version=str(raw_artifact.get("producer_version") or ""),
+            config_sha256=str(raw_artifact.get("config_sha256") or ""),
+            measured_checks={str(k): bool(v) for k, v in checks.items()}
+            if isinstance(checks, dict)
+            else {},
+        )
+        approval = reference_benchmarks.OwnerApproval(
+            actor=str(raw_approval.get("actor") or ""),
+            statement=str(raw_approval.get("statement") or ""),
+            granted=tuple(str(g) for g in (raw_approval.get("granted") or ())),
+        )
+        record = reference_benchmarks.accept(
+            reference_id=str(body.get("reference_id") or ""),
+            version=int(body.get("version") or 0),
+            project_scope_id=_reference_project_scope(
+                project_scope_id=str(body.get("project_scope_id") or ""),
+                session_id=str(body.get("session_id") or ""),
+                workspace_dir=str(body.get("workspace_dir") or ""),
+            ),
+            task_kind=str(body.get("task_kind") or ""),
+            brief=str(body.get("brief") or ""),
+            artifact=artifact,
+            approval=approval,
+            audience=str(body.get("audience") or ""),
+            language=str(body.get("language") or ""),
+            style_tags=[str(t) for t in (body.get("style_tags") or ())],
+            checks=[str(c) for c in (body.get("checks") or ())],
+        )
+    except (reference_benchmarks.ReferenceError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    try:
+        get_reference_store().put(record)
+    except reference_benchmarks.AcceptanceRewriteRefused as exc:
+        # 409, not 400: the request is well formed, it just contradicts a decision already made.
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except reference_benchmarks.ReferenceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return JSONResponse(
+        {
+            "status": "recorded",
+            "reference": _reference_mapping(record),
+            "cannot_settle": list(reference_benchmarks.REFERENCE_CANNOT_SETTLE),
+            # Restated on every write so no client has to guess: reuse of a style is not
+            # permission to ship the new work.
+            "grants_publish_permission": False,
+            "is_final_acceptance": False,
+        }
+    )
+
+
+@app.post("/api/reference-benchmarks/{reference_id:path}/enhance")
+async def api_enhance_reference_benchmark(reference_id: str, request: Request) -> JSONResponse:
+    """Record a new version of a reference, with its own fresh owner approval."""
+    store = get_reference_store()
+    try:
+        body = await request.json()
+    except Exception:
+        body = None
+    if not isinstance(body, dict):
+        raise HTTPException(
+            status_code=400,
+            detail="Enhancing a reference needs a JSON body with the new version, artifact and approval.",
+        )
+    version = int(body.get("version") or 0) or int(body.get("from_version") or 0)
+    if not version:
+        raise HTTPException(
+            status_code=400,
+            detail="from_version is required: an enhancement replaces one specific accepted version.",
+        )
+    base = store.get(reference_id, version)
+    if base is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"no recorded reference {reference_id!r} at version {version}; a new version has to improve on a recorded one.",
+        )
+    raw_artifact = body.get("artifact")
+    raw_approval = body.get("approval")
+    if not isinstance(raw_artifact, dict) or not isinstance(raw_approval, dict):
+        raise HTTPException(
+            status_code=400,
+            detail="artifact and approval are both required: a new version needs its own decision, not the previous one's.",
+        )
+    try:
+        checks = raw_artifact.get("measured_checks")
+        artifact = reference_benchmarks.ArtifactVersion(
+            artifact_id=str(raw_artifact.get("artifact_id") or ""),
+            content_sha256=str(raw_artifact.get("content_sha256") or ""),
+            identity_sha256=str(raw_artifact.get("identity_sha256") or ""),
+            identity_basis=str(raw_artifact.get("identity_basis") or "content_only"),
+            producer=str(raw_artifact.get("producer") or ""),
+            producer_version=str(raw_artifact.get("producer_version") or ""),
+            config_sha256=str(raw_artifact.get("config_sha256") or ""),
+            measured_checks={str(k): bool(v) for k, v in checks.items()}
+            if isinstance(checks, dict)
+            else {},
+        )
+        approval = reference_benchmarks.OwnerApproval(
+            actor=str(raw_approval.get("actor") or ""),
+            statement=str(raw_approval.get("statement") or ""),
+            granted=tuple(str(g) for g in (raw_approval.get("granted") or ())),
+        )
+        enhanced = reference_benchmarks.enhance(
+            base,
+            new_version=int(body.get("new_version") or 0),
+            artifact=artifact,
+            approval=approval,
+            brief=str(body.get("brief") or base.brief),
+            style_tags=[str(t) for t in (body.get("style_tags") or ())] or None,
+            checks=[str(c) for c in (body.get("checks") or ())] or None,
+        )
+        store.put(enhanced)
+        retired = reference_benchmarks.supersede(base, enhanced)
+        store.put(retired)
+    except reference_benchmarks.AcceptanceRewriteRefused as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except (reference_benchmarks.ReferenceError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return JSONResponse(
+        {
+            "status": "enhanced",
+            "reference": _reference_mapping(enhanced),
+            "superseded": _reference_mapping(retired),
+            # The earlier version is still readable with the approval it actually had.
+            "history": [_reference_mapping(row) for row in store.history(reference_id)],
+        }
+    )
+
+
+@app.post("/api/reference-benchmarks/{reference_id:path}/revoke")
+async def api_revoke_reference_benchmark(reference_id: str, request: Request) -> JSONResponse:
+    """Revoke a reference so it stops being offered -- without deleting what was decided."""
+    store = get_reference_store()
+    try:
+        body = await request.json()
+    except Exception:
+        body = None
+    if not isinstance(body, dict):
+        raise HTTPException(
+            status_code=400,
+            detail="Revoking a reference needs a JSON body naming who revoked it and why.",
+        )
+    version = int(body.get("version") or 0)
+    if not version:
+        raise HTTPException(
+            status_code=400, detail="version is required: revocation applies to one accepted version."
+        )
+    base = store.get(reference_id, version)
+    if base is None:
+        raise HTTPException(
+            status_code=404, detail=f"no recorded reference {reference_id!r} at version {version}."
+        )
+    try:
+        revoked = reference_benchmarks.revoke(
+            base,
+            reason=str(body.get("reason") or ""),
+            actor=str(body.get("actor") or ""),
+        )
+        store.put(revoked)
+    except reference_benchmarks.AcceptanceRewriteRefused as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except (reference_benchmarks.ReferenceError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return JSONResponse({"status": "revoked", "reference": _reference_mapping(revoked)})
+
+
+@app.post("/api/reference-benchmarks/coverage")
+async def api_reference_benchmark_coverage(request: Request) -> JSONResponse:
+    """Report whether the project's stored references cover a task, and what they leave open.
+
+    Read-only: a caller supplies the task it is about to produce, and gets back what the owner
+    has already settled plus what still needs verifying. It cannot widen coverage, only ask.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        body = None
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="coverage needs a JSON body naming the task.")
+    scope = _reference_project_scope(
+        project_scope_id=str(body.get("project_scope_id") or ""),
+        session_id=str(body.get("session_id") or ""),
+        workspace_dir=str(body.get("workspace_dir") or ""),
+    )
+    kind = str(body.get("task_kind") or "").strip()
+    if not kind:
+        raise HTTPException(
+            status_code=400,
+            detail="task_kind is required: coverage is a statement about one project's tasks.",
+        )
+    checks = [str(c) for c in (body.get("checks") or ())]
+    rows, missing = _reference_coverage(project_scope_id=scope, task_kind=kind, checks=checks)
+    return JSONResponse(
+        {
+            "project_scope_id": scope,
+            "task_kind": kind,
+            "covered": bool(rows) and not missing,
+            "references": rows,
+            "missing": missing,
+            # What coverage cannot discharge, listed beside the coverage itself so a caller
+            # cannot read "covered" as "approved to ship".
+            "still_required": list(
+                reference_benchmarks.verification_still_required(
+                    changed=[str(c) for c in (body.get("changed") or ())]
+                )
+            ),
+            "grants_publish_permission": False,
+            "is_final_acceptance": False,
+        }
+    )
 
 
 @app.get("/api/harness/sessions/{session_id}/feedback")

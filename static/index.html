@@ -1431,6 +1431,36 @@ summary:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--ring)
 .harness-feedback [data-tone="ok"] { color: var(--emerald); }
 .harness-feedback [data-tone="warn"] { color: var(--amber); }
 .harness-direction .ev-note { display: block; margin: 6px 0 8px; padding-top: 6px; border-top: 1px solid var(--border); }
+/* AP-020: the reference pane. Four things are drawn apart on purpose, because the failure this
+   pane exists to prevent is a reader collapsing them: what the owner approved, what that
+   settles about a *new* artifact, what it does not settle, and the separate decisions
+   (final acceptance, publish) that are still nobody's but the owner's. */
+.harness-reference { margin: 0 0 9px; padding: 9px 10px 2px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); }
+.harness-reference[hidden] { display: none; }
+.harness-reference-list { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.harness-reference-row { display: flex; flex-direction: column; gap: 3px; padding: 7px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-elev); }
+.harness-reference-row[data-status="revoked"] { border-left: 3px solid var(--rose); }
+.harness-reference-row[data-status="superseded"] { border-left: 3px solid var(--amber); }
+.harness-reference-head { display: flex; gap: 7px; align-items: baseline; flex-wrap: wrap; }
+.harness-reference-name { font-size: 12.2px; font-weight: 700; color: var(--text); overflow-wrap: anywhere; }
+.harness-reference-version { font-size: 10.8px; color: var(--text-faint); font-family: var(--mono); }
+.harness-reference-badge { font-size: 10.4px; font-weight: var(--weight-medium); padding: 1px 7px; border-radius: var(--radius-pill); border: 1px solid var(--border); color: var(--text-dim); }
+.harness-reference-badge[data-status="active"] { color: var(--emerald); border-color: var(--emerald); }
+.harness-reference-badge[data-status="revoked"] { color: var(--rose); border-color: var(--rose); }
+.harness-reference-badge[data-status="superseded"] { color: var(--amber); border-color: var(--amber); }
+.harness-reference-brief { margin: 0; font-size: 11.4px; line-height: 1.5; color: var(--text-dim); overflow-wrap: anywhere; }
+.harness-reference-approval { margin: 0; font-size: 11.2px; line-height: 1.5; color: var(--text); overflow-wrap: anywhere; }
+.harness-reference-meta { margin: 0; font-size: 10.8px; line-height: 1.45; color: var(--text-faint); font-family: var(--mono); overflow-wrap: anywhere; }
+.harness-reference-why { margin: 0; font-size: 10.8px; line-height: 1.45; color: var(--text-faint); }
+.harness-reference-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 4px; }
+.harness-reference-form { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); }
+.harness-reference-form label { font-size: 11.2px; font-weight: var(--weight-medium); color: var(--text-dim); }
+.harness-reference-form textarea { width: 100%; min-height: 40px; resize: vertical; padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-code); color: var(--text); font: inherit; font-size: 12px; line-height: 1.5; }
+.harness-reference-form textarea:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
+.harness-reference [data-tone="danger"], .harness-reference-form [data-tone="danger"] { color: var(--rose); }
+.harness-reference [data-tone="ok"], .harness-reference-form [data-tone="ok"] { color: var(--emerald); }
+.harness-reference [data-tone="warn"], .harness-reference-form [data-tone="warn"] { color: var(--amber); }
+.harness-reference-cannot { margin: 8px 0 0; padding-top: 6px; border-top: 1px solid var(--border); font-size: 11.2px; line-height: 1.5; color: var(--text-dim); }
 .harness-recovery-note[data-tone="ok"] { color: #6ee7b7; }
 .harness-recovery-note[data-tone="warn"] { color: #fde68a; }
 .harness-recovery-note[data-tone="danger"] { color: #fda4af; }
@@ -3098,6 +3128,20 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
             <span id="harnessFeedbackSelection" class="ev-note" role="status"></span>
           </div>
           <p class="ev-note">Recording a comment is not accepting the artifact and does not publish anything. A preference is never inferred from one comment; widening is a separate decision with a stated reason.</p>
+        </form>
+      </div>
+      <div class="ev-block harness-reference" id="harnessReferenceBlock">
+        <div id="harnessReferencePanel" role="status" aria-live="polite"></div>
+        <form id="harnessReferenceForm" class="harness-reference-form" onsubmit="return submitHarnessReference(event)">
+          <label for="harnessReferenceApprover">Your name (recorded as the approver)</label>
+          <input id="harnessReferenceApprover" type="text" maxlength="60" autocomplete="name" placeholder="e.g. Priya" style="padding:6px 8px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--bg-code); color:var(--text); font:inherit; font-size:12px;">
+          <label for="harnessReferenceStatement">Adopt this artifact as a reference</label>
+          <textarea id="harnessReferenceStatement" rows="2" maxlength="500" placeholder="What you are approving, in your own words. Reusing this as an example is not accepting or publishing the next piece of work."></textarea>
+          <div class="harness-reference-actions">
+            <button type="submit" class="btn btn-xs" id="harnessReferenceSubmit">Record approval</button>
+            <span id="harnessReferenceNote" class="ev-note" role="status"></span>
+          </div>
+          <p class="ev-note">Recording this needs a real approval from you. An agent cannot write one, and it does not grant final acceptance or publish permission for anything.</p>
         </form>
       </div>
       <div id="harnessEvidenceLimits" class="ev-block"></div>
@@ -16005,6 +16049,10 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
       harnessFeedbackPayload = null;
       renderHarnessFeedback();
     }
+    // AP-020: references belong to the project, not to the artifact, so they are read from the
+    // session's own scope even when this session has no artifact version of its own yet. The
+    // target is passed only to decide whether adopting one is even offered.
+    loadHarnessReferences(payload.sessionId, target);
   }
 
   function harnessEvidenceObservedHtml(payload) {
@@ -17188,6 +17236,239 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
   document.getElementById("harnessStream").addEventListener("scroll", () => updateHarnessTimelineJump(), { passive: true });
   renderChatMessages();
   document.getElementById("hallHumanInput").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitHallComposer(); } });
+
+
+  // ================= AP-020: VERSIONED OWNER-APPROVED REFERENCES =================
+  // A reference answers one question: "the owner already approved this kind of artifact, so
+  // may we reuse its tone?" It answers nothing else. The pane therefore draws four separate
+  // facts and never lets them collapse:
+  //
+  //   1. what the owner approved      (the exact artifact version, and their own words)
+  //   2. what that settles            (a style to reuse -- visible in `why_offered`)
+  //   3. what it does not settle      (new code, new facts, screenshots, security)
+  //   4. what only the owner can grant (final acceptance, publish permission)
+  //
+  // It also refuses to pretend to be the owner. The approver name is typed by the human and
+  // recorded as `owner:<name>`; there is no stored identity this pane could borrow, and an
+  // invented one would be exactly the fabricated approval the module exists to reject.
+  let harnessReferencePayload = null; // {scope, data, error}
+  let harnessReferenceNote = null;    // {tone, text}
+
+  const HARNESS_REFERENCE_CANNOT_SETTLE_DEFAULT = [
+    "new code working",
+    "new facts being true",
+    "security sign-off",
+    "screenshot approval",
+    "final acceptance of this work",
+    "publish permission",
+  ];
+
+  function harnessReferenceText(value, max) {
+    return typeof value === "string" ? value.slice(0, max || 300) : "";
+  }
+
+  function harnessReferenceModel(payload) {
+    if (!payload || typeof payload !== "object") return null;
+    const items = Array.isArray(payload.items) ? payload.items : [];
+    const cannot = Array.isArray(payload.cannot_settle) ? payload.cannot_settle : HARNESS_REFERENCE_CANNOT_SETTLE_DEFAULT;
+    return {
+      scope: harnessReferenceText(payload.project_scope_id, 64),
+      cannot: cannot.map(entry => harnessReferenceText(String(entry).replace(/_/g, " "), 80)),
+      items: items.map(item => ({
+        id: harnessReferenceText(item.reference_id, 160),
+        version: Number(item.version) || 0,
+        status: harnessReferenceText(item.status, 16) || "active",
+        brief: harnessReferenceText(item.brief, 600),
+        taskKind: harnessReferenceText(item.task_kind, 40),
+        audience: harnessReferenceText(item.audience, 40),
+        language: harnessReferenceText(item.language, 24),
+        styles: Array.isArray(item.style_tags) ? item.style_tags.map(tag => harnessReferenceText(tag, 32)).filter(Boolean) : [],
+        digest: harnessReferenceText(item.artifact && item.artifact.content_sha256, 64),
+        approvalActor: harnessReferenceText(item.approval && item.approval.actor, 80),
+        approvalWords: harnessReferenceText(item.approval && item.approval.statement, 600),
+        // Restated from the record, not assumed: a record that claimed either would have been
+        // refused at read time, so these are always false and are drawn as such.
+        finalAcceptance: item.is_final_acceptance === true,
+        publishPermission: item.grants_publish_permission === true,
+        why: Array.isArray(item.why_offered) ? item.why_offered.map(reason => harnessReferenceText(reason, 120)).filter(Boolean) : [],
+        supersededBy: harnessReferenceText(item.superseded_by, 160),
+      })),
+    };
+  }
+
+  function harnessReferenceRowHtml(item) {
+    const approval = item.approvalActor
+      ? `Approved by ${escapeHtml(item.approvalActor)}${item.approvalWords ? `: &ldquo;${escapeHtml(item.approvalWords)}&rdquo;` : ""}`
+      : "No approval is recorded on this row, so it is not a reference anyone may rely on.";
+    const why = item.why.length
+      ? `<p class="harness-reference-why">Offered because: ${escapeHtml(item.why.join("; "))}</p>`
+      : "";
+    const facts = [
+      item.taskKind ? `task ${item.taskKind}` : "",
+      item.audience ? `audience ${item.audience}` : "",
+      item.language ? `language ${item.language}` : "",
+      item.styles.length ? `style ${item.styles.join(", ")}` : "",
+      item.digest ? `artifact ${item.digest.slice(0, 12)}` : "",
+    ].filter(Boolean).join(" · ");
+    const staleLink = item.supersededBy
+      ? `<p class="harness-reference-meta">Replaced by ${escapeHtml(item.supersededBy)}. The earlier approval is still shown as it was given.</p>`
+      : "";
+    return `<li class="harness-reference-row" data-status="${escapeHtml(item.status)}">
+      <div class="harness-reference-head">
+        <span class="harness-reference-name">${escapeHtml(item.id)}</span>
+        <span class="harness-reference-version">v${item.version}</span>
+        <span class="harness-reference-badge" data-status="${escapeHtml(item.status)}">${escapeHtml(item.status)}</span>
+      </div>
+      <p class="harness-reference-brief">${escapeHtml(item.brief)}</p>
+      <p class="harness-reference-approval">${approval}</p>
+      ${facts ? `<p class="harness-reference-meta">${escapeHtml(facts)}</p>` : ""}
+      ${why}
+      ${staleLink}
+    </li>`;
+  }
+
+  function harnessReferenceHtml(payload) {
+    const model = harnessReferenceModel(payload);
+    if (!model) return "";
+    const cannot = model.cannot.length
+      ? `<p class="harness-reference-cannot"><strong>What a reference never settles:</strong> ${escapeHtml(model.cannot.join(", "))}. Those stay separate decisions, made about the new work.</p>`
+      : "";
+    if (!model.items.length) {
+      return `<div class="ev-heading">References</div>
+        <p class="ev-note">Nothing has been adopted as a reference in this project yet. Until something is, the agent has no approved example to reuse and will ask you about direction instead of inventing one.</p>${cannot}`;
+    }
+    return `<div class="ev-heading">References</div>
+      <ul class="harness-reference-list">${model.items.map(harnessReferenceRowHtml).join("")}</ul>
+      ${cannot}`;
+  }
+
+  function renderHarnessReference() {
+    const host = document.getElementById("harnessReferencePanel");
+    if (!host) return;
+    const note = harnessReferenceNote;
+    const noteHtml = note
+      ? `<p class="ev-note" data-tone="${escapeHtml(note.tone)}">${escapeHtml(note.text)}</p>`
+      : "";
+    if (!harnessReferencePayload) {
+      host.innerHTML = `<div class="ev-heading">References</div>
+        <p class="ev-note">No project is open, so there are no references to show.</p>${noteHtml}`;
+      return;
+    }
+    if (harnessReferencePayload.error) {
+      host.innerHTML = `<div class="ev-heading">References</div>
+        <p class="ev-note" data-tone="danger">The reference record could not be read: ${escapeHtml(harnessReferencePayload.error)}</p>${noteHtml}`;
+      return;
+    }
+    host.innerHTML = harnessReferenceHtml(harnessReferencePayload.data) + noteHtml;
+  }
+
+  // A refusal is answered where the control that caused it is. Re-rendering only the panel above
+  // would put the reason somewhere the reader who pressed the button is not looking, which is
+  // the same mistake AP-019's composer avoids.
+  function harnessReferenceSay(text, tone) {
+    const inline = document.getElementById("harnessReferenceNote");
+    if (inline) {
+      inline.textContent = text ? String(text) : "";
+      inline.dataset.tone = text ? String(tone || "info") : "";
+    }
+    if (!text) return;
+    // A read failure still belongs in the panel: it is about the records, not about the form.
+    if (String(tone) === "danger") {
+      harnessReferenceNote = { tone: "danger", text: String(text) };
+      renderHarnessReference();
+    }
+  }
+
+  // The target is the recorded artifact version of the session, exactly as AP-019 binds
+  // feedback to it: a reference to a version nobody recorded is a reference to a rumour.
+  async function loadHarnessReferences(sessionId, target) {
+    if (!sessionId || !target) {
+      harnessReferencePayload = null;
+      renderHarnessReference();
+      return;
+    }
+    try {
+      const response = await fetch(`/api/reference-benchmarks?session_id=${encodeURIComponent(sessionId)}`);
+      const data = await response.json().catch(() => null);
+      if (String(sessionId) !== String(activeHarnessId || "")) return; // a stale answer never lands on the new session
+      harnessReferencePayload = {
+        scope: data && data.project_scope_id ? data.project_scope_id : "",
+        data: response.ok ? data : null,
+        error: response.ok ? "" : ((data && (data.detail || data.error)) || `HTTP ${response.status}`),
+      };
+    } catch (error) {
+      if (String(sessionId) !== String(activeHarnessId || "")) return;
+      harnessReferencePayload = { scope: "", data: null, error: `the request never reached the server: ${error.message}` };
+    }
+    renderHarnessReference();
+  }
+
+  // Recording a reference is the owner's decision. If they have not typed who they are, the
+  // pane says so and sends nothing: a name taken from elsewhere in the UI would be a guess,
+  // and a guessed approver is a fabricated one.
+  async function submitHarnessReference(event) {
+    if (event && event.preventDefault) event.preventDefault();
+    const payload = harnessReferencePayload;
+    const target = harnessFeedbackPayload;
+    const approverField = document.getElementById("harnessReferenceApprover");
+    const statementField = document.getElementById("harnessReferenceStatement");
+    const approver = approverField ? String(approverField.value || "").trim() : "";
+    const statement = statementField ? String(statementField.value || "").trim() : "";
+
+    if (!payload || payload.error || !payload.scope) {
+      harnessReferenceSay("This project's references could not be read, so nothing was recorded. Reload the pane first.", "warn");
+      return false;
+    }
+    if (!target || target.error || !target.digest) {
+      harnessReferenceSay("No artifact version is recorded for this session yet, so there is nothing to adopt as a reference.", "warn");
+      return false;
+    }
+    if (!approver) {
+      harnessReferenceSay("Nothing was recorded: type your name. The record has to name the person who approved it, and the pane will not fill that in for you.", "warn");
+      return false;
+    }
+    if (!statement) {
+      harnessReferenceSay("Nothing was recorded: say in your own words what you are approving, or the record would be a click the agent wrote for you.", "warn");
+      return false;
+    }
+    try {
+      const response = await fetch("/api/reference-benchmarks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reference_id: `ref/${String(target.artifactId || "artifact").replace(/^\/+/, "")}`.slice(0, 160),
+          version: 1,
+          project_scope_id: payload.scope,
+          task_kind: "artifact",
+          brief: statement,
+          artifact: {
+            artifact_id: String(target.artifactId || ""),
+            content_sha256: target.digest,
+            measured_checks: {},
+          },
+          approval: { actor: `owner:${approver}`, statement: statement, granted: ["use_as_reference"] },
+          audience: "",
+          language: "",
+          style_tags: [],
+          checks: [],
+        }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        harnessReferenceSay(`The record was refused: ${(data && (data.detail || data.error)) || `HTTP ${response.status}`}`, "danger");
+        return false;
+      }
+      if (statementField) statementField.value = "";
+      harnessReferenceNote = {
+        tone: "ok",
+        text: "Recorded as a reference, with your words as the approval. It settles reuse of this style, not the next artifact, and it does not accept or publish anything.",
+      };
+      await loadHarnessReferences(payload.sessionId || activeHarnessId, target);
+    } catch (error) {
+      harnessReferenceSay(`The request never reached the server: ${error.message}`, "danger");
+    }
+    return false;
+  }
 
   // ================= UNIVERSAL CLOUD + CUSTOM MCP HUB (v6.0) =================
   let mcpPresets = {};

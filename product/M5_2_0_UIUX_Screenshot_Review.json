@@ -9,12 +9,12 @@
   "statement": "Every committed capture, the script that made it, what a reviewer concluded about it, and the checks that keep the claim honest: the index agrees with the disk, the theme in the filename is the theme in the pixels, the producer still exists, and a set that was re-shot in this story says so. A set nobody reviewed is a finding.",
   "luminance_measured": true,
   "totals": {
-    "sets": 40,
-    "files": 1792,
-    "reviewed_sets": 40,
-    "sets_eyed": 20,
-    "files_eyed": 108,
-    "re_taken_sets": 16,
+    "sets": 41,
+    "files": 1794,
+    "reviewed_sets": 41,
+    "sets_eyed": 21,
+    "files_eyed": 109,
+    "re_taken_sets": 17,
     "published_sets": 1,
     "findings": 0,
     "observations": 33
@@ -30,12 +30,12 @@
         "desktop": 121
       },
       "harness": {
-        "sets": 17,
-        "files": 205,
+        "sets": 18,
+        "files": 207,
         "dark": 85,
-        "light": 73,
-        "narrow": 38,
-        "desktop": 162
+        "light": 75,
+        "narrow": 39,
+        "desktop": 163
       },
       "hall": {
         "sets": 9,
@@ -5633,6 +5633,60 @@
           "theme": null,
           "theme_measured": "light",
           "luminance": 0.9635
+        }
+      ]
+    },
+    {
+      "set": "harness-reference",
+      "directory": "docs/media/harness-reference",
+      "story": "AP-020",
+      "producer": "scripts/harness_reference_walk.mjs",
+      "producer_from": "curated",
+      "index": {
+        "captured_at": "2026-11-24T19:23:23.952Z",
+        "viewport": {
+          "width": 1440,
+          "height": 960,
+          "device_scale_factor": 1
+        },
+        "theme": "light",
+        "folders": [
+          "harness-reference/1440x960-light",
+          "harness-reference/390x844-light"
+        ]
+      },
+      "reviewed": true,
+      "note": "A reference as a decision, not a style guide: each row names the exact artifact version the owner approved, quotes their own words beside it, and prints why it was offered. The superseded row still shows the earlier approval as it was given and points forward to the version that replaced it, the revoked row keeps its record and states its status, and the hostile row draws markup as text. Every state closes with what a reference never settles, and the form beneath it asks the owner to name themselves rather than borrowing an identity the app does not have.",
+      "eye": [
+        "1440x960-light/reference-pane.png"
+      ],
+      "re_taken": true,
+      "theme_claim": "light",
+      "known_failing_producer": false,
+      "files": [
+        {
+          "file": "harness-reference/1440x960-light/reference-pane.png",
+          "name": "reference-pane.png",
+          "bytes": 214287,
+          "sha256": "6b243cad8a560584c0d4eb2a8e4c99f4fb0c027aee80e6f4c3861b485037a5dd",
+          "width": 1440,
+          "height": 960,
+          "css_width": 1440,
+          "theme": "light",
+          "theme_measured": "light",
+          "luminance": 0.7154
+        },
+        {
+          "file": "harness-reference/390x844-light/reference-mobile.png",
+          "name": "reference-mobile.png",
+          "bytes": 239896,
+          "sha256": "c610f6c5b9305f75b25bab0cc6eb4b4c04870f025a181843dafb848c01924586",
+          "width": 780,
+          "height": 1688,
+          "css_width": 390,
+          "theme": "light",
+          "theme_measured": "light",
+          "luminance": 0.8475
         }
       ]
     },

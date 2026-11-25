@@ -73,9 +73,9 @@
     "positive_tabindex": 0
   },
   "names": {
-    "controls": 108,
+    "controls": 110,
     "unnamed": 0,
-    "live_regions": 30
+    "live_regions": 31
   },
   "walk": {
     "script": "scripts/a11y_walk.mjs",

@@ -28,6 +28,7 @@ INLINED_MODULES = (
     "process_supervision",
     "scoped_grants",
     "scoped_feedback",
+    "reference_benchmarks",
     "child_delegation",
     "workflow_state",
     "mcp_client",

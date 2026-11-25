@@ -468,11 +468,11 @@ def artifact_findings() -> list[dict[str, str]]:
         findings.append({"check": "isolation", "detail": "this environment's unprobed isolation must remain unqualified and blocked"})
     if accessibility.get("findings") or accessibility.get("evidence", {}).get("totals") != {"checks": 120, "passed": 120, "failed": 0, "captures": 62}:
         findings.append({"check": "accessibility", "detail": "UIV2-28 accessibility evidence is not green"})
-    # 279 controls and 128 mounted routes: the two direction routes and the controls that
-    # answer them are part of the Harness pane, and AP-019 adds the feedback composer, its
-    # clear-selection control and the five scoped-feedback routes. The numbers are raised
+    # 282 controls and 134 mounted routes: AP-020 adds the reference pane's three controls (the
+    # named-approver field, the approval statement and the record button) and six routes
+    # (list, one version, record, enhance, revoke, coverage). The numbers are raised
     # deliberately, not widened -- an inventory that loses a control is still a finding.
-    if preservation.get("totals", {}).get("controls") != 279 or preservation.get("totals", {}).get("mounted_routes") != 128:
+    if preservation.get("totals", {}).get("controls") != 282 or preservation.get("totals", {}).get("mounted_routes") != 134:
         findings.append({"check": "preservation", "detail": "six-pane control/route inventory drifted"})
     if preservation_e2e.get("totals", {}).get("matrix_rows") != 21 or preservation_e2e.get("totals", {}).get("mapped_rows") != 21 or preservation_e2e.get("findings"):
         findings.append({"check": "preservation-e2e", "detail": "all 21 preservation rows must be mapped without findings"})
