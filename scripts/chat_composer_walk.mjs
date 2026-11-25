@@ -56,6 +56,11 @@ if (!chrome) throw new Error("STUDIO_SCREENSHOT_CHROME is required");
 const extraArgs = (process.env.STUDIO_SCREENSHOT_CHROME_ARGS || "").split(/\s+/).filter(Boolean);
 const browser = await puppeteer.launch({ executablePath: chrome, headless: true, args: ["--no-sandbox", "--disable-dev-shm-usage", ...extraArgs] });
 const page = await browser.newPage();
+// A bare `WaitTask.js:46` says a wait timed out but not which one, which made a real
+// intermittent failure in CI indistinguishable from a flake worth ignoring. Bound every wait
+// and name the step in the message so the next failure is diagnosable.
+page.setDefaultTimeout(30000);
+page.setDefaultNavigationTimeout(30000);
 await page.setViewport({ width: 1280, height: 900, deviceScaleFactor: 1 });
 const pageErrors = [];
 const externalRequests = [];
