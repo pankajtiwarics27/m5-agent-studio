@@ -3463,7 +3463,7 @@
       "title": "Extract evidence-backed reusable skills from work",
       "priority": "P1",
       "optional": false,
-      "status": "in_review",
+      "status": "done",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-012",
@@ -3517,18 +3517,44 @@
         "Push/PR state; owner/independent approvals where required"
       ],
       "tracking": {
-        "owner": null,
-        "branch": null,
-        "base_sha": null,
-        "head_sha": null,
-        "claimed_at": null,
-        "heartbeat_at": null,
-        "pr_url": null,
-        "delivery_status": "not_pushed",
-        "acceptance_evidence": [],
-        "tests_executed": [],
+        "owner": "arena/ab195e0f-m5-agent-studio",
+        "branch": "arena/ab195e0f-m5-agent-studio",
+        "base_sha": "e7725bdf35",
+        "head_sha": "3dcb28d",
+        "claimed_at": "2026-11-10T00:00:00Z",
+        "heartbeat_at": "2026-11-10T00:00:00Z",
+        "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/371",
+        "delivery_status": "merged",
+        "acceptance_evidence": [
+          "AC1 (skills record provenance, prerequisites, permissions, versions, examples/tests and limitations): REQUIRED_SKILL_SECTIONS is checked as fields, not prose; a skill missing any section, a skill with only illustration examples (no is_test=True), a prose name and a non-positive version are each refused. Tests: test_a_skill_records_every_section_a_reader_needs, test_a_skill_with_no_limit_claims_universal_applicability, test_a_skill_with_no_prerequisite_or_permission_is_refused, test_a_skill_with_only_illustrations_has_no_regression_protection, test_a_prose_name_cannot_be_versioned_or_looked_up, test_a_version_must_be_a_positive_integer.",
+          "AC2 (one task success justifies task-local use but not automatic global superiority): assess_promotion derives task_local unless two independent sessions, public data and a matched comparison all hold; the same session twice counts once, unverified evidence cannot be extracted from at all, a comparison about another technique does not transfer and a comparison that does not favour the candidate blocks sharing. Tests: test_one_verified_task_is_recorded_as_task_local, test_unverified_evidence_cannot_be_extracted_from_at_all, test_a_skill_with_no_originating_task_is_a_guess_with_a_name, test_sharing_needs_independent_sessions_a_comparison_and_public_data, test_the_same_session_twice_is_not_independent_evidence, test_working_twice_is_not_evidence_of_being_better_than_the_incumbent, test_a_comparison_about_a_different_technique_does_not_transfer, test_a_comparison_that_favours_the_incumbent_blocks_sharing, test_a_comparison_needs_more_than_one_run_per_arm, test_a_comparison_needs_matched_configuration.",
+          "AC3 (failed approaches and corrections are retained safely without becoming executable instructions): FailedApproach has no steps or guidance field, render() raises PromotionRefused, executable is a constant False with init=False so no constructor argument can set it, and the evidence that shows the failure is required. Tests: test_a_failed_approach_is_recorded_with_its_correction, test_a_failed_approach_can_never_be_rendered_as_guidance, test_the_executable_flag_is_a_constant_not_a_parameter, test_a_failed_approach_needs_the_evidence_that_it_failed.",
+          "AC4 (private data and cross-project authority do not leak into shared skills): permissions are validated against scoped_grants.SG_CAPABILITY_TAXONOMY, privacy_findings() scans guidance and every example for credential patterns and host paths, internal confidentiality blocks sharing, and evidence_projects() reports which projects a skill was assembled from. Tests: test_an_internal_skill_is_never_shared, test_a_credential_in_the_guidance_blocks_sharing, test_a_host_path_in_an_example_blocks_sharing, test_an_empty_privacy_scan_is_not_the_same_as_a_clean_one, test_a_skill_cannot_carry_authority_its_source_tasks_did_not_hold, test_the_evidence_projects_are_reported_so_cross_project_promotion_is_visible, test_permissions_come_from_the_existing_capability_taxonomy.",
+          "AC5 (existing evidence_lessons promotion contracts are reused and actual consumers tested): promote_to_lesson_store converts a shared skill into evidence_lessons.LessonProvenance and calls EvidenceLessonStore.promote_lesson, so the store's own privacy, anchor, token and trust gates apply; a task-local skill is refused before the store is touched, and two tests execute the real store (one promoting successfully, one making the store's registered-secret rejection fire). Tests: test_a_task_local_skill_never_enters_the_cross_task_store, test_a_shared_skill_promotes_through_the_real_lesson_store, test_the_store_still_applies_its_own_privacy_gate_to_a_promoted_skill, test_a_decision_for_another_skill_cannot_promote_this_one.",
+          "AC6 (revoked/outdated skills are quarantined or revalidated; running tasks retain stable versions): versions are immutable, resolve() returns nothing while quarantined or revoked, a pin keeps the version it resolved after a quarantine, revalidate() resumes at the latest version, and a quarantine needs a reason. Tests: test_the_latest_version_is_what_a_new_task_resolves, test_a_version_is_immutable_and_an_edit_is_a_new_version, test_a_quarantine_stops_the_next_retrieval_and_spares_the_running_task, test_revalidation_resumes_retrieval_at_the_latest_version, test_a_revoked_skill_is_not_resolved, test_a_task_cannot_pin_what_it_cannot_resolve, test_a_quarantine_needs_a_reason_and_a_known_skill, test_the_library_reports_versions_quarantines_and_pins.",
+          "Discipline: the module imports only standard-library pieces plus evidence_lessons and scoped_grants, opens no clock, file or socket, and shares no top-level name with app.py. Tests: test_the_module_reads_no_clock_and_opens_no_socket, test_the_module_shares_no_top_level_name_with_app."
+        ],
+        "tests_executed": [
+          "tests/test_skill_extraction.py: 42 passed",
+          "scripts/ci_test_shard.py --run-shard 3 --python-version 3.12: 2459 passed, 10 skipped in 649s (nodes=2469, outcomes_sha256 a276d942...) — run before the browser-walk commit, whose own shard-3 modules are unchanged",
+          "mypy (96 modules): Success; ruff check .: clean; scripts/validate_docs.py: passed, 325 files",
+          "scripts/uiux_release_gate.py --check: 37/37 checks, 7/7 gates, 0 findings; scripts/uiux_preservation_signoff.py --check: up to date; scripts/uiv2_release_review.py --check: 0 findings",
+          "PR #371 pull-request run 45604482776 at head 5ebd47f: success, every required check green"
+        ],
         "blockers": [],
-        "handoff": null
+        "handoff": "AP-025's extraction contract is delivered and merged (PR #371): skill_extraction.py plus 42 tests and a doc page, every acceptance criterion mapped. Three limits are named rather than hidden. (1) No route, pane or orchestrator consumes skill_extraction.py yet; promote_to_lesson_store is a real caller of the lesson store and both suites exercise it, but no application path calls this module. (2) No skill was extracted from this session's own work — the skills in the tests are fixtures, because claiming a real extraction from one run is exactly the move this story refuses. (3) No shared skill was published; the store used in the tests is a temporary directory. The same PR also makes the intermittent Chat browser walk attributable rather than fixed: every wait names its step, verified against a page that can never satisfy the first wait, and the walk passed 6/6 locally after the change.",
+        "status": "in_review",
+        "changed_files": [
+          "skill_extraction.py: the extraction contract — task evidence, skill permissions from the existing grant taxonomy, examples with a required test, comparison evidence, the promotion decision, failed approaches and a version library with quarantine",
+          "tests/test_skill_extraction.py: 42 tests, mostly refusals, including two that promote through the real evidence_lessons store",
+          "docs/ap025-evidence-backed-skills.md, docs/README.md",
+          "tests/ci_test_shards.json (shard 3, balance [89,80,86]), tests/test_scopes.json, pyproject.toml (mypy scope, py-modules)",
+          "scripts/chat_composer_walk.mjs plus the three UIUX artifacts that pin it: every wait names its step so the next browser failure is attributable"
+        ],
+        "visual_evidence": [
+          "No new screen: this story adds a decision module and no pane, so no screenshot is claimed for it."
+        ],
+        "merge_commit": "e775ce7d69"
       },
       "implementation_prompt": "Implement AP-025: Extract evidence-backed reusable skills from work. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
