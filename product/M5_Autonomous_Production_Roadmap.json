@@ -4129,7 +4129,7 @@
       "title": "Qualify the production release and independent-agent handoff",
       "priority": "P1",
       "optional": false,
-      "status": "in_review",
+      "status": "done",
       "authorization": "owner_release_acceptance_and_existing_independent_security_visual_gates",
       "dependencies": [
         "AP-022",
@@ -4187,11 +4187,11 @@
         "owner": "arena/ab195e0f-m5-agent-studio",
         "branch": "arena/ab195e0f-m5-agent-studio",
         "base_sha": "e99d30d",
-        "head_sha": null,
+        "head_sha": "9ac4961619adf0e0ab2cd959518295b2656a7be9",
         "claimed_at": "2026-11-10T00:00:00Z",
         "heartbeat_at": "2026-11-10T00:00:00Z",
-        "pr_url": null,
-        "delivery_status": "in_review",
+        "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/382",
+        "delivery_status": "merged",
         "acceptance_evidence": [
           "AC1 (if only one specialisation is owner-selected, explicitly defer the other through an authorised ledger revision rather than fake completion): DeferredSpecialisation requires a human owner:/user: granter (a reviewer: is refused because a reviewer may gate quality but cannot decide what ships), a reason and a timestamp; QualificationPack refuses a specialisation deferred twice or both selected and deferred, and unaccounted_specialisations names any specialisation neither selected nor deferred, which blocks with 'leaving it unmentioned is not the same as deferring it'. Tests: test_the_unselected_pilot_must_be_deferred_not_omitted, test_a_deferral_names_a_human_owner, test_a_reviewer_cannot_decide_what_ships, test_a_deferral_needs_a_reason, test_an_unknown_specialisation_cannot_be_deferred, test_the_same_specialisation_cannot_be_deferred_twice, test_a_specialisation_cannot_be_both_selected_and_deferred, test_deferring_the_shipped_pilot_leaves_nothing_selected.",
           "AC2 (existing API/UI/session/workspace features and standalone remain verified): PreservationSurface requires an explicit verdict from verified/partially-verified/missing/not-applicable with no default; a verified or partially-verified surface needs an evidence id, not-applicable needs a reason, a missing or partially-verified surface blocks, and reporting no preserved surfaces at all blocks because unverified is not preserved. Tests: test_every_preserved_surface_carries_an_explicit_verdict, test_a_verified_surface_needs_evidence, test_not_applicable_needs_an_argument, test_a_missing_surface_blocks_an_otherwise_green_release, test_a_partially_verified_surface_blocks, test_reporting_no_preserved_surface_at_all_blocks.",
@@ -4205,10 +4205,15 @@
           "pytest tests/test_release_qualification.py -> 59 passed",
           "pytest tests/test_ci_test_shard.py tests/test_scoped_tests.py -> 20 passed",
           "ruff check . -> clean; mypy (102 modules) -> clean",
-          "scripts/validate_docs.py -> passed (331 files)"
+          "scripts/validate_docs.py -> passed (331 files)",
+          "full CI run 45640598189 at 9ac4961 -> success after rerunning one environment flake (tests/test_autonomous_production_research.py::test_repo_inspection_enforces_per_file_and_total_budgets, shard 1/3.11); the same shard passed locally at 2040 passed / 31 skipped with an identical skip hash"
         ],
         "blockers": [],
-        "handoff": "Ships the qualification machinery, not a qualification. Explicitly NOT claimed: no end-to-end pilot, held-out suite, website/video artifact review or rollback/migration/restore drill was run for this story -- the fixtures are constructed values, so a real pack must be assembled by a release run that actually performs them; no security or screenshot approval exists and, per owner policy U03 (public read-only research only), this agent cannot sign or substitute one -- Approval exists so an omitted signature blocks, never so one can be invented; the module is additive and does not wire into, weaken, bypass or replace security_release_gate.py, which keeps its own sign-off and prerequisite evaluation (where they overlap, the stricter reading applies in each); CiVerdict is supplied by a caller, no GitHub API call happens in the module; and the one-specialisation decision remains an owner decision recorded in this ledger. Owner acceptance for this story is therefore partial by construction and must be completed by the owner: the remaining release actions are to select or defer the launch specialisation in this ledger, run the pilot cases and artifact review at a real head, obtain the independent security and screenshot approvals, exercise rollback/migration/restore, and supply the green CI run id at that head. Until then the correct pack decision for the current build is release-blocked and this module reports it that way rather than assuming readiness."
+        "handoff": "Ships the qualification machinery, not a qualification. Explicitly NOT claimed: no end-to-end pilot, held-out suite, website/video artifact review or rollback/migration/restore drill was run for this story -- the fixtures are constructed values, so a real pack must be assembled by a release run that actually performs them; no security or screenshot approval exists and, per owner policy U03 (public read-only research only), this agent cannot sign or substitute one -- Approval exists so an omitted signature blocks, never so one can be invented; the module is additive and does not wire into, weaken, bypass or replace security_release_gate.py, which keeps its own sign-off and prerequisite evaluation (where they overlap, the stricter reading applies in each); CiVerdict is supplied by a caller, no GitHub API call happens in the module; and the one-specialisation decision remains an owner decision recorded in this ledger. Owner acceptance for this story is therefore partial by construction and must be completed by the owner: the remaining release actions are to select or defer the launch specialisation in this ledger, run the pilot cases and artifact review at a real head, obtain the independent security and screenshot approvals, exercise rollback/migration/restore, and supply the green CI run id at that head. Until then the correct pack decision for the current build is release-blocked and this module reports it that way rather than assuming readiness.",
+        "merge_commit": "b072d09",
+        "ci_run_id": 45640598189,
+        "ci_conclusion": "success",
+        "merged_at": "2026-11-10T00:00:00Z"
       },
       "implementation_prompt": "Implement AP-032: Qualify the production release and independent-agent handoff. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     }
