@@ -3908,10 +3908,10 @@
         "owner": "arena/ab195e0f-m5-agent-studio",
         "branch": "arena/ab195e0f-m5-agent-studio",
         "base_sha": "4ed6932",
-        "head_sha": null,
+        "head_sha": "75107b9",
         "claimed_at": "2026-11-10T00:00:00Z",
         "heartbeat_at": "2026-11-10T00:00:00Z",
-        "pr_url": null,
+        "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/379",
         "delivery_status": "in_review",
         "acceptance_evidence": [
           "AC1 (schedules grant only their explicit purpose; draft creation never implies publication): ScheduleGrant requires a named human granter, a project, a real expiry, a positive run cap and specific purposes from SCHEDULE_PURPOSES (draft/publish/deploy); permits() is the only ask and is false for another purpose, an expired grant or a spent cap. RecurringMission cannot exist without a grant, cannot borrow another project's grant, and cannot carry a purpose its grant omits. DraftArtifact has no published field or send method and to_mapping() states published: false; the only bridge to an external effect is requires_external_action(), which needs a separate grant carrying the matching purpose (publish vs deploy). Tests: test_a_schedule_needs_a_named_human_grant, test_a_grant_must_name_its_purposes, test_an_unknown_purpose_is_refused, test_a_grant_only_permits_its_own_purpose, test_an_expired_grant_permits_nothing, test_a_spent_grant_permits_nothing, test_a_grant_with_no_expiry_is_refused, test_a_mission_cannot_exist_without_a_grant, test_a_mission_cannot_borrow_another_projects_grant, test_a_mission_cannot_exceed_its_grants_purposes, test_a_draft_is_not_a_publication, test_a_draft_grant_cannot_produce_an_external_action, test_a_publish_grant_can_produce_an_external_action, test_a_deploy_needs_its_own_purpose, test_an_external_action_needs_an_expiry, test_the_intent_expiry_never_outlives_its_grant.",
