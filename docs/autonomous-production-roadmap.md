@@ -13,6 +13,32 @@
 
 **Precedence:** repository `AGENTS.md`, accepted security decisions, existing program ownership and signed approvals remain binding. This program does not replace the AS, M5 runtime, UIUX/UIV2, or LC ledgers, and does not reopen their completed stories. Reconcile overlapping work in AP-001. Drafting this roadmap does not grant automatic execution authority to its stories or to downloaded tools.
 
+## Revision 3.3 — AP-031 and AP-032 record their outstanding acceptance (2026-11-10; AP-031, AP-032 only)
+
+Revision 3.2 marked both stories `done` and said in prose that their owner
+acceptance was outstanding. That prose was the only record, and prose is not a
+control: `done_requires` names "required actual owner/independent approvals
+recorded", and AP-032's own authorization class is
+`owner_release_acceptance_and_existing_independent_security_visual_gates`.
+
+Both stories now carry a machine-checked `acceptance_outstanding` marker naming
+`owner_acceptance: pending`, the three deliverables each did **not** deliver, the
+actions that remain, and `release_effect: release-blocked`. Tests in
+`tests/test_autonomous_production_decisions.py` fail if the marker is deleted,
+emptied, points at a deliverable the story does not have, or survives a status
+change, and fail if an acceptance-given marker still names outstanding actions.
+Three mutations were verified to fail the suite before the tests were accepted.
+
+The status stays `done`, matching the convention AP-021/022/024 established: a
+merged bounded contract with its gap disclosed is `done`, while the deliverable
+and the human acceptance are separately recorded rather than assumed. What
+changed is that the disclosure is now checked.
+
+`release_qualification.py` returns `release-blocked` for the current build until
+the owner selects or defers the launch specialisation, runs the pilot at a real
+head, obtains the independent security and screenshot approvals, exercises
+rollback/migration/restore, and supplies a green CI run at that head.
+
 ## Revision 3.2 — AP-031 and AP-032 recorded done; program stories all merged (2026-11-10; AP-031, AP-032 only)
 
 Three PRs closed the last open stories: **AP-029** merged as

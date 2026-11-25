@@ -3,7 +3,7 @@
   "document_type": "proposed_autonomous_production_execution_ledger",
   "product": "M5 Agent Studio",
   "program": "AP",
-  "revision": "3.2",
+  "revision": "3.3",
   "prepared_date": "2026-11-08",
   "lifecycle": "registered_tracking_ap030_done_ap008_claim_reconciled_ap018_blocked_u01_u05_resolved",
   "source_snapshot": "a67e8b291614f8afdac7c8d38ba51bcc8926d695",
@@ -4119,7 +4119,24 @@
         "merge_commit": "e99d30d",
         "ci_run_id": 45636519428,
         "ci_conclusion": "success",
-        "merged_at": "2026-11-10T00:00:00Z"
+        "merged_at": "2026-11-10T00:00:00Z",
+        "acceptance_outstanding": {
+          "recorded_by": "arena/ab195e0f-m5-agent-studio",
+          "recorded_at": "2026-11-10",
+          "release_effect": "release-blocked",
+          "owner_acceptance": "pending",
+          "deliverables_not_delivered": [
+            "Capability readiness and policy UI",
+            "Reference/skill/model controls",
+            "Accurate help/export/operations UX"
+          ],
+          "outstanding_actions": [
+            "Serve operations_surface.py from an app route; it is a value with no caller today.",
+            "Render it in static/index.html behind the existing UI/UX gates (source manifest, preservation sign-off, control inventory, screenshot review).",
+            "Observe owner acceptance of the rendered surface; none has been given."
+          ],
+          "note": "The bounded contract and its 61 tests are merged, and the acceptance criteria are mapped to executed tests. The deliverables named above are UI surfaces and none was built: the module renders nothing, no route serves it, and nothing a user currently sees changed. This marker exists so that omission cannot be read as delivery."
+        }
       },
       "implementation_prompt": "Implement AP-031: Ship progressive configuration, onboarding and operations. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
@@ -4213,7 +4230,26 @@
         "merge_commit": "b072d09",
         "ci_run_id": 45640598189,
         "ci_conclusion": "success",
-        "merged_at": "2026-11-10T00:00:00Z"
+        "merged_at": "2026-11-10T00:00:00Z",
+        "acceptance_outstanding": {
+          "recorded_by": "arena/ab195e0f-m5-agent-studio",
+          "recorded_at": "2026-11-10",
+          "release_effect": "release-blocked",
+          "owner_acceptance": "pending",
+          "deliverables_not_delivered": [
+            "End-to-end pilot acceptance pack",
+            "Preservation/security/CI/supply-chain evidence",
+            "Runbooks, rollback and final handoff"
+          ],
+          "outstanding_actions": [
+            "Owner selects or defers the launch specialisation in this ledger.",
+            "Run the selected pilot cases and the artifact review at a real head.",
+            "Obtain the independent security and screenshot approvals; neither exists and this agent cannot sign one.",
+            "Exercise rollback, migration and restore, recording compared digests.",
+            "Supply a green CI run id at the head being shipped."
+          ],
+          "note": "The qualification machinery and its 59 tests are merged and every acceptance criterion that can be checked offline is enforced by construction. No pilot, suite, artifact review, drill or approval was performed, so release_qualification.py returns release-blocked for the current build. Author evidence is not independent acceptance."
+        }
       },
       "implementation_prompt": "Implement AP-032: Qualify the production release and independent-agent handoff. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     }
