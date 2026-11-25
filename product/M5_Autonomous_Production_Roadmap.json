@@ -3053,7 +3053,7 @@
       "title": "Deliver a complete website draft workflow",
       "priority": "P1",
       "optional": false,
-      "status": "not_started",
+      "status": "in_review",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-009",
@@ -3109,18 +3109,48 @@
         "Push/PR state; owner/independent approvals where required"
       ],
       "tracking": {
-        "owner": null,
-        "branch": null,
-        "base_sha": null,
-        "head_sha": null,
-        "claimed_at": null,
-        "heartbeat_at": null,
-        "pr_url": null,
-        "delivery_status": "not_pushed",
-        "acceptance_evidence": [],
-        "tests_executed": [],
+        "owner": "arena/ab195e0f-m5-agent-studio",
+        "branch": "arena/ab195e0f-m5-agent-studio",
+        "base_sha": "0ec4bc9d48",
+        "head_sha": "f0244e4",
+        "claimed_at": "2026-11-10T00:00:00Z",
+        "heartbeat_at": "2026-11-10T00:00:00Z",
+        "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/363",
+        "delivery_status": "merged",
+        "merge_commit": "0ec4bc9d48",
+        "changed_files": [
+          "website_draft.py: the draft contract — scope, asset provenance, interaction verdicts, required checks, repair bound, claim vocabulary",
+          "tests/test_website_draft.py: 49 tests, mostly refusals",
+          "tests/test_harness_ap_walks_browser.py: the three AP walks executed in CI's mandatory browser job",
+          "scripts/harness_direction_seed.py: the AP-018 fixture, repaired to stage coverage through the reference store",
+          ".github/workflows/ci.yml: the browser regressions shard now runs the AP walk tests",
+          "tests/ci_test_shards.json, tests/test_scopes.json: the new modules registered in both fail-closed maps",
+          "product/M5_2_0_UIUX_V2_{Accessibility,Performance}_*.json + two docs pages: regenerated from real browser runs after the workflow edit changed their pinned digests",
+          "docs/ap021-website-draft-workflow.md, docs/README.md, pyproject.toml (mypy scope)"
+        ],
+        "acceptance_evidence": [
+          "AC1 (audience and scope explicit; sample direction reviewed when no relevant benchmark exists): a DraftScope requires a DraftAudience, at least one page and at least one named exclusion; a brief that excludes nothing is refused because it cannot be finished or reviewed. no_layout_benchmark records whether an owner-approved reference existed; the sample gate itself is AP-018's and is not re-decided here. Tests: test_a_site_without_an_audience_cannot_be_described, test_a_brief_that_excludes_nothing_is_refused, test_a_site_with_no_pages_is_refused, test_an_unbenchmarked_site_is_marked_as_having_no_layout_benchmark.",
+          "AC2 (requested interactions work or are honestly marked unsupported; no fake testimonials or integrations): every interaction the brief asked for must return a verdict and a missing one is refused by name. supported requires evidence; supported_untested exists so a written-but-unproved handler cannot be reported as working; unsupported requires words and is not done either. ContentClaim refuses a testimonial, case study, customer logo or integration badge with no source_ref, and a fabricated placeholder is recordable but never admissible. Tests: test_a_requested_interaction_with_no_verdict_is_refused_not_dropped, test_an_interaction_that_claims_to_work_must_name_its_evidence, test_written_but_untested_is_not_working, test_an_honest_unsupported_verdict_still_makes_the_draft_partial, test_sourced_claim_kinds_cannot_exist_without_a_source, test_an_integration_badge_needs_a_real_source_too, test_a_fabricated_placeholder_is_recordable_but_never_admissible.",
+          "AC3 (research/assets have provenance and applicable rights): any asset not authored in the run names its source; 'licensed' without a licence id is refused because it is not a rights statement; basis=unknown is allowed but blocks delivery and must name who resolves it, so the block has an owner instead of surviving three handoffs. Tests: test_an_asset_from_elsewhere_must_name_where_it_came_from, test_a_licence_claim_without_the_licence_is_refused, test_an_unknown_basis_blocks_delivery_rather_than_passing_quietly, test_an_unknown_provenance_basis_name_is_refused.",
+          "AC4 (code executes in an authorised environment with real browser tests): the four required checks are document_loads, no_console_error, no_broken_link and no_horizontal_overflow; a draft omitting one is refused because a report cannot speak to a check that never ran, and a duplicate is refused because it would double-count. Execution is injected through DraftExecutor — the same port pattern AP-010 uses for its browser worker — and the real Chromium evidence for the shipped UI is the browser walks, now executed in CI by tests/test_harness_ap_walks_browser.py (direction 22, feedback 53, reference 40). Tests: test_a_draft_that_omits_a_required_check_is_refused, test_a_duplicate_check_would_double_count_and_is_refused, test_every_required_check_present_and_passing_is_complete.",
+          "AC5 (repair loop bounded; partial failure visible): the budget is 1–5, rejects booleans, and each retry is told which checks failed. Exhaustion returns a partial draft with every attempt recorded rather than raising, because an exception is something a caller can catch and report as success. Tests: test_the_loop_retries_within_the_budget_and_reports_each_attempt, test_an_exhausted_budget_yields_partial_not_an_exception, test_the_budget_cannot_be_unbounded_or_zero, test_partial_failure_is_visible_in_the_report_not_rounded_up.",
+          "AC6 (no deployment, DNS or production credentials without separate grants): DeploymentGrant's three fields are init=False constants pinned False, and asking it to deploy raises in words. The report states deployment, dns_change, production_credentials and publish_permission as False and lists CANNOT_BE_CLAIMED beside them. Tests: test_deployment_is_a_constant_that_cannot_be_flipped, test_asking_the_grant_to_deploy_is_refused_in_words, test_the_report_never_claims_what_the_draft_cannot_do.",
+          "AC7 (direction compliance, no namespace collision): the module imports only hashlib, json, re, dataclasses and typing — asserted, not assumed — and shares no top-level name with app.py, because a collision in the single-file build has already broken this repository once (direction_checkpoints' SCHEMA_VERSION). Tests: test_the_module_reads_no_clock_and_opens_nothing, test_the_module_shares_no_top_level_name_with_app, test_the_executor_protocol_is_the_only_place_work_happens.",
+          "Two defects found while writing the tests, both fixed in the module rather than worked around: an integration_badge was initially not treated as a sourced claim, so 'Works with Stripe' with no connection would have been admissible; and security_sign_off was missing from CANNOT_BE_CLAIMED."
+        ],
+        "tests_executed": [
+          "tests/test_website_draft.py: 49 passed",
+          "tests/test_harness_ap_walks_browser.py: 5 passed (three real-browser walks, 135s)",
+          "scripts/ci_test_shard.py --run-shard 3 --python-version 3.12: 2272 passed, 10 skipped in 617s",
+          "mypy (repo config, 92 modules): Success; ruff check .: clean",
+          "source-gate suite reproduced locally: validate_docs, check_commit_messages, verify_baseline, validate_security_signoff, check_frontend_syntax, demo_tour --check, validate_screenshots, both map checks, smoke_local, build_studio and the three generators all exit 0",
+          "PR CI run 45565230060 at f0244e4: every job green"
+        ],
+        "visual_evidence": [
+          "No new screen. AP-021 adds a decision module and no pane, so no screenshot is claimed for it; the existing UIV2 and AP captures are unchanged except where the workflow digest forced a real re-capture, which is recorded in AP-020's bookkeeping and in the regenerated artifacts themselves."
+        ],
         "blockers": [],
-        "handoff": null
+        "handoff": "AP-021's contract is delivered and merged as 0ec4bc9d (PR #363). It produces the record a website draft must satisfy, not the page: execution is injected through DraftExecutor, exactly as AP-010 injects its browser driver. Two gaps are deliberate and named rather than hidden — (1) no route or pane consumes website_draft.py yet, so the module is a contract with no surface, like autonomous_production_lab before its first caller; and (2) 'a real browser tests the produced site' is proved for the shipped Studio UI through the CI browser job, but a generated site's own browser check is the executor's obligation and has no default implementation here. Evaluated quality, delivery and creative usefulness are AP-022, which depends on this story; a 'complete' draft from this module means the workflow's obligations were met, not that the site is good."
       },
       "implementation_prompt": "Implement AP-021: Deliver a complete website draft workflow. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
