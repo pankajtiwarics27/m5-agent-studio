@@ -134,6 +134,7 @@ files = [
   "trusted_transformations.py",
   "verification_evidence.py",
   "website_draft.py",
+  "website_quality.py",
   "workflow_checkpoints.py",
   "workflow_evaluation.py",
   "workflow_orchestration.py",
