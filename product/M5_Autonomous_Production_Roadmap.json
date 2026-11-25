@@ -3053,7 +3053,7 @@
       "title": "Deliver a complete website draft workflow",
       "priority": "P1",
       "optional": false,
-      "status": "in_review",
+      "status": "done",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-009",
@@ -3150,7 +3150,8 @@
           "No new screen. AP-021 adds a decision module and no pane, so no screenshot is claimed for it; the existing UIV2 and AP captures are unchanged except where the workflow digest forced a real re-capture, which is recorded in AP-020's bookkeeping and in the regenerated artifacts themselves."
         ],
         "blockers": [],
-        "handoff": "AP-021's contract is delivered and merged as 0ec4bc9d (PR #363). It produces the record a website draft must satisfy, not the page: execution is injected through DraftExecutor, exactly as AP-010 injects its browser driver. Two gaps are deliberate and named rather than hidden — (1) no route or pane consumes website_draft.py yet, so the module is a contract with no surface, like autonomous_production_lab before its first caller; and (2) 'a real browser tests the produced site' is proved for the shipped Studio UI through the CI browser job, but a generated site's own browser check is the executor's obligation and has no default implementation here. Evaluated quality, delivery and creative usefulness are AP-022, which depends on this story; a 'complete' draft from this module means the workflow's obligations were met, not that the site is good."
+        "handoff": "AP-021's contract is delivered and merged as 0ec4bc9d (PR #363). It produces the record a website draft must satisfy, not the page: execution is injected through DraftExecutor, exactly as AP-010 injects its browser driver. Two gaps are deliberate and named rather than hidden — (1) no route or pane consumes website_draft.py yet, so the module is a contract with no surface, like autonomous_production_lab before its first caller; and (2) 'a real browser tests the produced site' is proved for the shipped Studio UI through the CI browser job, but a generated site's own browser check is the executor's obligation and has no default implementation here. Evaluated quality, delivery and creative usefulness are AP-022, which depends on this story; a 'complete' draft from this module means the workflow's obligations were met, not that the site is good.",
+        "status": "done"
       },
       "implementation_prompt": "Implement AP-021: Deliver a complete website draft workflow. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
@@ -3160,7 +3161,7 @@
       "title": "Qualify website output quality and delivery",
       "priority": "P1",
       "optional": false,
-      "status": "in_review",
+      "status": "done",
       "authorization": "normal_story_authorization_plus_owner_creative_acceptance",
       "dependencies": [
         "AP-020",
@@ -3216,8 +3217,8 @@
         "head_sha": "581441a",
         "claimed_at": "2026-11-10T00:00:00Z",
         "heartbeat_at": "2026-11-10T00:00:00Z",
-        "pr_url": null,
-        "delivery_status": "in_review",
+        "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/366",
+        "delivery_status": "merged",
         "changed_files": [
           "website_quality.py: the rubric — criteria, six-cell layout matrix, secret and placeholder scanners, owner review, derived deliverable verdict",
           "tests/test_website_quality.py: 47 tests, mostly refusals",
@@ -3244,7 +3245,9 @@
           "No new screen: this story adds a decision module and no pane, so no screenshot is claimed for it."
         ],
         "blockers": [],
-        "handoff": "AP-022's rubric and record are delivered: website_quality.py plus 47 tests and a doc page, with every acceptance criterion mapped to executed tests. Two gaps are named rather than hidden. (1) No route or pane consumes website_quality.py yet — it is a contract with a probe port and no surface, the same state website_draft.py was in before its first caller; API wiring is a separate reviewable change. (2) No real-browser QualityProbe ships with this story: a Chromium implementation carrying the viewport matrix and resolving real links is the next concrete step, and the Studio's own browser evidence is NOT borrowed as evidence for a generated site. No revenue, conversion or engagement claim is made anywhere; those six claims are refused by name and every report states claims_made: []. Creative usefulness is only ever a named person's judgement, and an accepted reference is recorded as a versioned pointer whose mapping grants nothing — turning it into a reusable reference remains AP-020's explicit decision."
+        "handoff": "AP-022's rubric and record are delivered: website_quality.py plus 47 tests and a doc page, with every acceptance criterion mapped to executed tests. Two gaps are named rather than hidden. (1) No route or pane consumes website_quality.py yet — it is a contract with a probe port and no surface, the same state website_draft.py was in before its first caller; API wiring is a separate reviewable change. (2) No real-browser QualityProbe ships with this story: a Chromium implementation carrying the viewport matrix and resolving real links is the next concrete step, and the Studio's own browser evidence is NOT borrowed as evidence for a generated site. No revenue, conversion or engagement claim is made anywhere; those six claims are refused by name and every report states claims_made: []. Creative usefulness is only ever a named person's judgement, and an accepted reference is recorded as a versioned pointer whose mapping grants nothing — turning it into a reusable reference remains AP-020's explicit decision.",
+        "merge_commit": "2e34de4458",
+        "status": "done"
       },
       "implementation_prompt": "Implement AP-022: Qualify website output quality and delivery. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
