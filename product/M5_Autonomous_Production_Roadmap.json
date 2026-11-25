@@ -3160,7 +3160,7 @@
       "title": "Qualify website output quality and delivery",
       "priority": "P1",
       "optional": false,
-      "status": "not_started",
+      "status": "in_review",
       "authorization": "normal_story_authorization_plus_owner_creative_acceptance",
       "dependencies": [
         "AP-020",
@@ -3210,18 +3210,41 @@
         "Push/PR state; owner/independent approvals where required"
       ],
       "tracking": {
-        "owner": null,
-        "branch": null,
-        "base_sha": null,
-        "head_sha": null,
-        "claimed_at": null,
-        "heartbeat_at": null,
+        "owner": "arena/ab195e0f-m5-agent-studio",
+        "branch": "arena/ab195e0f-m5-agent-studio",
+        "base_sha": "b9d39bc622",
+        "head_sha": "581441a",
+        "claimed_at": "2026-11-10T00:00:00Z",
+        "heartbeat_at": "2026-11-10T00:00:00Z",
         "pr_url": null,
-        "delivery_status": "not_pushed",
-        "acceptance_evidence": [],
-        "tests_executed": [],
+        "delivery_status": "in_review",
+        "changed_files": [
+          "website_quality.py: the rubric — criteria, six-cell layout matrix, secret and placeholder scanners, owner review, derived deliverable verdict",
+          "tests/test_website_quality.py: 47 tests, mostly refusals",
+          "docs/ap022-website-quality-qualification.md, docs/README.md",
+          "tests/ci_test_shards.json, tests/test_scopes.json: the new module registered in both fail-closed maps",
+          "pyproject.toml: mypy scope"
+        ],
+        "acceptance_evidence": [
+          "AC1 (critical forms/links/navigation/input flows pass real tests): InteractionCheck classifies every flow as form, link, navigation or input so a failure can be triaged, requires a passing flow to name what exercised it, and makes a failed flow undeliverable. Tests: test_a_passing_flow_must_say_what_exercised_it, test_a_flow_is_classified_so_it_can_be_triaged, test_a_failing_flow_makes_the_report_undeliverable.",
+          "AC2 (actual phone/tablet/desktop and zoom layouts have no clipped or overlapping content): six cells — three viewports at 100% and 200% — each measured and each named when it fails. An incomplete matrix, an unknown zoom, a viewport outside the matrix, a duplicated cell and a self-contradicting cell (overflow reported alongside 'not clipped') are all refused. Tests: test_a_broken_phone_layout_fails_even_when_desktop_passes, test_the_zoom_cell_is_judged_separately_from_the_base_cell, test_an_unmeasured_cell_is_not_a_passing_cell, test_an_unknown_zoom_factor_is_refused_not_rounded, test_a_viewport_outside_the_matrix_is_refused, test_overflow_and_no_clipping_cannot_both_be_reported, test_a_cell_may_be_recorded_once_only.",
+          "AC3 (keyboard/focus/contrast and reduced-motion checks pass applicable criteria): four of the eleven criteria are these, each individually blocking, at floors quoted from the Studio's own accessibility gate (4.5 normal, 3.0 large, 24px targets, 2x zoom) rather than re-invented. Tests: test_the_contrast_floors_are_the_same_numbers_the_studio_gate_uses, and test_an_accessibility_criterion_that_failed_blocks_delivery parametrized over all four.",
+          "AC4 (console/network/secrets/dependency problems and placeholder content are checked): five criteria plus two scanners that the module runs itself, so a probe that forgets cannot produce a clean report. A missing outcome is refused by name; an invented criterion is refused; a non-boolean outcome is refused; a secret can never be a warning; a dependency warning is reported without blocking; a wrong-shaped documents payload is refused rather than silently skipping both scanners. Tests: test_a_missing_criterion_outcome_is_refused_not_assumed, test_an_invented_criterion_measures_nothing, test_an_outcome_that_is_mostly_true_is_not_a_boolean, test_an_api_key_in_the_shipped_page_is_found_and_reported_masked, test_a_secret_can_never_be_a_warning, test_shipped_placeholder_copy_blocks_delivery, test_scanning_does_not_need_the_probe_to_remember, test_a_dependency_finding_is_classified_and_reported, test_documents_of_the_wrong_shape_are_refused_rather_than_skipped.",
+          "AC5 (owner reviews creative usefulness; accepted references are scoped and versioned): deliverable() is derived and false without a named person's review; machine actors are refused; an accepted reference must be a versioned id and its mapping still states is_final_acceptance false and grants_publish_permission false; the reference shortlist delegates to AP-020's rank() rather than re-implementing retrieval. Tests: test_no_owner_review_means_not_deliverable_however_green, test_an_agent_cannot_review_its_own_work, test_the_review_actor_must_be_namespaced, test_an_owner_who_says_it_is_not_useful_blocks_delivery, test_an_accepted_reference_must_be_versioned, test_an_accepted_reference_is_recorded_but_grants_nothing, test_the_shortlist_reuses_ap020_ranking_rather_than_reimplementing_it.",
+          "AC6 (report all evaluated runs, intervention/cost/time and limitations; no revenue claims): runs_evaluated and intervention_minutes are required fields and reject zero/booleans; limitations are carried into the report; the six forbidden claims are refused by name and every report states claims_made: [] beside claims_refused. Tests: test_every_evaluated_run_is_reported_not_just_the_best, test_runs_evaluated_cannot_be_zero_or_a_boolean, test_limitations_are_carried_into_the_report, test_a_revenue_claim_is_refused_by_name, test_every_forbidden_claim_is_refused, test_the_report_states_which_claims_it_did_not_make.",
+          "Discipline: the module imports only hashlib, json, re, dataclasses, typing and reference_benchmarks (no clock, no filesystem, no socket), and shares no top-level name with app.py. Tests: test_the_module_reads_no_clock_and_opens_nothing, test_the_module_shares_no_top_level_name_with_app."
+        ],
+        "tests_executed": [
+          "tests/test_website_quality.py: 47 passed",
+          "scripts/ci_test_shard.py --run-shard 3 --python-version 3.12: 2319 passed, 10 skipped in 640s",
+          "mypy (93 modules): Success; ruff check .: clean",
+          "scripts/uiux_release_gate.py --check: 37/37 checks, 7/7 gates, 0 findings; scripts/uiv2_release_review.py --check: 0 findings"
+        ],
+        "visual_evidence": [
+          "No new screen: this story adds a decision module and no pane, so no screenshot is claimed for it."
+        ],
         "blockers": [],
-        "handoff": null
+        "handoff": "AP-022's rubric and record are delivered: website_quality.py plus 47 tests and a doc page, with every acceptance criterion mapped to executed tests. Two gaps are named rather than hidden. (1) No route or pane consumes website_quality.py yet — it is a contract with a probe port and no surface, the same state website_draft.py was in before its first caller; API wiring is a separate reviewable change. (2) No real-browser QualityProbe ships with this story: a Chromium implementation carrying the viewport matrix and resolving real links is the next concrete step, and the Studio's own browser evidence is NOT borrowed as evidence for a generated site. No revenue, conversion or engagement claim is made anywhere; those six claims are refused by name and every report states claims_made: []. Creative usefulness is only ever a named person's judgement, and an accepted reference is recorded as a versioned pointer whose mapping grants nothing — turning it into a reusable reference remains AP-020's explicit decision."
       },
       "implementation_prompt": "Implement AP-022: Qualify website output quality and delivery. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
