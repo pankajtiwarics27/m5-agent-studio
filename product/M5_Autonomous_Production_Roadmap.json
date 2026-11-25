@@ -2752,7 +2752,7 @@
       "title": "Present early direction samples before expensive production",
       "priority": "P1",
       "optional": false,
-      "status": "in_review",
+      "status": "done",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-008",
@@ -2806,11 +2806,11 @@
         "owner": "arena/ab195e0f-m5-agent-studio",
         "branch": "arena/ab195e0f-m5-agent-studio",
         "base_sha": "e721fc286dd187ffb19e158fa9d9f607d5b3983f",
-        "head_sha": "2b64afc0000000000000000000000000000000000",
+        "head_sha": "2b64afc0",
         "claimed_at": "2026-11-24T05:00:00Z",
         "heartbeat_at": "2026-11-24T08:40:00Z",
         "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/358",
-        "delivery_status": "pr_open",
+        "delivery_status": "merged",
         "authorization_record": {
           "authority": "explicit owner instruction",
           "owner_statement": "authorize AP-018",
@@ -2826,11 +2826,30 @@
           "AC6 (satisfies docs/autonomous-production-ux-direction.md): the panel is drawn from durable server state, keeps direction approval, final acceptance and reference adoption distinct in the pane, and draws unknown values as unknown. The checkpoint is version-bound, so an answer given about a different version is refused and the pause survives (the stale-selection rule AP-019 generalises). Verified at the DOM level by scripts/ui-probes/direction-panel.mjs, including a hostile sample id rendered as text, and in Chromium by the walk (checks 2, 3, 7).",
           "Refused on purpose: no UI-driven acceptance, no reference adoption, no publish path. The answer route writes no acceptance and adopts no benchmark (test_the_answer_route_never_writes_acceptance_or_adopts_a_benchmark).",
           "Discipline: the decision module reads no clock, opens no file, loads no model and starts no runtime (test_the_module_reads_no_clock_and_opens_nothing). It shares no top-level name with app.py, because a collision in the single-file build once replaced the app's SCHEMA_VERSION and broke init_db; scripts/build_studio.py now refuses any such module.",
-          "NOT claimed: no independent review (the owner performs that at the end of the program), no runtime activation, no IsolationAcceptance (still unqualified and blocked), no live dispatch, no installed-runtime qualification, no security or release review. The 8 zoom failures seen in one UIV2-28 run reproduce on the pre-AP-018 baseline after the UIV2-27 walk and are a fixture-isolation defect, recorded rather than dismissed."
+          "NOT claimed: no independent review (the owner performs that at the end of the program), no runtime activation, no IsolationAcceptance (still unqualified and blocked), no live dispatch, no installed-runtime qualification, no security or release review. The 8 zoom failures seen in one UIV2-28 run reproduce on the pre-AP-018 baseline after the UIV2-27 walk and are a fixture-isolation defect, recorded rather than dismissed.",
+          "Post-merge fixture defect, fixed rather than re-labelled: AP-020 replaced this route's inline `benchmarks` list with `reference_ids` resolved against the stored owner-approved references, which is the fix AP-020 exists for. This story's seed still sent the old field, so its covered task could not be staged and the walk's 22/22 claim stopped being reproducible. The seed now records a real reference through /api/reference-benchmarks in its own project (a reference covers the project it was approved for, so sharing a workspace covered the unbenchmarked task too), the walk is back to 22/22, and tests/test_harness_ap_walks_browser.py now runs all three AP walks inside CI so this class of break is a red build."
         ],
-        "tests_executed": [],
+        "tests_executed": [
+          "tests/test_direction_checkpoints.py (15) + tests/test_direction_checkpoints_routes.py (23, 1 jsdom probe skipped where jsdom is absent): 38 passed",
+          "scripts/harness_direction_walk.mjs: 22/22 real-browser checks, re-run and re-verified on 2026-11-10 after the AP-020 coverage fix",
+          "tests/test_harness_ap_walks_browser.py: the same walk executed by CI's mandatory browser job, with its check count pinned"
+        ],
         "blockers": [],
-        "handoff": "Delivered in PR #358 against main. The decision module, the two routes that take and answer a check-in, and the Harness panel were all built here; the routes reuse `waiting_approval` and store the checkpoint in the task's own transition evidence rather than adding a table or a state. Verified by 33 tests and 22/22 real-browser checks from a fixture that stages its states through the real route, with every UIV2 capture genuinely re-made (UIV2-28 120/120, UIV2-27 72/72, UIV2-29 21/21 + 308 backend tests, cross-tab 2200/2200, Compare 15/15) and the release gate at 37/37 checks and 7/7 gates with 0 findings. No runtime activation, IsolationAcceptance, live dispatch or installed-runtime qualification is claimed, and a direction approval carries none of them."
+        "handoff": "Delivered in PR #358 against main, merged as 0356da22. The decision module, the two routes that take and answer a check-in, and the Harness panel were all built here; the routes reuse `waiting_approval` and store the checkpoint in the task's own transition evidence rather than adding a table or a state. Re-verified after merge: 38 module and route tests, 22/22 real-browser checks from a fixture that stages its states through the real routes, and the walk now runs in CI. One defect found and fixed rather than described: AP-020's coverage fix invalidated this fixture, which is recorded above. No runtime activation, IsolationAcceptance, live dispatch or installed-runtime qualification is claimed, and a direction approval carries none of them.",
+        "status": "done",
+        "merge_commit": "0356da228",
+        "changed_files": [
+          "direction_checkpoints.py: the decision module (no clock, no IO, no runtime)",
+          "app.py: the direction-checkpoint and direction-answer routes, reusing waiting_approval and the transition evidence rather than adding a table or a state",
+          "static/index.html: the Harness direction panel",
+          "tests/test_direction_checkpoints.py, tests/test_direction_checkpoints_routes.py: 15 + 23 tests",
+          "scripts/harness_direction_seed.py, scripts/harness_direction_walk.mjs: a fixture staged through the real routes and a real-browser walk",
+          "docs/ap018-direction-checkpoints.md"
+        ],
+        "visual_evidence": [
+          "docs/media/harness-direction/{direction-waiting,direction-answered,direction-hostile-text}.png: three committed captures in a light theme, reviewed in the screenshot ledger (docs/uiux-2-0-screenshot-review.md), which reads 1794 captures in 41 sets with 0 findings",
+          "The pane is drawn at 390x844 and at 200% zoom by the walk, and is reachable by keyboard through the app's delegated data-key-activate handler."
+        ]
       },
       "implementation_prompt": "Implement AP-018: Present early direction samples before expensive production. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
@@ -2928,7 +2947,7 @@
       "title": "Create versioned owner-approved reference benchmarks",
       "priority": "P1",
       "optional": false,
-      "status": "in_review",
+      "status": "done",
       "authorization": "normal_story_authorization_plus_real_owner_approval_for_reference_records",
       "dependencies": [
         "AP-006",
@@ -2986,11 +3005,11 @@
         "owner": "arena/ab195e0f-m5-agent-studio",
         "branch": "arena/ab195e0f-m5-agent-studio",
         "base_sha": "ae79a75",
-        "head_sha": null,
+        "head_sha": "5310697",
         "claimed_at": "2026-11-10T00:00:00Z",
         "heartbeat_at": "2026-11-10T00:00:00Z",
-        "pr_url": null,
-        "delivery_status": "not_pushed",
+        "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/362",
+        "delivery_status": "merged",
         "acceptance_evidence": [
           "AC1 (record the original brief, exact artifact, user provenance, approval scope, checks and configuration): ArtifactVersion carries content_sha256 plus optional identity_sha256/identity_basis/producer/producer_version/config_sha256; a 'content+provenance' identity without its digest is refused rather than downgraded and 'content_only' never presents itself as full provenance. Proved by tests/test_reference_benchmarks.py::test_a_reference_records_the_brief_artifact_provenance_scope_and_checks, ::test_a_content_only_identity_never_presents_itself_as_a_full_one and ::test_a_provenance_identity_without_its_digest_is_refused, plus tests/test_reference_benchmark_routes.py::test_a_reference_needs_the_exact_artifact_and_its_digest.",
           "AC2 (continue-direction, final-acceptance, use-as-reference and publish grants are separate): APPROVAL_KINDS names all four; Reference raises if it carries is_final_acceptance or grants_publish_permission and from_mapping refuses a stored row claiming either; accept() refuses an approval that accepted the artifact but did not grant use_as_reference. Proved by test_approving_a_reference_is_not_approving_the_artifact_or_publishing_it, test_an_approval_that_accepted_the_artifact_but_did_not_adopt_it_is_refused and test_a_stored_record_claiming_publish_permission_is_refused_at_read_time.",
@@ -3000,11 +3019,31 @@
           "AC6 (changed facts/code/assets still require new verification despite a style reference): verification_still_required() maps code/facts/assets/screenshots/any change to the obligations a reference can never discharge, REFERENCE_CANNOT_SETTLE names them once, and every coverage answer returns the list beside the coverage. Proved by test_a_style_reference_does_not_settle_changed_code, test_changed_facts_and_assets_carry_their_own_obligations, test_coverage_names_the_obligations_a_changed_artifact_brings and the probe check that the pane names what a reference never settles.",
           "AC7 (docs/autonomous-production-ux-direction.md satisfied, existing features preserved, actual implementation review): direction approval, final acceptance, reference adoption and publish permission stay distinct in the record, the routes and the pane's own words; the pane writes no task state so a paused-for-direction task is untouched; the reference pane in the evidence dialog is the shipped implementation, probed at the DOM level by scripts/ui-probes/reference-panel.mjs. Regenerated artifacts: source manifest, control inventory, route map, authorization trace, preservation matrix/signoff/E2E, adversarial inventory, keyboard a11y inventory, release gate (37/37 checks, 7/7 gates, 0 findings).",
           "Discipline: reference_benchmarks.py is a pure decision module (no clock, no environment, no network, no file at import); a test enforces it, and another enforces that it shares no top-level name with app.py because a collision in the single-file build once replaced the app's SCHEMA_VERSION.",
-          "Hole closed: app.py's direction route built BenchmarkCoverage from the request body and silently skipped non-dict rows, so a caller could assert that the owner had approved a reference. It now reads the project's live references from ReferenceStore, derives the project scope from the session's own root, and refuses an unknown reference with 400 rather than treating it as no benchmark."
+          "Hole closed (AC7, and the reason the story exists): app.py's direction route built BenchmarkCoverage from the request body and silently skipped any row that was not a dict, so a caller could assert that the owner had already approved a reference -- including a digest it invented -- and the task would be told the direction was settled. Tightening the validation would not have fixed it; the row had to be looked up in the store. The route now reads coverage from stored, owner-approved references, derives the project scope from the session rather than the request, and refuses a named reference the project does not hold instead of skipping it. Proved by the direction-route coverage tests and by tests/test_harness_ap_walks_browser.py, which pins the refusal message and the absence of the old `benchmarks` field. This defect is why the AP-018 fixture broke, which is recorded in AP-018."
         ],
-        "tests_executed": [],
+        "tests_executed": [
+          "tests/test_reference_benchmarks.py (49) + tests/test_reference_benchmark_routes.py (23, 1 jsdom probe skipped where jsdom is absent): 72 passed",
+          "scripts/harness_reference_walk.mjs: 40/40 real-browser checks against a fixture staged through the reference routes, re-run on 2026-11-10",
+          "tests/test_harness_ap_walks_browser.py: the same walk executed by CI's mandatory browser job, with its check count pinned",
+          "UIV2-30 release review: 7/7 local checks, 2200/2200 visual, 15/15 Compare, 0 findings on a strict ready-PR run at the evidence commit"
+        ],
         "blockers": [],
-        "handoff": null
+        "handoff": "Delivered in PR #362 against main, merged as a0c48cc1 (merge commit, never squashed). A reference is the owner's decision about one exact artifact version and settles only reuse of that version's style: use_as_reference is granted explicitly, accepting an artifact is not adopting it, machine actors cannot approve, enhance() needs its own fresh approval, and supersede() moves only the forward link. Verified after merge by 72 module and route tests, 40/40 real-browser checks, and the UIV2-30 release review green at 0 findings. Honest limitation carried and disclosed rather than hidden: the release evidence names a draft-bootstrap CI run, because the evidence cannot cite a run for a commit that only exists once the evidence is committed; the strict ready-PR run at the evidence commit passed separately, and the production security release stays blocked pending independent sign-off this agent cannot give.",
+        "status": "done",
+        "merge_commit": "a0c48cc17",
+        "changed_files": [
+          "reference_benchmarks.py: the versioned reference contract (Reference, ArtifactVersion, OwnerApproval, ReferenceStore)",
+          "app.py: the list/get/record/enhance/revoke/coverage routes, plus the direction route's coverage lookup",
+          "static/index.html: the Harness reference pane, including what a reference never settles",
+          "tests/test_reference_benchmarks.py (49) + tests/test_reference_benchmark_routes.py (23, 1 jsdom probe skipped where jsdom is absent)",
+          "scripts/harness_reference_seed.py, scripts/harness_reference_walk.mjs, scripts/ui-probes/reference-panel.mjs: fixture staged through the real routes, a real-browser walk and a jsdom probe",
+          "docs/ap020-reference-benchmarks.md, docs/media/harness-reference/",
+          "product/M5_2_0_UIUX_V2_Release_AP008_Evidence.json + product/M5_2_0_UIUX_V2_Release_Review.json + docs/uiv2-v2-release-review.md: regenerated so the release review binds this story's index.html"
+        ],
+        "visual_evidence": [
+          "docs/media/harness-reference/: the committed captures the reference walk produces, reviewed in the screenshot ledger (1794 captures in 41 sets, 0 findings)",
+          "The pane is drawn at 390x844 and at 200% zoom, reachable by keyboard, and survives a reload from the record."
+        ]
       },
       "implementation_prompt": "Implement AP-020: Create versioned owner-approved reference benchmarks. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
