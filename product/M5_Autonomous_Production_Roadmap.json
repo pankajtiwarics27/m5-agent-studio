@@ -3257,7 +3257,7 @@
       "title": "Deliver sourced original short-video drafts",
       "priority": "P1",
       "optional": false,
-      "status": "in_review",
+      "status": "done",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-009",
@@ -3343,7 +3343,7 @@
         ],
         "blockers": [],
         "handoff": "AP-023's record is delivered and merged as e98cfa2a (PR #367): video_draft.py plus 52 tests and a doc page, every acceptance criterion mapped to executed tests. Three gaps are named rather than hidden. (1) No route, pane or orchestrator consumes video_draft.py yet — it is a contract with two ports and no surface, the same state website_draft.py and website_quality.py were in before their first callers. (2) No real renderer or probe ships: the suite uses recording doubles, and an ffmpeg renderer with an ffprobe probe is the next concrete step. (3) No video was rendered, watched, published or monetised for this story; AP-024 owns technical and editorial qualification of a real clip, and upload/publication remain AP-029's separate grant.",
-        "merge_commit": "e98cfa2a4e",
+        "merge_commit": "40a61d742e",
         "changed_files": [
           "video_draft.py: the draft record — topic signals and derived popularity, narration claims, creative direction and storyboard, voice consent, media assets, the MoneyPrinterTurbo adapter audit, caption cues, the playback port and a derived readiness verdict",
           "tests/test_video_draft.py: 52 tests, mostly refusals",
@@ -3352,7 +3352,8 @@
         ],
         "visual_evidence": [
           "No new screen: this story adds a decision module and no pane, so no screenshot is claimed for it."
-        ]
+        ],
+        "status": "done"
       },
       "implementation_prompt": "Implement AP-023: Deliver sourced original short-video drafts. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },

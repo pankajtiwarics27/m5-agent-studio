@@ -166,6 +166,7 @@
     "autonomous.production": [
       "test_autonomous_production_*.py",
       "test_video_draft.py",
+      "test_video_quality.py",
       "test_website_draft.py",
       "test_website_quality.py"
     ],
@@ -532,6 +533,11 @@
       "security.execution"
     ],
     "video_draft.py": [
+      "autonomous.production",
+      "security.execution",
+      "quality.docs-ledger"
+    ],
+    "video_quality.py": [
       "autonomous.production",
       "security.execution",
       "quality.docs-ledger"
