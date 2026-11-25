@@ -3,7 +3,7 @@
   "document_type": "proposed_autonomous_production_execution_ledger",
   "product": "M5 Agent Studio",
   "program": "AP",
-  "revision": "3.1",
+  "revision": "3.2",
   "prepared_date": "2026-11-08",
   "lifecycle": "registered_tracking_ap030_done_ap008_claim_reconciled_ap018_blocked_u01_u05_resolved",
   "source_snapshot": "a67e8b291614f8afdac7c8d38ba51bcc8926d695",
