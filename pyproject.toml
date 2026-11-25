@@ -133,6 +133,7 @@ files = [
   "task_events.py",
   "trusted_transformations.py",
   "verification_evidence.py",
+  "website_draft.py",
   "workflow_checkpoints.py",
   "workflow_evaluation.py",
   "workflow_orchestration.py",
