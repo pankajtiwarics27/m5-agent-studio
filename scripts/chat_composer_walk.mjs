@@ -109,10 +109,20 @@ await page.evaluateOnNewDocument((token) => {
         controller = streamController;
         const later = (fn, delay) => timers.push(setTimeout(fn, delay));
         if (mode === "success") {
-          later(() => event("token", { kind: "content", text: "A verified " }), 80);
-          later(() => event("token", { kind: "content", text: "answer." }), 150);
-          later(() => event("done", { usage: { completion_tokens: 24, decode_tps: 12.5 } }), 230);
-          later(() => controller.close(), 250);
+          // The first token arrives immediately and the rest of the reply waits for the walk to
+          // release it. The streaming state is what this walk inspects, and it is transient: on a
+          // loaded runner the whole reply can finish between pressing Enter and the first poll, so a
+          // fixed 250ms window raced the walk rather than testing it. Holding the stream open makes
+          // "a send enters the streaming state" a real assertion instead of a timing assumption.
+          later(() => event("token", { kind: "content", text: "A verified " }), 0);
+          const finish = () => {
+            if (window.__chatReleaseSuccess) {
+              event("token", { kind: "content", text: "answer." });
+              event("done", { usage: { completion_tokens: 24, decode_tps: 12.5 } });
+              controller.close();
+            } else timers.push(setTimeout(finish, 10));
+          };
+          timers.push(setTimeout(finish, 10));
         } else if (mode === "partial-fail") {
           later(() => event("token", { kind: "content", text: "Partial answer retained." }), 50);
           later(() => event("error", { message: "synthetic provider refusal" }), 100);
@@ -165,15 +175,60 @@ try {
   await page.keyboard.press("Enter");
   await page.keyboard.up("Shift");
   check("Shift+Enter inserts a newline", /\n$/.test(await input.evaluate(element => element.value)));
+  // Enter only sends when the composer says it can: a catalogue read that has not landed leaves the
+  // model picker empty, Send disabled and the hint reporting "no-model", and the walk used to press
+  // Enter anyway and then report a missing streaming badge 30s later. Wait for the stated
+  // precondition rather than assuming it, so a genuinely broken composer still fails - with a step
+  // name that says which precondition never became true.
+  await step("the composer reports itself ready to send", async () => {
+    try {
+      // What actually gates Enter: a model is selected and Send is enabled. The hint may legitimately
+      // read "runtime-offline" (the demo has no local runtime, and the probe says so), which is a
+      // warning, not a refusal - so requiring "ready" would assert something the composer does not.
+      await page.waitForFunction(() => Boolean(String(document.getElementById("chatModel")?.value || "").trim())
+        && !document.getElementById("chatSendBtn").disabled);
+    } catch (error) {
+      const state = await page.evaluate(() => ({
+        reason: document.getElementById("chatComposerHint")?.dataset.reason,
+        hint: document.getElementById("chatComposerHint")?.textContent || "",
+        model: document.getElementById("chatModel")?.value || "",
+        modelOptions: document.getElementById("chatModel")?.options.length ?? 0,
+      }));
+      throw new Error(`${(error && error.message) || error} :: composer=${JSON.stringify(state)}`);
+    }
+  });
   await input.evaluate(element => { element.value = "desktop keyboard send"; });
+  await page.evaluate(() => { window.__chatReleaseSuccess = false; });
   await page.keyboard.press("Enter");
-  await step("a send enters the streaming state", () => page.waitForFunction(() => document.querySelector('#chatMessages [data-state="streaming"]')));
+  // A wait that times out must say what the pane was doing, not only that the selector never
+  // matched: the send is gated by the composer's own reason (no model selected, busy, ...), and a
+  // 30s timeout with no diagnosis cost three CI cycles to triage.
+  await step("a send enters the streaming state", async () => {
+    try {
+      await page.waitForFunction(() => document.querySelector('#chatMessages [data-state="streaming"]'));
+    } catch (error) {
+      const state = await page.evaluate(() => ({
+        reason: document.getElementById("chatComposerHint")?.dataset.reason,
+        hint: document.getElementById("chatComposerHint")?.textContent || "",
+        model: document.getElementById("chatModel")?.value || "",
+        modelOptions: document.getElementById("chatModel")?.options.length ?? 0,
+        inputValue: document.getElementById("chatInput")?.value || "",
+        sendDisabled: document.getElementById("chatSendBtn")?.disabled,
+        requests: window.__chatRequests?.length ?? -1,
+        turns: [...document.querySelectorAll("#chatMessages [data-role]")].map(node => `${node.dataset.role}:${node.dataset.state || ""}`),
+        presentation: document.querySelector("#chatState .presentation-title")?.textContent || "",
+      }));
+      throw new Error(`${(error && error.message) || error} :: composer=${JSON.stringify(state)}`);
+    }
+  });
   const streaming = await page.evaluate(() => ({
     stopVisible: getComputedStyle(document.getElementById("chatStopBtn")).display !== "none",
     sendDisabled: document.getElementById("chatSendBtn").disabled,
     busy: document.getElementById("chatMessages").getAttribute("aria-busy"),
   }));
   check("streaming exposes Stop and prevents a duplicate send", streaming.stopVisible && streaming.sendDisabled && streaming.busy === "true");
+  // Release the held reply only after the streaming state has been inspected.
+  await page.evaluate(() => { window.__chatReleaseSuccess = true; });
   await step("the reply completes and the send button re-enables", () => page.waitForFunction(() => [...document.querySelectorAll('#chatMessages [data-role="assistant"]')].at(-1)?.dataset.state === "complete" && !document.getElementById("chatSendBtn").disabled));
   const success = await page.evaluate(() => {
     const assistant = [...document.querySelectorAll('#chatMessages [data-role="assistant"]')].at(-1);
