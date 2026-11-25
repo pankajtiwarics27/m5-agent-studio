@@ -109,6 +109,23 @@ sample id is proven to become text rather than markup.
   record rejected, and no top-level name shared with `app.py`.
 * `scripts/harness_direction_walk.mjs` — 22/22 checks in a real browser against
   `scripts/harness_direction_seed.py`, which stages its states through the real route.
+  `tests/test_harness_ap_walks_browser.py` now executes this walk (and the AP-019/AP-020 walks)
+  inside CI's browser job, and pins the count so a walk that quietly stops checking fails.
+
+## The fixture the AP-020 fix broke
+
+The `covered` task used to be staged by sending an inline `benchmarks` list in the
+`direction-checkpoint` request. AP-020 removed that field on purpose: a caller that can type a
+reference id can announce that the owner approved work the owner never saw, so coverage is now
+read from stored, owner-approved references and a `reference_ids` entry the project does not
+hold is refused rather than skipped.
+
+The seed kept sending the old shape, so the walk could not stage its covered task at all. Nothing
+in CI ran the walk, so the only symptom was this document claiming 22/22 while the fixture was
+broken. The seed now records a real reference through `/api/reference-benchmarks`, in its own
+project — a reference covers the project it was approved for, and leaving the covered task in the
+shared workspace would have covered the unbenchmarked one too. The walk passes again at 22/22,
+and `tests/test_harness_ap_walks_browser.py` is what makes the next such break a red build.
 
 ## One trap worth recording
 

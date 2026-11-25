@@ -348,6 +348,7 @@
       "tests/test_frontend_boot_order.py",
       "tests/test_governance.py",
       "tests/test_hardware_capabilities.py",
+      "tests/test_harness_ap_walks_browser.py",
       "tests/test_harness_permissions.py",
       "tests/test_harness_timeline.py",
       "tests/test_keyboard_a11y.py",

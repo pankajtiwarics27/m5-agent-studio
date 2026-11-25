@@ -81,17 +81,23 @@ def prepare(environment: demo_tour.DemoEnvironment):
     workspace.mkdir(parents=True, exist_ok=True)
     sample_path = workspace / "hero.html"
     sample_path.write_text(SAMPLE_SOURCE, encoding="utf-8")
+    # The covered task needs its own project: a reference covers the project it was approved
+    # for, so an unbenchmarked task must not be sitting in that same project or it inherits
+    # the coverage. Two workspaces also let the walk prove the rule is per project.
+    covered_workspace = environment.root / "covered-website"
+    covered_workspace.mkdir(parents=True, exist_ok=True)
+    (covered_workspace / "hero.html").write_text(SAMPLE_SOURCE, encoding="utf-8")
 
     sm = studio.get_task_state_machine()
     ids: dict[str, str] = {}
-    for key, title in (
-        ("waiting", "AP-018 walk: unbenchmarked"),
-        ("covered", "AP-018 walk: benchmark covered"),
-        ("hostile", "AP-018 walk: hostile text"),
+    for key, title, task_workspace in (
+        ("waiting", "AP-018 walk: unbenchmarked", workspace),
+        ("covered", "AP-018 walk: benchmark covered", covered_workspace),
+        ("hostile", "AP-018 walk: hostile text", workspace),
     ):
         session = studio.create_harness_session_db(
             title=title,
-            workspace_dir=str(workspace),
+            workspace_dir=str(task_workspace),
             use_worktree=False,
             policy="standard",
             lead_model="Qwen3.8-27B-MLX-oQ4e-mtp",
@@ -102,7 +108,7 @@ def prepare(environment: demo_tour.DemoEnvironment):
             session_id,
             session_id=session_id,
             title=title,
-            workspace_dir=str(workspace),
+            workspace_dir=str(task_workspace),
             policy="standard",
         )
         if sm.store.get_task(session_id).state == "pending":
@@ -115,7 +121,7 @@ def prepare(environment: demo_tour.DemoEnvironment):
         )
         ids[key] = session_id
 
-    return studio, token, ids, sample_path
+    return studio, token, ids, sample_path, covered_workspace
 
 
 def _post_json(base_url: str, token: str, path: str, body: dict) -> tuple[int, dict]:
@@ -139,11 +145,62 @@ def _post_json(base_url: str, token: str, path: str, body: dict) -> tuple[int, d
         return exc.code, {"detail": exc.read().decode("utf-8", "replace")[:400]}
 
 
+# The reference the `covered` task relies on. It is a real record written through the real
+# route, because that is the only thing the direction route will accept as coverage.
+COVERED_REFERENCE_ID = "reference/website-2026-11"
+
+
+def _stage_covering_reference(
+    studio, token: str, base_url: str, workspace: Path, digest: str
+) -> str:
+    """Record the owner-approved reference that makes the `covered` task covered.
+
+    This used to be sent in the direction request as an inline ``benchmarks`` list, which
+    AP-020 removed on purpose: a caller that can type a reference id can announce that the
+    owner already approved work the owner never saw. The fixture therefore has to produce
+    the state the product produces -- a reference in the store, approved for this project.
+    """
+    scope = studio.evidence_lessons.derive_project_scope_id(workspace)
+    status, body = _post_json(
+        base_url,
+        token,
+        "/api/reference-benchmarks",
+        {
+            "reference_id": COVERED_REFERENCE_ID,
+            "version": 1,
+            "project_scope_id": scope,
+            "task_kind": "website",
+            "brief": "the approved website direction this task should follow",
+            "artifact": {
+                "artifact_id": "hero.html",
+                "content_sha256": digest,
+                "measured_checks": {"layout": True, "copy": True},
+            },
+            "approval": {
+                "actor": "owner:demo-fixture",
+                "statement": "this page is the direction I approved; reuse its style",
+                "granted": ["use_as_reference"],
+            },
+            "audience": "consumer",
+            "language": "en",
+            "style_tags": ["calm"],
+            "checks": ["layout", "copy"],
+        },
+    )
+    if status != 200:
+        raise demo_tour.DemoEnvironmentError(
+            f"the covering reference could not be recorded: {status} {str(body)[:300]}"
+        )
+    return scope
+
+
 def stage(
-    studio, token: str, ids: dict[str, str], base_url: str, sample_path: Path
+    studio, token: str, ids: dict[str, str], base_url: str, sample_path: Path,
+    covered_workspace: Path,
 ) -> dict[str, str]:
     """Ask the real direction route for the three check-ins, on the running server."""
     digest = _sample_digest(sample_path)
+    _stage_covering_reference(studio, token, base_url, covered_workspace, digest)
 
     # Startup recovery pauses a task that says `running` with no worker behind it, which is
     # correct: this fixture runs no model. A check-in is only taken on a running task, so the
@@ -179,7 +236,9 @@ def stage(
             f"the direction route did not stage a check-in: {waiting_status} {str(waiting_body)[:200]}"
         )
 
-    # 2. Covered work: a reference already answers the question, so the run keeps going.
+    # 2. Covered work: an owner-approved reference in this project already answers the
+    #    question, so the run keeps going. The caller names the reference it is relying on;
+    #    the route looks it up rather than believing the request.
     covered_status, covered_body = _post_json(
         base_url,
         token,
@@ -191,14 +250,7 @@ def stage(
                 "content_sha256": digest,
                 "technical_checks": {"renders": True},
             },
-            "benchmarks": [
-                {
-                    "reference_id": "reference/website-2026-11",
-                    "reference_sha256": "c" * 64,
-                    "covered_task_kinds": ["website"],
-                    "measured_checks": ["layout", "copy"],
-                }
-            ],
+            "reference_ids": [COVERED_REFERENCE_ID],
         },
     )
     if covered_status != 200 or covered_body.get("status") != "skipped":
@@ -254,7 +306,7 @@ def main(argv: list[str] | None = None) -> int:
         environment = demo_tour.make_environment(
             Path(args.root).expanduser() if args.root else None
         )
-        studio, token, ids, sample_path = prepare(environment)
+        studio, token, ids, sample_path, covered_workspace = prepare(environment)
     except demo_tour.DemoEnvironmentError as exc:  # pragma: no cover
         print(f"harness direction seed: {exc}", file=sys.stderr)
         return 1
@@ -302,7 +354,9 @@ def main(argv: list[str] | None = None) -> int:
             )
             return
         try:
-            made = stage(studio, token, ids, f"http://127.0.0.1:{port}", sample_path)
+            made = stage(
+                studio, token, ids, f"http://127.0.0.1:{port}", sample_path, covered_workspace
+            )
         except Exception as exc:  # pragma: no cover - reported, not swallowed
             print(f"harness direction seed: staging failed: {exc}", file=sys.stderr)
             return

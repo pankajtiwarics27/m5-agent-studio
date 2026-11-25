@@ -632,7 +632,7 @@ jobs:
         # Failing tests are echoed as check annotations, as the test job does.
         run: |
           set +e
-          python -m pytest -q -p scripts.browser_ci_no_skips tests/test_screenshot_capture_browser.py tests/test_uiux_adversarial_browser.py tests/test_browser_worker_real.py --tb=short > "${RUNNER_TEMP:-/tmp}/browser.log" 2>&1
+          python -m pytest -q -p scripts.browser_ci_no_skips tests/test_screenshot_capture_browser.py tests/test_uiux_adversarial_browser.py tests/test_browser_worker_real.py tests/test_harness_ap_walks_browser.py --tb=short > "${RUNNER_TEMP:-/tmp}/browser.log" 2>&1
           status=$?
           if [ "$status" -ne 0 ]; then
             grep -E '^(FAILED|ERROR)' "${RUNNER_TEMP:-/tmp}/browser.log" | head -25 | while IFS= read -r line; do
