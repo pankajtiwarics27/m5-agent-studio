@@ -4036,7 +4036,7 @@
       "title": "Ship progressive configuration, onboarding and operations",
       "priority": "P1",
       "optional": false,
-      "status": "in_review",
+      "status": "done",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-008",
@@ -4094,11 +4094,11 @@
         "owner": "arena/ab195e0f-m5-agent-studio",
         "branch": "arena/ab195e0f-m5-agent-studio",
         "base_sha": "30611ab",
-        "head_sha": null,
+        "head_sha": "9d2ffb3e0bc2bbad1051fd1268ba984bb2116bc1",
         "claimed_at": "2026-11-10T00:00:00Z",
         "heartbeat_at": "2026-11-10T00:00:00Z",
-        "pr_url": null,
-        "delivery_status": "in_review",
+        "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/381",
+        "delivery_status": "merged",
         "acceptance_evidence": [
           "AC1 (configured, tested, qualified, experimental, blocked and unavailable states are distinct): CAPABILITY_STATES is a closed set and status_for() collapses one CapabilityObservation into exactly one state worst-first (blocked > unavailable > experimental > configured > tested > qualified). The observation refuses qualified-without-tested, tested-without-configured and blocked-plus-unavailable; an unconfigured capability reports unavailable rather than ready, experimental is usable but not promised, blocked is not usable, and evidence is carried into the reason. Tests: test_the_states_are_a_closed_ordered_set, test_configured_without_a_test_is_not_tested, test_tested_without_qualification_is_not_qualified, test_qualification_requires_a_test, test_a_test_requires_something_configured, test_blocked_beats_configured, test_unavailable_beats_experimental, test_blocked_and_unavailable_are_different_answers, test_an_unconfigured_capability_is_unavailable_not_ready, test_experimental_is_usable_but_not_promised, test_a_blocked_capability_is_not_usable, test_evidence_appears_in_the_reason, test_a_qualified_capability_says_it_was_measured_here.",
           "AC2 (users can inspect/revoke grants and correct/export/delete preferences/references): GrantView requires the human granter, named capabilities, scopes, expiry, remaining uses, and either revocability or a stated reason it is not revocable; a revocable grant exposes its revoke route. PreferenceStore implements correct/export (with a stable digest)/delete for preferences and references, delete takes exactly one target, and actions_available() reports the operations. Tests: test_a_grant_names_who_granted_it, test_a_grant_with_no_capabilities_describes_nothing, test_a_irrevocable_grant_must_say_why, test_an_irrevocable_grant_with_a_reason_is_viewable, test_a_revocable_grant_exposes_its_revoke_route, test_preferences_can_be_corrected, test_preferences_can_be_exported_with_a_digest, test_preferences_can_be_deleted, test_deleting_an_unknown_preference_is_refused, test_a_reference_can_be_deleted_by_id, test_delete_takes_exactly_one_target, test_the_reader_is_told_which_actions_exist.",
@@ -4115,7 +4115,11 @@
           "scripts/validate_docs.py -> passed (330 files)"
         ],
         "blockers": [],
-        "handoff": "Shipped as values only: no route serves operations_surface.py, no markup renders it, and nothing a user currently sees has changed. Wiring it into static/index.html and the app routes is a separate story that must pass the existing UI/UX gates (source manifest, preservation sign-off, control inventory, screenshot review) -- this module deliberately renders nothing so that change is reviewed on its own. Not measured: no provider, runtime or gateway was probed for this story; every readiness row in the tests is a fixture, and qualified=True is a claim the caller must already have measured elsewhere. Limits a later story must close: (1) the disclosure levels describe a proposed grouping over the existing control inventory rather than a reorganisation that has happened; (2) readiness composition from the preflight is one-directional -- it does not yet read the app's live runtime observation objects; (3) the module does not itself emit notifications for pause/failure, it only states them in words; (4) nothing here enforces revocation -- GrantView exposes the route the existing scoped_grant store already provides."
+        "handoff": "Shipped as values only: no route serves operations_surface.py, no markup renders it, and nothing a user currently sees has changed. Wiring it into static/index.html and the app routes is a separate story that must pass the existing UI/UX gates (source manifest, preservation sign-off, control inventory, screenshot review) -- this module deliberately renders nothing so that change is reviewed on its own. Not measured: no provider, runtime or gateway was probed for this story; every readiness row in the tests is a fixture, and qualified=True is a claim the caller must already have measured elsewhere. Limits a later story must close: (1) the disclosure levels describe a proposed grouping over the existing control inventory rather than a reorganisation that has happened; (2) readiness composition from the preflight is one-directional -- it does not yet read the app's live runtime observation objects; (3) the module does not itself emit notifications for pause/failure, it only states them in words; (4) nothing here enforces revocation -- GrantView exposes the route the existing scoped_grant store already provides.",
+        "merge_commit": "e99d30d",
+        "ci_run_id": 45636519428,
+        "ci_conclusion": "success",
+        "merged_at": "2026-11-10T00:00:00Z"
       },
       "implementation_prompt": "Implement AP-031: Ship progressive configuration, onboarding and operations. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
