@@ -97,12 +97,21 @@ AS source/status record rather than a fourth interchangeable claim ledger.
   `44091638722` and exact-main run `44092926116` passed. The separate
   docs/ledger completion record records AP-007 `done` for this authorized
   scope only. No production caller, live dispatch, activation, or installed-
-  runtime qualification is claimed. AP-008 is the owner-authorized next story
-  after that record lands, but remains `not_started` and requires its own fresh
-  branch/PR. AP-009…AP-032, product runtime activation, destructive resets,
-  and real external services remain unauthorized; each later story needs its
-  own explicit owner authorization plus dependency evidence and its own
-  branch/PR before any work starts.
+  runtime qualification is claimed. **Status correction (ledger revision
+  3.2):** AP-001…AP-032 are all recorded `done`/`merged` — AP-029 as `4f292f4c`
+  (PR #379), AP-031 as `e99d30d` (PR #381), AP-032 as `b072d09` (PR #382) — so
+  read status from the ledger, not from this paragraph. A `done` story records a
+  merged bounded contract and its tests, **not** a released product or a
+  satisfied launch gate: AP-031 ships values that no route serves and no markup
+  renders, and AP-032 ships qualification machinery with no qualification
+  performed, so the correct pack decision for the current build remains
+  `release-blocked`. Product runtime activation, destructive resets, real
+  external services, external accounts/credentials/spend/publish, and the
+  owner's launch actions (selecting or deferring the launch specialisation,
+  running the pilot at a real head, obtaining independent security and
+  screenshot approvals, exercising rollback/migration/restore) remain
+  unauthorized and unperformed for any agent. New work needs its own explicit
+  owner authorization plus dependency evidence and its own branch/PR.
 
 Within the program you are working on, choose exactly one story that is both
 owner-authorized and dependency-ready, respect phase order, and take one story
