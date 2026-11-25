@@ -3564,7 +3564,7 @@
       "title": "Research model/paper/tool improvements and evaluate candidates",
       "priority": "P1",
       "optional": false,
-      "status": "not_started",
+      "status": "in_review",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-011",
@@ -3628,18 +3628,33 @@
         "Push/PR state; owner/independent approvals where required"
       ],
       "tracking": {
-        "owner": null,
-        "branch": null,
-        "base_sha": null,
-        "head_sha": null,
-        "claimed_at": null,
-        "heartbeat_at": null,
+        "owner": "arena/ab195e0f-m5-agent-studio",
+        "branch": "arena/ab195e0f-m5-agent-studio",
+        "base_sha": "b04a615",
+        "head_sha": "0125e6e",
+        "claimed_at": "2026-11-10T00:00:00Z",
+        "heartbeat_at": "2026-11-10T00:00:00Z",
         "pr_url": null,
-        "delivery_status": "not_pushed",
-        "acceptance_evidence": [],
-        "tests_executed": [],
+        "delivery_status": "in_review",
+        "acceptance_evidence": [
+          "AC1 (no implicit startup/background outbound requests; schedules require explicit grant): WatchSchedule refuses to exist without a WatchGrant, whose granted_by must be namespaced to a human (owner:/user:/reviewer:) and whose hosts must be a subset of autonomous_production_research.PUBLIC_READ_ALLOWLIST; Watcher exposes no start/daemon/loop and only ticks a supplied schedule with an injected fetcher, reporting starts_itself: False. assert_no_implicit_egress parses this module's own source (AST, not substring, because the function's text names what it forbids) and refuses socket/ssl/threading/asyncio/sched/schedule/requests/httpx/urllib/subprocess imports, create_task/ensure_future/Thread/Timer/sleep calls and while True. Tests: test_a_schedule_cannot_exist_without_a_grant, test_a_grant_needs_a_named_human_author, test_a_grant_cannot_authorise_a_host_outside_the_public_read_allowlist, test_the_watcher_has_no_start_and_no_loop, test_the_module_carries_no_network_or_background_machinery, test_the_module_reads_no_clock_and_opens_no_socket, test_a_round_gets_its_time_from_the_caller.",
+          "AC1b (the cap is checked before the round, so an over-budget round costs nothing) and expiry: tick() refuses when requests_used + len(locations) exceeds the grant cap and when the grant has expired, both raised before fetcher is called -- asserted by recording calls on a FakeFetcher. Tests: test_the_request_cap_is_enforced_before_the_round_runs, test_an_expired_grant_makes_no_requests_at_all, test_a_refused_round_reports_the_reason_it_was_refused.",
+          "AC2 (model cards/papers/repos capture dates, exact versions, licence and limitations): CandidateCard requires kind from CANDIDATE_KINDS (model/paper/repo/prompt/skill/config), an exact version, a captured_on date, a licence and non-empty limitations; the moving targets latest/main/HEAD/master/newest/* are refused as versions; the source_url is validated against the public read allowlist. Tests: test_a_candidate_records_version_date_licence_and_limits, test_a_moving_target_is_not_a_version, test_a_candidate_with_no_stated_limitation_is_a_recommendation, test_a_candidate_from_outside_the_read_allowlist_is_refused, test_a_candidate_needs_a_capture_date.",
+          "AC3 (experiments start from diagnosed problems and measurable hypotheses): Hypothesis requires non-empty problem_trace_ids, a metric, a numeric baseline, a direction and a threshold that can fail; a threshold that does not beat the baseline in the stated direction is refused as unfalsifiable, and is_met() is directional. Tests: test_a_hypothesis_names_the_failing_traces_it_came_from, test_a_threshold_that_cannot_fail_is_not_a_hypothesis, test_a_decrease_hypothesis_has_to_fall_below_the_baseline, test_a_baseline_has_to_be_measured_not_described.",
+          "AC4 (installed/runtime compatibility and download/resource limits precede trials): CompatibilityCheck compares the declared download against both a cap and free disk, the memory requirement against what is available, and runtime presence plus licence compatibility; fits is derived from blocking_reasons() rather than asserted, and run_experiment re-checks it before calling the trialler (a check after the work is a comment). Tests: test_a_check_that_did_not_fit_blocks_before_the_trial, test_the_trialler_is_not_called_when_compatibility_fails, test_a_download_over_the_cap_is_refused, test_a_download_that_does_not_fit_on_disk_is_refused, test_memory_that_exceeds_what_is_available_is_refused, test_fits_is_derived_not_asserted.",
+          "AC5 (held-out tasks/evaluators/authority controls cannot be edited by the optimiser): HeldOutGuard fingerprints the held-out tasks, the evaluator and the authority controls before the experiment and assert_untouched raises on any digest change including a removed path (a deleted control is not an unchanged control); a report whose post-trial guard differs forces keep_incumbent with the reason stated. Tests: test_the_evaluator_cannot_be_edited_between_the_two_runs, test_removing_a_held_out_control_is_a_change, test_an_edited_held_out_set_forces_the_incumbent_to_stay.",
+          "AC6 (distinguish memory/skill/config updates from weight training; no automatic RL rollout): OPTIMISATION_SURFACES is prompt/skill/config; weights, fine_tune and rl_rollout are refused by name (TrainingRefused) and unknown surfaces are refused too; every ImprovementReport carries weights_changed: False. Tests: test_a_prompt_skill_or_config_update_is_allowed, test_training_on_weights_is_refused_by_name, test_an_rl_rollout_is_refused_by_name, test_an_unknown_surface_is_refused, test_every_report_states_that_no_weights_changed.",
+          "AC7 (candidate generation, judge/evaluation and optimisation inference stay local; hosted-reference projects adapted or reference-only): ADAPTATION_STATES local_native/local_adaptation/reference_only; a candidate with a named hosted dependency is inference-refused (never inferred from silence) and run_experiment raises LocalOnlyRefused before the trialler runs; a reference_only candidate may be recorded but not trialled. Tests: test_a_hosted_candidate_never_reaches_the_trialler, test_a_reference_only_candidate_cannot_be_trialled, test_a_candidate_that_looks_hosted_must_say_so, test_a_local_native_candidate_is_trialled."
+        ],
+        "tests_executed": [
+          "pytest tests/test_improvement_lab.py -> 45 passed",
+          "pytest tests/test_ci_test_shard.py tests/test_scoped_tests.py -> 20 passed",
+          "scripts/ci_test_shard.py --run-shard 3 --python-version 3.12 -> 2504 passed, 10 skipped (640s)",
+          "ruff check . -> clean; mypy (97 modules) -> clean",
+          "scripts/validate_docs.py -> passed (326 files); scripts/uiux_release_gate.py --check -> 37/37, 7/7, 0 findings; uiux_preservation_signoff.py --check -> up to date; uiv2_release_review.py --check -> 0 findings; generate_roadmap_status.py --check -> up to date"
+        ],
         "blockers": [],
-        "handoff": null
+        "handoff": "Shipped as a contract with two injected seams (Fetcher, trialler) and no production caller: no route or orchestrator consumes improvement_lab.py yet, and no research was performed for this story -- no repository, paper or model was fetched and no candidate was evaluated against a real failure trace. Adoption of any candidate is AP-028's decision, not this module's. Limits a future story must close: (1) WatchGrant host matching is string-prefix against the allowlist, so it does not follow redirects -- outbound fetching must keep using the existing redirect-safety path once a real fetcher is wired; (2) HeldOutGuard compares digests of paths the caller names, so a held-out set the caller forgets to name is unguarded -- the caller must list all three; (3) the held-out comparison happens in memory within one run, so a long-lived optimiser resuming across processes would need the digests persisted; (4) the pre-trial compatibility numbers (free disk, available memory) are supplied by the caller, not measured here."
       },
       "implementation_prompt": "Implement AP-026: Research model/paper/tool improvements and evaluate candidates. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
