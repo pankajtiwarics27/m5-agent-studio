@@ -27,7 +27,7 @@
     ],
     "module_counts": [
       90,
-      82,
+      83,
       88
     ],
     "node_counts": [
@@ -296,6 +296,7 @@
       "tests/test_reference_benchmark_routes.py",
       "tests/test_refinement_bounds.py",
       "tests/test_release_manager.py",
+      "tests/test_release_qualification.py",
       "tests/test_request_fit.py",
       "tests/test_responsive.py",
       "tests/test_routing_decision_records.py",
