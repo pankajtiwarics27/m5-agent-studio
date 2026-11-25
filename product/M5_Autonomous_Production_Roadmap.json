@@ -3257,7 +3257,7 @@
       "title": "Deliver sourced original short-video drafts",
       "priority": "P1",
       "optional": false,
-      "status": "not_started",
+      "status": "in_review",
       "authorization": "normal_story_authorization",
       "dependencies": [
         "AP-009",
@@ -3317,18 +3317,42 @@
         "Push/PR state; owner/independent approvals where required"
       ],
       "tracking": {
-        "owner": null,
-        "branch": null,
-        "base_sha": null,
-        "head_sha": null,
-        "claimed_at": null,
-        "heartbeat_at": null,
-        "pr_url": null,
-        "delivery_status": "not_pushed",
-        "acceptance_evidence": [],
-        "tests_executed": [],
+        "owner": "arena/ab195e0f-m5-agent-studio",
+        "branch": "arena/ab195e0f-m5-agent-studio",
+        "base_sha": "b9d39bc622",
+        "head_sha": "9d125b9",
+        "claimed_at": "2026-11-10T00:00:00Z",
+        "heartbeat_at": "2026-11-10T00:00:00Z",
+        "pr_url": "https://github.com/pankajtiwarics27/m5-agent-studio/pull/367",
+        "delivery_status": "merged",
+        "acceptance_evidence": [
+          "AC1 (topic popularity is supported by dated region/source signals or labelled candidate/unknown): TopicSignal records the bundle source id, the date the number describes, the market, the metric and the value; assess_topic() derives supported (>=2 distinct in-region sources inside the 90-day window), candidate (one) or unknown (none), and a downgrade must state its reason. Refused rather than downgraded: a source the run never retrieved, a signal dated after the assessment, and a signal about another market. A candidate or unknown topic may be recorded but the narration may not call it trending, and the guard is negation-aware so \"this topic is not trending yet\" is not punished. Tests: test_a_topic_with_two_dated_regional_sources_is_supported, test_one_source_is_a_candidate_and_says_why, test_no_signal_is_unknown_rather_than_assumed, test_a_signal_from_a_source_the_run_never_retrieved_is_refused, test_a_signal_dated_after_the_assessment_is_refused, test_a_signal_from_another_market_is_not_popularity_here, test_a_stale_signal_falls_out_of_the_window_instead_of_counting, test_a_signal_needs_a_region_a_date_and_a_number, test_a_labelled_candidate_cannot_be_narrated_as_trending, test_denying_the_trend_is_the_honest_sentence_and_is_not_refused, test_asserting_a_trend_after_a_denial_in_another_clause_is_still_refused.",
+          "AC2 (important claims link to evidence and contradictions/uncertainty stay visible): NarrationClaim refuses an important claim with no source at construction; render_video_draft() requires the AP-009 ResearchBundle and refuses a claim citing a source the run never read; contradicted_claim_texts() reads AP-009's contradicted claims off the bundle itself and a draft whose uncertainties do not state them raises rather than smoothing them into confident copy. Tests: test_an_important_claim_without_a_source_is_refused_at_record_time, test_a_supported_claim_links_to_a_source_in_the_bundle, test_an_important_claim_citing_a_source_the_run_never_read_is_refused, test_the_render_needs_the_bundle_rather_than_being_asked_to_trust_the_caller, test_a_contradicted_claim_the_script_hides_is_refused, test_a_contradiction_stated_in_the_script_stays_visible, test_contradicted_claim_texts_refuses_a_foreign_bundle.",
+          "AC3 (script and storyboard preserve original angle, voice and visual direction): CreativeDirection requires the angle, voice, visual direction and a non-empty forbidden_moves list; every StoryboardScene names the direction element it serves so a scene serving nothing approved is drift; uncovered_elements() finds a brief element no scene shows; a script written against a different direction raises unless an OwnerDirectionChange names a namespaced human, a reason and a date, and a machine cannot create one. Tests: test_a_direction_that_forbids_nothing_is_not_a_direction, test_a_scene_that_serves_nothing_approved_is_drift, test_every_direction_element_must_be_served_by_a_scene, test_a_script_written_against_another_direction_needs_an_owner_change, test_an_owner_can_change_the_direction_on_the_record, test_a_machine_cannot_approve_a_direction_change.",
+          "AC4 (reuse/audit existing MoneyPrinter contracts before adding a second integration): EXISTING_MONEYPRINTER_SURFACES names the three surfaces already shipped (cli_tool, mcp_stdio_server, openai_gateway_profile); AdapterAudit refuses an audit that omits any of them and one that dispositions a surface twice; 'unsuitable' requires a reason; audit_existing_integrations() refuses a second integration while any surface is reused. Tests: test_the_audit_must_cover_every_existing_surface, test_a_second_integration_is_refused_while_a_surface_is_reused, test_a_second_integration_is_permitted_only_when_nothing_existing_fits, test_declaring_a_surface_unsuitable_needs_a_reason, test_a_surface_that_does_not_exist_cannot_be_audited, test_the_audit_is_recorded_on_the_draft.",
+          "AC5 (every asset/music/font/voice has rights and provenance; no unauthorised voice cloning): MediaAsset composes AP-021's AssetProvenance so rights vocabulary is shared, adds the role, and requires a VoiceConsent for voice assets; owner_cloned_with_consent needs the consent record named in evidence; cloned_from_youtube and deepfake_impersonation raise RightsRefused as unrecordable rather than flagged; unknown rights block delivery and one asset path is recorded once. Tests: test_an_unknown_rights_asset_blocks_delivery, test_a_voice_asset_must_name_whose_voice_it_is, test_unauthorised_voice_cloning_is_refused_by_name, test_cloned_voice_consent_needs_the_consent_record, test_a_licence_claim_without_a_licence_is_refused_upstream, test_a_non_voice_asset_cannot_carry_voice_consent, test_one_asset_path_is_recorded_once.",
+          "AC6 (an actual playable draft and captions are returned; upload remains separate authority): PlaybackProbe supplies duration/playable/cues, and the module refuses a probe digest that is not the renderer's, overlapping cues, a cue scheduled after the video ends, a render payload with no caption payload, and a renderer and probe that disagree about the cues; UploadGrant has no constructor argument that makes it true and every record states upload_granted/publication_granted false while reporting every run, intervention minutes and limitations. Tests: test_a_complete_draft_is_deliverable_and_says_what_it_is, test_a_file_that_did_not_probe_as_playable_is_not_a_draft, test_a_draft_without_captions_is_not_the_package_the_story_promises, test_a_caption_scheduled_after_the_video_ends_is_refused, test_overlapping_captions_are_refused, test_a_probe_that_hashed_another_file_is_refused, test_a_renderer_that_returns_no_caption_payload_is_refused, test_a_renderer_and_a_probe_that_disagree_about_captions_are_refused, test_the_renderer_is_told_the_approved_direction_and_the_reused_surface, test_an_unsupported_aspect_is_refused, test_upload_is_a_constant_that_cannot_be_set, test_every_run_and_its_cost_is_reported_not_just_the_best.",
+          "Discipline: the module imports only the standard-library pieces it needs plus AP-009's research contract and AP-021's asset provenance, opens no clock, file, process or socket, and shares no top-level name with app.py. Tests: test_the_module_reads_no_clock_and_opens_nothing, test_the_module_shares_no_top_level_name_with_app, test_the_renderer_protocol_is_the_only_place_work_happens."
+        ],
+        "tests_executed": [
+          "tests/test_video_draft.py: 52 passed",
+          "scripts/ci_test_shard.py --run-shard 3 --python-version 3.12: 2371 passed, 10 skipped in 635s (nodes=2381, outcomes_sha256 97596ee4...)",
+          "mypy (94 modules): Success; ruff check .: clean; scripts/validate_docs.py: passed, 323 files",
+          "scripts/uiux_release_gate.py --check: 37/37 checks, 7/7 gates, 0 findings; scripts/uiv2_release_review.py --check: 0 findings",
+          "PR #367 pull-request run 45589711310: success, every required check green"
+        ],
         "blockers": [],
-        "handoff": null
+        "handoff": "AP-023's record is delivered and merged as e98cfa2a (PR #367): video_draft.py plus 52 tests and a doc page, every acceptance criterion mapped to executed tests. Three gaps are named rather than hidden. (1) No route, pane or orchestrator consumes video_draft.py yet — it is a contract with two ports and no surface, the same state website_draft.py and website_quality.py were in before their first callers. (2) No real renderer or probe ships: the suite uses recording doubles, and an ffmpeg renderer with an ffprobe probe is the next concrete step. (3) No video was rendered, watched, published or monetised for this story; AP-024 owns technical and editorial qualification of a real clip, and upload/publication remain AP-029's separate grant.",
+        "merge_commit": "e98cfa2a4e",
+        "changed_files": [
+          "video_draft.py: the draft record — topic signals and derived popularity, narration claims, creative direction and storyboard, voice consent, media assets, the MoneyPrinterTurbo adapter audit, caption cues, the playback port and a derived readiness verdict",
+          "tests/test_video_draft.py: 52 tests, mostly refusals",
+          "docs/ap023-sourced-video-drafts.md, docs/README.md",
+          "tests/ci_test_shards.json (shard 3, balance [89,80,84]), tests/test_scopes.json (area plus source_areas), pyproject.toml (mypy scope, py-modules)"
+        ],
+        "visual_evidence": [
+          "No new screen: this story adds a decision module and no pane, so no screenshot is claimed for it."
+        ]
       },
       "implementation_prompt": "Implement AP-023: Deliver sourced original short-video drafts. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."
     },
