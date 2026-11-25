@@ -404,6 +404,7 @@
       "tests/test_uiux_tokens.py",
       "tests/test_uiv2_release_review.py",
       "tests/test_verify_test_identity.py",
+      "tests/test_website_draft.py",
       "tests/test_workflow_local_stream_close.py",
       "tests/test_workflow_mcp_coordinated.py",
       "tests/test_workflow_tracing.py",
