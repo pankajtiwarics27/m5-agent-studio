@@ -111,10 +111,13 @@ AS source/status record rather than a fourth interchangeable claim ledger.
   `tests/test_autonomous_production_decisions.py`, so `done` cannot be read as
   delivered. Product runtime activation, destructive resets, real
   external services, external accounts/credentials/spend/publish, and the
-  owner's launch actions (selecting or deferring the launch specialisation,
-  running the pilot at a real head, obtaining independent security and
-  screenshot approvals, exercising rollback/migration/restore) remain
-  unauthorized and unperformed for any agent. New work needs its own explicit
+  owner's launch actions (running the website pilot at a real head, obtaining
+  independent security and screenshot approvals, exercising
+  rollback/migration/restore, and deciding whether the video pilot is deferred
+  for this launch) remain unauthorized and unperformed for any agent. The
+  launch specialisation itself is **not** an open question: U01 resolved it on
+  2026-11-17 as website-first, then video (issue #330), and `safe_work` no
+  longer calls it a suggestion. New work needs its own explicit
   owner authorization plus dependency evidence and its own branch/PR.
 
 Within the program you are working on, choose exactly one story that is both

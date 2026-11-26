@@ -545,3 +545,48 @@ def test_unmarked_done_stories_do_not_claim_outstanding_owner_acceptance() -> No
             f"{story['id']}: discloses owner acceptance as incomplete in prose while carrying no marker; "
             "either record the marker or stop claiming the disclosure where nothing checks it"
         )
+
+
+def test_outstanding_actions_never_request_an_already_resolved_decision() -> None:
+    """A marker may not ask the owner for something the owner already decided.
+
+    AP-032's marker originally said "Owner selects or defers the launch
+    specialisation in this ledger." U01 was resolved on 2026-11-17 (issue #330:
+    websites first, then video). Asking again is the same defect as claiming
+    something unstarted that is done: a reader who trusts it will either redo a
+    decision or conclude the record was never made.
+    """
+    envelope = load_operating_envelope()
+    resolved = {decision.id for decision in envelope.decisions if decision.status == "resolved"}
+    roadmap = _read(ROADMAP)
+    stories = roadmap["stories"]
+    assert isinstance(stories, list)
+
+    # U01 is the decision that names the specialisation order.
+    assert "U01" in resolved, "this check assumes U01 stays resolved; revisit it if that changes"
+
+    for story in stories:
+        assert isinstance(story, dict)
+        marker = (story.get("tracking") or {}).get("acceptance_outstanding")
+        if not marker:
+            continue
+        for action in marker["outstanding_actions"]:
+            text = action.lower()
+            if "launch specialisation" in text and ("select" in text or "defer" in text):
+                pytest.fail(
+                    f"{story['id']}: outstanding action asks for a launch-specialisation decision while U01 is "
+                    f"resolved: {action!r}"
+                )
+
+
+def test_the_marker_records_the_specialisation_u01_selected() -> None:
+    """The order is an owner selection with named provenance, not a suggestion."""
+    roadmap = _read(ROADMAP)
+    story = next(s for s in roadmap["stories"] if isinstance(s, dict) and s["id"] == "AP-032")
+    recorded = story["tracking"]["acceptance_outstanding"]["specialisation"]
+    assert recorded["selected_by"] == "owner"
+    assert recorded["decision_id"] == "U01"
+    assert recorded["decision_status"] == "resolved"
+    assert recorded["order"] == ["website", "video"]
+    assert recorded["first"] == "website"
+    assert "issue #330" in recorded["recorded"]
