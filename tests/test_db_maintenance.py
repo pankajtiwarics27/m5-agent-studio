@@ -108,3 +108,77 @@ def test_backup_refuses_plaintext_credentials_and_future_schema(tmp_path: Path) 
     make_database(future, version=999)
     with pytest.raises(MaintenanceError, match="newer than supported"):
         backup_database(future, tmp_path / "future-backup.db")
+
+
+def test_a_hot_backup_captures_rows_still_in_the_wal(tmp_path: Path) -> None:
+    """The runbook tells operators to back up before a rollback, Studio running or not.
+
+    A WAL-mode database keeps committed rows in the -wal sidecar until a checkpoint.
+    If the backup API did not read them, a hot backup would silently restore an older
+    state than the operator had -- the exact data loss the runbook exists to prevent.
+    """
+    db = tmp_path / "studio.db"
+    make_database(db)
+    writer = sqlite3.connect(db, isolation_level=None)
+    try:
+        assert writer.execute("PRAGMA journal_mode=WAL").fetchone()[0] == "wal"
+        writer.execute("INSERT INTO runs(title) VALUES ('only in the wal')")
+        assert (tmp_path / "studio.db-wal").exists()
+
+        backup = backup_database(db, tmp_path / "hot.sqlite3")
+    finally:
+        writer.close()
+
+    with sqlite3.connect(backup) as conn:
+        titles = {row[0] for row in conn.execute("SELECT title FROM runs")}
+    assert titles == {"preserved", "only in the wal"}, "a hot backup dropped a committed row"
+
+
+def test_restore_refuses_while_wal_sidecars_exist(tmp_path: Path) -> None:
+    """Restore is not safe hot, and the sidecar check is how it knows.
+
+    Overwriting a database whose -wal still holds committed rows discards them. The
+    refusal must come before the destination is touched, so the live file keeps its data.
+    """
+    live = tmp_path / "studio.db"
+    snapshot = tmp_path / "snapshot.db"
+    make_database(live)
+    make_database(snapshot)
+    writer = sqlite3.connect(live, isolation_level=None)
+    try:
+        writer.execute("PRAGMA journal_mode=WAL")
+        writer.execute("INSERT INTO runs(title) VALUES ('uncheckpointed')")
+        assert (tmp_path / "studio.db-wal").exists()
+        with pytest.raises(MaintenanceError, match="Stop Studio cleanly before restoring"):
+            restore_database(snapshot, live, force=True)
+    finally:
+        writer.close()
+
+    with sqlite3.connect(live) as conn:
+        titles = {row[0] for row in conn.execute("SELECT title FROM runs")}
+    assert "uncheckpointed" in titles, "the refusal came after the destination was replaced"
+
+
+def test_a_refused_restore_leaves_the_destination_untouched(tmp_path: Path) -> None:
+    """The runbook promises the input is validated before the destination is touched.
+
+    An operator who points restore at the wrong file must lose nothing. This asserts the
+    destination still holds its own rows and that no safety backup was written for an
+    attempt that never got as far as replacing anything.
+    """
+    live = tmp_path / "studio.db"
+    make_database(live)
+    with sqlite3.connect(live) as conn:
+        conn.execute("INSERT INTO runs(title) VALUES ('live data')")
+    junk = tmp_path / "not-a-backup.sqlite3"
+    junk.write_bytes(b"\x00\x01this is not a database" * 64)
+
+    with pytest.raises(MaintenanceError, match="Not a readable SQLite database"):
+        restore_database(junk, live, force=True)
+
+    with sqlite3.connect(live) as conn:
+        titles = {row[0] for row in conn.execute("SELECT title FROM runs")}
+    assert titles == {"preserved", "live data"}
+    assert not list(tmp_path.glob("*.pre-restore-*.bak")), (
+        "a restore that never replaced anything still left a safety backup behind"
+    )

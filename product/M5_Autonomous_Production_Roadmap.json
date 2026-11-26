@@ -4293,7 +4293,10 @@
           },
           "runbooks": {
             "rollback_migration_restore": "docs/release-rollback-runbook.md",
-            "packaging": "docs/packaging-rollback.md"
+            "packaging": "docs/packaging-rollback.md",
+            "commands_executed": "every command in the runbook was run against this revision before it was written: backup (default name, 0600, hot with live WAL), its five refusals, restore with --force (safety backup 0600, destination 0644->0600), the WAL-sidecar refusal, a refused restore leaving the destination intact, release package/install/update/rollback/verify/status/prune across 9.0.1<->9.0.2, and the downgrade refusal",
+            "pinned_by": "tests/test_db_maintenance.py (10 tests): hot backup keeps WAL rows, restore refuses live sidecars, refused restore leaves the destination untouched",
+            "corrections": "the first draft of the runbook misdescribed the credential refusal as a content scan (it reads cloud_providers.api_key and mcp_servers credential columns only), said backup was unsafe on a live database (a hot backup keeps uncheckpointed rows), and described release rollback as reinstalling through the channel (it is scripts/release.py rollback, which swaps and is repeatable). docs/packaging-rollback.md also placed --root on package, which this CLI rejects."
           }
         }
       },
