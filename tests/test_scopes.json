@@ -184,6 +184,7 @@
     "quality.docs-ledger": [
       "test_adr_process.py",
       "test_autonomous_production_decisions.py",
+      "test_check_documented_commands.py",
       "test_docs.py",
       "test_governance.py"
     ],
@@ -287,6 +288,10 @@
     "challenger_evaluation.py": [
       "quality.docs-ci",
       "models.providers"
+    ],
+    "scripts/check_documented_commands.py": [
+      "quality.docs-ci",
+      "quality.docs-ledger"
     ],
     "comparison_board.py": [
       "ui.compare",

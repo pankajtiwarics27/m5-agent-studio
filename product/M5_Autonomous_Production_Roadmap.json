@@ -4323,6 +4323,15 @@
             "commands_executed": "every command in the runbook was run against this revision before it was written: backup (default name, 0600, hot with live WAL), its five refusals, restore with --force (safety backup 0600, destination 0644->0600), the WAL-sidecar refusal, a refused restore leaving the destination intact, release package/install/update/rollback/verify/status/prune across 9.0.1<->9.0.2, and the downgrade refusal",
             "pinned_by": "tests/test_db_maintenance.py (10 tests): hot backup keeps WAL rows, restore refuses live sidecars, refused restore leaves the destination untouched",
             "corrections": "the first draft of the runbook misdescribed the credential refusal as a content scan (it reads cloud_providers.api_key and mcp_servers credential columns only), said backup was unsafe on a live database (a hot backup keeps uncheckpointed rows), and described release rollback as reinstalling through the channel (it is scripts/release.py rollback, which swaps and is repeatable). docs/packaging-rollback.md also placed --root on package, which this CLI rejects."
+          },
+          "documented_commands": {
+            "module": "scripts/check_documented_commands.py",
+            "tests": "tests/test_check_documented_commands.py (18 passed)",
+            "recorded_in": "docs/check-documented-commands.md",
+            "ci": "runs in the documentation gate after validate_docs.py",
+            "finds": "0 problems across 120 documented lines (72 checked statically, 42 skipped for placeholders, 6 scripts not statically readable)",
+            "motivated_by": "docs/packaging-rollback.md documented release.py package --root, which the CLI rejects",
+            "limits": "checks that a flag exists in its subcommand scope, not that the documented command is sufficient or that it does what the prose says"
           }
         }
       },
