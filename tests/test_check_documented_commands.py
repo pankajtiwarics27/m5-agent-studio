@@ -253,6 +253,79 @@ def test_a_placeholder_line_is_skipped_not_passed(tmp_path: Path) -> None:
     assert all(command.script == "scripts/tool.py" for command in checkable + skipped)
 
 
+def test_continued_literal_command_checks_flags_on_later_lines(tmp_path: Path) -> None:
+    (tmp_path / "scripts").mkdir()
+    _script(tmp_path / "scripts", 'p = argparse.ArgumentParser()\np.add_argument("--ok")\n')
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "page.md").write_text(
+        'python scripts/tool.py --ok \\\n  --wrong value\n', encoding="utf-8"
+    )
+    report = cdc.check_repository(tmp_path)
+    assert not report.ok and not report.unchecked and not report.skipped
+    assert [(p.flag, p.line) for p in report.problems] == [("--wrong", 1)]
+
+
+def test_continued_node_command_checks_later_flags(tmp_path: Path) -> None:
+    (tmp_path / "scripts").mkdir()
+    (tmp_path / "scripts" / "walk.mjs").write_text(
+        'function parse() { return process.argv.includes("--ok"); }\n', encoding="utf-8"
+    )
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "page.md").write_text(
+        'node scripts/walk.mjs --ok \\\n  --wrong \\\n  value\n', encoding="utf-8"
+    )
+    report = cdc.check_repository(tmp_path)
+    assert not report.ok and not report.unchecked and not report.skipped
+    assert [(p.flag, p.line) for p in report.problems] == [("--wrong", 1)]
+
+
+def test_continuation_preserves_shell_join_without_inserting_space(tmp_path: Path) -> None:
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "page.md").write_text('python scripts/tool.py --fla\\\ng value\n', encoding="utf-8")
+    commands, skipped = cdc.documented_commands(tmp_path)
+    assert not skipped
+    assert commands[0].tokens == ("--flag", "value")
+
+
+def test_a_pair_of_final_backslashes_does_not_continue_the_command(tmp_path: Path) -> None:
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "page.md").write_text(
+        'python scripts/tool.py --path \\\\\n  --wrong value\n', encoding="utf-8"
+    )
+    commands, skipped = cdc.documented_commands(tmp_path)
+    assert not skipped and len(commands) == 1
+    assert commands[0].tokens == ("--path", "\\")
+
+
+def test_continued_placeholder_is_skipped_as_a_whole(tmp_path: Path) -> None:
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "page.md").write_text(
+        'python scripts/tool.py --ok \\\n  --output <path>\n', encoding="utf-8"
+    )
+    commands, skipped = cdc.documented_commands(tmp_path)
+    assert not commands and len(skipped) == 1 and skipped[0].line == 1
+
+
+def test_incomplete_continuation_does_not_swallow_next_command(tmp_path: Path) -> None:
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "page.md").write_text(
+        'python scripts/first.py --ok \\\npython scripts/second.py --ok\n'
+        'python scripts/third.py --ok \\\n```\n', encoding="utf-8"
+    )
+    commands, skipped = cdc.documented_commands(tmp_path)
+    assert [(c.script, c.line) for c in commands] == [("scripts/second.py", 2)]
+    assert [(c.script, c.line) for c in skipped] == [("scripts/first.py", 1), ("scripts/third.py", 3)]
+
+
+def test_malformed_counterexample_is_skipped_without_parsing(tmp_path: Path) -> None:
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "page.md").write_text(
+        f'<!-- {cdc.COUNTER_EXAMPLE_MARKER} -->\npython scripts/tool.py --broken "\n', encoding="utf-8"
+    )
+    commands, skipped = cdc.documented_commands(tmp_path)
+    assert not commands and len(skipped) == 1
+
+
 def test_python_and_python3_are_both_recognised(tmp_path: Path) -> None:
     (tmp_path / "docs").mkdir()
     (tmp_path / "docs" / "page.md").write_text(

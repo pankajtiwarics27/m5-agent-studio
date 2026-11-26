@@ -133,6 +133,32 @@ def _markdown_files(root: Path) -> Iterator[Path]:
         yield readme
 
 
+def _command_lines(text: str) -> Iterator[tuple[int, str, bool]]:
+    """Join simple backslash continuations; never consume another command or a Markdown boundary."""
+    lines = text.splitlines()
+    index = 0
+    while index < len(lines):
+        number = index + 1
+        line = lines[index]
+        index += 1
+        if _COMMAND.match(line) is None:
+            continue
+        complete = True
+        while line.endswith("\\") and (len(line) - len(line.rstrip("\\"))) % 2:
+            if index >= len(lines):
+                complete = False
+                break
+            following = lines[index]
+            stripped = following.strip()
+            if not stripped or stripped.startswith(("```", "~~~")) or _COMMAND.match(following):
+                complete = False
+                break
+            # Shell removes the backslash and newline, but preserves indentation on the next line.
+            line = line[:-1] + following
+            index += 1
+        yield number, line, complete
+
+
 def documented_commands(root: Path) -> tuple[list[DocCommand], list[DocCommand]]:
     """Return (checkable, skipped) documented invocations.
 
@@ -143,37 +169,13 @@ def documented_commands(root: Path) -> tuple[list[DocCommand], list[DocCommand]]
     checkable: list[DocCommand] = []
     skipped: list[DocCommand] = []
     for document in _markdown_files(root):
-        if COUNTER_EXAMPLE_MARKER in document.read_text(encoding="utf-8"):
-            skipped.extend(
-                DocCommand(
-                    document.name,
-                    number,
-                    match.group("script"),
-                    tuple(shlex.split(match.group(3))),
-                    interpreter=match.group("interpreter"),
-                )
-                for number, match in (
-                    (number, _COMMAND.match(text))
-                    for number, text in enumerate(document.read_text(encoding="utf-8").splitlines(), 1)
-                )
-                if match is not None
-            )
-            continue
-        for number, text in enumerate(document.read_text(encoding="utf-8").splitlines(), 1):
+        source = document.read_text(encoding="utf-8")
+        for number, text, complete in _command_lines(source):
             match = _COMMAND.match(text)
-            if match is None:
-                continue
+            assert match is not None
             interpreter, script, rest = match.group("interpreter"), match.group("script"), match.group(3).strip()
-            if _NOT_A_LITERAL.search(rest) or not rest:
-                skipped.append(
-                    DocCommand(
-                        document.name,
-                        number,
-                        script,
-                        tuple(shlex.split(rest) if rest and not _NOT_A_LITERAL.search(rest) else ()),
-                        interpreter=interpreter,
-                    )
-                )
+            if COUNTER_EXAMPLE_MARKER in source or not complete or _NOT_A_LITERAL.search(rest) or not rest:
+                skipped.append(DocCommand(document.name, number, script, (), interpreter=interpreter))
                 continue
             try:
                 tokens = tuple(shlex.split(rest))
