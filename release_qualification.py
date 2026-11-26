@@ -60,6 +60,7 @@ __all__ = [
     "SPECIALISATIONS",
     "VERDICTS",
     "DRILLS",
+    "RESTORE_COMPARISONS",
     "APPROVAL_KINDS",
     "Evidence",
     "Claim",
@@ -87,6 +88,10 @@ VERDICTS: tuple[str, ...] = ("verified", "partially-verified", "missing", "not-a
 
 #: The drills a release must actually perform, not document.
 DRILLS: tuple[str, ...] = ("rollback", "migration", "restore")
+
+#: What a restore's digests are taken over. A SQLite restore is logically identical but not
+#: byte-identical, so the basis has to be named rather than assumed.
+RESTORE_COMPARISONS: tuple[str, ...] = ("byte-identical", "logical-content")
 
 #: Separate independent approvals. Screenshot review is not a security review.
 APPROVAL_KINDS: tuple[str, ...] = ("security", "screenshot")
@@ -619,12 +624,23 @@ class CiVerdict:
 
 @dataclass(frozen=True, slots=True)
 class DrillRecord:
-    """A rollback, migration or restore drill. Restore only counts when the bytes were compared."""
+    """A rollback, migration or restore drill. A restore counts only when it was compared.
+
+    ``comparison`` names *what* the digests are taken over, because that changes the answer and
+    the wrong choice reports a false failure. A SQLite backup restored through the online backup
+    API is logically identical but **not** byte-identical: page layout, freelist state and header
+    fields legitimately differ, so two ``sha256`` file digests of the same data will not match.
+    Measuring this repository's own ``backup_database``/``restore_database`` round-trip gives
+    equal logical digests and unequal file digests. Recording a file-digest mismatch as a failed
+    restore would therefore block a release for a correct restore; recording a logical match as a
+    byte match would overclaim. Both are refused by naming the basis.
+    """
 
     kind: str
     exercised: bool
     restored_digest: str = ""
     source_digest: str = ""
+    comparison: str = ""
     detail: str = ""
 
     def __post_init__(self) -> None:
@@ -634,6 +650,11 @@ class DrillRecord:
             raise DrillRefused("exercised must be a boolean.")
         restored = _optional(self.restored_digest, limit=80).lower()
         source = _optional(self.source_digest, limit=80).lower()
+        comparison = _optional(self.comparison, limit=40)
+        if comparison and comparison not in RESTORE_COMPARISONS:
+            raise DrillRefused(
+                f"unknown restore comparison {comparison!r}; comparisons are {list(RESTORE_COMPARISONS)}"
+            )
         if self.kind == "restore" and self.exercised:
             if not restored or not source:
                 raise DrillRefused(
@@ -642,13 +663,26 @@ class DrillRecord:
                 )
             if not _DIGEST_RE.fullmatch(restored) or not _DIGEST_RE.fullmatch(source):
                 raise DrillRefused("restore digests must be lowercase SHA-256 hex digests.")
+            if not comparison:
+                raise DrillRefused(
+                    "a restore drill must name what its digests are taken over (byte-identical or "
+                    "logical-content); without it the reader cannot tell a real mismatch from the expected "
+                    "difference between two SQLite files holding the same rows"
+                )
         object.__setattr__(self, "restored_digest", restored)
         object.__setattr__(self, "source_digest", source)
+        object.__setattr__(self, "comparison", comparison)
         object.__setattr__(self, "detail", _optional(self.detail, limit=600))
 
     @property
     def proves_restore(self) -> bool:
-        return self.kind == "restore" and self.exercised and bool(self.restored_digest) and self.restored_digest == self.source_digest
+        return (
+            self.kind == "restore"
+            and self.exercised
+            and bool(self.restored_digest)
+            and bool(self.comparison)
+            and self.restored_digest == self.source_digest
+        )
 
     def to_mapping(self) -> dict[str, Any]:
         return {
@@ -656,6 +690,7 @@ class DrillRecord:
             "exercised": self.exercised,
             "restored_digest": self.restored_digest,
             "source_digest": self.source_digest,
+            "comparison": self.comparison,
             "detail": self.detail,
             "proves_restore": self.proves_restore,
         }

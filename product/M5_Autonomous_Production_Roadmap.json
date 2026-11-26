@@ -3,7 +3,7 @@
   "document_type": "proposed_autonomous_production_execution_ledger",
   "product": "M5 Agent Studio",
   "program": "AP",
-  "revision": "3.4",
+  "revision": "3.5",
   "prepared_date": "2026-11-08",
   "lifecycle": "registered_tracking_ap030_done_ap008_claim_reconciled_ap018_blocked_u01_u05_resolved",
   "source_snapshot": "a67e8b291614f8afdac7c8d38ba51bcc8926d695",
@@ -4244,7 +4244,6 @@
           "outstanding_actions": [
             "Run the website pilot cases and the artifact review at a real head; U01 already selected website-first on 2026-11-17 (issue #330), so no specialisation decision is outstanding.",
             "Obtain the independent security and screenshot approvals; neither exists and this agent cannot sign one.",
-            "Exercise rollback, migration and restore, recording compared digests.",
             "Supply a green CI run id at the head being shipped.",
             "Record, by an authorised owner revision, whether the video pilot is deferred for this launch; U01 orders video second but does not itself defer it, and AC1 is satisfied either by deferring it explicitly or by qualifying it."
           ],
@@ -4260,6 +4259,16 @@
             "first": "website",
             "recorded": "product/M5_Autonomous_Production_Operating_Envelope.json U01 resolution (2026-11-17); verbatim owner selections in issue #330",
             "video_launch_scope": "ordered second; not deferred by this record"
+          },
+          "drills": {
+            "status": "exercised",
+            "module": "release_drill_witness.py",
+            "witness_tests": "tests/test_release_drill_witness.py (12 passed)",
+            "recorded_in": "docs/ap032-drill-witness.md",
+            "rollback": "v4 -> restore pre-migration backup -> v1 with the original rows -> v4 again",
+            "migration": "v1 -> v4; 5 pre-existing rows kept every original column value; 13 tables gained columns",
+            "restore": "backup, mutate, restore, re-read: logical digests equal; file digests differ, which is why the record names logical-content",
+            "limits": "scoped to a fixture database and this repository's own db_maintenance/runtime_persistence; not a production-window proof and not an install-lifecycle rollback"
           }
         }
       },
