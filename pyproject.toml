@@ -133,6 +133,7 @@ files = [
   "reference_benchmarks.py",
   "refinement_bounds.py",
   "scripts/check_documented_commands.py",
+  "scripts/ci_test_shard.py",
   "scripts/js_documented_flags.py",
   "scripts/verify_test_identity.py",
   "security_release_gate.py",

@@ -50,10 +50,23 @@ def _notice(title: str, message: str) -> None:
 
 
 def _emit_failure_annotations(outcomes: dict[str, dict[str, str]]) -> None:
+    """Name each failure, and say why it failed.
+
+    An annotation that names a failure but not its reason is the defect issue #393 was filed against:
+    the run that failed had no readable traceback anywhere, and the one piece of evidence that
+    survived said only `: failed`. When a detail is missing this says so explicitly rather than
+    emitting a bare outcome, so "no reason recorded" can never look like "no reason".
+    """
     for nodeid, item in sorted(outcomes.items()):
         outcome = item["outcome"]
         if outcome in {"failed", "error"}:
-            _workflow_annotation("error", "Pytest failure", f"{nodeid}: {outcome}")
+            detail = item.get("failure", "").strip()
+            message = f"{nodeid}: {outcome}"
+            if detail:
+                message = f"{message}\n{detail}"
+            else:
+                message = f"{message} (no detail recorded for this report)"
+            _workflow_annotation("error", "Pytest failure", message)
 
 
 def load_manifest(path: Path = MANIFEST_PATH) -> dict[str, Any]:
@@ -125,6 +138,36 @@ def _skip_reason(report: Any) -> str:
     return str(value).splitlines()[-1] if value else ""
 
 
+#: GitHub annotations are capped, and a traceback does not need to be complete to be actionable: the
+#: last line carries the exception and the first frames carry the assertion. The full text stays in
+#: the uploaded `pytest-result-*.xml`.
+_ANNOTATION_LIMIT = 3500
+
+
+def _failure_detail(report: Any) -> str:
+    """The exception line and the assertion that produced it, for a failing report.
+
+    `test_ci_test_shard.py` used to record `outcome` and nothing else, so the annotation an operator
+    reads in CI said `test_x: failed` with no reason. Issue #393 is the cost of that: a test failed
+    once, the job log and artifact download both errored, and the annotation was the only surviving
+    evidence — and it carried no traceback. The failure was never explained, because this recorder had
+    thrown the explanation away before anything could read it.
+    """
+    value = report.longrepr
+    text = str(value) if value is not None else ""
+    if not text:
+        return ""
+    lines = [line.rstrip() for line in text.splitlines() if line.strip()]
+    if not lines:
+        return ""
+    # The tail holds the exception; the assertion sits a few frames above it. Keep the end, which is
+    # where both live, and cut on a line boundary so the annotation stays readable.
+    detail = "\n".join(lines)
+    if len(detail) > _ANNOTATION_LIMIT:
+        detail = "..." + detail[-_ANNOTATION_LIMIT:]
+    return detail
+
+
 @dataclass
 class ResultRecorder:
     node_ids: list[str] = field(default_factory=list)
@@ -145,12 +188,20 @@ class ResultRecorder:
                 outcome = "xfail" if hasattr(report, "wasxfail") else "skipped"
                 self.outcomes[report.nodeid] = {"outcome": outcome, "skip_reason": _skip_reason(report)}
             elif report.failed:
-                self.outcomes[report.nodeid] = {"outcome": "failed", "skip_reason": ""}
+                self.outcomes[report.nodeid] = {
+                    "outcome": "failed",
+                    "skip_reason": "",
+                    "failure": _failure_detail(report),
+                }
             else:
                 outcome = "xpass" if hasattr(report, "wasxfail") else "passed"
                 self.outcomes[report.nodeid] = {"outcome": outcome, "skip_reason": ""}
         elif report.failed:
-            self.outcomes[report.nodeid] = {"outcome": "error", "skip_reason": ""}
+            self.outcomes[report.nodeid] = {
+                "outcome": "error",
+                "skip_reason": "",
+                "failure": _failure_detail(report),
+            }
         elif report.skipped and report.nodeid not in self.outcomes:
             self.outcomes[report.nodeid] = {"outcome": "skipped", "skip_reason": _skip_reason(report)}
 
@@ -262,7 +313,7 @@ def verify_results(
         raise ValueError(f"outcome identity incomplete; missing={missing[:20]} extra={extra[:20]}")
 
     counts = Counter(item["outcome"] for item in outcomes.values())
-    payload = {
+    payload: dict[str, Any] = {
         "schema_version": 1,
         "label": "sharded-union",
         "python_version": python_version,

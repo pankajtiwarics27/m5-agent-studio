@@ -54,9 +54,119 @@ def test_failed_and_error_outcomes_emit_one_error_annotation_each(
     )
 
     assert capsys.readouterr().out.splitlines() == [
-        "::error title=Pytest failure::tests/test_alpha.py::test_failure[100%25]: failed",
-        "::error title=Pytest failure::tests/test_beta.py::test_error: error",
+        "::error title=Pytest failure::tests/test_alpha.py::test_failure[100%25]: failed "
+        "(no detail recorded for this report)",
+        "::error title=Pytest failure::tests/test_beta.py::test_error: error "
+        "(no detail recorded for this report)",
     ]
+
+
+def test_a_failure_annotation_carries_the_reason_not_only_the_outcome(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Issue #393: a bare `: failed` annotation left a CI-only flake unexplainable.
+
+    The run failed once, the job log and the artifact download both errored, and the annotation said
+    only that the test failed. The reason must survive in the annotation, because it may be the only
+    surface an operator can reach.
+    """
+    ci_test_shard._emit_failure_annotations(
+        {
+            "tests/test_alpha.py::test_whys": {
+                "outcome": "failed",
+                "skip_reason": "",
+                "failure": "tests/test_alpha.py:12: in test_whys\n    assert value[\"b\"] == 2\nE   KeyError: 'b'",
+            }
+        }
+    )
+    out = capsys.readouterr().out
+    assert ": failed" in out, out
+    assert "KeyError: 'b'" in out, "the exception was dropped from the annotation: " + out
+    assert "assert value" in out, "the failing assertion was dropped from the annotation: " + out
+
+
+def test_a_failure_with_no_recorded_detail_says_so_rather_than_looking_bare(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """`no detail recorded` and `the reason was X` must not be indistinguishable."""
+    ci_test_shard._emit_failure_annotations(
+        {"tests/test_alpha.py::test_x": {"outcome": "error", "skip_reason": ""}}
+    )
+    out = capsys.readouterr().out
+    assert "no detail recorded" in out
+    assert out.strip().endswith("(no detail recorded for this report)")
+
+
+def test_the_recorder_captures_the_detail_of_a_real_failing_report() -> None:
+    """The emitter is not the only half: the recorder must keep the reason in the first place.
+
+    Tested with an actual pytest report rather than a stub, because the detail comes from
+    `report.longrepr`, and a stub would only prove the stub right.
+    """
+    import _pytest.reports
+
+    recorder = ci_test_shard.ResultRecorder()
+
+    class _Item:
+        nodeid = "tests/test_alpha.py::test_whys"
+
+    failed = _pytest.reports.TestReport(
+        nodeid=_Item.nodeid,
+        location=("tests/test_alpha.py", 12, "test_whys"),
+        keywords={},
+        outcome="failed",
+        longrepr="tests/test_alpha.py:12: in test_whys\n    assert value[\"b\"] == 2\nE   KeyError: 'b'",
+        when="call",
+        sections=[],
+        duration=0.01,
+    )
+    recorder.pytest_runtest_logreport(failed)
+    recorded = recorder.outcomes[_Item.nodeid]
+    assert recorded["outcome"] == "failed"
+    assert "KeyError: 'b'" in recorded["failure"], (
+        "the recorder dropped the reason, so no annotation can carry it: " + repr(recorded)
+    )
+
+
+def test_the_recorder_captures_the_detail_of_a_real_error_report() -> None:
+    import _pytest.reports
+
+    recorder = ci_test_shard.ResultRecorder()
+    errored = _pytest.reports.TestReport(
+        nodeid="tests/test_beta.py::test_setup",
+        location=("tests/test_beta.py", 3, "test_setup"),
+        keywords={},
+        outcome="failed",
+        longrepr="E   RuntimeError: fixture exploded",
+        when="setup",
+        sections=[],
+        duration=0.01,
+    )
+    recorder.pytest_runtest_logreport(errored)
+    recorded = recorder.outcomes["tests/test_beta.py::test_setup"]
+    assert recorded["outcome"] == "error"
+    assert "RuntimeError: fixture exploded" in recorded["failure"], repr(recorded)
+
+
+def test_the_failure_detail_is_bounded_and_keeps_the_exception() -> None:
+    """A huge traceback must not produce an unbounded annotation, and must keep its last line."""
+
+    class _Report:
+        longrepr = "\n".join([f"frame {index}: " + "x" * 80 for index in range(400)]) + "\nE   ValueError: the end"
+
+    detail = ci_test_shard._failure_detail(_Report())
+    assert len(detail) <= ci_test_shard._ANNOTATION_LIMIT + 3
+    assert detail.endswith("ValueError: the end"), "the exception line was cut off"
+
+
+def test_a_failure_detail_does_not_appear_in_the_outcome_hash() -> None:
+    """A traceback carries file paths and timings; identity must not depend on it."""
+    base = {"tests/test_a.py::test_x": {"outcome": "failed", "skip_reason": ""}}
+    with_detail = {
+        "tests/test_a.py::test_x": {"outcome": "failed", "skip_reason": "", "failure": "E   boom"}
+    }
+    assert ci_test_shard.canonical_outcome_hash(base) == ci_test_shard.canonical_outcome_hash(with_detail)
+    assert ci_test_shard.canonical_skip_hash(base) == ci_test_shard.canonical_skip_hash(with_detail)
 
 
 def test_result_verifier_rejects_duplicates_and_proves_collection_identity(
