@@ -251,3 +251,45 @@ def test_a_docs_only_tree_skips_the_module_count_pass(tmp_path: Path) -> None:
     _copy_docs(tmp_path)
 
     assert validate_docs(tmp_path) == []
+
+
+def _validated_with_sentence(tmp_path: Path, sentence: str) -> list[str]:
+    """Build a complete tree, state one extra README sentence, and validate it."""
+    _copy_docs(tmp_path)
+    _copy_code(ROOT, tmp_path)
+    readme = tmp_path / "README.md"
+    readme.write_text(
+        readme.read_text(encoding="utf-8") + f"\n{sentence}\n", encoding="utf-8"
+    )
+    return validate_docs(tmp_path)
+
+
+@pytest.mark.parametrize(
+    ("sentence", "expected"),
+    [
+        ("`app.py` plus 999 small contract modules", "small contract modules"),
+        ("inlines 999 sibling modules", "inlined sibling modules"),
+        ("(999 of them type-checked", "type-checked modules"),
+    ],
+)
+def test_every_stated_module_count_is_actually_checked(
+    tmp_path: Path, sentence: str, expected: str
+) -> None:
+    """Each count guard must fire, not just the one the other test happens to pin.
+
+    The guards are deliberately optional -- a reworded README is allowed to state
+    nothing, and `test_readme_avoids_volatile_module_counts` keeps the landing page
+    free of volatile counts. That design makes an unproven guard dangerous: a
+    guard that silently stopped matching would look exactly like a README that no
+    longer states a count, so nothing would fail until a stale number shipped.
+    These cases pin all three, so the optionality stays a choice and not a hole.
+    """
+    errors = _validated_with_sentence(tmp_path, sentence)
+    assert any(expected in error and "code has" in error for error in errors), errors
+
+
+def test_the_count_guards_stay_silent_when_no_count_is_stated(tmp_path: Path) -> None:
+    """The other half of the contract: absence of a stated count is not an error."""
+    _copy_docs(tmp_path)
+    _copy_code(ROOT, tmp_path)
+    assert validate_docs(tmp_path) == []
