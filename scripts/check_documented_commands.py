@@ -267,13 +267,18 @@ def flags_a_script_accepts(path: Path) -> ParserShape:
     parser's flags must never be attributed to the root, or they would validate a flag the subcommand
     does not take.
     """
+    if path.suffix != ".py":
+        return ParserShape(frozenset(), {}, False, "not a Python script")
     try:
         source = path.read_text(encoding="utf-8")
-    except OSError:
+    except (OSError, UnicodeError):
         return ParserShape(frozenset(), {}, False, "unreadable")
     if "argparse" not in source:
         return ParserShape(frozenset(), {}, False, "no argparse")
-    tree = ast.parse(source)
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return ParserShape(frozenset(), {}, False, "not parseable as Python")
     loop_names = _loop_bound_names(tree)
 
     # Which variable holds a parser, and for which subcommand names.

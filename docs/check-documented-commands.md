@@ -62,7 +62,14 @@ A parser this reader cannot follow — no `argparse`, non-literal flags, or a pa
 saw created — is `static: False`, and every command against it is reported as *not checked*.
 
 It is never reported as *accepting nothing*. Those two are different: the first says "I could not
-tell", the second says "the page is wrong", and only one of them is evidence.
+tell", the second says "the page is wrong", and only one of them is evidence. In particular, a script
+without the text `sys.argv` may still read `from sys import argv`, so absence of that text is not
+proof that it accepts no options. A comment mentioning `argparse` is not proof of a readable parser.
+The Python reader also abstains on non-Python files, invalid Python syntax and files it cannot decode.
+
+These cases have regression tests: each was checked with a mutation that removed the relevant
+abstention or guard, and the restored test files passed afterward. This does not make arbitrary Python
+argument handling statically readable; the scripts in the unreadable list remain unchecked.
 
 ## The node half, added after the python half shipped
 
