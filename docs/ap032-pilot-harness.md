@@ -24,7 +24,7 @@ These are answerable from the artifact's own bytes and structure.
 `dependencies_reviewed` deliberately does not mean "the CDN is trustworthy". It means nothing external
 went unreviewed — reviewable scheme or it is listed.
 
-## What it refuses (6 of 11)
+## What it refuses — and what measures it instead (6 of 11)
 
 `keyboard_reachable`, `focus_visible`, `contrast_ok`, `reduced_motion_respected`, `console_clean` and
 `navigation_works` are emitted as `passed=False, basis="cannot-measure-here"` with the reason. A focus
@@ -33,6 +33,33 @@ run. A regex standing in for any of those would be a green row that means nothin
 
 They are never silently dropped, either. `PilotPartial` refuses to be constructed unless it carries an
 outcome for all 11, so "unmeasured" can never render as "absent".
+
+**These six are measurable, just not here.** `scripts/pilot_browser_walk.mjs` drives headless Chromium
+at the artifact and answers them:
+
+| Criterion | How the walk decides it |
+|---|---|
+| `keyboard_reachable` | presses Tab and records every stop; a click handler on a non-focusable element counts as mouse-only |
+| `focus_visible` | each stop's computed `outline`/`box-shadow` must differ from its unfocused rendering |
+| `contrast_ok` | every text node against its effective background, WCAG AA (4.5:1, or 3:1 for large text) |
+| `reduced_motion_respected` | emulates `prefers-reduced-motion: reduce`; no transition/animation over 0.01s, none running |
+| `console_clean` | loads and clicks every control; any `console.error` or uncaught error fails it |
+| `navigation_works` | follows every same-origin link; `ERR_FILE_NOT_FOUND` or a missing title/landmark fails it |
+
+```bash
+STUDIO_SCREENSHOT_CHROME=/path/to/chromium \
+STUDIO_PUPPETEER_CORE=$PWD/tests/browser/node_modules/puppeteer-core \
+node scripts/pilot_browser_walk.mjs path/to/built/site --out browser-partial.json
+```
+
+Exit `0` only when all six cleared; `1` when a criterion failed; `2` when it refused (no browser, no
+puppeteer, no HTML, not a directory). It carries the same refusal as the harness: a criterion it did
+not measure is `basis: "not-measured"`, `passed: false`, and the JSON states
+`is_a_qualification_report: false`. A pass counts its documents and a failure names the page, so one
+green page cannot read as "the artifact passed".
+
+The walk measures one viewport, 1440x900, in headless Chromium. It does not judge design, copy, or
+whether the site is worth shipping.
 
 ## What it emits
 
@@ -43,8 +70,10 @@ release evidence as-is without being mistaken for a qualification report.
 
 ```bash
 python pilot_harness.py path/to/built/site            # JSON on stdout, exit 1 if any offline criterion fails
-python pilot_harness.py path/to/site --out partial.json
+python pilot_harness.py path/to/site
 ```
+
+(`pilot_harness.py` prints to stdout; redirect it if you want a file.)
 
 Exit codes: `0` offline axes clear, `1` an offline criterion failed or the artifact was refused (empty,
 binary, or containing nothing to audit), `2` the path is not a directory. A refusal is never `0`.
@@ -55,22 +84,31 @@ binary, or containing nothing to audit), `2` the path is not a directory. A refu
 2. Run the harness against the built directory. It audits files on disk and never fetches, renders or
    executes them.
 3. Fix anything red on the offline axes and re-run. This is the cheap loop.
-4. Only then open the site in a browser and decide the six remaining criteria by hand, recording what
-   you did: which viewport, which keyboard path, which contrast tool, what the console showed.
-5. Run the real pilot through `website_quality` to produce the `PilotReport`, and attach the partial
-   beside it. The partial does not replace the report; it explains the report's offline rows.
+4. Run `pilot_browser_walk.mjs` against the same directory for the six browser criteria. Fix and
+   re-run — this is still a machine loop.
+5. Open the site yourself and review what a walk cannot: design, copy, whether the thing is worth
+   shipping. The walk does not do this and does not claim to.
+6. Run the real pilot through `website_quality` to produce the `PilotReport`, and attach both partials
+   beside it. They do not replace the report; they are the machine evidence behind its rows.
 
 ## What this does not do
 
-- It does not start a browser, take screenshots, or produce the `screenshot` approval.
+- It does not produce the `screenshot` approval. Neither does the walk: a machine can measure a focus
+  ring, but "this looks right" is a reviewer's judgement.
 - It does not review the artifact. `OwnerReview` refuses agent-shaped actors, and this harness does not
   attempt one.
-- It does not make the pilot blocker disappear. Six criteria and the owner review still need a human
-  at a head; the harness makes those the *only* things left.
+- It does not make the pilot blocker disappear. With both partials in hand the machine-checkable
+  criteria are covered, and the owner review and the two independent approvals remain — a human still
+  has to decide the artifact is good, and no tool here is allowed to do that for them.
 
-Tests: `tests/test_pilot_harness.py` (27 cases). They are mostly negative — a browser criterion passed
-with a non-measured basis, a partial missing a criterion, a binary file, an empty artifact, a secret
-re-leaked in the mapping — because the failure mode worth guarding is a partial that looks complete.
+Tests: `tests/test_pilot_harness.py` (27 cases) and `tests/test_pilot_browser_walk.py` (16). Both are
+mostly negative — a browser criterion passed with a non-measured basis, a partial missing a criterion,
+a binary file, an empty artifact, a secret re-leaked in the mapping; and on the walk, a mouse-only
+control, a missing focus ring, pale text, an animation that ignores reduced motion, a console error and
+a broken link, each of which must fail its criterion and name the page.
+
+The walk's tests that need a browser skip unless `M5_PILOT_BROWSER` points at a Chromium binary, and
+the skip says so. A test that invented a pass in the browser's absence would be the defect it guards.
 
 ## The operator side
 

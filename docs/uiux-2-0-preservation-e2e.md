@@ -6,7 +6,7 @@ executed by [`scripts/preservation_suite.py`](../scripts/preservation_suite.py).
 
 * 21 of 21 matrix rows mapped, 73 provers, 0 findings
 * 42 walk checks, 14 pytest nodes, 13 route probes, 4 wired controls
-* 18 walks prove a row; 32 more are listed with the reason they do not
+* 18 walks prove a row; 33 more are listed with the reason they do not
 
 ## What this page is, and is not
 
@@ -109,6 +109,7 @@ than succeed. That is what "existing endpoint and permission semantics" means in
 | `mcp_tools_walk.mjs` | the MCP tools walk (UIV2-23) proves that the tool browser keeps configured, discovered, available and denied apart, that every row states the risk of a call in words the server can justify and what its approval policy promises, that Allow/Deny on a row is the allowlist the server itself enforces, that a test call validates its arguments against the tool's schema, asks for consent on anything that is not a read, carries `confirm_write` only when that consent is given, and renders the server's 403 and 428 answers as refusals with the next step; the capability it belongs to is the MCP surface, which the matrix already enumerates from the tool strip and the dialog's own controls |
 | `mcp_wizard_walk.mjs` | the MCP guide walk (UIV2-22) proves that connecting a server is four questions rather than one form: that a step which is not satisfied refuses to advance and names the field, that the token is a password field the review never reads back, that a local command needs a consent naming the exact command and that the consent cannot grant the operator's `STUDIO_ALLOW_MCP_STDIO` opt-in, that raw headers and environment JSON stay behind a shut disclosure, and that saving re-checks every earlier step and reports the connection test where the button is; the capability it belongs to is the MCP surface, which the matrix already enumerates from the tool strip and the dialog's own controls |
 | `overlay_walk.mjs` | the overlay controller (P1-04) is shared machinery the matrix does not enumerate |
+| `pilot_browser_walk.mjs` | the AP-032 pilot walk measures a generated website artifact in a headless browser (keyboard reachability, focus visibility, contrast, reduced motion, console errors and link resolution) for the release pilot; that capability belongs to autonomous production, which this matrix does not enumerate, and the walk never opens the Studio shell |
 | `pipeline_recovery_walk.mjs` | Pipeline failure recovery (P3-07) extends a capability rather than preserving it |
 | `pipeline_workspace_walk.mjs` | the Pipeline workspace walk (UIV2-25) proves that All Stages and exactly the server's four stages survive, that keyboard selection, the unchanged four-seat payload, real loading/long/error streams, checkpoint restoration without a POST, stable Copy focus/scroll, responsive output and the Inspector all describe the same observed run; the capability it belongs to is the existing four-stage Pipeline, which the matrix already enumerates from the pane's own controls |
 | `polish_walk.mjs` | the polish layer (P5-05) proves affordances across all six panes |

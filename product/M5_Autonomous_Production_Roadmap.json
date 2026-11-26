@@ -4242,7 +4242,7 @@
             "Preservation/security/CI/supply-chain evidence"
           ],
           "outstanding_actions": [
-            "Run the website pilot cases and the artifact review at a real head, using pilot_harness.py for the offline axes; U01 already selected website-first on 2026-11-17 (issue #330), so no specialisation decision is outstanding.",
+            "Run pilot_harness.py and pilot_browser_walk.mjs at a real head, then review the artifact yourself; U01 already selected website-first on 2026-11-17 (issue #330), so no specialisation decision is outstanding. The machine-measurable criteria are covered by the two scripts; the review, the PilotReport layout/interaction measurements and the two independent approvals are not.",
             "Obtain the independent security and screenshot approvals; neither exists and this agent cannot sign one.",
             "Supply a green CI run id at the head being shipped.",
             "Record, by an authorised owner revision, whether the video pilot is deferred for this launch; U01 orders video second but does not itself defer it, and AC1 is satisfied either by deferring it explicitly or by qualifying it."
@@ -4290,7 +4290,18 @@
               "navigation_works"
             ],
             "emits": "PilotPartial with is_a_qualification_report=false; refuses to emit a PilotReport",
-            "limits": "parses artifact text only; no browser, no screenshot, no owner review, no artifact judgement; a partial is not a pilot"
+            "limits": "parses artifact text only; no browser, no screenshot, no owner review, no artifact judgement; a partial is not a pilot",
+            "browser_walk": "scripts/pilot_browser_walk.mjs",
+            "browser_walk_tests": "tests/test_pilot_browser_walk.py (16; 10 skip without M5_PILOT_BROWSER)",
+            "measures_in_a_browser": [
+              "keyboard_reachable",
+              "focus_visible",
+              "contrast_ok",
+              "reduced_motion_respected",
+              "console_clean",
+              "navigation_works"
+            ],
+            "browser_walk_limits": "one viewport (1440x900) in headless Chromium; measures, does not judge design or copy; emits is_a_qualification_report false like the offline partial"
           },
           "runbooks": {
             "rollback_migration_restore": "docs/release-rollback-runbook.md",
