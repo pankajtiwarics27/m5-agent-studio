@@ -138,8 +138,10 @@ silently normalised.
 - `tests/test_security_and_quality.py` — versioned schema upgrade on legacy
   tables, refusal of a future schema without mutation, transaction rollback,
   backup/recovery, and credential-migration failure behaviour.
-- `tests/test_db_maintenance.py` — backup, restore, pre-restore copy, and refusal
-  of plaintext-credential databases.
+- `tests/test_db_maintenance.py` — backup, restore, pre-restore copy, refusal of
+  plaintext-credential databases, a hot backup that keeps rows still in the WAL,
+  the refusal to restore over live WAL/SHM sidecars, and a refused restore
+  leaving the destination untouched.
 - `tests/test_release_manager.py` (39 tests) — install/update/rollback including
   downgrade refusal, corrupt rollback target, and CLI end-to-end.
 - `scripts/release.py verify` and `scripts/db_maintenance.py` were exercised by

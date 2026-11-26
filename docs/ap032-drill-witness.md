@@ -24,6 +24,11 @@ restore    exercised=True  1f18fe30b77b==1f18fe30b77b  backup, mutate, restore, 
 `tests/test_release_drill_witness.py` (12 tests) runs all three for real — nothing is stubbed, because a
 stubbed drill proves nothing about the claim it backs.
 
+**These drills are not the operator procedure.** They prove the mechanism is reversible inside a
+fixture. What an operator actually types, and what each command refuses, is
+[`release-rollback-runbook.md`](release-rollback-runbook.md) — written by running every command in it,
+which is how four wrong claims in its first draft were found.
+
 ## The measurement that changed the design
 
 A SQLite backup restored through the online backup API is **logically identical but not

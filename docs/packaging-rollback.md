@@ -44,22 +44,28 @@ claims otherwise.
 python scripts/release.py package --version 9.0.1
 python scripts/release.py package --version 9.0.1 --artifact /path/to/studio.py   # prebuilt
 
-# Install and activate
+# Install and activate (--from-dir defaults to the staging dir package wrote)
 python scripts/release.py install --version 9.0.1 --root ~/.local/share/m5-agent-studio
 
-# Update (refuses to downgrade unless --allow-downgrade)
-python scripts/release.py update --version 9.0.2
+# Update (refuses to downgrade; pass --allow-downgrade only deliberately)
+python scripts/release.py update --version 9.0.2 --root ~/.local/share/m5-agent-studio
 
 # Revert to the previous release (repeatable: it swaps)
-python scripts/release.py rollback
+python scripts/release.py rollback --root ~/.local/share/m5-agent-studio
 
 # Inspect and verify digests of the active and previous releases
-python scripts/release.py status
-python scripts/release.py verify            # exit 1 when unhealthy
+python scripts/release.py status --root ~/.local/share/m5-agent-studio
+python scripts/release.py verify --root ~/.local/share/m5-agent-studio   # exit 1 when unhealthy
 
 # Delete superseded releases, keeping the active release and rollback target
-python scripts/release.py prune --keep 2
+python scripts/release.py prune --keep 2 --root ~/.local/share/m5-agent-studio
 ```
+
+`package` is the one subcommand that takes no `--root`: it stages into `--output`
+(default `dist/releases/`) and `install`/`update` read that staging directory
+through `--from-dir`. Passing `--root` to `package` fails with
+`unrecognized arguments: --root`. The operator-facing procedure, including what
+each command refuses, is [`release-rollback-runbook.md`](release-rollback-runbook.md).
 
 Run an installed release with `python <root>/versions/<version>/studio.py`.
 
