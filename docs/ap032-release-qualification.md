@@ -86,7 +86,7 @@ This is the **machinery** for qualification, not a qualification of the current 
 
 | Check | Result |
 | --- | --- |
-| `tests/test_release_qualification.py` | 59 passed |
+| `tests/test_release_qualification.py` | 62 passed |
 | mypy (102 modules), `ruff check .` | clean |
 | shard/scopes registries | 20 passed |
 | AST discipline test | imports limited to `__future__, hashlib, json, re, dataclasses, typing`; no `time` |

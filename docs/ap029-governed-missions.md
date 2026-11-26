@@ -91,10 +91,25 @@ is a story. A suggestion can only ever become a `DraftArtifact`: `changes_public
 - **No causal claim is validated**, only refused when unmeasured: a suggestion naming an experiment id
   is not checked to have been run.
 
+## Coverage of the scheduling decision
+
+`RecurringMission.due()` — the call that decides whether work runs at all — originally
+had no test: the suite exercised `slot_for()`, `run_id_for()` and the grant, but never
+the combination. It is now covered directly, including the two ways it must say no
+(a slot already run, and a slot earlier than the last one, so a backwards clock cannot
+back-fill) and the two ways the grant overrides a fresh slot (run cap and expiry).
+`Reconciliation` likewise gained coverage for the `unresolved` verdict, which had been
+reachable but unexercised. Both are mutation-verified: breaking the slot dedupe and
+ignoring the grant each fail the suite.
+
+`due()`'s purpose check is unreachable by construction — the constructor refuses a
+mission whose purpose its grant does not name — so the test asserts the construction
+refusal rather than a branch that cannot run.
+
 ## Verification
 
 | Check | Result |
 | --- | --- |
-| `tests/test_governed_missions.py` | 62 passed |
+| `tests/test_governed_missions.py` | 77 passed |
 | mypy (100 modules), `ruff check .` | clean |
 | shard/scopes registries | 20 passed |
