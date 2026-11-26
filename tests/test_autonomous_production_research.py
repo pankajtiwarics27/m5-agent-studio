@@ -547,13 +547,31 @@ def test_repo_inspection_refuses_symlinks_outside_root(tmp_path: Path):
 
 
 def test_repo_inspection_enforces_per_file_and_total_budgets(tmp_path: Path):
+    """The total budget stops the walk; the per-file cap is not what stopped it.
+
+    This asserted that a file literally named `c.bin` was never included, which
+    is only true when the filesystem happens to enumerate `c.bin` last. With
+    three equal 5000-byte files and a 9000-byte budget, exactly one file fits, so
+    whichever name is enumerated first is the included one -- and that order is
+    not the caller's to decide. The failure was observed in CI on shard 1 (3.13
+    and 3.11) while passing on other interpreters and machines.
+
+    The intent is order-independent and is now asserted directly: the walk
+    truncates, nothing was skipped for being too large per file, and exactly one
+    complete file's worth of bytes was admitted.
+    """
     for name, size in (("a.bin", 5000), ("b.bin", 5000), ("c.bin", 5000)):
         (tmp_path / name).write_bytes(b"x" * size)
     result = inspect_repository(tmp_path, max_files=10, max_file_bytes=10000, max_total_bytes=9000)
+
     skipped = [f for f in result.files if f.skipped_reason]
+    included = [f for f in result.files if f.skipped_reason is None]
+
     assert result.truncated is True
-    assert not any(f.path.endswith("c.bin") and f.skipped_reason is None for f in result.files)
-    assert skipped == []  # per-file cap not hit; total budget stops the walk
+    assert skipped == []  # per-file cap not hit; the total budget stops the walk
+    assert len(included) == 1, f"exactly one file fits in the budget, admitted {[f.path for f in included]}"
+    assert included[0].sha256 is not None and included[0].size_bytes == 5000
+    assert result.total_bytes == 5000
 
 
 def test_repo_inspection_per_file_cap(tmp_path: Path):
