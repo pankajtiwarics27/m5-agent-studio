@@ -3,7 +3,7 @@
   "document_type": "proposed_autonomous_production_execution_ledger",
   "product": "M5 Agent Studio",
   "program": "AP",
-  "revision": "3.3",
+  "revision": "3.4",
   "prepared_date": "2026-11-08",
   "lifecycle": "registered_tracking_ap030_done_ap008_claim_reconciled_ap018_blocked_u01_u05_resolved",
   "source_snapshot": "a67e8b291614f8afdac7c8d38ba51bcc8926d695",
@@ -4242,13 +4242,25 @@
             "Runbooks, rollback and final handoff"
           ],
           "outstanding_actions": [
-            "Owner selects or defers the launch specialisation in this ledger.",
-            "Run the selected pilot cases and the artifact review at a real head.",
+            "Run the website pilot cases and the artifact review at a real head; U01 already selected website-first on 2026-11-17 (issue #330), so no specialisation decision is outstanding.",
             "Obtain the independent security and screenshot approvals; neither exists and this agent cannot sign one.",
             "Exercise rollback, migration and restore, recording compared digests.",
-            "Supply a green CI run id at the head being shipped."
+            "Supply a green CI run id at the head being shipped.",
+            "Record, by an authorised owner revision, whether the video pilot is deferred for this launch; U01 orders video second but does not itself defer it, and AC1 is satisfied either by deferring it explicitly or by qualifying it."
           ],
-          "note": "The qualification machinery and its 59 tests are merged and every acceptance criterion that can be checked offline is enforced by construction. No pilot, suite, artifact review, drill or approval was performed, so release_qualification.py returns release-blocked for the current build. Author evidence is not independent acceptance."
+          "note": "The qualification machinery and its 59 tests are merged and every acceptance criterion that can be checked offline is enforced by construction. No pilot, suite, artifact review, drill or approval was performed, so release_qualification.py returns release-blocked for the current build. Author evidence is not independent acceptance.",
+          "specialisation": {
+            "selected_by": "owner",
+            "decision_id": "U01",
+            "decision_status": "resolved",
+            "order": [
+              "website",
+              "video"
+            ],
+            "first": "website",
+            "recorded": "product/M5_Autonomous_Production_Operating_Envelope.json U01 resolution (2026-11-17); verbatim owner selections in issue #330",
+            "video_launch_scope": "ordered second; not deferred by this record"
+          }
         }
       },
       "implementation_prompt": "Implement AP-032: Qualify the production release and independent-agent handoff. Read AGENTS.md, docs/autonomous-production-roadmap.md and M5_AUTONOMOUS_PRODUCTION_AGENT_PROMPT.md. Check authorization, dependencies, current main and overlapping owners. Reconcile existing implementation before adding code. Deliver only this bounded story, satisfy every acceptance criterion below, preserve authority and features, record evidence, and push a documented story PR. Stop only the affected work for a genuinely blocking decision. Never self-sign human/security/screenshot approvals."

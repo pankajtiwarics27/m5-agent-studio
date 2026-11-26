@@ -13,6 +13,38 @@
 
 **Precedence:** repository `AGENTS.md`, accepted security decisions, existing program ownership and signed approvals remain binding. This program does not replace the AS, M5 runtime, UIUX/UIV2, or LC ledgers, and does not reopen their completed stories. Reconcile overlapping work in AP-001. Drafting this roadmap does not grant automatic execution authority to its stories or to downloaded tools.
 
+## Revision 3.4 — U01 is already answered; the marker stops asking again (2026-11-10; AP-032 only)
+
+Revision 3.3 recorded AP-032's outstanding actions, and the first of them read
+"Owner selects or defers the launch specialisation in this ledger." That was
+wrong. **U01 was resolved by the owner on 2026-11-17** — "Websites first, then
+videos" — recorded in the operating envelope with the owner's verbatim
+selections in issue #330, and it states in its own words that "'website-first'
+is now an owner selection, not a suggestion."
+
+Asking for a resolved decision is the same failure as reporting finished work as
+unstarted: a reader who trusts it either redoes the decision or concludes none
+was ever recorded.
+
+Two contradictions are corrected and both are now checked:
+
+1. **The envelope contradicted itself.** U01's `resolution` says website-first is
+   a selection, while U01's own `safe_work` still said "Keep website-first as a
+   suggestion rather than a selected launch decision." `safe_work` now records
+   that the order is selected and that selection grants no launch approval.
+2. **The marker asked again.** AP-032's actions now name the real remaining work
+   and carry a `specialisation` block recording U01, its resolved status, the
+   `["website", "video"]` order and the issue-#330 provenance.
+
+`tests/test_autonomous_production_decisions.py` fails if any outstanding action
+asks for a launch-specialisation decision while U01 is resolved, and pins the
+recorded order and provenance. Re-adding the old sentence was confirmed to fail.
+
+**What is still genuinely open** is narrower than "select a specialisation":
+U01 orders video second but does not defer it. AP-032 AC1 is satisfied either by
+an authorised owner revision deferring the video pilot for this launch, or by
+qualifying it. That decision is not recorded, and this agent does not invent it.
+
 ## Revision 3.3 — AP-031 and AP-032 record their outstanding acceptance (2026-11-10; AP-031, AP-032 only)
 
 Revision 3.2 marked both stories `done` and said in prose that their owner
@@ -35,9 +67,11 @@ and the human acceptance are separately recorded rather than assumed. What
 changed is that the disclosure is now checked.
 
 `release_qualification.py` returns `release-blocked` for the current build until
-the owner selects or defers the launch specialisation, runs the pilot at a real
-head, obtains the independent security and screenshot approvals, exercises
-rollback/migration/restore, and supplies a green CI run at that head.
+the website pilot is run at a real head with its artifact review, the
+independent security and screenshot approvals are obtained,
+rollback/migration/restore are exercised, and a green CI run is supplied at that
+head. (This paragraph originally also asked the owner to "select or defer the
+launch specialisation". That decision already existed: see Revision 3.4.)
 
 ## Revision 3.2 — AP-031 and AP-032 recorded done; program stories all merged (2026-11-10; AP-031, AP-032 only)
 
@@ -488,7 +522,7 @@ This revision supersedes earlier blanket exclusions of hosted media inference: l
 
 M5 Agent Studio becomes a **local-first autonomous production team**. A user supplies an outcome, audience, constraints and an operating envelope. All model inference is local-only. The team plans, researches gaps, selects suitable models/tools, creates artifacts, tests and repairs them, requests useful direction feedback when necessary, and delivers a reviewable result. It can learn validated methods and preferences from previous work and improve its capabilities without weakening its safety controls.
 
-The goal is not multi-agent conversation as an end in itself. It is unusually good output in a small number of areas, with progressively less owner supervision. Initial candidate areas are websites/web experiences and researched faceless/explainer videos. Exact niches, formats and launch order remain an owner decision; do not treat an illustrative workflow as a locked business strategy.
+The goal is not multi-agent conversation as an end in itself. It is unusually good output in a small number of areas, with progressively less owner supervision. Initial candidate areas are websites/web experiences and researched faceless/explainer videos. Exact niches and formats remain a pilot-time owner decision, while the launch order is now owner-selected as website-first then video (U01, 2026-11-17); do not treat an illustrative workflow as a locked business strategy.
 
 The product may support side-income projects through useful deliverables. It must not promise revenue, audience growth, monetisation eligibility, factual perfection or the elimination of customer/distribution work.
 
@@ -543,7 +577,7 @@ The product may support side-income projects through useful deliverables. It mus
 - Start with a coordinator and a small bounded set of specialists; execution concurrency derives from actual admission/qualification. No fixed model residency or chip assumptions.
 - Shared project artifacts with scoped writes; separate worktrees or versioned writes for concurrent coding. Stronger environments for mutually untrusted workers.
 - Production and improvement experiments use separate state and promotion paths.
-- A small website pilot before a short-video pilot is a suggested order, not an owner-selected launch order.
+- A small website pilot before a short-video pilot **was** a suggested order; U01 resolved it as the owner's selection on 2026-11-17 (issue #330). The order is settled; what it does not settle is launch approval, publishing/delivery authority, or whether video is deferred for this launch.
 
 ### 2.3 Decisions U01–U06 — all resolved 2026-11-17 (owner decisions)
 
