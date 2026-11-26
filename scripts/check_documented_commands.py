@@ -363,27 +363,29 @@ def accepts_for(command: DocCommand, root: Path) -> tuple[frozenset[str], bool]:
 def unresolved_scripts(root: Path) -> tuple[str, ...]:
     """Scripts referenced by the docs whose argument wiring this module cannot read."""
     commands, _ = documented_commands(root)
-    seen: dict[str, bool] = {}
+    unresolved: set[str] = set()
     for command in commands:
-        if command.script in seen:
-            continue
         _, static = accepts_for(command, root)
-        seen[command.script] = static
-    return tuple(sorted(name for name, static in seen.items() if not static))
+        if not static:
+            unresolved.add(command.script)
+    return tuple(sorted(unresolved))
 
 
 def check_flags(commands: Iterable[DocCommand], root: Path) -> tuple[list[DocFlagProblem], list[DocCommand]]:
     """Return (problems, commands whose script could not be read statically)."""
     problems: list[DocFlagProblem] = []
     unchecked: list[DocCommand] = []
-    cache: dict[str, tuple[frozenset[str], bool]] = {}
+    cache: dict[tuple[str, str], tuple[frozenset[str], bool]] = {}
     shapes: dict[str, ParserShape] = {}
     for command in commands:
         path = root / command.script
-        if command.script not in cache:
-            cache[command.script] = accepts_for(command, root)
+        interpreter = "python" if command.interpreter.startswith("python") else command.interpreter
+        key = (command.script, interpreter)
+        if key not in cache:
+            cache[key] = accepts_for(command, root)
+        if command.script not in shapes:
             shapes[command.script] = flags_a_script_accepts(path)
-        accepted_flags, static = cache[command.script]
+        accepted_flags, static = cache[key]
         if not static:
             unchecked.append(command)
             continue
@@ -454,7 +456,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     readable = len(report.checked) - len(report.unchecked)
     print(
         f"documented commands: {len(report.checked) + len(report.skipped)} lines, "
-        f"{len(report.checked)} literal, {len(report.skipped)} with placeholders; "
+        f"{len(report.checked)} literal candidates, {len(report.skipped)} skipped lines; "
         f"{readable} checked against a static parser, {len(report.unchecked)} unchecked "
         f"across {len(report.unresolved)} unreadable scripts, {len(report.problems)} problem(s)"
     )
