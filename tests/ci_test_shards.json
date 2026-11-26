@@ -26,7 +26,7 @@
       645.0
     ],
     "module_counts": [
-      96,
+      97,
       83,
       88
     ],
@@ -184,6 +184,7 @@
       "tests/test_harness_settings.py",
       "tests/test_history_privacy.py",
       "tests/test_isolation_smoke.py",
+      "tests/test_js_documented_flags.py",
       "tests/test_macos_hardware_profiler.py",
       "tests/test_mcp_client.py",
       "tests/test_mcp_tools.py",

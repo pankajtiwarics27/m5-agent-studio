@@ -64,10 +64,55 @@ saw created — is `static: False`, and every command against it is reported as 
 It is never reported as *accepting nothing*. Those two are different: the first says "I could not
 tell", the second says "the page is wrong", and only one of them is evidence.
 
+## The node half, added after the python half shipped
+
+The first version of this checker read `python scripts/*.py` lines and nothing else. That covered the
+prose it was written for and left the other half of the documentation unchecked: every
+`node scripts/*.mjs ...` invocation in these pages, including the two in `ap032-pilot-harness.md` that
+an operator is told to run before a pilot. A page can be wrong about a `node` flag exactly as it was
+wrong about `--root`.
+
+`scripts/js_documented_flags.py` reads `process.argv` handling the way this module reads `argparse`:
+from the source, without running anything. It understands the three shapes these walks use — a
+`switch` with a `next()` value getter, an `if`-chain ending in an unknown-flag `throw`, and a
+`process.argv.includes("--flag")` boolean — and abstains on anything else.
+
+It makes the same mistake the Python half made, and avoids it the same way. A flag name is read only
+from the code that handles `process.argv`, found by brace-matching the function that mentions it, not
+from every string in the file: a `"--dark"` compared while rendering is not an accepted flag. When
+handling happens inline at top level, where a line scan sees only the `for` header, the reader falls
+back to the whole file and marks the result **widened**, because a file-wide set is a union over code
+that need not all run at once.
+
+Two abstentions are load-bearing:
+
+- a flag built from a variable (`case FLAG:`, `` `--${name}` ``) or matched by prefix
+  (`arg.startsWith("--")`) means the accepted set is not closed, so it is *not readable*;
+- a walk that never touches `process.argv` accepts **no** flags. That is a closed set of zero, not an
+  abstention, so a documented flag against it is a problem.
+
+An unknown-flag guard — `else if (arg.startsWith("-")) throw` — is the opposite of a dynamic name: it
+*rejects* everything unrecognised, which is what makes the literal set trustworthy. The reader
+distinguishes the two; an early version of it did not and abstained on the pilot walk itself.
+
+Current result: **162 documented lines, 107 checked, 0 problems**, up from 121 and 72.
+
 ## Verification
 
-`tests/test_check_documented_commands.py` (18 tests). Six mutations, each caught: dropping subcommand
-scope, reporting an abstention as a finding, checking placeholder lines, not resolving loop-built
-subparsers, letting an unknown parser leak to the root, and dropping the widened report. The widened
-test originally asserted `static or reason`, which passes either way — it now asserts the specific
-failure, because a vacuous test is not a guard.
+`tests/test_check_documented_commands.py` (25 tests) and `tests/test_js_documented_flags.py` (12).
+Eight mutations, each caught: dropping subcommand scope, reporting an abstention as a finding,
+checking placeholder lines, not resolving loop-built subparsers, letting an unknown parser leak to the
+root, dropping the widened report, routing every command to the Python reader, and ignoring `node`
+lines again. The widened test originally asserted `static or reason`, which passes either way — it now
+asserts the specific failure, because a vacuous test is not a guard.
+
+The JavaScript reader was mutation-tested separately, and its first test suite failed the check that
+matters: mutating *strip comments* and *scope to the argv region* both survived. The comment test had
+used a flag merely *mentioned* in prose, which cannot reach the flag patterns at all — the realistic
+case is commented-out code, and with that the mutation is caught. The scope test did not exist; it
+does now, and it fails when flags are read from the whole file. A third survivor — falling back to a
+file-wide scan instead of abstaining — is now covered by the widened assertion, so a weaker result
+cannot be reported as a clean one.
+
+The end-to-end check is a test rather than a claim: `--out` in the pilot runbook's own documented
+command is changed to `--output`, and the gate must fail.

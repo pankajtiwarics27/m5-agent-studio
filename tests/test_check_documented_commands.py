@@ -227,16 +227,96 @@ def test_python_and_python3_are_both_recognised(tmp_path: Path) -> None:
     assert len(checkable) == 2
 
 
-def test_a_line_that_is_not_a_python_invocation_is_ignored(tmp_path: Path) -> None:
+def test_a_line_that_names_no_script_is_ignored(tmp_path: Path) -> None:
+    """`$ curl ...` is not an instruction to run one of our scripts, so it is not checked."""
     (tmp_path / "docs").mkdir()
-    (tmp_path / "docs" / "page.md").write_text(
-        "node scripts/walk.mjs --out x.json\n$ curl http://localhost\n", encoding="utf-8"
-    )
+    (tmp_path / "docs" / "page.md").write_text("$ curl http://localhost\n", encoding="utf-8")
     checkable, skipped = cdc.documented_commands(tmp_path)
     assert checkable == [] and skipped == []
 
 
+def test_a_documented_node_invocation_is_checked_not_ignored(tmp_path: Path) -> None:
+    """A `node scripts/walk.mjs` line is an instruction too.
+
+    This module checked only `python scripts/*.py` for its first release, so 43 documented `node`
+    invocations -- including the pilot walk the AP-032 runbook tells an operator to run -- were
+    unchecked. Reading them is the fix; ignoring them was the gap.
+    """
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "scripts").mkdir()
+    (tmp_path / "scripts" / "walk.mjs").write_text(
+        'for (const arg of process.argv.slice(2)) {\n'
+        '  if (arg === "--json") {}\n'
+        '  else throw new Error(`unknown flag: ${arg}`);\n'
+        '}\n',
+        encoding="utf-8",
+    )
+    (tmp_path / "docs" / "page.md").write_text("node scripts/walk.mjs --json\n", encoding="utf-8")
+    checkable, skipped = cdc.documented_commands(tmp_path)
+    assert [command.script for command in checkable] == ["scripts/walk.mjs"]
+    assert checkable[0].interpreter == "node"
+    assert skipped == []
+    report = cdc.check_repository(tmp_path)
+    assert report.ok, [problem.describe() for problem in report.problems]
+
+
+def test_a_documented_node_flag_the_walk_does_not_accept_is_a_problem(tmp_path: Path) -> None:
+    """The whole point: a wrong flag in a `node` line must fail, exactly as for a Python script."""
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "scripts").mkdir()
+    (tmp_path / "scripts" / "walk.mjs").write_text(
+        'for (const arg of process.argv.slice(2)) {\n'
+        '  if (arg === "--json") {}\n'
+        '  else throw new Error(`unknown flag: ${arg}`);\n'
+        '}\n',
+        encoding="utf-8",
+    )
+    (tmp_path / "docs" / "page.md").write_text(
+        "node scripts/walk.mjs --out partial.json\n", encoding="utf-8"
+    )
+    report = cdc.check_repository(tmp_path)
+    assert not report.ok
+    described = " ".join(problem.describe() for problem in report.problems)
+    assert "--out" in described and "does not accept it" in described
+
+
+def test_a_walk_with_no_argument_handling_accepts_no_flags(tmp_path: Path) -> None:
+    """A script that never reads process.argv is a closed set of zero flags, not an abstention."""
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "scripts").mkdir()
+    (tmp_path / "scripts" / "helper.js").write_text("console.log('hello');\n", encoding="utf-8")
+    (tmp_path / "docs" / "page.md").write_text("node scripts/helper.js --json\n", encoding="utf-8")
+    report = cdc.check_repository(tmp_path)
+    assert report.unresolved == [], "a script with no argv handling must not be an abstention"
+    assert not report.ok and "--json" in report.problems[0].describe()
+
+
 # ── the repository, which is the reason this exists ─────────────────────────────────────────────
+
+
+def test_a_wrong_node_flag_in_the_pilot_runbook_fails_the_gate(tmp_path: Path) -> None:
+    """The reason the node half exists: the pilot runbook tells an operator to run that walk.
+
+    The runbook's documented command is copied here with one flag changed, so this fails if the
+    checker stops reading `node` lines, stops resolving that walk's flags, or starts treating an
+    unknown walk as an abstention.
+    """
+    source = (PROJECT_ROOT / "docs" / "ap032-pilot-harness.md").read_text(encoding="utf-8")
+    assert "node scripts/pilot_browser_walk.mjs" in source, "the pilot runbook no longer documents a walk"
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "scripts").mkdir()
+    (tmp_path / "scripts" / "pilot_browser_walk.mjs").write_text(
+        (PROJECT_ROOT / "scripts" / "pilot_browser_walk.mjs").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    (tmp_path / "docs" / "ap032-pilot-harness.md").write_text(
+        source.replace("--out browser.json", "--output browser.json"), encoding="utf-8"
+    )
+    report = cdc.check_repository(tmp_path)
+    assert not report.ok, "a wrong flag on the documented pilot walk was not reported"
+    text = " ".join(problem.describe() for problem in report.problems)
+    assert "--output" in text and "pilot_browser_walk.mjs" in text
+    assert report.unresolved == [], "the pilot walk must be readable, not an abstention"
 
 
 def test_the_committed_documentation_names_no_missing_flag() -> None:
