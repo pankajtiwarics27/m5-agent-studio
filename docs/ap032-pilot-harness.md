@@ -78,6 +78,32 @@ python pilot_harness.py path/to/site
 Exit codes: `0` offline axes clear, `1` an offline criterion failed or the artifact was refused (empty,
 binary, or containing nothing to audit), `2` the path is not a directory. A refusal is never `0`.
 
+## Joining the two partials: `pilot_preflight.py`
+
+Two partials are only evidence if they describe the same bytes. `pilot_preflight.py` joins them and
+refuses the join when it would invent a result:
+
+```bash
+python pilot_harness.py build/site > offline.json
+node scripts/pilot_browser_walk.mjs build/site --out browser.json
+python pilot_preflight.py offline.json browser.json --out preflight.json
+```
+
+- **Both partials carry `artifact_sha256`**, computed by the same scheme in both tools: sorted relative
+  path, NUL, file content, NUL, over `.html/.htm/.css/.js/.txt`. If those digests differ the pair is
+  refused — combining them would report 11/11 for a build nobody measured.
+- **A criterion that was never measured is a refusal**, not an empty section. The preflight will not
+  print a hole as an absence.
+- **A partial that claims to be a qualification report is refused**, so the preflight cannot inherit
+  one.
+- Exit `0` only when every criterion was measured and none failed; `1` on a refusal or a red criterion;
+  `2` on bad usage. It prints nothing on stdout when it refuses.
+
+What it produces is `ready_for_owner_review: true` when the *machine* work is finished — and it says in
+its own note that this is a statement about the evidence, not about the artifact. It names what a human
+still owes: the review, the `PilotReport` layout/interaction measurements, and both independent
+approvals.
+
 ## How to use it at a real head
 
 1. Build the site at the head you want to qualify.
