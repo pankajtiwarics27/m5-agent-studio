@@ -33,11 +33,13 @@ command is not tied to the command.
 
 The last row is the important one. A line like `--root` followed by an angle-bracketed stand-in describes a
 value the reader cannot know, so the line is **skipped and counted**, never checked and passed. The
-skip count also includes lines with no arguments, shell text the reader cannot parse (including
-backslash-continued commands), and opted-out counter-examples; it is not a count of placeholders alone.
-The output prints checked and skipped line counts and names scripts it could not read statically — a
-checker that silently reads nothing would pass forever. In particular, a skipped multi-line command has
-not been validated by this checker.
+skip count also includes lines with no arguments, shell text the reader cannot parse, incomplete
+continuations, and opted-out counter-examples; it is not a count of placeholders alone. Complete simple
+backslash continuations are joined before parsing, preserving their starting line number. A placeholder
+on any continuation line skips the whole command. An unfinished continuation at a Markdown boundary or
+before another command is skipped, without swallowing the next command. This is not a general shell
+parser: skipped commands have not been validated. The output prints checked and skipped command counts
+and names scripts it could not read statically — a checker that silently reads nothing would pass forever.
 
 ## Static, not executed
 
@@ -112,7 +114,7 @@ An unknown-flag guard — `else if (arg.startsWith("-")) throw` — is the oppos
 *rejects* everything unrecognised, which is what makes the literal set trustworthy. The reader
 distinguishes the two; an early version of it did not and abstained on the pilot walk itself.
 
-Current result: **162 documented lines: 49 skipped, 104 checked, 9 unchecked across 6
+Current result: **162 documented command starts: 42 skipped, 109 checked, 11 unchecked across 6
 unreadable scripts, and 0 problems**. Previously this page reported 107 checked: the summary subtracted
 six distinct script names from 113 literal invocations, even though those scripts occur on nine lines.
 The count now subtracts invocations, not names. A JavaScript file-wide or multi-region flag union is
@@ -120,7 +122,9 @@ also named as a weaker check in the repository report, rather than only inside t
 
 Regression tests were mutation-checked against the old count, a missing unchecked list, an inaccurate
 runtime-parser diagnosis, omitted or over-broad JavaScript widening, and a suppressed warning. All six
-mutations were caught, and the restored Python and JavaScript command-checker tests passed.
+mutations were caught, and the restored Python and JavaScript command-checker tests passed. Seven more
+mutations tested Python and Node continuations, exact shell joining, escaped backslashes, placeholders,
+boundaries, and malformed counter-examples; each was caught and the restored tests passed.
 
 ## Verification
 
