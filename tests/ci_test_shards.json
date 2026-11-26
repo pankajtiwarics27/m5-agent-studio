@@ -26,7 +26,7 @@
       645.0
     ],
     "module_counts": [
-      93,
+      94,
       83,
       88
     ],
@@ -199,6 +199,7 @@
       "tests/test_overlays.py",
       "tests/test_pilot_browser_walk.py",
       "tests/test_pilot_harness.py",
+      "tests/test_pilot_preflight.py",
       "tests/test_process_supervision.py",
       "tests/test_provider_switching.py",
       "tests/test_release_drill_witness.py",

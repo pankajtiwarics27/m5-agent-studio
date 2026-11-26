@@ -30,7 +30,8 @@
  *
  * Needs Chrome/Chromium (STUDIO_SCREENSHOT_CHROME) and puppeteer-core (STUDIO_PUPPETEER_CORE).
  */
-import { existsSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
@@ -115,6 +116,34 @@ function resolveChrome() {
   throw new Error(
     "No Chrome/Chromium binary found. Set STUDIO_SCREENSHOT_CHROME to one. This walk refuses to report a walk it did not perform.",
   );
+}
+
+/**
+ * The artifact identity, computed exactly as `pilot_harness.artifact_digest` does: sorted relative
+ * path, NUL, content, NUL, over the same text files the harness reads. Two tools each inventing their
+ * own digest would make `pilot_preflight.py`'s same-bytes check meaningless.
+ */
+const DIGEST_EXTENSIONS = [".html", ".htm", ".css", ".js", ".txt"];
+
+function artifactDigest(root) {
+  const files = [];
+  const walk = (dir) => {
+    for (const entry of readdirSync(dir).sort()) {
+      const full = join(dir, entry);
+      const info = statSync(full);
+      if (info.isDirectory()) walk(full);
+      else if (DIGEST_EXTENSIONS.some((ext) => entry.toLowerCase().endsWith(ext))) files.push(full);
+    }
+  };
+  walk(root);
+  const digest = createHash("sha256");
+  for (const file of files.sort()) {
+    digest.update(file.slice(root.length + 1), "utf-8");
+    digest.update(Buffer.from([0]));
+    digest.update(readFileSync(file, "utf-8"), "utf-8");
+    digest.update(Buffer.from([0]));
+  }
+  return { digest: digest.digest("hex"), files: files.length };
 }
 
 function htmlPages(root) {
@@ -408,6 +437,8 @@ async function run(args) {
     throw new Error(`no HTML documents under ${root}; a walk of nothing proves nothing`);
   }
 
+  const identity = artifactDigest(root);
+
   const puppeteer = await loadPuppeteer();
   const executablePath = resolveChrome();
   const browser = await puppeteer.launch({
@@ -477,6 +508,9 @@ async function run(args) {
 
   const payload = {
     is_a_qualification_report: false,
+    artifact_sha256: identity.digest,
+    artifact_digest_scheme: "sha256 over sorted relative path + NUL + content + NUL, text files",
+    artifact_files_digested: identity.files,
     artifact_root: root,
     documents: measuredPages,
     browser: executablePath,

@@ -4301,7 +4301,21 @@
               "console_clean",
               "navigation_works"
             ],
-            "browser_walk_limits": "one viewport (1440x900) in headless Chromium; measures, does not judge design or copy; emits is_a_qualification_report false like the offline partial"
+            "browser_walk_limits": "one viewport (1440x900) in headless Chromium; measures, does not judge design or copy; emits is_a_qualification_report false like the offline partial",
+            "preflight": {
+              "module": "pilot_preflight.py",
+              "tests": "tests/test_pilot_preflight.py (20 passed)",
+              "joins": "pilot_harness.py (5 offline criteria) + scripts/pilot_browser_walk.mjs (6 browser criteria)",
+              "refuses": [
+                "two partials whose artifact_sha256 differ",
+                "a criterion no partial measured",
+                "a partial claiming to be a qualification report",
+                "a missing or unreadable partial"
+              ],
+              "shared_digest": "sha256 over sorted relative path + NUL + content + NUL across .html/.htm/.css/.js/.txt, computed identically by both tools so 'same bytes' is checkable",
+              "emits": "ready_for_owner_review plus what_a_human_still_owes; is_a_qualification_report false",
+              "limits": "a clean preflight means the machine-measurable criteria are done; it is not an artifact review and cannot produce an approval"
+            }
           },
           "runbooks": {
             "rollback_migration_restore": "docs/release-rollback-runbook.md",

@@ -42,6 +42,7 @@ __all__ = [
     "CriterionOutcome",
     "AssetReference",
     "PilotPartial",
+    "artifact_digest",
     "audit_artifact",
     "build_pilot_partial",
 ]
@@ -177,6 +178,7 @@ class PilotPartial:
     def to_mapping(self) -> dict[str, Any]:
         return {
             "artifact_sha256": self.artifact_sha256,
+            "artifact_digest_scheme": "sha256 over sorted relative path + NUL + content + NUL, text files",
             "is_a_qualification_report": False,
             "offline_clear": self.offline_clear,
             "measured_count": len(self.measured),
@@ -372,12 +374,29 @@ def _normalise(href: str) -> str:
     return target
 
 
+def artifact_digest(files: Mapping[str, str]) -> str:
+    """SHA-256 over the artifact's relative paths and bytes, in sorted order.
+
+    This is the identity both halves of a pilot are measured against: the browser walk computes the
+    same digest over the same directory, so `pilot_preflight.py` can refuse a pair that measured
+    different builds. Defining it in one place is the point -- two tools each inventing their own
+    digest would agree by accident or disagree for the wrong reason.
+    """
+    digest = hashlib.sha256()
+    for path in sorted(files):
+        digest.update(path.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(str(files[path]).encode("utf-8"))
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
 def build_pilot_partial(
     files: Mapping[str, str],
     *,
     notes: Iterable[str] = (),
 ) -> PilotPartial:
-    """Audit an artifact and return the partial, with a digest over exactly the bytes audited."""
+    """Audit an artifact and return the partial, with a digest over the bytes audited."""
     if not isinstance(files, Mapping):
         raise ArtifactRefused("files must be a mapping of path to text")
     digest = hashlib.sha256()
