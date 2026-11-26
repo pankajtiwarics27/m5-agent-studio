@@ -119,6 +119,42 @@ def test_a_script_without_argparse_is_not_read_as_accepting_nothing(tmp_path: Pa
     assert shape.reason == "no argparse"
 
 
+def test_imported_argv_is_not_evidence_of_zero_options(tmp_path: Path) -> None:
+    path = tmp_path / "alias.py"
+    path.write_text('from sys import argv\nif "--real" in argv: print("yes")\n', encoding="utf-8")
+    assert not cdc.flags_a_script_accepts(path).static
+
+
+def test_argparse_in_a_comment_does_not_make_an_argv_script_readable(tmp_path: Path) -> None:
+    path = tmp_path / "comment.py"
+    path.write_text('# argparse\nfrom sys import argv\nif "--real" in argv: print("yes")\n', encoding="utf-8")
+    assert not cdc.flags_a_script_accepts(path).static
+
+
+def test_python_reader_refuses_other_languages_even_when_they_look_like_python(tmp_path: Path) -> None:
+    path = tmp_path / "walk.mjs"
+    path.write_text('import argparse\np = argparse.ArgumentParser()\np.add_argument("--flag")\n', encoding="utf-8")
+    shape = cdc.flags_a_script_accepts(path)
+    assert not shape.static
+    assert shape.reason == "not a Python script"
+
+
+def test_unparseable_python_is_reported_as_unreadable(tmp_path: Path) -> None:
+    path = tmp_path / "broken.py"
+    path.write_text('import argparse\ndef broken(:\n', encoding="utf-8")
+    shape = cdc.flags_a_script_accepts(path)
+    assert not shape.static
+    assert shape.reason == "not parseable as Python"
+
+
+def test_non_utf8_python_is_reported_as_unreadable(tmp_path: Path) -> None:
+    path = tmp_path / "encoded.py"
+    path.write_bytes(b"\xff")
+    shape = cdc.flags_a_script_accepts(path)
+    assert not shape.static
+    assert shape.reason == "unreadable"
+
+
 def test_non_literal_flags_abstain_rather_than_guessing(tmp_path: Path) -> None:
     body = '''
 FLAGS = ["--version"]
