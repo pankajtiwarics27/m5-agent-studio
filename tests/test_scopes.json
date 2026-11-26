@@ -171,6 +171,7 @@
       "test_improvement_lab.py",
       "test_operations_surface.py",
       "test_pilot_browser_walk.py",
+      "test_pilot_criteria_alignment.py",
       "test_pilot_harness.py",
       "test_pilot_preflight.py",
       "test_promotion_policy.py",

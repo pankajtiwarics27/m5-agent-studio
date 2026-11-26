@@ -114,8 +114,29 @@ approvals.
    re-run — this is still a machine loop.
 5. Open the site yourself and review what a walk cannot: design, copy, whether the thing is worth
    shipping. The walk does not do this and does not claim to.
-6. Run the real pilot through `website_quality` to produce the `PilotReport`, and attach both partials
-   beside it. They do not replace the report; they are the machine evidence behind its rows.
+6. Assemble the `PilotReport` **in Python** — this step is not a command, and there is no CLI for it.
+   Attach both partials beside the report: they do not replace it, they are the machine evidence behind
+   its eleven criteria rows.
+
+Step 6 is written as a step because the report is required, not because it is runnable. What is true
+today, so that nobody goes looking for a command that does not exist:
+
+- `website_quality` is a library. It has no `main`, no `__main__` and no argument parser, so
+  "run the pilot through `website_quality`" cannot be done by any invocation. The report is
+  constructed in Python, and step 6 is done by whoever writes that code.
+- `PilotReport` will not accept a partial evidence set: it needs all eleven outcomes **and** all six
+  layout cells (three viewports from `VIEWPORT_MATRIX` × zoom 1 and 2). An incomplete matrix raises
+  `LayoutRefused`, and an incomplete outcome set raises rather than defaulting to a pass.
+- **Nothing in this repository measures the layout matrix.** The browser walk measures the six
+  browser criteria; it does not walk viewports or page zoom, and no script here emulates 200% zoom.
+  So the six layout cells are measurements a human has to take — they are not a summary of the two
+  partials, and a report that filled them in from the walk would be inventing them.
+- `deliverable()` stays false until an `OwnerReview` exists, and `OwnerReview` refuses agent-shaped
+  actors. A report built without one is correct and expected: construction succeeding does not mean
+  the pilot is qualified.
+
+`pilot_preflight.py` states the same thing in its `what_a_human_still_owes` list — "supply the
+`PilotReport` layout and interaction measurements" is a human item, not a tool's.
 
 ## What this does not do
 
@@ -126,6 +147,20 @@ approvals.
 - It does not make the pilot blocker disappear. With both partials in hand the machine-checkable
   criteria are covered, and the owner review and the two independent approvals remain — a human still
   has to decide the artifact is good, and no tool here is allowed to do that for them.
+
+## Keeping the three criterion lists one list
+
+The eleven criteria are named in three places: `website_quality.CRITERIA` (what the report demands),
+`pilot_preflight.EXPECTED_CRITERIA` (what the join expects) and the harness/walk split (who measures
+what). They agree, and nothing forced them to until `tests/test_pilot_criteria_alignment.py` (10 cases)
+pinned it. A criterion renamed in one place would not have failed anything — the join only reads what
+the tools emit and the report only checks what it is given, so a renamed criterion would retire a check
+while every tool stayed green.
+
+That module also pins the negative claims this page makes, so the page cannot drift from the code:
+there is no script that measures page zoom, `PilotReport` refuses a partial layout matrix, a complete
+matrix is still not deliverable without an owner review, and step 6 does not read like a command. Each
+claim is a test that fails if the claim stops being true — including `website_quality` gaining a `main`.
 
 Tests: `tests/test_pilot_harness.py` (27 cases) and `tests/test_pilot_browser_walk.py` (16). Both are
 mostly negative — a browser criterion passed with a non-measured basis, a partial missing a criterion,
