@@ -455,3 +455,42 @@ def test_the_module_has_no_html_or_template_strings() -> None:
     source = open("operations_surface.py", encoding="utf-8").read()
     for token in ("<div", "<span", "<button", "innerHTML", "text/html"):
         assert token not in source
+
+
+# ---------------------------------------------------------------------------
+# Ingesting a foreign snapshot (previously: the skip branches had no coverage).
+# ---------------------------------------------------------------------------
+
+
+def test_preflight_steps_without_an_id_are_skipped_not_guessed() -> None:
+    """A step that cannot name itself cannot become a readiness row."""
+    report = ops.build_readiness_from_preflight(
+        {
+            "steps": [
+                {"title": "Nameless", "status": "ready"},
+                {"id": "auth", "title": "Auth", "status": "ready"},
+            ],
+            "local_probe": "not-run",
+        }
+    )
+    assert [row.check_id for row in report.checks] == ["preflight:auth"]
+
+
+def test_non_mapping_preflight_steps_are_skipped() -> None:
+    """A snapshot is foreign data; a malformed entry must not crash or be invented."""
+    report = ops.build_readiness_from_preflight(
+        {"steps": ["not-a-step", 42, {"id": "auth", "title": "Auth", "status": "ready"}], "local_probe": "not-run"}
+    )
+    assert [row.check_id for row in report.checks] == ["preflight:auth"]
+
+
+def test_a_preflight_snapshot_that_is_not_a_mapping_is_refused() -> None:
+    with pytest.raises(ops.OperationsError, match="preflight snapshot must be a mapping"):
+        ops.build_readiness_from_preflight(["auth", "model-source"])  # type: ignore[arg-type]
+
+
+def test_a_step_with_no_title_falls_back_to_its_id() -> None:
+    report = ops.build_readiness_from_preflight(
+        {"steps": [{"id": "auth", "status": "ready"}], "local_probe": "not-run"}
+    )
+    assert report.checks[0].label == "auth"

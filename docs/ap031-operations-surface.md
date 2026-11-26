@@ -82,6 +82,6 @@ and being allowed to publish it are different decisions, and no help topic may m
 
 | Check | Result |
 | --- | --- |
-| `tests/test_operations_surface.py` | 61 passed |
+| `tests/test_operations_surface.py` | 65 passed |
 | mypy (101 modules), `ruff check .` | clean |
 | shard/scopes registries | 20 passed |

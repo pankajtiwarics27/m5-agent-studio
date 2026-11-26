@@ -563,3 +563,98 @@ def test_no_function_takes_a_clock_or_a_provider() -> None:
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             parameters.update(arg.arg for arg in node.args.args + node.args.kwonlyargs)
     assert parameters & {"clock", "now_fn", "time", "session", "client", "http"} == set()
+
+
+# ---------------------------------------------------------------------------
+# The scheduling decision itself (previously untested: `due()` had no coverage).
+# ---------------------------------------------------------------------------
+
+
+def test_a_mission_is_due_once_its_slot_has_not_been_run() -> None:
+    m = mission()
+    assert m.due(now=NOW, last_slot=None, runs_used=0) is True
+
+
+def test_a_mission_whose_slot_already_ran_is_not_due_again() -> None:
+    """The dedupe that makes a restart in the same slot safe."""
+    m = mission()
+    slot = m.slot_for(NOW)
+    assert m.due(now=NOW, last_slot=slot, runs_used=1) is False
+
+
+def test_a_later_slot_is_due_again() -> None:
+    m = mission()
+    first = m.slot_for(NOW)
+    assert m.due(now=NOW + DAY, last_slot=first, runs_used=1) is True
+
+
+def test_a_slot_earlier_than_the_last_one_is_never_due() -> None:
+    """A clock that steps backwards must not back-fill work."""
+    m = mission()
+    assert m.due(now=NOW, last_slot=m.slot_for(NOW + DAY), runs_used=1) is False
+
+
+def test_due_requires_the_grant_to_permit_the_purpose() -> None:
+    """A new slot is not enough: the grant still has to allow another run."""
+    m = mission(grant=grant(max_runs=1))
+    assert m.due(now=NOW + DAY, last_slot=m.slot_for(NOW), runs_used=1) is False
+
+
+def test_a_mission_cannot_even_exist_for_a_purpose_its_grant_lacks() -> None:
+    """`due()`'s purpose check is unreachable by construction, and that is the point.
+
+    The refusal happens at the constructor, so a mission for an ungranted purpose
+    cannot be built and then quietly evaluated as "not due" -- which would look
+    like a schedule resting rather than a schedule exceeding its authority.
+    """
+    with pytest.raises(gm.ScheduleRefused, match="a schedule may only do what it was granted for"):
+        mission(purpose="publish", grant=grant(purposes=("draft",)))
+
+
+def test_due_is_false_after_the_grant_expires() -> None:
+    m = mission(grant=grant(expires_at=NOW + HOUR))
+    assert m.due(now=NOW + 2 * HOUR, last_slot=None, runs_used=0) is False
+
+
+def test_two_processes_waking_in_one_slot_agree_on_the_run_id() -> None:
+    """The property `due()` relies on: same slot, same identity."""
+    m = mission()
+    assert m.run_id_for(m.slot_for(NOW)) == m.run_id_for(m.slot_for(NOW + 60))
+
+
+def test_a_mission_mapping_carries_mission_project_purpose_cadence_and_grant() -> None:
+    mapping = mission().to_mapping()
+    assert mapping["mission_id"] == "mission-1"
+    assert mapping["project_id"] == "proj-1"
+    assert mapping["purpose"] == "draft"
+    assert mapping["cadence"] == "daily"
+    assert mapping["grant"]["grant_id"] == "grant-1"
+
+
+# ---------------------------------------------------------------------------
+# Reconciliation vocabulary (the "unresolved" answer had no coverage).
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("verdict", ["verified_committed", "verified_not_applied", "unresolved"])
+def test_every_reconciliation_verdict_is_recordable(verdict: str) -> None:
+    rec = gm.Reconciliation(verdict=verdict, evidence="provider query returned a status")
+    assert rec.to_mapping()["verdict"] == verdict
+
+
+def test_only_a_verified_absence_allows_a_retry() -> None:
+    """The other two verdicts must not read as permission."""
+    assert gm.Reconciliation("verified_not_applied", "absent").retry_allowed is True
+    assert gm.Reconciliation("verified_committed", "committed").retry_allowed is False
+    assert gm.Reconciliation("unresolved", "provider timed out").retry_allowed is False
+
+
+def test_an_invented_reconciliation_verdict_is_refused() -> None:
+    """A verdict outside the closed set could otherwise read as a permissive one."""
+    with pytest.raises(gm.GovernanceError, match="unknown reconciliation verdict"):
+        gm.Reconciliation(verdict="probably_fine", evidence="guess")
+
+
+def test_reconciliation_needs_stated_evidence() -> None:
+    with pytest.raises(gm.GovernanceError, match="must not be empty"):
+        gm.Reconciliation(verdict="unresolved", evidence="   ")

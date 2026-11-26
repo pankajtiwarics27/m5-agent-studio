@@ -539,3 +539,57 @@ def test_now_is_a_required_parameter() -> None:
     source = open("release_qualification.py", encoding="utf-8").read()
     assert "time.time()" not in source
     assert "import time" not in source
+
+
+# ---------------------------------------------------------------------------
+# The public factory (previously untested: every test built the dataclass directly).
+# ---------------------------------------------------------------------------
+
+
+def test_qualify_release_is_the_supported_entry_point() -> None:
+    """The documented constructor must behave like the dataclass it wraps."""
+    built = rq.qualify_release(
+        head_sha=HEAD,
+        base_sha=BASE,
+        claims=(claim(),),
+        evidence=(evidence(), evidence(evidence_id="ev-review", kind="review")),
+        selected=("website",),
+        ci=rq.CiVerdict(head_sha=HEAD, run_id=456_365_194_28, conclusion="success"),
+        now=NOW,
+        deferred=(deferral(),),
+        preservation=(surface(),),
+        workflows=(workflow(),),
+        approvals=(approval(), approval(kind="screenshot", approver="reviewer:visual-review")),
+        drills=(drill(), drill(kind="migration"), restore_drill()),
+        artifacts=(artifact(),),
+    )
+    assert built.decision == "release-qualified"
+    assert built.fingerprint() == pack().fingerprint()
+
+
+def test_qualify_release_defaults_to_an_honest_block() -> None:
+    """Called with only the required arguments, it must not invent a qualification."""
+    built = rq.qualify_release(
+        head_sha=HEAD,
+        base_sha=BASE,
+        claims=(),
+        evidence=(),
+        selected=(),
+        ci=rq.CiVerdict(head_sha=HEAD, run_id=1, conclusion="success"),
+        now=NOW,
+    )
+    assert built.qualified is False
+    assert built.decision == "release-blocked"
+    assert any("no scope" in reason for reason in built.blocking_reasons)
+    assert any("approvals missing" in reason for reason in built.blocking_reasons)
+    assert any("drills not exercised" in reason for reason in built.blocking_reasons)
+
+
+def test_qualify_release_records_the_author_that_cannot_approve() -> None:
+    built = rq.qualify_release(
+        head_sha=HEAD, base_sha=BASE, claims=(), evidence=(), selected=(),
+        ci=rq.CiVerdict(head_sha=HEAD, run_id=1, conclusion="success"), now=NOW,
+        author="arena:ab195e0f",
+    )
+    assert built.to_mapping()["handoff"]["author"] == "arena:ab195e0f"
+    assert built.to_mapping()["handoff"]["author_can_approve"] is False
