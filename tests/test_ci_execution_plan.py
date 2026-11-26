@@ -256,9 +256,12 @@ def test_workflow_preserves_required_checks_and_shards_browser_work() -> None:
     assert "needs.plan.outputs.suite == 'docs'" in workflow
     assert "--paths-file \"$PR_PATHS_FILE\"" in workflow
     scope_map = json.loads((ROOT / "tests" / "test_scopes.json").read_text(encoding="utf-8"))
+    # The docs gate runs `scripts/validate_docs.py` and `scripts/check_documented_commands.py`, so a
+    # change to either must select the tests that hold both to their word.
     assert scope_map["areas"]["quality.docs-ledger"] == [
         "test_adr_process.py",
         "test_autonomous_production_decisions.py",
+        "test_check_documented_commands.py",
         "test_docs.py",
         "test_governance.py",
     ]
