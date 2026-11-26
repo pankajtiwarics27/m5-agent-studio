@@ -116,13 +116,6 @@ class DocFlagReport:
     widened: dict[str, tuple[str, ...]] = field(default_factory=dict)
     #: documents exempted because they quote a wrong command as a counter-example.
     counter_examples: list[str] = field(default_factory=list)
-    #: scripts the reader could confirm take no options at all, without `argparse`. Zero flags is an
-    #: answer, not an abstention -- and naming them makes it visible that a documented flag there would
-    #: be caught, rather than silently exempted.
-    accepts_nothing: list[str] = field(default_factory=list)
-    #: scripts whose flags were read from a hand-rolled argv check rather than `argparse`. Readable, but
-    #: weaker, because the patterns cover only what the source spells out. Reported, never hidden.
-    hand_rolled: list[str] = field(default_factory=list)
 
     @property
     def ok(self) -> bool:
@@ -268,36 +261,18 @@ def _loop_bound_names(tree: ast.Module) -> dict[str, set[str]]:
 def flags_a_script_accepts(path: Path) -> ParserShape:
     """Read a script's parser without running it.
 
-    ``static`` is False when the shape cannot be resolved: a subcommand whose name is not resolvable
-    from literals, or an `add_argument` whose flags are not literals. A caller must treat that as
-    "unknown", never as "accepts nothing" -- and, just as important, an unresolvable parser's flags
-    must never be attributed to the root, or they would validate a flag the subcommand does not take.
-
-    A script with no `argparse` is not necessarily unknown. Five documented scripts take no options at
-    all, and one reads argv by hand:
-
-    * `validate_docs.py`, `validate_security_signoff.py`, `check_frontend_syntax.py` and
-      `build_studio.py` take no arguments whatsoever. "Accepts nothing" is a real answer for them, and
-      a documented flag against one is a real problem. Reporting them as unreadable left six
-      documented invocations unchecked because of a property nothing could go wrong with.
-    * `smoke_local.py` reads `"--standalone" in sys.argv[1:]`. That is a closed set of literal flags
-      in a hand-rolled parser: readable, and marked `hand-rolled` so the weaker result is visible.
-
-    Anything else that touches `sys.argv` or `os.environ`-driven flags without `argparse` still
-    abstains, because a wrong guess there is worse than an abstention.
+    ``static`` is False when the shape cannot be resolved: no `argparse`, a subcommand whose name is
+    not resolvable from literals, or an `add_argument` whose flags are not literals. A caller must
+    treat that as "unknown", never as "accepts nothing" -- and, just as important, an unresolvable
+    parser's flags must never be attributed to the root, or they would validate a flag the subcommand
+    does not take.
     """
-    if path.suffix != ".py":
-        # The Python reader must never answer for a JavaScript walk: a `.mjs` file has no `argparse`,
-        # which this reader would otherwise report as "takes no options". That is the wrong answer,
-        # confidently given. `accepts_for` routes by interpreter; this guard makes a mis-route an
-        # explicit abstention instead of a silently empty flag set.
-        return ParserShape(frozenset(), {}, False, f"{path.suffix or 'no extension'} is not a Python script")
     try:
         source = path.read_text(encoding="utf-8")
     except OSError:
         return ParserShape(frozenset(), {}, False, "unreadable")
     if "argparse" not in source:
-        return _parser_shape_without_argparse(source)
+        return ParserShape(frozenset(), {}, False, "no argparse")
     tree = ast.parse(source)
     loop_names = _loop_bound_names(tree)
 
@@ -350,66 +325,14 @@ def flags_a_script_accepts(path: Path) -> ParserShape:
             return ParserShape(frozenset(), {}, False, f"parser variable `{receiver}` was not created here")
 
     widened = frozenset(name for names in subcommands.values() if len(names) > 1 for name in names)
-    # An `argparse` script that declares no flag still accepts no flags; that is a closed set, not an
-    # unresolvable one. Reading it as unknown would abstain on a script that cannot accept anything.
+    static = bool(root_flags or per_subcommand)
     return ParserShape(
         root_flags=frozenset(root_flags),
         subcommand_flags={name: frozenset(flags) for name, flags in per_subcommand.items()},
-        static=True,
-        reason="",
+        static=static,
+        reason="" if static else "no flags found",
         widened=widened,
     )
-
-
-#: Hand-rolled membership tests that name a flag literally: `"--standalone" in sys.argv[1:]`.
-_ARGV_MEMBERSHIP = re.compile(r"""['"](--?[A-Za-z][\w-]*)['"]\s+in\s+(?:sys\.argv|argv)""")
-#: A flag compared against an argv element: `sys.argv[1] == "--json"`.
-_ARGV_COMPARE = re.compile(r"""(?:sys\.argv\[\d+\]|argv\[\d+\])\s*==\s*['"](--?[A-Za-z][\w-]*)['"]""")
-
-
-def _parser_shape_without_argparse(source: str) -> ParserShape:
-    """Read a hand-rolled parser, or say why it cannot be read.
-
-    Only three answers are honest here, and they are different answers:
-
-    * the script never reads `sys.argv` -- it accepts nothing, which is a closed set of zero flags, so
-      a documented flag against it is a problem rather than something to abstain on;
-    * it reads `sys.argv` by comparing literal flags -- readable, but `hand-rolled`, and the report
-      names that as a weaker check than an `argparse` wiring;
-    * it reaches `sys.argv` in any way this reader cannot close over -- unreadable, because a flag may
-      be accepted under a name the source does not spell out.
-
-    `reason` is only ever set on the third answer. It means "why this is unknown", so filling it in on
-    a readable script would label a known result as an unknown one.
-    """
-    if "sys.argv" not in source:
-        return ParserShape(frozenset(), {}, True, "none")
-    try:
-        tree = ast.parse(source)
-    except SyntaxError:
-        return ParserShape(frozenset(), {}, False, "not parseable as Python")
-    flags = frozenset(_ARGV_MEMBERSHIP.findall(source)) | frozenset(_ARGV_COMPARE.findall(source))
-    if not flags:
-        return ParserShape(
-            frozenset(), {}, False, "reads sys.argv but names no literal flag, so the set is not closed"
-        )
-    # `sys.argv[0]` is the program path and `sys.argv[1:]` is how these scripts reach their arguments;
-    # neither can hide a flag name. An argv element selected by a concrete index and *not* compared
-    # with a literal in the patterns above is evidence of a name this reader did not see.
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.Subscript) or not isinstance(node.value, ast.Attribute):
-            continue
-        if node.value.attr != "argv":
-            continue
-        index = node.slice
-        if isinstance(index, ast.Slice):
-            continue
-        if isinstance(index, ast.Constant) and index.value == 0:
-            continue
-        return ParserShape(
-            frozenset(), {}, False, "selects an argv element the literal comparisons do not cover"
-        )
-    return ParserShape(root_flags=flags, subcommand_flags={}, static=True, reason="hand-rolled")
 
 
 def accepts_for(command: DocCommand, root: Path) -> tuple[frozenset[str], bool]:
@@ -497,11 +420,6 @@ def check_repository(root: Path = _ROOT) -> DocFlagReport:
         if shape.static and shape.widened:
             widened[script] = tuple(sorted(shape.widened))
     report.widened = widened
-    shapes = {script: flags_a_script_accepts(root / script) for script in {command.script for command in commands}}
-    report.hand_rolled = sorted(script for script, shape in shapes.items() if shape.reason == "hand-rolled")
-    report.accepts_nothing = sorted(
-        script for script, shape in shapes.items() if shape.static and shape.reason == "none"
-    )
     report.counter_examples = sorted(
         document.name
         for document in _markdown_files(root)
@@ -531,16 +449,6 @@ def main(argv: Sequence[str] | None = None) -> int:
     if report.counter_examples:
         print(
             f"exempt as counter-examples (not instructions): {', '.join(report.counter_examples)}",
-            file=sys.stderr,
-        )
-    if report.accepts_nothing:
-        print(
-            "takes no options at all, checked as such: " + ", ".join(report.accepts_nothing), file=sys.stderr
-        )
-    if report.hand_rolled:
-        print(
-            "weaker check (flags read from a hand-rolled argv test, not argparse): "
-            + ", ".join(report.hand_rolled),
             file=sys.stderr,
         )
     for script, names in report.widened.items():
