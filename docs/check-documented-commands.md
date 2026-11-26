@@ -111,8 +111,12 @@ Two abstentions are load-bearing:
 
 - a flag built from a variable (`case FLAG:`, `` `--${name}` ``) or matched by prefix
   (`arg.startsWith("--")`) means the accepted set is not closed, so it is *not readable*;
-- a walk that never touches `process.argv` accepts **no** flags. That is a closed set of zero, not an
-  abstention, so a documented flag against it is a problem.
+- a walk without a literal `process.argv` reference is **not readable**. The absence of that spelling
+  does not prove zero options: `import { argv } from "node:process"`, `process["argv"]`, or an imported
+  argument handler can read them indirectly. This conservative rule may also abstain on a script that
+  truly takes no options; it does not attempt to resolve arbitrary imported code. A mutation restoring
+  the zero-options inference was caught separately by the plain-script test, all three indirect-access
+  variants, and the end-to-end unchecked-report test; the restored checker tests passed.
 
 An unknown-flag guard — `else if (arg.startsWith("-")) throw` — is the opposite of a dynamic name: it
 *rejects* everything unrecognised, which is what makes the literal set trustworthy. The reader

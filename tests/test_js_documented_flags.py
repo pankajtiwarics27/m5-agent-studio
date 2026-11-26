@@ -4,13 +4,15 @@
 Its Python counterpart had a first version that unioned every `add_argument` in the file, which
 validated the very flag the checker existed to reject. The same mistake is available here — a
 `"--dark"` compared somewhere in rendering is not an accepted flag — so these tests pin the scope, the
-abstentions, and the one case that must *not* be an abstention: a walk that reads no arguments at all
-accepts no flags.
+abstentions. In particular, absence of the text `process.argv` is not proof of zero accepted flags:
+a script can read argv indirectly.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
+
+import pytest
 
 from scripts.js_documented_flags import flags_a_js_script_accepts
 
@@ -170,11 +172,24 @@ run(parseArgs(process.argv.slice(2)));
     assert shape.flags == frozenset({"--json"})
 
 
-def test_a_script_with_no_argument_handling_accepts_no_flags(tmp_path: Path) -> None:
-    """This is a closed set of zero, not an abstention — a documented flag against it is a problem."""
+def test_a_script_without_literal_argv_access_is_unreadable(tmp_path: Path) -> None:
     path = _walk(tmp_path, "console.log('no arguments here');\n", name="helper.js")
     shape = flags_a_js_script_accepts(path)
-    assert shape.static and shape.flags == frozenset() and shape.shape == "none"
+    assert not shape.static and shape.reason
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        'import { argv } from "node:process"; if (argv.includes("--json")) {}',
+        'if (process["argv"].includes("--json")) {}',
+        'import "./argument-handler.mjs";',
+    ],
+    ids=["imported-argv", "computed-property", "imported-handler"],
+)
+def test_indirect_argv_access_is_not_read_as_zero_options(tmp_path: Path, source: str) -> None:
+    shape = flags_a_js_script_accepts(_walk(tmp_path, source))
+    assert not shape.static and shape.reason
 
 
 def test_argv_read_but_no_literal_flag_is_not_readable(tmp_path: Path) -> None:
