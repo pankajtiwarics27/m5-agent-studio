@@ -376,9 +376,9 @@
     {
       "path": "scripts/uiux_preservation_e2e.py",
       "role": "maps each preservation-matrix row to the walk, test, route and control that proves it",
-      "sha256": "d00d4aaddfcd9174de35e18136b967d09c88ab0172637de8e519205530694a7c",
-      "bytes": 49402,
-      "lines": 861
+      "sha256": "9d34b4075c9e5225b8a9b9809ceb92fc5470f815fcb3f10c825335ff88cb08a6",
+      "bytes": 50707,
+      "lines": 883
     },
     {
       "path": "tests/test_uiux_preservation_e2e.py",

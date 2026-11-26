@@ -365,6 +365,14 @@ NEEDS_SERVER = {
     "uiv2_preservation_visual_walk.mjs",
 }
 
+# Walks that open neither the Studio shell nor the suite's server. They exist to measure a *non-Studio*
+# artifact -- a generated website in the release pilot -- so the fixture/server question does not apply
+# to them, and asserting either answer would be a finding about the walk's shape rather than its role.
+# Listing them here is what keeps that third case explicit instead of silently exempt.
+NO_SERVER_NEEDED = {
+    "pilot_browser_walk.mjs",
+}
+
 # Walks that exist for a story but prove no matrix row are not failures - most of them prove a
 # *contract* rather than a capability - but they are listed so the gap is visible: a walk nobody
 # runs in the suite is a test that decays.
@@ -386,6 +394,12 @@ SUPPORT_WALKS = {
     "harness_direction_walk.mjs": "the AP-018 direction walk proves that a pause for direction is stated with the sample and its exact version, that keeping or changing the direction goes through the real route and never claims acceptance, and that a covered task is not interrupted; the capability it belongs to is autonomous production, which this matrix does not enumerate",
     "compare_continuity_walk.mjs": "Compare continuity (P4-06) keeps a comparison; the capability it belongs to is the comparison itself",
     "uiux_interaction_polish_walk.mjs": "the supplemental P5-05 evidence walk measures hover/focus parity and captures 72 screenshots; it proves presentation, not a capability the matrix enumerates",
+    "pilot_browser_walk.mjs": (
+        "the AP-032 pilot walk measures a generated website artifact in a headless browser "
+        "(keyboard reachability, focus visibility, contrast, reduced motion, console errors and link "
+        "resolution) for the release pilot; that capability belongs to autonomous production, which this "
+        "matrix does not enumerate, and the walk never opens the Studio shell"
+    ),
     "adversarial_walk.mjs": "the adversarial walk (P6-02) proves how a refusal is drawn, which is a contract about failures rather than a capability the matrix enumerates",
     "chat_persona_walk.mjs": "the Chat persona walk (UIV2-19) proves that the picker is drawn from CHAT_PERSONAS, that a stored choice survives a reload, that a deleted persona falls back to the default, and that the request carries the registry's prompt rather than the picker's value; the capability it belongs to is Chat itself, which the matrix already enumerates from the pane's own controls",
     "mcp_wizard_walk.mjs": "the MCP guide walk (UIV2-22) proves that connecting a server is four questions rather than one form: that a step which is not satisfied refuses to advance and names the field, that the token is a password field the review never reads back, that a local command needs a consent naming the exact command and that the consent cannot grant the operator's `STUDIO_ALLOW_MCP_STDIO` opt-in, that raw headers and environment JSON stay behind a shut disclosure, and that saving re-checks every earlier step and reports the connection test where the button is; the capability it belongs to is the MCP surface, which the matrix already enumerates from the tool strip and the dialog's own controls",
@@ -587,11 +601,18 @@ def build_inventory() -> dict:
                     "detail": f"`scripts/{name}` starts its own fixture but is listed as needing the suite's server",
                 }
             )
-        if not starts_itself and name not in NEEDS_SERVER:
+        if not starts_itself and name not in NEEDS_SERVER and name not in NO_SERVER_NEEDED:
             findings.append(
                 {
                     "check": "server-classification",
                     "detail": f"`scripts/{name}` does not start a fixture and is not listed as needing the suite's server",
+                }
+            )
+        if name in NO_SERVER_NEEDED and (starts_itself or name in NEEDS_SERVER):
+            findings.append(
+                {
+                    "check": "server-classification",
+                    "detail": f"`scripts/{name}` is listed as needing no server but starts a fixture or is listed as needing one",
                 }
             )
 
@@ -636,6 +657,7 @@ def build_inventory() -> dict:
         },
         "walks": sorted(walk_scripts),
         "needs_server": sorted(NEEDS_SERVER & walk_scripts),
+        "no_server_needed": sorted(NO_SERVER_NEEDED),
         "support_walks": dict(sorted(SUPPORT_WALKS.items())),
         "pytest_nodes": sorted(set(pytest_nodes)),
         "last_run": last_run(),
