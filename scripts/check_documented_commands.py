@@ -110,7 +110,11 @@ class DocFlagReport:
     checked: list[DocCommand] = field(default_factory=list)
     skipped: list[DocCommand] = field(default_factory=list)
     problems: list[DocFlagProblem] = field(default_factory=list)
+    #: Literal invocations whose parser was unreadable; unlike unresolved, this counts each line.
+    unchecked: list[DocCommand] = field(default_factory=list)
     unresolved: list[str] = field(default_factory=list)
+    #: JavaScript scripts whose flags are unioned across regions or a file-wide fallback.
+    js_widened: list[str] = field(default_factory=list)
     #: script -> subcommands whose flags were widened across loop iterations, so a pass there is
     #: weaker than a pass elsewhere. Reported, never hidden.
     widened: dict[str, tuple[str, ...]] = field(default_factory=dict)
@@ -417,8 +421,13 @@ def check_repository(root: Path = _ROOT) -> DocFlagReport:
     """Check every documentation line this module can read, and count what it could not."""
     commands, skipped = documented_commands(root)
     problems, unchecked = check_flags(commands, root)
-    report = DocFlagReport(checked=list(commands), skipped=list(skipped), problems=problems)
+    report = DocFlagReport(checked=list(commands), skipped=list(skipped), problems=problems, unchecked=unchecked)
     report.unresolved = sorted({command.script for command in unchecked})
+    report.js_widened = sorted(
+        script
+        for script in {command.script for command in commands if command.interpreter == "node"}
+        if (shape := flags_a_js_script_accepts(root / script)).static and shape.widened
+    )
     widened: dict[str, tuple[str, ...]] = {}
     for script in sorted({command.script for command in commands}):
         shape = flags_a_script_accepts(root / script)
@@ -442,15 +451,20 @@ def main(argv: Sequence[str] | None = None) -> int:
     report = check_repository(root)
     for problem in report.problems:
         print(f"doc flag: {problem.describe()}", file=sys.stderr)
-    readable = len(report.checked) - len(list(report.unresolved))
+    readable = len(report.checked) - len(report.unchecked)
     print(
         f"documented commands: {len(report.checked) + len(report.skipped)} lines, "
         f"{len(report.checked)} literal, {len(report.skipped)} with placeholders; "
-        f"{readable} checked against a static parser, {len(report.unresolved)} not statically readable, "
-        f"{len(report.problems)} problem(s)"
+        f"{readable} checked against a static parser, {len(report.unchecked)} unchecked "
+        f"across {len(report.unresolved)} unreadable scripts, {len(report.problems)} problem(s)"
     )
     if report.unresolved:
-        print(f"not checked (parser built at runtime): {', '.join(report.unresolved)}", file=sys.stderr)
+        print(f"not checked (parser not statically readable): {', '.join(report.unresolved)}", file=sys.stderr)
+    if report.js_widened:
+        print(
+            "weaker check (JavaScript flags unioned across regions or file): " + ", ".join(report.js_widened),
+            file=sys.stderr,
+        )
     if report.counter_examples:
         print(
             f"exempt as counter-examples (not instructions): {', '.join(report.counter_examples)}",
