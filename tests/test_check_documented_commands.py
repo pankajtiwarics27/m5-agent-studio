@@ -111,12 +111,76 @@ def main():
 # ── abstention: never a false pass, never a false finding ────────────────────────────────────────
 
 
-def test_a_script_without_argparse_is_not_read_as_accepting_nothing(tmp_path: Path) -> None:
+def test_a_script_that_reads_no_arguments_accepts_nothing(tmp_path: Path) -> None:
+    """This first abstained, and the abstention was pointless: nothing can go wrong in `print('hi')`.
+
+    Four documented scripts are like this -- `validate_docs.py`, `validate_security_signoff.py`,
+    `check_frontend_syntax.py`, `build_studio.py` -- and reading them as unknown left six documented
+    invocations unchecked for a property that cannot be wrong.
+    """
     path = tmp_path / "plain.py"
     path.write_text("print('hi')\n", encoding="utf-8")
     shape = cdc.flags_a_script_accepts(path)
-    assert shape.static is False
-    assert shape.reason == "no argparse"
+    assert shape.static is True, shape.reason
+    assert shape.root_flags == frozenset()
+    assert shape.reason == "none"
+
+
+def test_a_script_with_no_argparse_that_reads_argv_hands_rolls(tmp_path: Path) -> None:
+    """`smoke_local.py` reads `"--standalone" in sys.argv[1:]`: a closed set, read by hand."""
+    path = tmp_path / "hand.py"
+    path.write_text(
+        "import sys\n\ndef main():\n    standalone = \"--standalone\" in sys.argv[1:]\n    return 0\n",
+        encoding="utf-8",
+    )
+    shape = cdc.flags_a_script_accepts(path)
+    assert shape.static is True, shape.reason
+    assert shape.root_flags == frozenset({"--standalone"})
+    assert shape.reason == "hand-rolled", "a weaker read must be labelled as one"
+
+
+def test_a_script_that_reaches_argv_in_an_unreadable_way_still_abstains(tmp_path: Path) -> None:
+    """Unreadable must stay unreadable: an argv element compared with a variable may hide a flag."""
+    # A literal flag *and* an argv element this reader cannot cover: the flag makes the first branch
+    # pass, so the abstention has to come from the indexed-argv check, not from "no literal flag".
+    path = tmp_path / "opaque.py"
+    path.write_text(
+        "import sys\n\nif '--json' in sys.argv[1:]:\n    pass\nname = sys.argv[2]\nprint(name)\n",
+        encoding="utf-8",
+    )
+    shape = cdc.flags_a_script_accepts(path)
+    assert shape.static is False, "an opaque argv read was treated as a closed set"
+    assert "argv element" in shape.reason, shape.reason
+
+
+def test_the_python_reader_refuses_a_javascript_file(tmp_path: Path) -> None:
+    """A `.mjs` walk has no `argparse`, so this reader would call it "takes no options".
+
+    That happened while wiring the node half: the report asked the Python reader about every script,
+    so `pilot_browser_walk.mjs` was listed as taking no options -- a confident wrong answer, on the
+    one walk the pilot runbook tells an operator to run.
+    """
+    path = tmp_path / "walk.mjs"
+    path.write_text('const out = process.argv.includes("--out");\n', encoding="utf-8")
+    shape = cdc.flags_a_script_accepts(path)
+    assert shape.static is False, "the Python reader answered for a JavaScript file"
+    assert ".mjs" in shape.reason
+
+
+def test_an_argparse_script_that_declares_no_flag_accepts_nothing(tmp_path: Path) -> None:
+    """A parser with no `add_argument` is a closed set of zero flags, not an unresolved one.
+
+    This was `static = bool(root_flags or per_subcommand)`, which reported every script that legitimately
+    takes no options as unreadable -- the same needless abstention, one branch over.
+    """
+    path = tmp_path / "noopts.py"
+    path.write_text(
+        "import argparse\n\nparser = argparse.ArgumentParser()\nargs = parser.parse_args()\n",
+        encoding="utf-8",
+    )
+    shape = cdc.flags_a_script_accepts(path)
+    assert shape.static is True, shape.reason
+    assert shape.root_flags == frozenset()
 
 
 def test_non_literal_flags_abstain_rather_than_guessing(tmp_path: Path) -> None:
@@ -353,14 +417,39 @@ def test_the_cli_returns_nonzero_on_a_problem(tmp_path: Path, capsys: pytest.Cap
 
 
 def test_the_cli_reports_what_it_did_not_check(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """An abstention must be named on stderr; a script that takes no options is named separately."""
     (tmp_path / "scripts").mkdir()
-    (tmp_path / "scripts" / "plain.py").write_text("print('no parser here')\n", encoding="utf-8")
+    (tmp_path / "scripts" / "opaque.py").write_text(
+        "import sys\nname = sys.argv[1]\n", encoding="utf-8"
+    )
+    (tmp_path / "scripts" / "plain.py").write_text("print('no arguments')\n", encoding="utf-8")
     (tmp_path / "docs").mkdir()
-    (tmp_path / "docs" / "page.md").write_text("python scripts/plain.py --anything\n", encoding="utf-8")
+    (tmp_path / "docs" / "page.md").write_text("python scripts/opaque.py --anything\n", encoding="utf-8")
     assert cdc.main([str(tmp_path)]) == 0
     captured = capsys.readouterr()
     assert "not checked" in captured.err
-    assert "scripts/plain.py" in captured.err
+    assert "scripts/opaque.py" in captured.err
+
+
+def test_a_documented_flag_on_a_script_that_takes_no_options_is_a_problem(tmp_path: Path) -> None:
+    """The reason reading zero-option scripts matters: it turns a stale line into a failure.
+
+    While these four scripts were "not statically readable", a documented flag against any of them
+    was invisible. `build_studio.py` regenerates `studio.py`, so an operator who ran it with a
+    plausible-looking flag got an argparse-free script that ignored it -- or worse, ran a generator.
+    """
+    (tmp_path / "scripts").mkdir()
+    (tmp_path / "scripts" / "plain.py").write_text("print('no arguments')\n", encoding="utf-8")
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "page.md").write_text(
+        "python scripts/plain.py --dry-run\n", encoding="utf-8"
+    )
+    report = cdc.check_repository(tmp_path)
+    assert not report.ok, "a flag documented against a zero-option script passed"
+    described = " ".join(problem.describe() for problem in report.problems)
+    assert "--dry-run" in described and "does not accept it" in described
+    assert report.unresolved == [], "a zero-option script must not be reported as unreadable"
+    assert report.accepts_nothing == ["scripts/plain.py"]
 
 
 # ── the counter-example exemption ───────────────────────────────────────────────────────────────

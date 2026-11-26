@@ -58,11 +58,31 @@ rather than implying precision it does not have.
 
 ## Abstention
 
-A parser this reader cannot follow — no `argparse`, non-literal flags, or a parser variable it never
-saw created — is `static: False`, and every command against it is reported as *not checked*.
+A parser this reader cannot follow — non-literal flags, an argv element compared with a variable, or a
+parser variable it never saw created — is `static: False`, and every command against it is reported as
+*not checked*.
 
 It is never reported as *accepting nothing*. Those two are different: the first says "I could not
 tell", the second says "the page is wrong", and only one of them is evidence.
+
+The converse matters as much, and this reader got it wrong for its first two releases. A script that
+takes no options was reported as *not checked*, so a documented flag against it was invisible. Four
+documented scripts are like that — `validate_docs.py`, `validate_security_signoff.py`,
+`check_frontend_syntax.py` and `build_studio.py` — and nothing could go wrong in the property being
+abstained on. They are now read as taking zero flags, and a documented flag on one is a **problem**.
+`smoke_local.py` reads `"--standalone" in sys.argv[1:]`, which is a closed set read by hand: readable,
+and reported as a **weaker check** than an `argparse` wiring, for the same reason a loop-built
+subparser is.
+
+An `argparse` script that declares no `add_argument` was caught by the same bug one branch over:
+`static = bool(root_flags or per_subcommand)` called it unreadable. Zero flags is a closed set there
+too.
+
+One more refusal, added after it bit: the Python reader refuses any file that is not `.py`. Before
+that guard, the report asked it about every script, and since a `.mjs` walk has no `argparse` it
+answered "takes no options" — confidently, about `pilot_browser_walk.mjs`, the walk this programme's
+own runbook tells an operator to run. A reader answering outside its language is worse than one that
+abstains.
 
 ## The node half, added after the python half shipped
 
@@ -95,11 +115,13 @@ An unknown-flag guard — `else if (arg.startsWith("-")) throw` — is the oppos
 *rejects* everything unrecognised, which is what makes the literal set trustworthy. The reader
 distinguishes the two; an early version of it did not and abstained on the pilot walk itself.
 
-Current result: **162 documented lines, 107 checked, 0 problems**, up from 121 and 72.
+Current result: **162 documented lines, 112 checked, 1 not statically readable, 0 problems**, up from
+121 and 72. The one remaining abstention is `qualify_environment.py`, whose parser is chosen from a
+variable the source does not name — a genuine unknown, not a lazy one.
 
 ## Verification
 
-`tests/test_check_documented_commands.py` (25 tests) and `tests/test_js_documented_flags.py` (12).
+`tests/test_check_documented_commands.py` (30 tests) and `tests/test_js_documented_flags.py` (12).
 Eight mutations, each caught: dropping subcommand scope, reporting an abstention as a finding,
 checking placeholder lines, not resolving loop-built subparsers, letting an unknown parser leak to the
 root, dropping the widened report, routing every command to the Python reader, and ignoring `node`
@@ -113,6 +135,17 @@ case is commented-out code, and with that the mutation is caught. The scope test
 does now, and it fails when flags are read from the whole file. A third survivor — falling back to a
 file-wide scan instead of abstaining — is now covered by the widened assertion, so a weaker result
 cannot be reported as a clean one.
+
+The zero-option and hand-rolled readers were mutation-tested the same way: six mutations, each caught
+— abstaining again on a script that reads no arguments, letting the Python reader answer for a `.mjs`
+file, calling a hand-rolled read a clean pass, accepting an opaque argv read as a closed set, dropping
+the zero-option names from the report, and treating an `argparse` script with no flags as unreadable.
+
+Two of those tests were vacuous when first written and the mutations found them. The opaque-argv case
+used `sys.argv[1]` with no literal flag anywhere, so it was refused for having no literal — not for
+reaching argv by index — and the mutation that removed the indexed check survived. It now includes a
+literal flag, so the abstention can only come from the check under test. The argparse-with-no-flags
+case had no test at all until its mutation survived.
 
 The end-to-end check is a test rather than a claim: `--out` in the pilot runbook's own documented
 command is changed to `--output`, and the gate must fail.
