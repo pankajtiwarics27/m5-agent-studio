@@ -111,7 +111,13 @@ def drill(**kw: Any) -> rq.DrillRecord:
 
 
 def restore_drill(**kw: Any) -> rq.DrillRecord:
-    params: dict[str, Any] = {"kind": "restore", "exercised": True, "restored_digest": DIGEST, "source_digest": DIGEST}
+    params: dict[str, Any] = {
+        "kind": "restore",
+        "exercised": True,
+        "restored_digest": DIGEST,
+        "source_digest": DIGEST,
+        "comparison": "logical-content",
+    }
     params.update(kw)
     return rq.DrillRecord(**params)
 
@@ -593,3 +599,47 @@ def test_qualify_release_records_the_author_that_cannot_approve() -> None:
     )
     assert built.to_mapping()["handoff"]["author"] == "arena:ab195e0f"
     assert built.to_mapping()["handoff"]["author_can_approve"] is False
+
+
+# ---------------------------------------------------------------------------
+# A restore must say what its digests cover (added after measuring the real round-trip).
+# ---------------------------------------------------------------------------
+
+
+def test_a_restore_must_name_what_it_compared() -> None:
+    """Without a basis, a file-digest mismatch reads the same as a failed restore.
+
+    Measured on this repository's own backup/restore: the restored SQLite file is
+    logically identical and byte-different, so a record that does not say which
+    comparison it made either records a failure for a correct restore or claims a
+    byte match it never measured.
+    """
+    with pytest.raises(rq.DrillRefused, match="must name what its digests are taken over"):
+        restore_drill(comparison="")
+
+
+def test_an_invented_restore_comparison_is_refused() -> None:
+    with pytest.raises(rq.DrillRefused, match="unknown restore comparison"):
+        restore_drill(comparison="looks-about-right")
+
+
+@pytest.mark.parametrize("comparison", ["byte-identical", "logical-content"])
+def test_both_comparison_bases_are_accepted(comparison: str) -> None:
+    record = restore_drill(comparison=comparison)
+    assert record.proves_restore is True
+    assert record.to_mapping()["comparison"] == comparison
+
+
+def test_a_restore_without_a_basis_does_not_prove_restore_even_if_digests_match() -> None:
+    """The gate is `proves_restore`, so an uncompared record must not reach it.
+
+    Constructing an unexercised restore is allowed (it records an attempt); it
+    must not then count as proof.
+    """
+    record = restore_drill(exercised=False, comparison="")
+    assert record.proves_restore is False
+
+
+def test_the_pack_blocks_when_the_restore_names_no_comparison() -> None:
+    built = pack(drills=(drill(), drill(kind="migration"), restore_drill(exercised=False, comparison="")))
+    assert any("restored bytes were never compared" in reason for reason in built.blocking_reasons)

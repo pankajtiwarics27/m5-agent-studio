@@ -26,7 +26,7 @@
       645.0
     ],
     "module_counts": [
-      90,
+      91,
       83,
       88
     ],
@@ -199,6 +199,7 @@
       "tests/test_overlays.py",
       "tests/test_process_supervision.py",
       "tests/test_provider_switching.py",
+      "tests/test_release_drill_witness.py",
       "tests/test_remote_protections.py",
       "tests/test_request_fit_admission.py",
       "tests/test_routing_consent_policy.py",
