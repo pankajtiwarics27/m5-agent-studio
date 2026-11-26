@@ -167,6 +167,8 @@ jobs:
         run: python scripts/validate_security_signoff.py
       - name: Validate published documentation and links
         run: python scripts/validate_docs.py
+      - name: Check documented CLI flags exist on the scripts they drive
+        run: python scripts/check_documented_commands.py
       - name: Lint sources (Ruff)
         run: ruff check .
       - name: Type-check contract modules (mypy)

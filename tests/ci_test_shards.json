@@ -26,7 +26,7 @@
       645.0
     ],
     "module_counts": [
-      94,
+      95,
       83,
       88
     ],
@@ -166,6 +166,7 @@
       "tests/test_chat_composer.py",
       "tests/test_chat_handoff.py",
       "tests/test_chat_recovery.py",
+      "tests/test_check_documented_commands.py",
       "tests/test_ci_test_shard.py",
       "tests/test_compare_evidence.py",
       "tests/test_comparison_board.py",

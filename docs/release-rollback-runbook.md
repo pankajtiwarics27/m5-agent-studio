@@ -70,7 +70,9 @@ Measured behaviour:
 - `verify` checks the digests of the active **and** previous releases, so a corrupt rollback target is
   reported before you need it.
 
-Note the flags, because `packaging-rollback.md` prints them in a shape this CLI rejects:
+Note the flags, because `packaging-rollback.md` used to print them in a shape this CLI rejects.
+`scripts/check_documented_commands.py` now checks every documented flag against the script that
+accepts it, so this class of page cannot drift silently again:
 
 | Command | Takes `--root`? | Where the artifact comes from |
 |---|---|---|
