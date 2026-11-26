@@ -377,6 +377,33 @@ def test_every_unchecked_script_is_named_with_its_reason() -> None:
         assert shape.reason, f"{script} was skipped without saying why"
 
 
+@pytest.mark.parametrize("reverse", [False, True])
+@pytest.mark.parametrize("language", ["python", "node"])
+def test_each_interpreter_is_checked_independently_for_the_same_script(
+    tmp_path: Path, reverse: bool, language: str
+) -> None:
+    (tmp_path / "scripts").mkdir()
+    (tmp_path / "docs").mkdir()
+    if language == "python":
+        _script(tmp_path / "scripts", 'p = argparse.ArgumentParser()\np.add_argument("--ok")\n')
+        script, correct, incorrect = "scripts/tool.py", "python", "node"
+    else:
+        (tmp_path / "scripts" / "walk.mjs").write_text(
+            'function parse() { if (process.argv.includes("--ok")) return true; }\n', encoding="utf-8"
+        )
+        script, correct, incorrect = "scripts/walk.mjs", "node", "python"
+    lines = [f"{correct} {script} --ok", f"{incorrect} {script} --ok"]
+    if reverse:
+        lines.reverse()
+    (tmp_path / "docs" / "page.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    report = cdc.check_repository(tmp_path)
+    assert report.ok
+    assert len(report.unchecked) == 1
+    assert report.unchecked[0].interpreter == incorrect
+    assert report.unresolved == [script]
+    assert cdc.unresolved_scripts(tmp_path) == (script,)
+
+
 def test_cli_counts_unchecked_invocations_not_only_distinct_scripts(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -396,6 +423,18 @@ def test_cli_counts_unchecked_invocations_not_only_distinct_scripts(
     assert "1 checked against a static parser, 2 unchecked across 1 unreadable scripts" in output.out
     assert "parser built at runtime" not in output.err
     assert "not checked (parser not statically readable): scripts/plain.py" in output.err
+
+
+def test_cli_does_not_call_every_skipped_line_a_placeholder(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "page.md").write_text(
+        'python scripts/tool.py\npython scripts/tool.py --path <path>\npython scripts/tool.py --path \\\n',
+        encoding="utf-8",
+    )
+    assert cdc.main([str(tmp_path)]) == 0
+    output = capsys.readouterr().out
+    assert "0 literal candidates, 3 skipped lines" in output
+    assert "with placeholders" not in output
 
 
 def test_js_filewide_fallback_is_reported_as_weaker(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

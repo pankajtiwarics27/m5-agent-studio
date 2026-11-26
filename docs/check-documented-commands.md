@@ -32,9 +32,12 @@ command is not tied to the command.
 | an unresolvable parser is reported as unchecked | anything after an angle-bracketed stand-in, `$VAR`, `\|` or `...` |
 
 The last row is the important one. A line like `--root` followed by an angle-bracketed stand-in describes a
-value the reader cannot know, so the line is **skipped and counted**, never checked and passed. The output prints how many
-lines were checked, how many had placeholders, and which scripts could not be read statically — a
-checker that silently reads nothing would pass forever.
+value the reader cannot know, so the line is **skipped and counted**, never checked and passed. The
+skip count also includes lines with no arguments, shell text the reader cannot parse (including
+backslash-continued commands), and opted-out counter-examples; it is not a count of placeholders alone.
+The output prints checked and skipped line counts and names scripts it could not read statically — a
+checker that silently reads nothing would pass forever. In particular, a skipped multi-line command has
+not been validated by this checker.
 
 ## Static, not executed
 
@@ -71,6 +74,13 @@ These cases have regression tests: each was checked with a mutation that removed
 abstention or guard, and the restored test files passed afterward. This does not make arbitrary Python
 argument handling statically readable; the scripts in the unreadable list remain unchecked.
 
+Each invocation is read using its documented interpreter. Caching by path alone allowed a valid
+`python` invocation to lend its result to a `node` invocation of the same Python file, or an unreadable
+invocation to hide a readable one, depending on order. Mixed-interpreter tests cover both orders for
+Python and JavaScript files; mutations restoring the path-only cache and the first-invocation-only
+unresolved list were caught, and the restored tests passed. An interpreter/file mismatch remains
+unchecked, not validated by the other interpreter's reader.
+
 ## The node half, added after the python half shipped
 
 The first version of this checker read `python scripts/*.py` lines and nothing else. That covered the
@@ -102,7 +112,7 @@ An unknown-flag guard — `else if (arg.startsWith("-")) throw` — is the oppos
 *rejects* everything unrecognised, which is what makes the literal set trustworthy. The reader
 distinguishes the two; an early version of it did not and abstained on the pilot walk itself.
 
-Current result: **162 documented lines: 49 with placeholders, 104 checked, 9 unchecked across 6
+Current result: **162 documented lines: 49 skipped, 104 checked, 9 unchecked across 6
 unreadable scripts, and 0 problems**. Previously this page reported 107 checked: the summary subtracted
 six distinct script names from 113 literal invocations, even though those scripts occur on nine lines.
 The count now subtracts invocations, not names. A JavaScript file-wide or multi-region flag union is
