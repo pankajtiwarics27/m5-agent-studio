@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
+import pathlib
 from pathlib import Path
 import stat
 import subprocess
@@ -19,6 +21,34 @@ import pytest
 import app as studio
 import process_supervision
 import scoped_grants
+
+
+def _atomic_pid_publication(path: Path, pid_expression: str) -> str:
+    """Child code that publishes a complete PID, never an empty or partially written file."""
+    temp = path.with_name(path.name + ".tmp")
+    return (
+        f"pathlib.Path({str(temp)!r}).write_text(str({pid_expression}), encoding='utf-8'); "
+        f"os.replace({str(temp)!r}, {str(path)!r})"
+    )
+
+
+def test_pid_file_is_published_only_after_the_complete_value_is_written(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    target = tmp_path / "child.pid"
+    original_replace = os.replace
+    observations: list[str] = []
+
+    def observe_replace(src: str, dst: str) -> None:
+        assert Path(dst) == target
+        assert not target.exists(), "the final PID file was visible before publication"
+        observations.append(Path(src).read_text(encoding="utf-8"))
+        original_replace(src, dst)
+
+    monkeypatch.setattr(os, "replace", observe_replace)
+    exec(_atomic_pid_publication(target, "12345"), {"os": os, "pathlib": pathlib})  # noqa: S102
+    assert observations == ["12345"]
+    assert target.read_text(encoding="utf-8") == "12345"
 
 
 class _FakeClock:
@@ -653,7 +683,7 @@ def test_capability_specific_in_flight_containment_preserves_unrelated_capabilit
         textwrap.dedent(
             f"""\
             import json, os, pathlib, sys, time
-            pathlib.Path({str(slow_mcp_pid_file)!r}).write_text(str(os.getpid()))
+            {_atomic_pid_publication(slow_mcp_pid_file, 'os.getpid()')}
             for raw in sys.stdin:
                 line = raw.strip()
                 if not line:
@@ -681,12 +711,12 @@ def test_capability_specific_in_flight_containment_preserves_unrelated_capabilit
         textwrap.dedent(
             f"""\
             import os, pathlib, subprocess, sys, time
-            pathlib.Path({str(leader_pid_file)!r}).write_text(str(os.getpid()))
+            {_atomic_pid_publication(leader_pid_file, 'os.getpid()')}
             child = subprocess.Popen(
                 [sys.executable, "-c", "import time; time.sleep(30)"],
                 start_new_session=True,
             )
-            pathlib.Path({str(detached_pid_file)!r}).write_text(str(child.pid))
+            {_atomic_pid_publication(detached_pid_file, 'child.pid')}
             time.sleep(30.0)
             """
         ),
@@ -1385,7 +1415,7 @@ def test_mid_spawn_grant_revocation_contains_stdio_mcp_before_register_process(
         textwrap.dedent(
             f"""\
             import os, pathlib, time
-            pathlib.Path({str(bash_pid_file)!r}).write_text(str(os.getpid()))
+            {_atomic_pid_publication(bash_pid_file, 'os.getpid()')}
             time.sleep(30.0)
             """
         ),
@@ -1560,9 +1590,9 @@ def test_scope_only_stdio_mcp_containment_preserves_unrelated_mcp_server(
                 elif method == "tools/call":
                     tname = (msg.get("params") or {{}}).get("name", "")
                     if tname == "hang_a":
-                        pathlib.Path({str(pid_a_file)!r}).write_text(str(os.getpid()))
+                        {_atomic_pid_publication(pid_a_file, 'os.getpid()')}
                     elif tname == "hang_b":
-                        pathlib.Path({str(pid_b_file)!r}).write_text(str(os.getpid()))
+                        {_atomic_pid_publication(pid_b_file, 'os.getpid()')}
                     time.sleep(30.0)
             """
         ),
