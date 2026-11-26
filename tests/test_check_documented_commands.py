@@ -377,6 +377,46 @@ def test_every_unchecked_script_is_named_with_its_reason() -> None:
         assert shape.reason, f"{script} was skipped without saying why"
 
 
+def test_cli_counts_unchecked_invocations_not_only_distinct_scripts(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    (tmp_path / "scripts").mkdir()
+    (tmp_path / "scripts" / "plain.py").write_text("print('no parser')\n", encoding="utf-8")
+    _script(tmp_path / "scripts", 'p = argparse.ArgumentParser()\np.add_argument("--ok")\n')
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "page.md").write_text(
+        "python scripts/plain.py --one\npython scripts/plain.py --two\npython scripts/tool.py --ok\n",
+        encoding="utf-8",
+    )
+    report = cdc.check_repository(tmp_path)
+    assert len(report.unchecked) == 2
+    assert report.unresolved == ["scripts/plain.py"]
+    assert cdc.main([str(tmp_path)]) == 0
+    output = capsys.readouterr()
+    assert "1 checked against a static parser, 2 unchecked across 1 unreadable scripts" in output.out
+    assert "parser built at runtime" not in output.err
+    assert "not checked (parser not statically readable): scripts/plain.py" in output.err
+
+
+def test_js_filewide_fallback_is_reported_as_weaker(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    (tmp_path / "scripts").mkdir()
+    (tmp_path / "scripts" / "walk.mjs").write_text(
+        'for (const arg of process.argv.slice(2)) {\n  if (arg === "--json") {}\n}\n', encoding="utf-8"
+    )
+    (tmp_path / "scripts" / "precise.mjs").write_text(
+        'function parse() { if (process.argv.includes("--json")) return true; }\n', encoding="utf-8"
+    )
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "page.md").write_text(
+        "node scripts/walk.mjs --json\nnode scripts/precise.mjs --json\n", encoding="utf-8"
+    )
+    report = cdc.check_repository(tmp_path)
+    assert report.ok and not report.unchecked
+    assert report.js_widened == ["scripts/walk.mjs"]
+    assert cdc.main([str(tmp_path)]) == 0
+    assert "weaker check (JavaScript flags unioned across regions or file): scripts/walk.mjs" in capsys.readouterr().err
+
+
 def test_the_cli_returns_nonzero_on_a_problem(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     (tmp_path / "scripts").mkdir()
     _script(tmp_path / "scripts", SUBCOMMANDS).rename(tmp_path / "scripts" / "tool.py")

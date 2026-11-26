@@ -102,7 +102,15 @@ An unknown-flag guard — `else if (arg.startsWith("-")) throw` — is the oppos
 *rejects* everything unrecognised, which is what makes the literal set trustworthy. The reader
 distinguishes the two; an early version of it did not and abstained on the pilot walk itself.
 
-Current result: **162 documented lines, 107 checked, 0 problems**, up from 121 and 72.
+Current result: **162 documented lines: 49 with placeholders, 104 checked, 9 unchecked across 6
+unreadable scripts, and 0 problems**. Previously this page reported 107 checked: the summary subtracted
+six distinct script names from 113 literal invocations, even though those scripts occur on nine lines.
+The count now subtracts invocations, not names. A JavaScript file-wide or multi-region flag union is
+also named as a weaker check in the repository report, rather than only inside the JavaScript reader.
+
+Regression tests were mutation-checked against the old count, a missing unchecked list, an inaccurate
+runtime-parser diagnosis, omitted or over-broad JavaScript widening, and a suppressed warning. All six
+mutations were caught, and the restored Python and JavaScript command-checker tests passed.
 
 ## Verification
 
