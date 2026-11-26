@@ -2232,16 +2232,21 @@ def test_ap007_deadline_stops_claims_dispatch_and_resume_without_any_observation
 ) -> None:
     """AC3: the deadline is enforced from the clock alone; nobody has to report it."""
     root, mission = "ap007-deadline-root", "ap007-deadline"
-    deadline = time.time() + 3_600
+    # Reproduce #393: serializing to four decimals crosses a two-decimal formatting boundary.
+    deadline = int(time.time()) + 3_600 + 0.00496
     sm = _ap007_machine(
         isolated_env,
         root,
         execution_budget.TaskBudgetSpec(max_steps=50, deadline_at=deadline),
         acceptance=_AP007_FIXTURE_ACCEPTANCE,
     )
+    persisted_deadline = sm.budgets.get_budget(root).spec.deadline_at
+    assert persisted_deadline is not None
+    assert persisted_deadline == round(deadline, 4)
+    assert f"{persisted_deadline:.2f}" != f"{deadline:.2f}", "the double-rounding boundary was not exercised"
     binding, tasks = _ap007_plan(sm, root, mission, keys=("work", "next"))
     lease = _ap007_claim(sm, root, mission, "work", tasks["work"], binding)
-    late = deadline + 1
+    late = persisted_deadline + 1
     # AP-007-F2: a consequential charge on a plan task presents the fixture proof, so
     # that the deadline is the only thing this case can be refused for.
     charge = {
@@ -2280,8 +2285,8 @@ def test_ap007_deadline_stops_claims_dispatch_and_resume_without_any_observation
     assert (report.outcome, report.plan_status) == ("stopped", "failed")
     assert report.stop is not None
     assert (report.stop["code"], report.stop["scope"]) == ("deadline", "root")
-    # The stored reason names the deadline, not the time of evaluation, so the record is stable.
-    assert report.stop["reason"] == f"deadline exceeded (deadline_at={deadline:.2f})"
+    # The stored reason names the persisted deadline, not the evaluation time or an unpersisted float.
+    assert report.stop["reason"] == f"deadline exceeded (deadline_at={persisted_deadline:.2f})"
     assert sm.mission_recovery_report(mission, 1, now=late + 500).report_hash == report.report_hash
 
 
