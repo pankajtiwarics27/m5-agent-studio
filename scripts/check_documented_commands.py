@@ -61,9 +61,9 @@ _ROOT = Path(__file__).resolve().parent
 _COMMAND = re.compile(
     r"^\s*\$?\s*(?P<interpreter>python3?|node)\s+(?P<script>scripts/[\w./-]+\.(?:py|m?js|cjs))\b(.*)$"
 )
-#: Lines carrying shell metacharacters describe a shape, not an invocation. `<...>`, `$VAR`, `|` and
-#: `...` all mean "substitute something here", so the flags after them are not checkable.
-_NOT_A_LITERAL = re.compile(r"[<>$|`]|\.\.\.")
+#: Do not treat shell operators or substitutions as arguments to one command. Even inside quotes we
+#: conservatively skip: this reader is not a shell parser and cannot claim full coverage.
+_NOT_A_LITERAL = re.compile(r"[<>$|`;&]|\.\.\.")
 #: A document that quotes a wrong command in order to explain why it is wrong is not instructing
 #: anyone to run it. Rewriting such an example to look correct would destroy its point, so the document
 #: opts out with this marker, and the report prints every opt-out by name so the exemption is visible
@@ -80,6 +80,7 @@ class DocCommand:
     script: str
     tokens: tuple[str, ...]
     interpreter: str = "python"
+    source_path: str = ""
 
     @property
     def text(self) -> str:
@@ -145,6 +146,14 @@ def _command_lines(text: str) -> Iterator[tuple[int, str, bool]]:
             continue
         complete = True
         while line.endswith("\\") and (len(line) - len(line.rstrip("\\"))) % 2:
+            # A shell comment can terminate before the backslash; do not swallow the next command.
+            if "#" in line:
+                complete = False
+                break
+            # Backslash-newline inside single quotes is literal, not shell line continuation. We do
+            # not track shell quote state here, so abstain if a single quote precedes a join.
+            if "'" in line:
+                complete = False
             if index >= len(lines):
                 complete = False
                 break
@@ -174,15 +183,16 @@ def documented_commands(root: Path) -> tuple[list[DocCommand], list[DocCommand]]
             match = _COMMAND.match(text)
             assert match is not None
             interpreter, script, rest = match.group("interpreter"), match.group("script"), match.group(3).strip()
+            source_path = document.relative_to(root).as_posix()
             if COUNTER_EXAMPLE_MARKER in source or not complete or _NOT_A_LITERAL.search(rest) or not rest:
-                skipped.append(DocCommand(document.name, number, script, (), interpreter=interpreter))
+                skipped.append(DocCommand(document.name, number, script, (), interpreter=interpreter, source_path=source_path))
                 continue
             try:
-                tokens = tuple(shlex.split(rest))
+                tokens = tuple(shlex.split(rest, comments=True))
             except ValueError:
-                skipped.append(DocCommand(document.name, number, script, (), interpreter=interpreter))
+                skipped.append(DocCommand(document.name, number, script, (), interpreter=interpreter, source_path=source_path))
                 continue
-            command = DocCommand(document.name, number, script, tokens, interpreter=interpreter)
+            command = DocCommand(document.name, number, script, tokens, interpreter=interpreter, source_path=source_path)
             (skipped if not tokens else checkable).append(command)
     return checkable, skipped
 
@@ -462,6 +472,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"{readable} checked against a static parser, {len(report.unchecked)} unchecked "
         f"across {len(report.unresolved)} unreadable scripts, {len(report.problems)} problem(s)"
     )
+    if report.skipped:
+        print(
+            "skipped command starts (not checked): "
+            + ", ".join(f"{command.source_path or command.document}:{command.line}" for command in report.skipped),
+            file=sys.stderr,
+        )
     if report.unresolved:
         print(f"not checked (parser not statically readable): {', '.join(report.unresolved)}", file=sys.stderr)
     if report.js_widened:

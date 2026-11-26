@@ -326,6 +326,62 @@ def test_malformed_counterexample_is_skipped_without_parsing(tmp_path: Path) -> 
     assert not commands and len(skipped) == 1
 
 
+@pytest.mark.parametrize("suffix", [" && echo done", "; echo done"])
+def test_shell_operators_are_skipped_instead_of_treated_as_arguments(
+    tmp_path: Path, suffix: str
+) -> None:
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "page.md").write_text("python scripts/tool.py --ok" + suffix + "\n", encoding="utf-8")
+    commands, skipped = cdc.documented_commands(tmp_path)
+    assert not commands and [(c.script, c.line) for c in skipped] == [("scripts/tool.py", 1)]
+
+
+def test_inline_shell_comment_is_not_checked_as_a_flag(tmp_path: Path) -> None:
+    (tmp_path / "scripts").mkdir()
+    _script(tmp_path / "scripts", 'p = argparse.ArgumentParser()\np.add_argument("--ok")\n')
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "page.md").write_text(
+        "python scripts/tool.py --ok # don't treat --wrong as a flag\n", encoding="utf-8"
+    )
+    report = cdc.check_repository(tmp_path)
+    assert report.ok and not report.skipped and not report.unchecked
+    assert report.checked[0].tokens == ("--ok",)
+
+
+def test_backslash_in_a_shell_comment_does_not_consume_the_next_command(tmp_path: Path) -> None:
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "page.md").write_text(
+        'python scripts/tool.py --ok # comment \\\npython scripts/next.py --ok\n', encoding="utf-8"
+    )
+    commands, skipped = cdc.documented_commands(tmp_path)
+    assert [(c.script, c.line) for c in commands] == [("scripts/next.py", 2)]
+    assert [(c.script, c.line) for c in skipped] == [("scripts/tool.py", 1)]
+    lines = list(cdc._command_lines('python scripts/tool.py --ok # comment \\\n  --wrong\n'))
+    assert lines == [(1, 'python scripts/tool.py --ok # comment \\', False)]
+
+
+def test_single_quote_before_continuation_is_skipped_without_guessing_shell_quote_state(tmp_path: Path) -> None:
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "page.md").write_text(
+        "python scripts/tool.py --value 'first\\\nsecond'\n", encoding="utf-8"
+    )
+    commands, skipped = cdc.documented_commands(tmp_path)
+    assert not commands and [(c.script, c.line) for c in skipped] == [("scripts/tool.py", 1)]
+
+
+def test_cli_names_skipped_locations(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "page.md").write_text(
+        "python scripts/tool.py --root <root>\npython scripts/other.py\n", encoding="utf-8"
+    )
+    (tmp_path / "docs" / "README.md").write_text("python scripts/a.py\n", encoding="utf-8")
+    (tmp_path / "README.md").write_text("python scripts/b.py\n", encoding="utf-8")
+    assert cdc.main([str(tmp_path)]) == 0
+    err = capsys.readouterr().err
+    assert "docs/page.md:1, docs/page.md:2" in err
+    assert "docs/README.md:1" in err and ", README.md:1" in err
+
+
 def test_python_and_python3_are_both_recognised(tmp_path: Path) -> None:
     (tmp_path / "docs").mkdir()
     (tmp_path / "docs" / "page.md").write_text(
