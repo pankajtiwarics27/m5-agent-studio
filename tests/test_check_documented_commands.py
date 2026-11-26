@@ -445,15 +445,23 @@ def test_a_documented_node_flag_the_walk_does_not_accept_is_a_problem(tmp_path: 
     assert "--out" in described and "does not accept it" in described
 
 
-def test_a_walk_with_no_argument_handling_accepts_no_flags(tmp_path: Path) -> None:
-    """A script that never reads process.argv is a closed set of zero flags, not an abstention."""
+def test_indirect_node_argv_is_reported_unchecked_not_as_a_flag_problem(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
     (tmp_path / "docs").mkdir()
     (tmp_path / "scripts").mkdir()
-    (tmp_path / "scripts" / "helper.js").write_text("console.log('hello');\n", encoding="utf-8")
+    (tmp_path / "scripts" / "helper.js").write_text(
+        'import { argv } from "node:process"; if (argv.includes("--json")) {}\n', encoding="utf-8"
+    )
     (tmp_path / "docs" / "page.md").write_text("node scripts/helper.js --json\n", encoding="utf-8")
     report = cdc.check_repository(tmp_path)
-    assert report.unresolved == [], "a script with no argv handling must not be an abstention"
-    assert not report.ok and "--json" in report.problems[0].describe()
+    assert report.unresolved == ["scripts/helper.js"]
+    assert len(report.unchecked) == 1 and report.unchecked[0].interpreter == "node"
+    assert report.ok and not report.problems
+    assert cdc.main([str(tmp_path)]) == 0
+    output = capsys.readouterr()
+    assert "0 checked against a static parser, 1 unchecked across 1 unreadable scripts" in output.out
+    assert "not checked (parser not statically readable): scripts/helper.js" in output.err
 
 
 # ── the repository, which is the reason this exists ─────────────────────────────────────────────
@@ -500,10 +508,15 @@ def test_the_repository_check_actually_reads_commands() -> None:
 def test_every_unchecked_script_is_named_with_its_reason() -> None:
     """Abstention is allowed; silence is not. Each unchecked script must say why it could not be read."""
     report = cdc.check_repository(PROJECT_ROOT)
-    for script in report.unresolved:
-        shape = cdc.flags_a_script_accepts(PROJECT_ROOT / script)
+    for command in report.unchecked:
+        path = PROJECT_ROOT / command.script
+        shape = (
+            cdc.flags_a_script_accepts(path)
+            if command.interpreter.startswith("python")
+            else cdc.flags_a_js_script_accepts(path)
+        )
         assert shape.static is False
-        assert shape.reason, f"{script} was skipped without saying why"
+        assert shape.reason, f"{command.script} was skipped without saying why"
 
 
 @pytest.mark.parametrize("reverse", [False, True])

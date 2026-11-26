@@ -12,7 +12,8 @@ not regular:
 * a walk that parses with `switch (arg) { case "--base-url": ... }` and a `next()` value getter;
 * a walk that parses with `if (arg === "--json") ... else if (arg.startsWith("-")) throw`;
 * a walk that reads `process.argv.includes("--proposed")` for a single boolean;
-* a walk with no argument handling at all, which accepts no flags — a real answer, not an abstention.
+* a walk that does not literally mention `process.argv` is unreadable: it may access argv through an
+  import, computed property, or another module.
 
 **Scope matters more than coverage here.** The Python reader's first version collected every
 `add_argument` in the file and checked against the union, which validated `package --root` — the defect
@@ -65,7 +66,7 @@ class JsParserShape:
     flags: frozenset[str] = frozenset()
     static: bool = False
     reason: str = ""
-    #: Where the flags were read from, for the report: `switch`, `if-chain`, `includes`, `none`.
+    #: Where the flags were read from, for the report: `switch`, `if-chain`, `includes`.
     shape: str = ""
     #: True when more than one argument-handling region contributed flags, so the set is a union over
     #: regions and a pass is weaker than a single-region pass. Reported, never hidden.
@@ -141,10 +142,10 @@ def flags_a_js_script_accepts(path: Path) -> JsParserShape:
         return JsParserShape(static=False, reason=f"cannot read {path.name}: {exc.strerror}")
     source = _strip_comments(raw)
 
-    # A walk with no argv handling at all accepts no flags. That is a real answer, and a documented
-    # flag against it is a real problem -- not an abstention.
+    # Absence of this literal spelling does not prove argv is unused: it can be imported, accessed by
+    # computed property, or read by another module. Unknown is not the closed set of zero flags.
     if "process.argv" not in source:
-        return JsParserShape(flags=frozenset(), static=True, shape="none")
+        return JsParserShape(static=False, reason="no literal process.argv access; argument handling may be indirect")
 
     if _TEMPLATE_FLAG.search(source):
         return JsParserShape(
