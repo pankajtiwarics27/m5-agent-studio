@@ -132,6 +132,8 @@ files = [
   "promotion_policy.py",
   "reference_benchmarks.py",
   "refinement_bounds.py",
+  "scripts/check_documented_commands.py",
+  "scripts/js_documented_flags.py",
   "scripts/verify_test_identity.py",
   "security_release_gate.py",
   "session_trust.py",

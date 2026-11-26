@@ -262,6 +262,7 @@ def test_workflow_preserves_required_checks_and_shards_browser_work() -> None:
         "test_adr_process.py",
         "test_autonomous_production_decisions.py",
         "test_check_documented_commands.py",
+        "test_js_documented_flags.py",
         "test_docs.py",
         "test_governance.py",
     ]

@@ -5,8 +5,15 @@ not accept `--root` on `package`; an operator following the page got `unrecogniz
 release. The page was wrong for as long as it existed and nothing noticed, because prose about a
 command is not tied to the command.
 
-This module ties them: it reads the documentation, finds every `python scripts/<tool>.py ...` line,
-parses the tool's `argparse` wiring **statically** and reports a flag the tool does not accept.
+This module ties them: it reads the documentation, finds every `python scripts/<tool>.py ...` and
+`node scripts/<walk>.mjs ...` line, reads the tool's argument wiring **statically** and reports a flag
+the tool does not accept.
+
+The Python side reads `argparse` with `ast`. The JavaScript side reads `process.argv` handling with
+`js_documented_flags`, which abstains rather than guessing when a walk builds a flag name at runtime.
+It was added after the Python half shipped: 43 documented `node` invocations, including the pilot walk
+that this programme's own runbook tells an operator to run, were unchecked by a page that claimed to
+check documented commands.
 
 Static parsing is deliberate. Running the scripts would be the stronger check and is the wrong method
 here: several are generators that write files and one starts a server, so a documentation check that
@@ -32,6 +39,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, Iterator, Mapping, Sequence
 
+try:  # imported as scripts.check_documented_commands (tests) or run as a script (CI)
+    from .js_documented_flags import flags_a_js_script_accepts
+except ImportError:  # pragma: no cover - the script entry point
+    from js_documented_flags import flags_a_js_script_accepts
+
 __all__ = [
     "DocCommand",
     "DocFlagProblem",
@@ -44,7 +56,11 @@ __all__ = [
 ]
 
 _ROOT = Path(__file__).resolve().parent
-_COMMAND = re.compile(r"^\s*\$?\s*python3?\s+(scripts/[\w./-]+\.py)\b(.*)$")
+#: A documented invocation, with the interpreter kept so the right reader is used for the script.
+#: `python scripts/x.py` and `node scripts/x.mjs` are both instructions; only the first was checked.
+_COMMAND = re.compile(
+    r"^\s*\$?\s*(?P<interpreter>python3?|node)\s+(?P<script>scripts/[\w./-]+\.(?:py|m?js|cjs))\b(.*)$"
+)
 #: Lines carrying shell metacharacters describe a shape, not an invocation. `<...>`, `$VAR`, `|` and
 #: `...` all mean "substitute something here", so the flags after them are not checkable.
 _NOT_A_LITERAL = re.compile(r"[<>$|`]|\.\.\.")
@@ -57,16 +73,18 @@ COUNTER_EXAMPLE_MARKER = "doc-command-check: counter-example"
 
 @dataclass(frozen=True)
 class DocCommand:
-    """One `python scripts/tool.py ...` line found in the documentation."""
+    """One `python scripts/tool.py ...` or `node scripts/walk.mjs ...` line in the documentation."""
 
     document: str
     line: int
     script: str
     tokens: tuple[str, ...]
+    interpreter: str = "python"
 
     @property
     def text(self) -> str:
-        return " ".join((f"python {self.script}", *self.tokens))
+        binary = "python" if self.interpreter.startswith("python") else "node"
+        return " ".join((f"{binary} {self.script}", *self.tokens))
 
 
 @dataclass(frozen=True)
@@ -123,7 +141,13 @@ def documented_commands(root: Path) -> tuple[list[DocCommand], list[DocCommand]]
     for document in _markdown_files(root):
         if COUNTER_EXAMPLE_MARKER in document.read_text(encoding="utf-8"):
             skipped.extend(
-                DocCommand(document.name, number, match.group(1), tuple(shlex.split(match.group(2))))
+                DocCommand(
+                    document.name,
+                    number,
+                    match.group("script"),
+                    tuple(shlex.split(match.group(3))),
+                    interpreter=match.group("interpreter"),
+                )
                 for number, match in (
                     (number, _COMMAND.match(text))
                     for number, text in enumerate(document.read_text(encoding="utf-8").splitlines(), 1)
@@ -135,16 +159,24 @@ def documented_commands(root: Path) -> tuple[list[DocCommand], list[DocCommand]]
             match = _COMMAND.match(text)
             if match is None:
                 continue
-            script, rest = match.group(1), match.group(2).strip()
+            interpreter, script, rest = match.group("interpreter"), match.group("script"), match.group(3).strip()
             if _NOT_A_LITERAL.search(rest) or not rest:
-                skipped.append(DocCommand(document.name, number, script, tuple(shlex.split(rest) if rest and not _NOT_A_LITERAL.search(rest) else ())))
+                skipped.append(
+                    DocCommand(
+                        document.name,
+                        number,
+                        script,
+                        tuple(shlex.split(rest) if rest and not _NOT_A_LITERAL.search(rest) else ()),
+                        interpreter=interpreter,
+                    )
+                )
                 continue
             try:
                 tokens = tuple(shlex.split(rest))
             except ValueError:
-                skipped.append(DocCommand(document.name, number, script, ()))
+                skipped.append(DocCommand(document.name, number, script, (), interpreter=interpreter))
                 continue
-            command = DocCommand(document.name, number, script, tokens)
+            command = DocCommand(document.name, number, script, tokens, interpreter=interpreter)
             (skipped if not tokens else checkable).append(command)
     return checkable, skipped
 
@@ -257,11 +289,11 @@ def flags_a_script_accepts(path: Path) -> ParserShape:
         if isinstance(call.func, ast.Attribute) and call.func.attr == "add_parser":
             if not call.args:
                 return ParserShape(frozenset(), {}, False, "add_parser with no name")
-            name = call.args[0]
-            if isinstance(name, ast.Constant) and isinstance(name.value, str):
-                resolved = {name.value}
-            elif isinstance(name, ast.Name) and name.id in loop_names:
-                resolved = loop_names[name.id]
+            name_node = call.args[0]
+            if isinstance(name_node, ast.Constant) and isinstance(name_node.value, str):
+                resolved = {name_node.value}
+            elif isinstance(name_node, ast.Name) and name_node.id in loop_names:
+                resolved = loop_names[name_node.id]
             else:
                 return ParserShape(frozenset(), {}, False, "subcommand name is not resolvable from literals")
             for target in targets:
@@ -303,15 +335,30 @@ def flags_a_script_accepts(path: Path) -> ParserShape:
     )
 
 
+def accepts_for(command: DocCommand, root: Path) -> tuple[frozenset[str], bool]:
+    """The flags a documented command's script accepts, and whether they were readable.
+
+    Dispatch is on the interpreter, not the file extension: the reader decides whether a `.py` script's
+    `argparse` or a `.mjs` walk's `process.argv` handling is the source of truth. When the two disagree
+    about readability — one says static, the other does not — the answer is "not readable", because a
+    flag must never be validated by a reader that did not understand the script.
+    """
+    path = root / command.script
+    if command.interpreter.startswith("python"):
+        shape = flags_a_script_accepts(path)
+        return frozenset(shape.root_flags) | frozenset().union(*shape.subcommand_flags.values()) if shape.static else frozenset(), shape.static
+    js = flags_a_js_script_accepts(path)
+    return js.flags, js.static
+
+
 def unresolved_scripts(root: Path) -> tuple[str, ...]:
-    """Scripts referenced by the docs whose parser this module cannot read."""
+    """Scripts referenced by the docs whose argument wiring this module cannot read."""
     commands, _ = documented_commands(root)
     seen: dict[str, bool] = {}
     for command in commands:
-        path = root / command.script
         if command.script in seen:
             continue
-        _, static = flags_a_script_accepts(path)
+        _, static = accepts_for(command, root)
         seen[command.script] = static
     return tuple(sorted(name for name, static in seen.items() if not static))
 
@@ -320,18 +367,28 @@ def check_flags(commands: Iterable[DocCommand], root: Path) -> tuple[list[DocFla
     """Return (problems, commands whose script could not be read statically)."""
     problems: list[DocFlagProblem] = []
     unchecked: list[DocCommand] = []
-    cache: dict[str, ParserShape] = {}
+    cache: dict[str, tuple[frozenset[str], bool]] = {}
+    shapes: dict[str, ParserShape] = {}
     for command in commands:
         path = root / command.script
         if command.script not in cache:
-            cache[command.script] = flags_a_script_accepts(path)
-        shape = cache[command.script]
-        if not shape.static:
+            cache[command.script] = accepts_for(command, root)
+            shapes[command.script] = flags_a_script_accepts(path)
+        accepted_flags, static = cache[command.script]
+        if not static:
             unchecked.append(command)
             continue
+        shape = shapes[command.script]
         tokens = [token for token in command.tokens if not token.startswith("-")]
-        subcommand = tokens[0] if tokens and tokens[0] in shape.subcommand_flags else ""
-        accepted = set(shape.root_flags) | set(shape.subcommand_flags.get(subcommand, ()))
+        # Subcommand scope only means something for a Python script with subparsers; a walk has none.
+        subcommand = (
+            tokens[0] if command.interpreter.startswith("python") and tokens and tokens[0] in shape.subcommand_flags else ""
+        )
+        accepted = (
+            set(shape.root_flags) | set(shape.subcommand_flags.get(subcommand, ()))
+            if command.interpreter.startswith("python")
+            else set(accepted_flags)
+        )
         for token in command.tokens:
             if not token.startswith("--"):
                 continue
