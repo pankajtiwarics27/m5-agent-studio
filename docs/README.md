@@ -28,6 +28,8 @@ contain placeholder text, and every relative link must resolve.
 
 | Page | Contents |
 |---|---|
+| [`release-rollback-runbook.md`](release-rollback-runbook.md) | Undoing a release or restoring the history database: the exact commands, why a restore is verified logically rather than by file hash, and what the drills did and did not prove |
+| [`ap032-pilot-harness.md`](ap032-pilot-harness.md) | The website pilot harness: the 5 criteria it can measure offline, the 6 it refuses to guess, and how to run the rest by hand at a head you control |
 | [`packaging-rollback.md`](packaging-rollback.md) | Versioned install, update, rollback, artifact integrity |
 | [`release-provenance.md`](release-provenance.md) | SBOM, provenance, scans, and the signing hook (unprovisioned) |
 | [`migration-guide.md`](migration-guide.md) | Upgrading releases, schema migrations, credentials, restore |

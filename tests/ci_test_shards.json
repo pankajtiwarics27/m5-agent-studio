@@ -26,7 +26,7 @@
       645.0
     ],
     "module_counts": [
-      91,
+      92,
       83,
       88
     ],
@@ -197,6 +197,7 @@
       "tests/test_omlx_lifecycle_bridge.py",
       "tests/test_onboarding_preflight.py",
       "tests/test_overlays.py",
+      "tests/test_pilot_harness.py",
       "tests/test_process_supervision.py",
       "tests/test_provider_switching.py",
       "tests/test_release_drill_witness.py",
