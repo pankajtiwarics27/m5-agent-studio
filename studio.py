@@ -57944,7 +57944,7 @@ class FeedbackStore:
         return record
 
     def put(self, record: Feedback) -> Feedback:
-        """Insert or update a record without transferring its identity between sessions."""
+        """Insert or update a record without changing its session, artifact, version or scope."""
         payload = json.dumps(record.to_mapping(), sort_keys=True)
         with self._connect() as connection:
             cursor = connection.execute(
@@ -57961,6 +57961,9 @@ class FeedbackStore:
                     record_json = excluded.record_json,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE scoped_feedback.session_id = excluded.session_id
+                  AND scoped_feedback.artifact_id = excluded.artifact_id
+                  AND scoped_feedback.artifact_sha256 = excluded.artifact_sha256
+                  AND scoped_feedback.scope_kind = excluded.scope_kind
                 """,
                 (
                     record.feedback_id,
@@ -57973,7 +57976,7 @@ class FeedbackStore:
                 ),
             )
             if cursor.rowcount != 1:
-                raise FeedbackConflict("feedback identity belongs to a different session")
+                raise FeedbackConflict("feedback identity has a different recorded binding")
         return record
 
     def get(self, feedback_id: str) -> Feedback | None:

@@ -373,6 +373,23 @@ def test_promotion_cannot_replace_another_sessions_feedback(tmp_path, monkeypatc
     assert studio._read_harness_events(other) == events_before
 
 
+def test_promotion_cannot_overwrite_same_session_artifact_with_derived_id(tmp_path, monkeypatch):
+    studio, client = _harness_client(tmp_path, monkeypatch)
+    session = _session(studio)
+    assert _capture(client, session, feedback_id="shared@preference", verbatim="original").status_code == 200
+    assert _capture(client, session, feedback_id="shared", verbatim="other", material=False).status_code == 200
+    before = _list(client, session).json()["items"]
+    events = studio._read_harness_events(session)
+    result = client.post(
+        f"/api/harness/sessions/{session}/feedback/shared/promote",
+        json={"basis": "repeated correction", "promoted_by": "owner"},
+    )
+    assert result.status_code == 409, result.text
+    assert "no promotion was recorded" in result.json()["detail"]
+    assert _list(client, session).json()["items"] == before
+    assert studio._read_harness_events(session) == events
+
+
 def test_repeating_promotion_in_same_session_preserves_existing_behavior(tmp_path, monkeypatch):
     studio, client = _harness_client(tmp_path, monkeypatch)
     session = _session(studio)

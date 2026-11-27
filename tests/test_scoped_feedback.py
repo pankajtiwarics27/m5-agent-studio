@@ -58,6 +58,25 @@ def test_put_does_not_transfer_record_to_another_session(tmp_path):
         assert connection.execute("SELECT session_id FROM scoped_feedback WHERE feedback_id = 'legacy'").fetchone()[0] == ""
 
 
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"artifact_id": "other.html"},
+        {"artifact_sha256": SHA_B},
+        {"selection": _selection()},
+    ],
+    ids=["artifact", "version", "scope"],
+)
+def test_put_cannot_rebind_an_identity_within_a_session(tmp_path, changes):
+    store = ps.FeedbackStore(tmp_path / "feedback.db")
+    original = _feedback(feedback_id="shared", session_id="a", verbatim="original")
+    store.put(original)
+    candidate = _feedback(feedback_id="shared", session_id="a", verbatim="replacement", **changes)
+    with pytest.raises(ps.FeedbackConflict):
+        store.put(candidate)
+    assert store.get("shared") == original
+
+
 def test_atomic_put_does_not_transfer_record_in_a_race(tmp_path):
     store = ps.FeedbackStore(tmp_path / "feedback.db")
     barrier = Barrier(2, timeout=5)
@@ -77,6 +96,27 @@ def test_atomic_put_does_not_transfer_record_in_a_race(tmp_path):
     winner = next(session for result, session in outcomes if result == "written")
     stored = store.get("same")
     assert stored.session_id == winner and stored.verbatim == winner
+    assert len(store.list()) == 1
+
+
+def test_atomic_put_refuses_same_session_artifact_race(tmp_path):
+    store = ps.FeedbackStore(tmp_path / "feedback.db")
+    barrier = Barrier(2, timeout=5)
+
+    def put(artifact):
+        record = _feedback(feedback_id="same", session_id="a", artifact_id=artifact)
+        barrier.wait()
+        try:
+            store.put(record)
+            return ("written", artifact)
+        except ps.FeedbackConflict:
+            return ("conflict", artifact)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        outcomes = list(pool.map(put, ("a.html", "b.html")))
+    assert sorted(result for result, _ in outcomes) == ["conflict", "written"]
+    winner = next(artifact for result, artifact in outcomes if result == "written")
+    assert store.get("same").artifact_id == winner
     assert len(store.list()) == 1
 
 
