@@ -2263,6 +2263,16 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
 #harnessGitBadge { max-width: 84px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #pane-harness .harness-main { min-width: 0; min-height: 0; overflow-y: auto; position: relative; }
 #pane-harness .harness-stream { width: 100%; max-width: 900px; margin: 0 auto; padding: 24px; min-height: 120px; }
+/* Session work and its existing inert workspace review share one bounded surface. */
+#pane-harness .harness-workspace-layout { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; min-height: 260px; }
+#pane-harness .harness-workspace-layout .harness-stream { flex: 1 1 auto; min-width: 0; }
+#pane-harness .harness-workspace-review { flex: 0 1 auto; max-height: min(32vh, 240px); overflow: auto; }
+@media (min-width: 1280px) {
+  #pane-harness .harness-workspace-layout { flex-direction: row; align-items: stretch; }
+  #pane-harness .harness-workspace-layout .harness-stream { width: auto; margin: 0; }
+  #pane-harness .harness-workspace-review { flex: 0 0 36%; max-width: 440px; max-height: none; margin: 12px 24px 12px 0; }
+}
+#pane-harness .harness-main:has(.harness-welcome) .harness-workspace-layout { flex: 0 0 auto; min-height: 0; margin-top: auto; }
 #pane-harness .harness-main:has(.harness-welcome) .harness-stages,
 #pane-harness .harness-main:has(.harness-welcome) #harnessInfoBanner,
 #pane-harness .harness-main:has(.harness-welcome) .harness-workspace-review { display: none !important; }
@@ -3582,20 +3592,6 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
             </div>
           </div>
 
-          <details id="harnessWorkspaceReview" class="harness-workspace-review" ontoggle="if (this.open) refreshHarnessWorkspaceReview()">
-            <summary>Files, progress &amp; resources</summary>
-            <div class="harness-workspace-review-body">
-              <p id="harnessWorkspaceProgress" role="status">Select a session to see its recorded progress.</p>
-              <p id="harnessWorkspaceContractFiles" role="status">Select a session to see its verification file requirements.</p>
-              <p id="harnessWorkspaceVersions" role="status" aria-live="polite">Open this section to inspect recorded workspace snapshots.</p>
-              <p id="harnessWorkspaceDiffState" role="status" aria-live="polite">Open this section to inspect workspace changes.</p>
-              <pre id="harnessWorkspaceDiffPreview" aria-label="Inert text preview of workspace changes" hidden></pre>
-              <p>Preview is inert text, not an active website. Source references and artifact versions are not available here. Workspace snapshots are recovery records, not artifact versions; changes shown are current and may differ from a snapshot.</p>
-              <button type="button" class="btn btn-xs" onclick="refreshHarnessWorkspaceReview()">Refresh workspace review</button>
-              <button type="button" class="btn btn-xs" onclick="openHarnessEvidenceModal()">Verification &amp; artifacts</button>
-            </div>
-          </details>
-
           <!-- Recovery: the state the run was left in, what survived it, and the way
                forward. Present only when the task is not simply ready or finished, and
                built from `GET …/state` + `GET …/task` - no route was added for it. -->
@@ -3634,7 +3630,22 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
           <!-- Trajectory Stream -->
           <div id="harnessRefusalState"></div>
           <div id="harnessStreamState"></div>
+          <div class="harness-workspace-layout">
           <div id="harnessStream" class="harness-stream"></div>
+          <details id="harnessWorkspaceReview" class="harness-workspace-review" ontoggle="if (this.open) refreshHarnessWorkspaceReview()">
+            <summary>Files, progress &amp; resources</summary>
+            <div class="harness-workspace-review-body">
+              <p id="harnessWorkspaceProgress" role="status">Select a session to see its recorded progress.</p>
+              <p id="harnessWorkspaceContractFiles" role="status">Select a session to see its verification file requirements.</p>
+              <p id="harnessWorkspaceVersions" role="status" aria-live="polite">Open this section to inspect recorded workspace snapshots.</p>
+              <p id="harnessWorkspaceDiffState" role="status" aria-live="polite">Open this section to inspect workspace changes.</p>
+              <pre id="harnessWorkspaceDiffPreview" aria-label="Inert text preview of workspace changes" hidden></pre>
+              <p>Preview is inert text, not an active website. Source references and artifact versions are not available here. Workspace snapshots are recovery records, not artifact versions; changes shown are current and may differ from a snapshot.</p>
+              <button type="button" class="btn btn-xs" onclick="refreshHarnessWorkspaceReview()">Refresh workspace review</button>
+              <button type="button" class="btn btn-xs" onclick="openHarnessEvidenceModal()">Verification &amp; artifacts</button>
+            </div>
+          </details>
+          </div>
 
           <!-- One task composer; existing payload controls and run guards are unchanged. -->
           <div class="hall-composer task-composer">
@@ -12022,7 +12033,9 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     const note = document.getElementById("debateColumnsNote");
     const chosen = debateSelectedModels();
     const panels = debatePanels();
-    const count = Math.max(panels.length, chosen.length);
+    // Existing results describe the previous run, not the next set of model picks.
+    // Only use the selection while no result panels are present.
+    const count = panels.length || chosen.length;
     if (grid) {
       const columns = Math.max(1, Math.min(count, 4));
       grid.style.setProperty("--debate-cols", String(columns));
@@ -15552,6 +15565,8 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
 
   function invalidateHarnessEvidence() {
     harnessEvidenceReadSerial += 1;
+    invalidateHarnessFeedback();
+    invalidateHarnessReference();
     harnessEvidencePayload = null;
     for (const id of ["harnessEvidenceMeta", "harnessEvidenceVerdict", "harnessEvidenceSpec", "harnessEvidenceObserved", "harnessEvidenceChange", "harnessEvidenceArtifacts", "harnessEvidenceLimits"]) {
       const node = document.getElementById(id);
@@ -15848,6 +15863,39 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
   let harnessFeedbackPayload = null;     // {sessionId, artifactId, digest, data, error}
   let harnessFeedbackSelection = null;   // {locatorKind, locator, artifactSha256}
   let harnessFeedbackNote = null;        // {tone, text}
+  let harnessFeedbackGeneration = 0;
+  let harnessFeedbackTargetKey = "";
+  let harnessFeedbackLoading = false;
+  // Drafts stay in this page only, and are never carried to another artifact version.
+  const harnessFeedbackDrafts = new Map();
+  const harnessFeedbackUnsettled = new Set();
+
+  function harnessFeedbackKey(target) {
+    return target && target.sessionId && target.artifactId && target.digest
+      ? JSON.stringify([target.sessionId, target.artifactId, target.digest]) : "";
+  }
+
+  function invalidateHarnessFeedback() {
+    harnessFeedbackGeneration += 1;
+    const field = document.getElementById("harnessFeedbackText");
+    if (field && harnessFeedbackTargetKey) {
+      if (field.value) harnessFeedbackDrafts.set(harnessFeedbackTargetKey, field.value);
+      else harnessFeedbackDrafts.delete(harnessFeedbackTargetKey);
+    }
+    if (field) field.value = "";
+    harnessFeedbackTargetKey = "";
+    harnessFeedbackPayload = null;
+    harnessFeedbackSelection = null;
+    harnessFeedbackNote = null;
+    harnessFeedbackLoading = false;
+    renderHarnessFeedback();
+  }
+
+  function harnessFeedbackIsCurrent(generation, target) {
+    return generation === harnessFeedbackGeneration
+      && harnessFeedbackTargetKey === harnessFeedbackKey(target)
+      && String(target.sessionId) === String(activeHarnessId || "");
+  }
 
   // The artifact version feedback is bound to. It is the latest checkpoint's recorded artifact
   // for this session; without one there is no version to pin to, and the pane says so rather
@@ -15860,20 +15908,29 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
   }
 
   async function loadHarnessFeedback(target) {
-    if (!target || !target.sessionId) {
-      harnessFeedbackPayload = null;
-      return;
+    invalidateHarnessFeedback();
+    const generation = harnessFeedbackGeneration;
+    const key = harnessFeedbackKey(target);
+    if (!key || String(target.sessionId) !== String(activeHarnessId || "")) return;
+    harnessFeedbackTargetKey = key;
+    if (harnessFeedbackUnsettled.has(key)) {
+      harnessFeedbackNote = { tone: "warn", text: "A feedback submission was sent before you left this view. It may have been recorded; check the record before sending again." };
     }
+    const field = document.getElementById("harnessFeedbackText");
+    if (field) field.value = harnessFeedbackDrafts.get(key) || "";
+    harnessFeedbackLoading = true;
+    renderHarnessFeedback();
     try {
       const url = `/api/harness/sessions/${encodeURIComponent(target.sessionId)}/feedback?artifact_id=${encodeURIComponent(target.artifactId)}&artifact_sha256=${target.digest}`;
       const response = await fetch(url);
       const data = response.ok ? await response.json() : { error: `HTTP ${response.status}` };
-      // A response for a session that is no longer active must not be drawn over the new one.
-      if (String(target.sessionId) !== String(activeHarnessId || "")) return;
+      if (!harnessFeedbackIsCurrent(generation, target)) return;
       harnessFeedbackPayload = { ...target, data, error: response.ok ? "" : (data.detail || data.error || "read failed") };
     } catch (error) {
+      if (!harnessFeedbackIsCurrent(generation, target)) return;
       harnessFeedbackPayload = { ...target, data: null, error: `the request never reached the server: ${error.message}` };
     }
+    harnessFeedbackLoading = false;
     renderHarnessFeedback();
   }
 
@@ -15887,9 +15944,13 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     if (!host) return;
     const note = harnessFeedbackNote;
     const noteHtml = note ? `<p class="ev-note" data-tone="${escapeHtml(note.tone)}">${escapeHtml(note.text)}</p>` : "";
+    if (harnessFeedbackLoading) {
+      host.innerHTML = `<div class="ev-heading">Feedback</div><p class="ev-note">Reading feedback for this artifact version…</p>`;
+      return;
+    }
     if (!harnessFeedbackPayload) {
       host.innerHTML = `<div class="ev-heading">Feedback</div>
-        <p class="ev-note">No artifact version is recorded for this session yet, so there is nothing to bind feedback to. A comment that cannot name its version cannot be checked for staleness later.</p>${noteHtml}`;
+        <p class="ev-note">No artifact version is available here. It may not be recorded, or the session read may be incomplete. Feedback cannot be bound until a version is available.</p>${noteHtml}`;
       return;
     }
     if (harnessFeedbackPayload.error) {
@@ -15944,7 +16005,8 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
   // reading must not later be told they approved the work.
   async function confirmHarnessFeedback(feedbackId) {
     const payload = harnessFeedbackPayload;
-    if (!payload || payload.error) return;
+    const generation = harnessFeedbackGeneration;
+    if (!payload || payload.error || !harnessFeedbackIsCurrent(generation, payload)) return;
     try {
       const response = await fetch(`/api/harness/sessions/${encodeURIComponent(payload.sessionId)}/feedback/${encodeURIComponent(feedbackId)}/confirm`, {
         method: "POST",
@@ -15952,6 +16014,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
         body: JSON.stringify({ confirmed_by: "owner" }),
       });
       const data = await response.json().catch(() => null);
+      if (!harnessFeedbackIsCurrent(generation, payload)) return;
       if (!response.ok) {
         harnessFeedbackSay(`The confirmation was refused: ${(data && (data.detail || data.error)) || `HTTP ${response.status}`}`, "danger");
         return;
@@ -15960,17 +16023,20 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
       harnessFeedbackNote = { tone: "ok", text: "Reading confirmed. That settles what the words meant, and nothing about whether the work is accepted." };
       renderHarnessFeedback();
     } catch (error) {
-      harnessFeedbackSay(`The request never reached the server: ${error.message}`, "danger");
+      if (!harnessFeedbackIsCurrent(generation, payload)) return;
+      harnessFeedbackSay(`The response was not received: ${error.message}. Refresh the record before retrying.`, "danger");
     }
   }
 
   // Withdrawing is not deleting the history: the server keeps the record and stops counting it.
   async function withdrawHarnessFeedback(feedbackId) {
     const payload = harnessFeedbackPayload;
-    if (!payload || payload.error) return;
+    const generation = harnessFeedbackGeneration;
+    if (!payload || payload.error || !harnessFeedbackIsCurrent(generation, payload)) return;
     try {
       const response = await fetch(`/api/harness/sessions/${encodeURIComponent(payload.sessionId)}/feedback/${encodeURIComponent(feedbackId)}`, { method: "DELETE" });
       const data = await response.json().catch(() => null);
+      if (!harnessFeedbackIsCurrent(generation, payload)) return;
       if (!response.ok) {
         harnessFeedbackSay(`The withdrawal was refused: ${(data && (data.detail || data.error)) || `HTTP ${response.status}`}`, "danger");
         return;
@@ -15979,16 +16045,19 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
       harnessFeedbackNote = { tone: "ok", text: "Withdrawn. The record of what was said stays where it is; it no longer applies to this version." };
       renderHarnessFeedback();
     } catch (error) {
-      harnessFeedbackSay(`The request never reached the server: ${error.message}`, "danger");
+      if (!harnessFeedbackIsCurrent(generation, payload)) return;
+      harnessFeedbackSay(`The response was not received: ${error.message}. Refresh the record before retrying.`, "danger");
     }
   }
 
   async function submitHarnessFeedback(event) {
     if (event && event.preventDefault) event.preventDefault();
     const payload = harnessFeedbackPayload;
+    const generation = harnessFeedbackGeneration;
     const field = document.getElementById("harnessFeedbackText");
-    const text = field ? String(field.value || "").trim() : "";
-    if (!payload || payload.error) {
+    const originalText = field ? String(field.value || "") : "";
+    const text = originalText.trim();
+    if (!payload || payload.error || !harnessFeedbackIsCurrent(generation, payload)) {
       harnessFeedbackSay("There is no artifact version to record this against, so nothing was sent.", "warn");
       return false;
     }
@@ -15996,6 +16065,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
       harnessFeedbackSay("Nothing was recorded: say what should change, or use a quick action.", "warn");
       return false;
     }
+    harnessFeedbackUnsettled.add(harnessFeedbackTargetKey);
     try {
       const response = await fetch(`/api/harness/sessions/${encodeURIComponent(payload.sessionId)}/feedback`, {
         method: "POST",
@@ -16008,17 +16078,23 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
         }),
       });
       const data = await response.json().catch(() => null);
+      if (!harnessFeedbackIsCurrent(generation, payload)) return;
+      harnessFeedbackUnsettled.delete(harnessFeedbackTargetKey);
       if (!response.ok) {
         harnessFeedbackSay(`The record was refused: ${(data && (data.detail || data.error)) || `HTTP ${response.status}`}`, "danger");
         return false;
       }
-      if (field) field.value = "";
+      if (field && field.value === originalText) {
+        field.value = "";
+        harnessFeedbackDrafts.delete(harnessFeedbackTargetKey);
+      }
       harnessFeedbackSelection = null;
       harnessFeedbackPayload = { ...payload, data, error: "" };
       harnessFeedbackNote = { tone: "ok", text: "Recorded against this version. Confirming what it means is a separate step, and neither one accepts the artifact." };
       renderHarnessFeedback();
     } catch (error) {
-      harnessFeedbackSay(`The request never reached the server: ${error.message}`, "danger");
+      if (!harnessFeedbackIsCurrent(generation, payload)) return;
+      harnessFeedbackSay(`The response was not received: ${error.message}. The comment may have been recorded; refresh and check before retrying.`, "danger");
     }
     return false;
   }
@@ -16046,8 +16122,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     if (target) {
       loadHarnessFeedback(target);
     } else {
-      harnessFeedbackPayload = null;
-      renderHarnessFeedback();
+      invalidateHarnessFeedback();
     }
     // AP-020: references belong to the project, not to the artifact, so they are read from the
     // session's own scope even when this session has no artifact version of its own yet. The
@@ -17251,8 +17326,38 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
   // It also refuses to pretend to be the owner. The approver name is typed by the human and
   // recorded as `owner:<name>`; there is no stored identity this pane could borrow, and an
   // invented one would be exactly the fabricated approval the module exists to reject.
-  let harnessReferencePayload = null; // {scope, data, error}
+  let harnessReferencePayload = null; // {scope, data, error, sessionId, targetKey}
   let harnessReferenceNote = null;    // {tone, text}
+  let harnessReferenceGeneration = 0;
+  let harnessReferenceTargetKey = "";
+  let harnessReferenceLoading = false;
+  const harnessReferenceDrafts = new Map();
+  const harnessReferenceUnsettled = new Set();
+
+  function invalidateHarnessReference() {
+    harnessReferenceGeneration += 1;
+    const approver = document.getElementById("harnessReferenceApprover");
+    const statement = document.getElementById("harnessReferenceStatement");
+    if (harnessReferenceTargetKey && approver && statement) {
+      if (approver.value || statement.value) harnessReferenceDrafts.set(harnessReferenceTargetKey, { approver: approver.value, statement: statement.value });
+      else harnessReferenceDrafts.delete(harnessReferenceTargetKey);
+    }
+    if (approver) approver.value = "";
+    if (statement) statement.value = "";
+    harnessReferenceTargetKey = "";
+    harnessReferencePayload = null;
+    harnessReferenceNote = null;
+    harnessReferenceLoading = false;
+    const inline = document.getElementById("harnessReferenceNote");
+    if (inline) inline.textContent = "";
+    renderHarnessReference();
+  }
+
+  function harnessReferenceIsCurrent(generation, sessionId, target) {
+    return generation === harnessReferenceGeneration
+      && String(sessionId) === String(activeHarnessId || "")
+      && harnessReferenceTargetKey === harnessFeedbackKey(target);
+  }
 
   const HARNESS_REFERENCE_CANNOT_SETTLE_DEFAULT = [
     "new code working",
@@ -17349,9 +17454,13 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     const noteHtml = note
       ? `<p class="ev-note" data-tone="${escapeHtml(note.tone)}">${escapeHtml(note.text)}</p>`
       : "";
+    if (harnessReferenceLoading) {
+      host.innerHTML = `<div class="ev-heading">References</div><p class="ev-note">Reading references for this project…</p>${noteHtml}`;
+      return;
+    }
     if (!harnessReferencePayload) {
       host.innerHTML = `<div class="ev-heading">References</div>
-        <p class="ev-note">No project is open, so there are no references to show.</p>${noteHtml}`;
+        <p class="ev-note">References are not available here; select a session with a recorded artifact version and read its project records.</p>${noteHtml}`;
       return;
     }
     if (harnessReferencePayload.error) {
@@ -17382,24 +17491,34 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
   // The target is the recorded artifact version of the session, exactly as AP-019 binds
   // feedback to it: a reference to a version nobody recorded is a reference to a rumour.
   async function loadHarnessReferences(sessionId, target) {
-    if (!sessionId || !target) {
-      harnessReferencePayload = null;
-      renderHarnessReference();
-      return;
-    }
+    invalidateHarnessReference();
+    const generation = harnessReferenceGeneration;
+    const key = harnessFeedbackKey(target);
+    if (!sessionId || !key || String(target.sessionId) !== String(sessionId) || String(sessionId) !== String(activeHarnessId || "")) return;
+    harnessReferenceTargetKey = key;
+    const draft = harnessReferenceDrafts.get(key);
+    const approver = document.getElementById("harnessReferenceApprover");
+    const statement = document.getElementById("harnessReferenceStatement");
+    if (approver) approver.value = draft ? draft.approver : "";
+    if (statement) statement.value = draft ? draft.statement : "";
+    if (harnessReferenceUnsettled.has(key)) harnessReferenceNote = { tone: "warn", text: "An approval was sent before you left this view. It may have been recorded; check the project records before trying again." };
+    harnessReferenceLoading = true;
+    renderHarnessReference();
     try {
       const response = await fetch(`/api/reference-benchmarks?session_id=${encodeURIComponent(sessionId)}`);
       const data = await response.json().catch(() => null);
-      if (String(sessionId) !== String(activeHarnessId || "")) return; // a stale answer never lands on the new session
+      if (!harnessReferenceIsCurrent(generation, sessionId, target)) return;
       harnessReferencePayload = {
+        sessionId, targetKey: key,
         scope: data && data.project_scope_id ? data.project_scope_id : "",
         data: response.ok ? data : null,
         error: response.ok ? "" : ((data && (data.detail || data.error)) || `HTTP ${response.status}`),
       };
     } catch (error) {
-      if (String(sessionId) !== String(activeHarnessId || "")) return;
-      harnessReferencePayload = { scope: "", data: null, error: `the request never reached the server: ${error.message}` };
+      if (!harnessReferenceIsCurrent(generation, sessionId, target)) return;
+      harnessReferencePayload = { sessionId, targetKey: key, scope: "", data: null, error: `the reference read failed: ${error.message}` };
     }
+    harnessReferenceLoading = false;
     renderHarnessReference();
   }
 
@@ -17410,12 +17529,14 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     if (event && event.preventDefault) event.preventDefault();
     const payload = harnessReferencePayload;
     const target = harnessFeedbackPayload;
+    const generation = harnessReferenceGeneration;
     const approverField = document.getElementById("harnessReferenceApprover");
     const statementField = document.getElementById("harnessReferenceStatement");
     const approver = approverField ? String(approverField.value || "").trim() : "";
-    const statement = statementField ? String(statementField.value || "").trim() : "";
+    const originalStatement = statementField ? String(statementField.value || "") : "";
+    const statement = originalStatement.trim();
 
-    if (!payload || payload.error || !payload.scope) {
+    if (!payload || payload.error || !payload.scope || !target || payload.targetKey !== harnessFeedbackKey(target) || !harnessReferenceIsCurrent(generation, payload.sessionId, target)) {
       harnessReferenceSay("This project's references could not be read, so nothing was recorded. Reload the pane first.", "warn");
       return false;
     }
@@ -17431,6 +17552,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
       harnessReferenceSay("Nothing was recorded: say in your own words what you are approving, or the record would be a click the agent wrote for you.", "warn");
       return false;
     }
+    harnessReferenceUnsettled.add(payload.targetKey);
     try {
       const response = await fetch("/api/reference-benchmarks", {
         method: "POST",
@@ -17454,18 +17576,25 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
         }),
       });
       const data = await response.json().catch(() => null);
+      if (!harnessReferenceIsCurrent(generation, payload.sessionId, target)) return false;
+      harnessReferenceUnsettled.delete(payload.targetKey);
       if (!response.ok) {
         harnessReferenceSay(`The record was refused: ${(data && (data.detail || data.error)) || `HTTP ${response.status}`}`, "danger");
         return false;
       }
-      if (statementField) statementField.value = "";
+      if (statementField && statementField.value === originalStatement) statementField.value = "";
+      const refresh = loadHarnessReferences(payload.sessionId, target);
+      const refreshGeneration = harnessReferenceGeneration;
+      await refresh;
+      if (!harnessReferenceIsCurrent(refreshGeneration, payload.sessionId, target)) return false;
       harnessReferenceNote = {
         tone: "ok",
         text: "Recorded as a reference, with your words as the approval. It settles reuse of this style, not the next artifact, and it does not accept or publish anything.",
       };
-      await loadHarnessReferences(payload.sessionId || activeHarnessId, target);
+      renderHarnessReference();
     } catch (error) {
-      harnessReferenceSay(`The request never reached the server: ${error.message}`, "danger");
+      if (!harnessReferenceIsCurrent(generation, payload.sessionId, target)) return false;
+      harnessReferenceSay(`The response was not received: ${error.message}. The approval may have been recorded; refresh and check before retrying.`, "danger");
     }
     return false;
   }
@@ -19284,6 +19413,9 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     });
   } catch (_) { applyTheme("dark"); }
   applyShortcutHints();
+  // Open only after the handlers above exist; an HTML open attribute can fire toggle during parsing.
+  const workspaceReview = document.getElementById("harnessWorkspaceReview");
+  if (workspaceReview) workspaceReview.open = true;
   presentDebateEmpty();
   presentHallEmpty();
   // A checkpoint outlives the page it was written on: drawing it here is what makes a failed

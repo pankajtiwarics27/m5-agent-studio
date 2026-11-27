@@ -44,17 +44,16 @@ for (const c of cases) {
     if (host.querySelector(bad)) { console.log('FAIL: element injected:', bad); failures++; }
   }
   if (host.querySelectorAll('dt').length !== c.length) { console.log('FAIL: row count'); failures++; }
-  if (PROPOSED && c[0].note) {
+  if (c[0].note) {
     const note = host.querySelector('p.ev-note');
     if (!note || note.textContent !== c[0].note) { console.log('FAIL: note text not verbatim/escaped'); failures++; }
   }
-  if (PROPOSED && !c[0].note && host.querySelector('p.ev-note')) { console.log('FAIL: empty note emitted'); failures++; }
-  if (!PROPOSED && host.querySelector('p.ev-note')) { console.log('FAIL: shipped renderer emitted a note element'); failures++; }
+  if (!c[0].note && host.querySelector('p.ev-note')) { console.log('FAIL: empty note emitted'); failures++; }
   // no handlers survive as attributes
   for (const el of host.querySelectorAll('*')) for (const a of el.attributes) {
     if (/^on/i.test(a.name)) { console.log('FAIL: handler attribute survived:', a.name); failures++; }
   }
   console.log('ok', JSON.stringify(fn(c)).slice(0, 70));
 }
-console.log(failures === 0 ? 'PROPOSED PATCH: ALL PROBE CHECKS PASSED' : `${failures} FAILURES`);
+console.log(failures === 0 ? `${PROPOSED ? 'PROPOSED' : 'SHIPPED'} RENDERER: ALL PROBE CHECKS PASSED` : `${failures} FAILURES`);
 process.exit(failures === 0 ? 0 : 1);

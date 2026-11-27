@@ -346,6 +346,7 @@ const assert=require('node:assert/strict');
 let activeHarnessId='one', nodes={}, rendered=[];
 let document={getElementById(id){return nodes[id] ||= {textContent:'old secret'}}};
 function harnessCachedEvents(){return [];} function harnessVerdictTone(){return '';}
+function invalidateHarnessFeedback(){} function invalidateHarnessReference(){} // Covered by the separate fencing probes.
 function renderHarnessEvidence(value){rendered.push(value);} function openOverlay(){} function closeOverlay(){invalidateHarnessEvidence();}
 function showToast(){} let fetch;
 ''' + html[start:end] + r'''

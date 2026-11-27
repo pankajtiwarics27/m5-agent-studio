@@ -113,9 +113,6 @@ An agent session over a workspace, with the diff, approval, and abort controls.
 | button | — | Approve | resolveHarnessApproval('__inventory_probe__','approve','__inventory_probe__') |
 | button | — | + New session | startFreshHarnessDraft() |
 | input | harnessSessionFilter | — | — |
-| summary | — | Files, progress & resources | — |
-| button | — | Refresh workspace review | refreshHarnessWorkspaceReview() |
-| button | — | Verification & artifacts | openHarnessEvidenceModal() |
 | button | harnessTimelineToggle | Session log | toggleHarnessTimeline() |
 | button | — | All | setHarnessEventFilter('all') |
 | button | — | Tools | setHarnessEventFilter('tool') |
@@ -125,6 +122,9 @@ An agent session over a workspace, with the diff, approval, and abort controls.
 | button | harnessTimelineJump | Jump to latest ↓ | jumpToLatestHarnessEvent() |
 | button | harnessTimelineReplay | Replay log | replayHarnessLog() |
 | button | harnessTimelineResync | Resync | harnessResyncFromSnapshot('operator') |
+| summary | — | Files, progress & resources | — |
+| button | — | Refresh workspace review | refreshHarnessWorkspaceReview() |
+| button | — | Verification & artifacts | openHarnessEvidenceModal() |
 | textarea | harnessPromptInput | — | — |
 | select | harnessLeadModel | — | — |
 | select | harnessPolicy | Standard (Ask before Bash) Autonomous (Auto Build & Test) Plan & Audit (Read-Only) | — |
@@ -395,11 +395,11 @@ provenance; a matching snapshot cannot clear separate review holds.
 | Input | Current digest | Owner-recorded digest |
 |---|---|---|
 | `ledger_content_sha256` | `cb04b1bdf0ec9be6b39d2233496d9e9e53ffb91b0f92397824c9964af333b85f` | `not recorded` |
-| `source_manifest_sha256` | `383211760a6cd3ba327def9cb9ccc55db11a17bda64daf3fdf60ba19a3c51b70` | `not recorded` |
-| `control_inventory_sha256` | `a7719304dc93be02f10e9882d8bc296106e974c2120a201fc5da8f9a49272757` | `not recorded` |
-| `route_map_sha256` | `e72e7d781027703420418cf7616457662798b5bc34bfce5788b9b356f9683a25` | `not recorded` |
-| `authorization_trace_sha256` | `d803505da5b73353a1cf8bd42219272b000bde7c136740f3d7d0b312474b4b1d` | `not recorded` |
-| `frontend_sha256` | `848af209461f2a56227f818208f644cca89ab99e1fd85a71a547c699fac0d3ea` | `not recorded` |
+| `source_manifest_sha256` | `7943f6a14512afbff7a913c24bbc167a3be54eeaa29a2920e7b80a375958a622` | `not recorded` |
+| `control_inventory_sha256` | `856e01df20d5ca4b7a88c6ad7abeff46d513000c60a362b19a19d155fd9695a8` | `not recorded` |
+| `route_map_sha256` | `e9a02592a567243d2dc3844b39704da45316da0ac724d5fd8fb189c6eb31e342` | `not recorded` |
+| `authorization_trace_sha256` | `d33c8c33f6cb311b887c7f8c12a986034a2b1a634dde965a2e4dd0f08f5902bf` | `not recorded` |
+| `frontend_sha256` | `c8ba86f1215a9d9aa7254272f2d2bd1153c3111166b74282da00296e42ed8d64` | `not recorded` |
 | `screenshot_manifest_sha256` | `b488bf453ae260b6564ae592f0455e3d70cff3121dca1e7c823c7abb270b44d3` | `not recorded` |
 | `screenshot_index_sha256` | `16b0620ca1d02a1b181ad15b3a2b0c6aae9e7aa539654d27ed80d9147189634e` | `not recorded` |
 | `generator_sha256` | `6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65` | `not recorded` |

@@ -7,6 +7,9 @@ permission to ship.
 
 from __future__ import annotations
 
+import subprocess
+from pathlib import Path
+
 import pytest
 
 SHA_A = "a" * 64
@@ -522,3 +525,16 @@ def test_coverage_reports_the_same_missing_check_once(tmp_path, monkeypatch):
     ).json()
     assert answer["missing"] == ["check:a11y"]
     assert answer["covered"] is False
+
+
+def test_reference_view_fences_races_and_keeps_approval_drafts_by_version():
+    root = Path(__file__).resolve().parents[1]
+    result = subprocess.run(
+        ["node", "tests/reference_fencing_probe.cjs"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "reference fencing probe passed" in result.stdout

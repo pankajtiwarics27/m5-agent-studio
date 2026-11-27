@@ -8,6 +8,9 @@ written here can be read later as acceptance or permission.
 
 from __future__ import annotations
 
+import subprocess
+from pathlib import Path
+
 SHA_A = "a" * 64
 SHA_B = "b" * 64
 
@@ -317,3 +320,16 @@ def test_one_run_cannot_confirm_or_withdraw_another_runs_comment(tmp_path, monke
     still = _list(client, owner).json()
     assert [item["feedback_id"] for item in still["items"]] == ["fb-owner"]
     assert still["items"][0]["deleted"] is False
+
+
+def test_feedback_view_fences_races_and_keeps_drafts_by_version():
+    root = Path(__file__).resolve().parents[1]
+    result = subprocess.run(
+        ["node", "tests/feedback_fencing_probe.cjs"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "feedback fencing probe passed" in result.stdout

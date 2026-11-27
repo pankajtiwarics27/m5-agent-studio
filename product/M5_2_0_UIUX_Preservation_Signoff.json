@@ -26,11 +26,11 @@
     "approved_inputs": null,
     "current_inputs": {
       "ledger_content_sha256": "cb04b1bdf0ec9be6b39d2233496d9e9e53ffb91b0f92397824c9964af333b85f",
-      "source_manifest_sha256": "383211760a6cd3ba327def9cb9ccc55db11a17bda64daf3fdf60ba19a3c51b70",
-      "control_inventory_sha256": "a7719304dc93be02f10e9882d8bc296106e974c2120a201fc5da8f9a49272757",
-      "route_map_sha256": "e72e7d781027703420418cf7616457662798b5bc34bfce5788b9b356f9683a25",
-      "authorization_trace_sha256": "d803505da5b73353a1cf8bd42219272b000bde7c136740f3d7d0b312474b4b1d",
-      "frontend_sha256": "848af209461f2a56227f818208f644cca89ab99e1fd85a71a547c699fac0d3ea",
+      "source_manifest_sha256": "7943f6a14512afbff7a913c24bbc167a3be54eeaa29a2920e7b80a375958a622",
+      "control_inventory_sha256": "856e01df20d5ca4b7a88c6ad7abeff46d513000c60a362b19a19d155fd9695a8",
+      "route_map_sha256": "e9a02592a567243d2dc3844b39704da45316da0ac724d5fd8fb189c6eb31e342",
+      "authorization_trace_sha256": "d33c8c33f6cb311b887c7f8c12a986034a2b1a634dde965a2e4dd0f08f5902bf",
+      "frontend_sha256": "c8ba86f1215a9d9aa7254272f2d2bd1153c3111166b74282da00296e42ed8d64",
       "screenshot_manifest_sha256": "b488bf453ae260b6564ae592f0455e3d70cff3121dca1e7c823c7abb270b44d3",
       "screenshot_index_sha256": "16b0620ca1d02a1b181ad15b3a2b0c6aae9e7aa539654d27ed80d9147189634e",
       "generator_sha256": "6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65",
@@ -40,11 +40,11 @@
   },
   "inputs": {
     "ledger_sha256": "96f9ca873e9d2105935e73c8df6a807095e6b11e4ab48a4d64926941e1ccd28a",
-    "source_manifest_sha256": "383211760a6cd3ba327def9cb9ccc55db11a17bda64daf3fdf60ba19a3c51b70",
-    "control_inventory_sha256": "a7719304dc93be02f10e9882d8bc296106e974c2120a201fc5da8f9a49272757",
-    "route_map_sha256": "e72e7d781027703420418cf7616457662798b5bc34bfce5788b9b356f9683a25",
-    "authorization_trace_sha256": "d803505da5b73353a1cf8bd42219272b000bde7c136740f3d7d0b312474b4b1d",
-    "frontend_sha256": "848af209461f2a56227f818208f644cca89ab99e1fd85a71a547c699fac0d3ea"
+    "source_manifest_sha256": "7943f6a14512afbff7a913c24bbc167a3be54eeaa29a2920e7b80a375958a622",
+    "control_inventory_sha256": "856e01df20d5ca4b7a88c6ad7abeff46d513000c60a362b19a19d155fd9695a8",
+    "route_map_sha256": "e9a02592a567243d2dc3844b39704da45316da0ac724d5fd8fb189c6eb31e342",
+    "authorization_trace_sha256": "d33c8c33f6cb311b887c7f8c12a986034a2b1a634dde965a2e4dd0f08f5902bf",
+    "frontend_sha256": "c8ba86f1215a9d9aa7254272f2d2bd1153c3111166b74282da00296e42ed8d64"
   },
   "approval_request": [
     {
@@ -475,27 +475,6 @@
           "handler": null
         },
         {
-          "tag": "summary",
-          "id": null,
-          "text": "Files, progress & resources",
-          "onclick": null,
-          "handler": null
-        },
-        {
-          "tag": "button",
-          "id": null,
-          "text": "Refresh workspace review",
-          "onclick": "refreshHarnessWorkspaceReview()",
-          "handler": "refreshHarnessWorkspaceReview"
-        },
-        {
-          "tag": "button",
-          "id": null,
-          "text": "Verification & artifacts",
-          "onclick": "openHarnessEvidenceModal()",
-          "handler": "openHarnessEvidenceModal"
-        },
-        {
           "tag": "button",
           "id": "harnessTimelineToggle",
           "text": "Session log",
@@ -557,6 +536,27 @@
           "text": "Resync",
           "onclick": "harnessResyncFromSnapshot('operator')",
           "handler": "harnessResyncFromSnapshot"
+        },
+        {
+          "tag": "summary",
+          "id": null,
+          "text": "Files, progress & resources",
+          "onclick": null,
+          "handler": null
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "text": "Refresh workspace review",
+          "onclick": "refreshHarnessWorkspaceReview()",
+          "handler": "refreshHarnessWorkspaceReview"
+        },
+        {
+          "tag": "button",
+          "id": null,
+          "text": "Verification & artifacts",
+          "onclick": "openHarnessEvidenceModal()",
+          "handler": "openHarnessEvidenceModal"
         },
         {
           "tag": "textarea",

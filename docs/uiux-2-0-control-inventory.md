@@ -6,7 +6,7 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 re-derived from the markup on every run.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
-* Frontend digest: `848af209461f2a56227f818208f644cca89ab99e1fd85a71a547c699fac0d3ea`.
+* Frontend digest: `c8ba86f1215a9d9aa7254272f2d2bd1153c3111166b74282da00296e42ed8d64`.
 * Panes: 6 · controls in panes: 113 · controls in the
   shared chrome: 169 · script-rendered: 76.
 
@@ -66,18 +66,18 @@ Section `pane-harness`, 38 interactive elements.
 | 1 | button | — | button | Inventory-only approval route anchor | resolveHarnessApproval('__inventory_probe__','approve','__inventory_probe__') |
 | 2 | button | — | — | + New session | startFreshHarnessDraft() |
 | 3 | input | harnessSessionFilter | search | Filter harness sessions by title, id, status or policy | renderHarnessSidebar() |
-| 4 | summary | — | — | Files, progress & resources | — |
-| 5 | button | — | button | Refresh workspace review | refreshHarnessWorkspaceReview() |
-| 6 | button | — | button | Verification & artifacts | openHarnessEvidenceModal() |
-| 7 | button | harnessTimelineToggle | button | Session log | toggleHarnessTimeline() |
-| 8 | button | — | button | All | setHarnessEventFilter('all') |
-| 9 | button | — | button | Tools | setHarnessEventFilter('tool') |
-| 10 | button | — | button | Approvals | setHarnessEventFilter('approval') |
-| 11 | button | — | button | Errors | setHarnessEventFilter('error') |
-| 12 | button | — | button | System | setHarnessEventFilter('system') |
-| 13 | button | harnessTimelineJump | button | Jump to latest ↓ | jumpToLatestHarnessEvent() |
-| 14 | button | harnessTimelineReplay | button | Replay log | replayHarnessLog() |
-| 15 | button | harnessTimelineResync | button | Resync | harnessResyncFromSnapshot('operator') |
+| 4 | button | harnessTimelineToggle | button | Session log | toggleHarnessTimeline() |
+| 5 | button | — | button | All | setHarnessEventFilter('all') |
+| 6 | button | — | button | Tools | setHarnessEventFilter('tool') |
+| 7 | button | — | button | Approvals | setHarnessEventFilter('approval') |
+| 8 | button | — | button | Errors | setHarnessEventFilter('error') |
+| 9 | button | — | button | System | setHarnessEventFilter('system') |
+| 10 | button | harnessTimelineJump | button | Jump to latest ↓ | jumpToLatestHarnessEvent() |
+| 11 | button | harnessTimelineReplay | button | Replay log | replayHarnessLog() |
+| 12 | button | harnessTimelineResync | button | Resync | harnessResyncFromSnapshot('operator') |
+| 13 | summary | — | — | Files, progress & resources | — |
+| 14 | button | — | button | Refresh workspace review | refreshHarnessWorkspaceReview() |
+| 15 | button | — | button | Verification & artifacts | openHarnessEvidenceModal() |
 | 16 | textarea | harnessPromptInput | — | Your task for the Harness | — |
 | 17 | select | harnessLeadModel | — | — | handleModelSelectChange(this, patchActiveHarnessSettings) |
 | 18 | select | harnessPolicy | — | Standard (Ask before Bash) Autonomous (Auto Build & Test) Plan & Audit (Read-Only) | patchActiveHarnessSettings() |

@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "848af209461f2a56227f818208f644cca89ab99e1fd85a71a547c699fac0d3ea",
+  "frontend_sha256": "c8ba86f1215a9d9aa7254272f2d2bd1153c3111166b74282da00296e42ed8d64",
   "panes": [
     {
       "dom_id": "start",
@@ -172,24 +172,6 @@
           "oninput": "renderHarnessSidebar()"
         },
         {
-          "tag": "summary",
-          "text": "Files, progress & resources"
-        },
-        {
-          "tag": "button",
-          "type": "button",
-          "class": "btn btn-xs",
-          "onclick": "refreshHarnessWorkspaceReview()",
-          "text": "Refresh workspace review"
-        },
-        {
-          "tag": "button",
-          "type": "button",
-          "class": "btn btn-xs",
-          "onclick": "openHarnessEvidenceModal()",
-          "text": "Verification & artifacts"
-        },
-        {
           "tag": "button",
           "id": "harnessTimelineToggle",
           "type": "button",
@@ -278,6 +260,24 @@
           "title": "Re-read the authoritative task state and the whole log",
           "onclick": "harnessResyncFromSnapshot('operator')",
           "text": "Resync"
+        },
+        {
+          "tag": "summary",
+          "text": "Files, progress & resources"
+        },
+        {
+          "tag": "button",
+          "type": "button",
+          "class": "btn btn-xs",
+          "onclick": "refreshHarnessWorkspaceReview()",
+          "text": "Refresh workspace review"
+        },
+        {
+          "tag": "button",
+          "type": "button",
+          "class": "btn btn-xs",
+          "onclick": "openHarnessEvidenceModal()",
+          "text": "Verification & artifacts"
         },
         {
           "tag": "textarea",
