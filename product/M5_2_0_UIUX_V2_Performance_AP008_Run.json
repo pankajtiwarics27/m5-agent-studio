@@ -1,14 +1,14 @@
 {
   "story": "UIV2-29",
   "git": {
-    "head": "fa0c7015d1ece7a34a1199896b31f3c967327eb9",
+    "head": "971c8a17694eb929350f63c87761daca60298bb8",
     "dirty": true
   },
   "source_sha256": {
     "static/index.html": "85da77e41ea6b18ace1f28113a060965d5ac4286e9c2996700a078fd6d03e814",
     "scripts/uiv2_performance_safety_walk.mjs": "db65e34744d881132250aba25da39f6d239adcf43c407ac4ebaf85f840070643"
   },
-  "generated_at": "2026-11-27T11:28:02.275Z",
+  "generated_at": "2026-11-27T12:27:09.672Z",
   "environment": {
     "node": "v22.22.3",
     "platform": "linux",
@@ -54,11 +54,11 @@
       },
       "fast": {
         "model": "Gemma-4-21B-REAP-4bit",
-        "elapsed_ms": 337.09999999403954,
+        "elapsed_ms": 334.90000000596046,
         "renders": 18,
         "schedules": 58,
         "model_tokens": 58,
-        "sse_per_second": 172.056,
+        "sse_per_second": 173.186,
         "complete_chars": 330
       }
     },
@@ -68,7 +68,7 @@
           "Nodes": 8683,
           "Documents": 2,
           "JSEventListeners": 344,
-          "JSHeapUsedSize": 3425984,
+          "JSHeapUsedSize": 3424188,
           "JSHeapTotalSize": 4194304,
           "LayoutCount": 1,
           "RecalcStyleCount": 3
@@ -77,7 +77,7 @@
           "Nodes": 8683,
           "Documents": 2,
           "JSEventListeners": 344,
-          "JSHeapUsedSize": 3388252,
+          "JSHeapUsedSize": 3382708,
           "JSHeapTotalSize": 4165632,
           "LayoutCount": 123,
           "RecalcStyleCount": 245
@@ -86,13 +86,13 @@
           "Nodes": 8683,
           "Documents": 2,
           "JSEventListeners": 344,
-          "JSHeapUsedSize": 3378828,
+          "JSHeapUsedSize": 3378680,
           "JSHeapTotalSize": 4165632,
           "LayoutCount": 245,
           "RecalcStyleCount": 487
         },
         "cycle_1": {
-          "elapsed_ms": 3969.7000000178814,
+          "elapsed_ms": 3982.800000011921,
           "cursor": 18000,
           "cached": 5000,
           "cards": 300,
@@ -100,7 +100,7 @@
           "last": 18000
         },
         "cycle_2": {
-          "elapsed_ms": 3974.2000000178814,
+          "elapsed_ms": 3973.2000000178814,
           "cursor": 30000,
           "cached": 5000,
           "cards": 300,
@@ -111,9 +111,9 @@
       },
       "steady": {
         "calls": 20,
-        "mean_ms": 2.594999997317791,
-        "p95_ms": 3.5999999940395355,
-        "max_ms": 3.699999988079071,
+        "mean_ms": 1.8049999982118607,
+        "p95_ms": 2.2999999821186066,
+        "max_ms": 3.899999976158142,
         "cards": 300
       }
     },
@@ -121,10 +121,10 @@
       {
         "viewport": "1640x900",
         "theme": "light",
-        "cls_total": 0.21757,
-        "cls_internal_stream": 0.21757,
+        "cls_total": 0.18827,
+        "cls_internal_stream": 0.18827,
         "cls_external_shell": 0,
-        "shifts": 7,
+        "shifts": 6,
         "overflow": 0,
         "max_geometry_delta": 0,
         "cards": 300,
@@ -145,10 +145,10 @@
       {
         "viewport": "1440x900",
         "theme": "light",
-        "cls_total": 0.19692,
-        "cls_internal_stream": 0.19692,
+        "cls_total": 0.22974,
+        "cls_internal_stream": 0.22974,
         "cls_external_shell": 0,
-        "shifts": 6,
+        "shifts": 7,
         "overflow": 0,
         "max_geometry_delta": 0,
         "cards": 300,
@@ -169,10 +169,10 @@
       {
         "viewport": "1280x800",
         "theme": "light",
-        "cls_total": 0.15491,
-        "cls_internal_stream": 0.15491,
+        "cls_total": 0.18073,
+        "cls_internal_stream": 0.18073,
         "cls_external_shell": 0,
-        "shifts": 6,
+        "shifts": 7,
         "overflow": 0,
         "max_geometry_delta": 0,
         "cards": 300,
@@ -245,7 +245,7 @@
       "group": "sse",
       "step": "the measured fast fixture actually exceeds fifty scheduled SSE updates per second",
       "passed": true,
-      "detail": "rate=172.1/s elapsed=337.1ms schedules=58"
+      "detail": "rate=173.2/s elapsed=334.9ms schedules=58"
     },
     {
       "group": "dom-memory",
@@ -275,7 +275,7 @@
       "group": "dom-memory",
       "step": "post-GC JS heap remains within the declared repeated-cycle plateau budgets",
       "passed": true,
-      "detail": "baseline=3425984 cycle1=3388252 cycle2=3378828 cycle_delta=-9424 baseline_delta=-47156"
+      "detail": "baseline=3424188 cycle1=3382708 cycle2=3378680 cycle_delta=-4028 baseline_delta=-45508"
     },
     {
       "group": "dom-memory",
@@ -287,13 +287,13 @@
       "group": "dom-memory",
       "step": "ten-event frames retain the existing four-millisecond full-window budget",
       "passed": true,
-      "detail": "{\"calls\":20,\"mean_ms\":2.594999997317791,\"p95_ms\":3.5999999940395355,\"max_ms\":3.699999988079071,\"cards\":300}"
+      "detail": "{\"calls\":20,\"mean_ms\":1.8049999982118607,\"p95_ms\":2.2999999821186066,\"max_ms\":3.899999976158142,\"cards\":300}"
     },
     {
       "group": "layout",
       "step": "1640x900 light: streaming shifts neither shell geometry nor the page",
       "passed": true,
-      "detail": "{\"cls_total\":0.21757,\"cls_internal_stream\":0.21757,\"cls_external_shell\":0,\"shifts\":7,\"overflow\":0,\"max_geometry_delta\":0,\"cards\":300,\"cursor\":30302}",
+      "detail": "{\"cls_total\":0.18827,\"cls_internal_stream\":0.18827,\"cls_external_shell\":0,\"shifts\":6,\"overflow\":0,\"max_geometry_delta\":0,\"cards\":300,\"cursor\":30302}",
       "viewport": "1640x900",
       "theme": "light",
       "pane": "harness"
@@ -311,7 +311,7 @@
       "group": "layout",
       "step": "1440x900 light: streaming shifts neither shell geometry nor the page",
       "passed": true,
-      "detail": "{\"cls_total\":0.19692,\"cls_internal_stream\":0.19692,\"cls_external_shell\":0,\"shifts\":6,\"overflow\":0,\"max_geometry_delta\":0,\"cards\":300,\"cursor\":30502}",
+      "detail": "{\"cls_total\":0.22974,\"cls_internal_stream\":0.22974,\"cls_external_shell\":0,\"shifts\":7,\"overflow\":0,\"max_geometry_delta\":0,\"cards\":300,\"cursor\":30502}",
       "viewport": "1440x900",
       "theme": "light",
       "pane": "harness"
@@ -329,7 +329,7 @@
       "group": "layout",
       "step": "1280x800 light: streaming shifts neither shell geometry nor the page",
       "passed": true,
-      "detail": "{\"cls_total\":0.15491,\"cls_internal_stream\":0.15491,\"cls_external_shell\":0,\"shifts\":6,\"overflow\":0,\"max_geometry_delta\":0,\"cards\":300,\"cursor\":30702}",
+      "detail": "{\"cls_total\":0.18073,\"cls_internal_stream\":0.18073,\"cls_external_shell\":0,\"shifts\":7,\"overflow\":0,\"max_geometry_delta\":0,\"cards\":300,\"cursor\":30702}",
       "viewport": "1280x800",
       "theme": "light",
       "pane": "harness"
@@ -371,7 +371,7 @@
   "captures": [
     {
       "path": "chat-midstream.png",
-      "sha256": "c9d11d9732897ef587a71a4bb37ce9f0806fbdafa3004adc0496ec9d677ed23f",
+      "sha256": "abb4bd85f49335e0dddc222023cf33598efaf425a5f50a08e7c72355f9ca2dd9",
       "group": "sse",
       "viewport": "1440x900",
       "theme": "dark",
@@ -380,7 +380,7 @@
     },
     {
       "path": "chat-complete.png",
-      "sha256": "54acb654f409e503759b2865bf5c1e162eaf609d5d99b9408f69aba197fdbb5a",
+      "sha256": "838186467e5d723d05c00f6663b847542fc81d7c5a80065ae4b51b612562bf2d",
       "group": "sse",
       "viewport": "1440x900",
       "theme": "dark",
@@ -389,7 +389,7 @@
     },
     {
       "path": "chat-high-frequency-complete.png",
-      "sha256": "3d9b19371cf0a55689176ed60c211c739f7b11f2b7bc313582a6cd19c83dd5ec",
+      "sha256": "f3b89c0dedd0e815daf75f3ada9d0bb021efdb94efc567d7673c571a088e86c1",
       "group": "sse",
       "viewport": "1440x900",
       "theme": "dark",
@@ -398,7 +398,7 @@
     },
     {
       "path": "layout/light/1640x900-harness.png",
-      "sha256": "cebe0a88101b38560f12636591ddd4c560eb015fe5e21369c63d82c9ad2a101b",
+      "sha256": "fca88772c3ab889009bff7d66b7e7fd7d2bcb4e9773bb89d7366ec35ec09ad9b",
       "group": "layout",
       "viewport": "1640x900",
       "theme": "light",
@@ -407,7 +407,7 @@
     },
     {
       "path": "layout/dark/1640x900-harness.png",
-      "sha256": "344321819d17068f97d64046054515a10a2c83d0d34d0eceb8dc30733fe90fca",
+      "sha256": "400ac4dfad22e5c966212f51b0dd5379bdf93abc0e83327906247b4294fbd398",
       "group": "layout",
       "viewport": "1640x900",
       "theme": "dark",
@@ -416,7 +416,7 @@
     },
     {
       "path": "layout/light/1440x900-harness.png",
-      "sha256": "fb9aba9c167e54e4283602670d6faaed57ad7563fca6c12c8ddb672abad77b97",
+      "sha256": "953c96f1dd9a367f07c1309371f120a34cbe9aeaca89d4d5e40ec4a268e00a68",
       "group": "layout",
       "viewport": "1440x900",
       "theme": "light",
@@ -425,7 +425,7 @@
     },
     {
       "path": "layout/dark/1440x900-harness.png",
-      "sha256": "bd6b81fd9f3d004cd05dbf80b688c7ec08f8a355a1de6577422aad915f6f7cb2",
+      "sha256": "91cc074f9703bb6b270267dc7a65e0e0cc95aed8a6251a11b3f996969d0c6de3",
       "group": "layout",
       "viewport": "1440x900",
       "theme": "dark",
@@ -434,7 +434,7 @@
     },
     {
       "path": "layout/light/1280x800-harness.png",
-      "sha256": "92195d919530c67f098270377f8c19b9fe1b003f0065b7fa130d88be83439756",
+      "sha256": "976410179f5ad0bf2f0d4aec1820147dfba355eaff2761a1ad2eaee10193cfea",
       "group": "layout",
       "viewport": "1280x800",
       "theme": "light",
@@ -443,7 +443,7 @@
     },
     {
       "path": "layout/dark/1280x800-harness.png",
-      "sha256": "6bf4a8379391805f84d87905e26790c0daadd624c8ab0ce19a711c3e3bb000ee",
+      "sha256": "3ade3c0f2dfe1c65852f4250d8cdb8ccb2c1159b120d47e936b3dc26903145a3",
       "group": "layout",
       "viewport": "1280x800",
       "theme": "dark",

@@ -15835,7 +15835,9 @@ async def api_capture_scoped_feedback(session_id: str, request: Request) -> JSON
             # something the caller did not ask for.
             scope_kind=str(body["scope_kind"]) if body.get("scope_kind") else None,
         )
-        get_scoped_feedback_store().put(record)
+        get_scoped_feedback_store().create(record)
+    except scoped_feedback.FeedbackConflict as exc:
+        raise HTTPException(status_code=409, detail="Feedback identity already exists; no new feedback was recorded.") from exc
     except scoped_feedback.FeedbackError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

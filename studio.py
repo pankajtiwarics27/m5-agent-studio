@@ -35350,7 +35350,9 @@ async def api_capture_scoped_feedback(session_id: str, request: Request) -> JSON
             # something the caller did not ask for.
             scope_kind=str(body["scope_kind"]) if body.get("scope_kind") else None,
         )
-        get_scoped_feedback_store().put(record)
+        get_scoped_feedback_store().create(record)
+    except scoped_feedback.FeedbackConflict as exc:
+        raise HTTPException(status_code=409, detail="Feedback identity already exists; no new feedback was recorded.") from exc
     except scoped_feedback.FeedbackError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -57912,6 +57914,31 @@ class FeedbackStore:
         connection = sqlite3.connect(self.database, timeout=5.0)
         connection.row_factory = sqlite3.Row
         return connection
+
+    def create(self, record: Feedback) -> Feedback:
+        """Insert a new feedback identity, atomically refusing any existing identity."""
+        payload = json.dumps(record.to_mapping(), sort_keys=True)
+        with self._connect() as connection:
+            cursor = connection.execute(
+                """
+                INSERT INTO scoped_feedback (
+                    feedback_id, session_id, artifact_id, artifact_sha256, scope_kind, verbatim, record_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(feedback_id) DO NOTHING
+                """,
+                (
+                    record.feedback_id,
+                    record.session_id,
+                    record.artifact_id,
+                    record.artifact_sha256,
+                    record.scope_kind,
+                    record.verbatim,
+                    payload,
+                ),
+            )
+            if cursor.rowcount != 1:
+                raise FeedbackConflict("feedback identity already exists; no new feedback was recorded")
+        return record
 
     def put(self, record: Feedback) -> Feedback:
         """Insert or replace one record. The id is the identity; a put cannot fork history."""

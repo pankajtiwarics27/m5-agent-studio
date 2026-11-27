@@ -8,6 +8,9 @@ looking would fail rather than pass quietly.
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
+
 import pytest
 
 import scoped_feedback as ps
@@ -32,6 +35,29 @@ def _feedback(**overrides):
     )
     base.update(overrides)
     return ps.capture(**base)
+
+
+def test_atomic_create_refuses_identity_collisions_even_when_racing(tmp_path):
+    store = ps.FeedbackStore(tmp_path / "feedback.db")
+    barrier = Barrier(2, timeout=5)
+
+    def create(session):
+        record = _feedback(feedback_id="shared", session_id=session, verbatim=session)
+        barrier.wait()
+        try:
+            store.create(record)
+            return ("created", session)
+        except ps.FeedbackConflict:
+            return ("conflict", session)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        outcomes = list(pool.map(create, ("session-a", "session-b")))
+    assert sorted(result for result, _ in outcomes) == ["conflict", "created"]
+    winner = next(session for result, session in outcomes if result == "created")
+    stored = store.get("shared")
+    assert stored.session_id == winner
+    assert stored.verbatim == winner
+    assert len(store.list()) == 1
 
 
 # ── scope follows what was pointed at ────────────────────────────────────────────────────

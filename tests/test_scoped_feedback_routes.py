@@ -322,6 +322,38 @@ def test_one_run_cannot_confirm_or_withdraw_another_runs_comment(tmp_path, monke
     assert still["items"][0]["deleted"] is False
 
 
+def test_capture_collision_cannot_replace_a_session_record_or_its_history(tmp_path, monkeypatch):
+    studio, client = _harness_client(tmp_path, monkeypatch)
+    owner = _session(studio)
+    other = _session(studio)
+    first = _capture(client, owner, feedback_id="shared-id", verbatim="original")
+    assert first.status_code == 200
+    confirmed = client.post(
+        f"/api/harness/sessions/{owner}/feedback/shared-id/confirm", json={"confirmed_by": "owner"}
+    )
+    assert confirmed.status_code == 200
+    before = _list(client, owner).json()["items"]
+    assert len(before) == 1 and before[0]["confirmed"] is True
+    events_before = {session: studio._read_harness_events(session) for session in (owner, other)}
+
+    for session in (owner, other):
+        collision = _capture(client, session, feedback_id="shared-id", verbatim="replacement")
+        assert collision.status_code == 409, collision.text
+        assert "no new feedback was recorded" in collision.json()["detail"]
+    assert _list(client, owner).json()["items"] == before
+    assert _list(client, other).json()["items"] == []
+    assert {session: studio._read_harness_events(session) for session in (owner, other)} == events_before
+    assert studio.get_scoped_feedback_store().get("shared-id").verbatim == "original"
+
+    removed = client.delete(f"/api/harness/sessions/{owner}/feedback/shared-id")
+    assert removed.status_code == 200
+    assert _capture(client, other, feedback_id="shared-id", verbatim="resurrect").status_code == 409
+    retained = _list(client, owner).json()["items"]
+    assert len(retained) == 1 and retained[0]["deleted"] is True
+    assert retained[0]["verbatim"] == "original"
+    assert _list(client, other).json()["items"] == []
+
+
 def test_feedback_view_fences_races_and_keeps_drafts_by_version():
     root = Path(__file__).resolve().parents[1]
     result = subprocess.run(
