@@ -363,7 +363,8 @@ async function run(args) {
 
   const browser = await puppeteer.launch({
     executablePath: resolveChrome(),
-    args: (process.env.STUDIO_SCREENSHOT_CHROME_ARGS || "--no-zygote --single-process --disable-gpu --no-sandbox").split(" "),
+    args: ["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu",
+      ...(process.env.STUDIO_SCREENSHOT_CHROME_ARGS || "").split(/\s+/).filter(Boolean)],
   });
   const pageErrors = [];
   const requests = [];

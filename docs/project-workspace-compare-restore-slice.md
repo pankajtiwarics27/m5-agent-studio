@@ -12,8 +12,14 @@ reload, and a saved single stopped panel after reload. It passed 18/18 checks. R
 the unconditional call made both restored-state checks fail; removing the empty-state call
 made the fresh-state check fail. The restored walk passed. The mandatory browser wrapper
 now runs this walk and checks its 18/18 summary; a stale count mutation failed, and the
-restored six-test wrapper passed. The browser fixture uses real routes and a local
-stand-in runtime; this is not owner visual acceptance or a pilot release
+restored six-test wrapper passed. PR CI subsequently failed to launch the newly required
+walk's browser with its configured Chrome arguments; the precise CI-side launch error was
+not available in the check annotation. The walk now supplies the same mandatory headless
+browser flags as the existing fixtures even when extra arguments are set. In a root-run
+local check with the CI-style override, removing the no-sandbox flag failed browser
+launch and restoring it passed; that local reproduction does not establish the CI cause.
+The browser fixture uses real routes and a local stand-in runtime; this is not owner visual
+acceptance or a pilot release
 qualification. The verdict comparison checks rendered verdict body and model; provenance
 copy may legitimately differ on restoration.
 
