@@ -25,8 +25,10 @@ binding to checkpoint membership or current-file integrity. Selection and feedba
 constitute acceptance or permission to publish.
 
 Tracking: [issue 413](https://github.com/pankajtiwarics27/m5-agent-studio/issues/413).
-Do not paper over this by assigning an unsupported kind or treating an unrelated file as
-an element of the first artifact. A follow-up needs explicit artifact/version selection,
+An [interim mitigation](project-workspace-feedback-scope-mitigation.md) now refuses
+worktree-file selection in the composer; the wider issue remains open. Do not paper over
+this by assigning an unsupported kind or treating an unrelated file as an element of the
+first artifact. A follow-up needs explicit artifact/version selection,
 a defensible mapping to supported locators or an honest refusal with plain-text fallback,
 and mutation-tested coverage of the actual persisted selection, multi-file switches,
 stale responses and drafts. Any server authority or governance change requires separate

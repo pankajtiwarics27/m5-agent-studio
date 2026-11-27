@@ -3131,11 +3131,11 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
         <div id="harnessFeedbackPanel"></div>
         <form id="harnessFeedbackForm" class="harness-feedback-form" onsubmit="return submitHarnessFeedback(event)">
           <label class="ev-subheading" for="harnessFeedbackText">Feedback on this artifact</label>
-          <textarea id="harnessFeedbackText" rows="2" maxlength="2000" placeholder="Say what should change. A region you select narrows this to that region; without a selection it applies to this artifact version only."></textarea>
+          <textarea id="harnessFeedbackText" rows="2" maxlength="2000" placeholder="Say what should change on the bound artifact version."></textarea>
           <div class="harness-feedback-actions">
             <button type="button" class="btn btn-xs btn-primary" onclick="submitHarnessFeedback(event)">Record feedback</button>
-            <button type="button" class="btn btn-xs" onclick="clearHarnessFeedbackSelection()">Clear selection</button>
-            <span id="harnessFeedbackSelection" class="ev-note" role="status"></span>
+            <button type="button" class="btn btn-xs" onclick="clearHarnessFeedbackSelection()" disabled>Clear selection</button>
+            <span id="harnessFeedbackSelection" class="ev-note" role="status">File selection is unavailable; feedback applies to the bound artifact version.</span>
           </div>
           <p class="ev-note">Recording a comment is not accepting the artifact and does not publish anything. A preference is never inferred from one comment; widening is a separate decision with a stated reason.</p>
         </form>
@@ -15766,7 +15766,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     const added = files.reduce((total, file) => total + file.added, 0);
     const deleted = files.reduce((total, file) => total + file.deleted, 0);
     const rows = files.length
-      ? files.map(file => `<div class="ev-file" role="button" tabindex="0" data-key-activate title="Narrow feedback to this file" aria-pressed="${harnessFeedbackSelection && harnessFeedbackSelection.locator === file.path ? "true" : "false"}" data-feedback-region="${escapeHtml(file.path)}" onclick="selectHarnessFeedbackRegion(this.dataset.feedbackRegion)">
+      ? files.map(file => `<div class="ev-file">
           <span class="ev-file-path mono">${escapeHtml(file.path)}</span>
           <span class="ev-file-add mono">+${escapeHtml(String(file.added))}</span>
           <span class="ev-file-del mono">-${escapeHtml(String(file.deleted))}</span>
@@ -15783,7 +15783,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
       ${rows}
       <div class="ev-actions"><button class="btn btn-xs" type="button" onclick="openHarnessDiffModal()">Read the full unified diff</button></div>
       <p class="ev-note">This diff is the worktree as it is now, not a copy frozen at the verdict: a change made after the turn appears here too.</p>
-      <p class="ev-note">Selecting a file above narrows the feedback to that region. Selecting nothing is fine: the comment then applies to this artifact version as a whole.</p>`;
+      <p class="ev-note">These worktree files cannot be selected as artifact regions here. Feedback applies to the bound artifact version, not to a selected file.</p>`;
   }
 
   function harnessCheckpointReferencesHtml(task, sessionId) {
@@ -15998,28 +15998,15 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     host.innerHTML = harnessFeedbackHtml(harnessFeedbackPayload.data) + noteHtml;
     const status = document.getElementById("harnessFeedbackSelection");
     if (status) {
-      status.textContent = harnessFeedbackSelection
-        ? `Narrowed to ${harnessFeedbackSelection.locatorKind}: ${harnessFeedbackSelection.locator}`
-        : "No selection: this will apply to this artifact version only";
+      status.textContent = "File selection is unavailable; feedback applies to the bound artifact version.";
     }
   }
 
-  // A region is a convenience, never a requirement. Whatever is selected has to name the
-  // version it was selected on, because a region id from one version means nothing in another.
-  function selectHarnessFeedbackRegion(locator) {
-    const payload = harnessFeedbackPayload;
-    const name = harnessFeedbackText(locator, 300);
-    if (!payload || payload.error || !name) {
-      harnessFeedbackSay("A region can only be selected once an artifact version is bound, so nothing was narrowed.", "warn");
-      return;
-    }
-    if (harnessFeedbackSelection && harnessFeedbackSelection.locator === name) {
-      clearHarnessFeedbackSelection();
-      return;
-    }
-    harnessFeedbackSelection = { locatorKind: "region", locator: name, artifactSha256: payload.digest };
-    if (harnessFeedbackNote && harnessFeedbackNote.tone === "warn") harnessFeedbackNote = null;
-    renderHarnessFeedback();
+  // A current worktree path does not establish a region of the checkpoint artifact.
+  // Keep the legacy entry point fail-closed until a verifiable selection is available.
+  function selectHarnessFeedbackRegion(_locator) {
+    harnessFeedbackSelection = null;
+    harnessFeedbackSay("File selection is unavailable; feedback applies to the bound artifact version.", "warn");
     refreshHarnessEvidenceSelection();
   }
 
@@ -16104,6 +16091,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     }
     harnessFeedbackUnsettled.add(harnessFeedbackTargetKey);
     try {
+      // No worktree path is sent as an artifact region; plain feedback remains available.
       const response = await fetch(`/api/harness/sessions/${encodeURIComponent(payload.sessionId)}/feedback`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -16111,7 +16099,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
           artifact_id: payload.artifactId,
           artifact_sha256: payload.digest,
           verbatim: text,
-          selection: harnessFeedbackSelection,
+          selection: null,
         }),
       });
       const data = await response.json().catch(() => null);
@@ -16721,6 +16709,12 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
         <p class="ev-note">This artifact has no recorded version, so feedback cannot be pinned to it. A comment that cannot name its version cannot be checked for staleness later, so none is accepted here.</p>`;
     }
     const rows = [];
+    rows.push({
+      label: "Bound artifact",
+      value: model.artifactId || "artifact identity unavailable",
+      mono: true,
+      note: "This is the first eligible recorded artifact in the session; choosing another artifact is not available here. The recorded content has not been rechecked against current files.",
+    });
     rows.push({
       label: "Bound to version",
       value: `sha256 ${model.digest}`,

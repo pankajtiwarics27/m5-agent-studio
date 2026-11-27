@@ -26,8 +26,7 @@
  *      averaged into one change;
  *   6. feedback given against an OLDER version is shown as stale and is not counted as
  *      applying to the version on screen;
- *   7. a region can be selected for a comment, the selection is stated in words, and clearing
- *      it returns the composer to artifact scope;
+ *   7. worktree file selection is refused, and feedback remains artifact-scoped;
  *   8. withdrawing a comment goes through `DELETE …/feedback/{id}` and the item stops applying
  *      while the record of what was said stays in the store;
  *   9. words, ids and regions that are markup are drawn as text: no element, no handler, no
@@ -397,25 +396,28 @@ async function main() {
 
     if (args.screenshots) await page.screenshot({ path: `${args.screenshots}/feedback-stale.png` });
 
-    // ---- 7. a region can be selected, stated in words, and cleared ----
+    // ---- 7. worktree paths are not presented as checkpoint artifact regions ----
     await openSession(ids.main);
     await openFeedbackPane();
     check(await composerReady(), "7. the composer is present and enabled");
-    const selected = await page.evaluate(() => {
-      const row = document.querySelector("#harnessEvidenceChange [data-feedback-region]");
-      if (!row) return "";
-      row.click();
-      return row.dataset.feedbackRegion || "";
+    const scopeBefore = await page.evaluate(() => {
+      const panel = document.getElementById("harnessFeedbackPanel");
+      const status = document.getElementById("harnessFeedbackSelection");
+      const rows = [...document.querySelectorAll("#harnessEvidenceChange .ev-file")];
+      const files = rows.map(row => row.textContent);
+      rows.forEach(row => row.click());
+      return {panel: panel.textContent, status: status.textContent, files,
+        interactive: rows.filter(row => row.hasAttribute("onclick") || row.hasAttribute("tabindex") || row.getAttribute("role") === "button").length};
     });
-    await sleep(args.settleMs * 4);
-    check(Boolean(selected), "7. a region in the diff can be selected for the comment", selected);
-    let status = await page.evaluate(() => (document.getElementById("harnessFeedbackSelection") || {}).textContent || "");
-    check(new RegExp(`Narrowed to region: ${selected.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`).test(status), "7. the composer states in words what the comment will apply to", status);
-    await page.evaluate(() => clearHarnessFeedbackSelection());
-    await sleep(args.settleMs * 3);
-    status = await page.evaluate(() => (document.getElementById("harnessFeedbackSelection") || {}).textContent || "");
-    check(/No selection/i.test(status) && /artifact version only/i.test(status), "7. clearing the selection returns the composer to artifact scope", status);
+    check(scopeBefore.files.some(text => text.includes("hero.html")) && scopeBefore.files.some(text => text.includes("z-other.txt")), "7. the real diff contains both bound and unrelated files", JSON.stringify(scopeBefore));
+    check(scopeBefore.interactive === 0 && /File selection is unavailable/.test(scopeBefore.status), "7. diff file rows do not claim a selectable artifact region", JSON.stringify(scopeBefore));
+    check(scopeBefore.panel.includes(artifactId) && /first eligible recorded artifact/i.test(scopeBefore.panel) && /not been rechecked/i.test(scopeBefore.panel), "7. the composer names its first bound artifact and its limits", scopeBefore.panel.slice(0, 600));
+    await page.evaluate(() => selectHarnessFeedbackRegion("z-other.txt"));
+    const refused = await page.evaluate(() => ({status: document.getElementById("harnessFeedbackSelection").textContent, text: document.getElementById("harnessFeedbackPanel").textContent, selection: harnessFeedbackSelection}));
+    check(/File selection is unavailable/.test(refused.status) && /File selection is unavailable/.test(refused.text) && refused.selection === null, "7. the legacy selection entry point refuses an unrelated path", JSON.stringify(refused));
 
+    // Exercise the submit fence even if old in-page code somehow retained a selection.
+    await page.evaluate(digestValue => { harnessFeedbackSelection = {locatorKind: "region", locator: "z-other.txt", artifactSha256: digestValue}; }, digest);
     // ---- 8. a comment can be withdrawn, and the record survives ----
     const submitted = await page.evaluate(async () => {
       const field = document.getElementById("harnessFeedbackText");
@@ -431,7 +433,7 @@ async function main() {
     let recorded = await served(ids.main, digest);
     const typed = (recorded.items || []).find((item) => item.verbatim === "the footer needs the year");
     check(Boolean(typed), "8. typed words reached the store through the real route", JSON.stringify((recorded.items || []).map((i) => i.verbatim)).slice(0, 200));
-    check(typed && typed.scope_kind === "artifact", "8. with no selection it was recorded at artifact scope");
+    check(typed && typed.scope_kind === "artifact" && typed.artifact_id === artifactId && typed.artifact_sha256 === digest && typed.selection === null, "8. feedback is recorded only against the named artifact version without a selected region", JSON.stringify(typed));
     await page.evaluate(() => {
       const rows = Array.from(document.querySelectorAll("#harnessFeedbackPanel li"));
       const row = rows.find((n) => /the footer needs the year/.test(n.innerText));

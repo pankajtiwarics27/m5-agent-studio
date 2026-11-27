@@ -78,15 +78,15 @@ def _git(workspace: Path, *argv: str) -> None:
 
 
 def _build_workspace(root: Path) -> Path:
-    """A committed git workspace with one uncommitted change, so the pane can draw a real diff.
+    """A committed workspace with two changed files, only one recorded as an artifact.
 
-    A region a reader can select is a file in the change, so the change has to exist. It is a
-    real worktree with a real `git diff`, not a fabricated payload: the pane reads the same
-    `/diff` route the product reads.
+    The real worktree diff lets the walk check that a current file is not silently treated as
+    a selectable region of a checkpoint artifact.
     """
     workspace = root / "current"
     workspace.mkdir(parents=True, exist_ok=True)
     (workspace / ARTIFACT_ID).write_text(OLD_SOURCE, encoding="utf-8")
+    (workspace / "z-other.txt").write_text("before\n", encoding="utf-8")
     _git(workspace, "init", "-q")
     _git(workspace, "config", "user.email", "walk@example.invalid")
     _git(workspace, "config", "user.name", "AP-019 walk")
@@ -94,6 +94,7 @@ def _build_workspace(root: Path) -> Path:
     _git(workspace, "commit", "-q", "-m", "baseline")
     # The change the run made, uncommitted, so the diff the pane draws is the worktree's own.
     (workspace / ARTIFACT_ID).write_text(CURRENT_SOURCE, encoding="utf-8")
+    (workspace / "z-other.txt").write_text("after\n", encoding="utf-8")
     return workspace
 
 

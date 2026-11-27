@@ -30,7 +30,7 @@ ROOT = Path(__file__).resolve().parents[1]
 # quotes; if a walk gains a check this list is the thing that has to be updated on purpose.
 AP_WALKS = (
     ("scripts/harness_direction_walk.mjs", 22),
-    ("scripts/harness_feedback_walk.mjs", 59),
+    ("scripts/harness_feedback_walk.mjs", 60),
     ("scripts/harness_reference_walk.mjs", 40),
     ("scripts/compare_continuity_walk.mjs", 18),
 )

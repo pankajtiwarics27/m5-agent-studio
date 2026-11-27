@@ -6,7 +6,7 @@ It is the `UIUX-P0-02` artifact: every interactive element in
 re-derived from the markup on every run.
 
 * Pinned source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (the ledger's pin).
-* Frontend digest: `8ab8127dbb47ff13acb96e0c2bb15eb9b5c5e53013d52040e9df27daa6993073`.
+* Frontend digest: `4d7170e91f6830eb477655cd8b2f956402bc6853dcf4388ea52155d93de33324`.
 * Panes: 6 · controls in panes: 113 · controls in the
   shared chrome: 169 · script-rendered: 76.
 
@@ -298,7 +298,7 @@ attributed to one.
 | 98 | button | — | — | Close | closeHarnessDiffModal() |
 | 99 | button | — | — | Refresh | refreshHarnessEvidence() |
 | 100 | button | — | — | Close | closeHarnessEvidenceModal() |
-| 101 | textarea | harnessFeedbackText | — | Say what should change. A region you select narrows this to that region; without a selection it applies to this artifact version only. | — |
+| 101 | textarea | harnessFeedbackText | — | Say what should change on the bound artifact version. | — |
 | 102 | button | — | button | Record feedback | submitHarnessFeedback(event) |
 | 103 | button | — | button | Clear selection | clearHarnessFeedbackSelection() |
 | 104 | input | harnessReferenceApprover | text | e.g. Priya | — |
