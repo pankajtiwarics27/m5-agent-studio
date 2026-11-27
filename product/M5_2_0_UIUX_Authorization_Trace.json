@@ -8,8 +8,8 @@
   "check_with": "python3 scripts/uiux_authorization_trace.py --check",
   "statement": "For state-changing route candidates resolved by the browser map: the shared gates every request passes, handler refusals, referenced authority and durable-state subsystems, and possible effects. The route map is a lexical scan, not proof of exhaustive browser coverage; a reference is evidence of a consultation, not proof of enforcement.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "app_sha256": "ac00f6b3fed92b3b898d902d2822c678d5d4aee3df3832f67b9c2ad9f676c83f",
-  "route_map_sha256": "356324778092c368814448f09440c9bc5230e5fea2b73e0d48442fcd731c86bb",
+  "app_sha256": "4ed76c5fc0203b6433f1cd81de6c1463a9e1710615dc1921af416fc69207a433",
+  "route_map_sha256": "2ed596dbd6406acc29320200a7bd6d2d0f5406729da73802452f65cc6054cfb0",
   "totals": {
     "routes_in_app": 134,
     "state_changing_routes_in_app": 91,
@@ -34,7 +34,7 @@
       "401": 56,
       "403": 62,
       "404": 24,
-      "409": 28,
+      "409": 30,
       "413": 56,
       "429": 8,
       "500": 1,
@@ -53,7 +53,7 @@
       "400": 63,
       "403": 6,
       "404": 24,
-      "409": 28,
+      "409": 30,
       "500": 1,
       "502": 2,
       "503": 13,
@@ -2315,7 +2315,7 @@
       "method": "DELETE",
       "path": "/api/harness/sessions/{session_id}/feedback/{feedback_id}",
       "handler": "api_delete_scoped_feedback",
-      "handler_line": 15918,
+      "handler_line": 15917,
       "response": "json",
       "ui_callers": [
         "withdrawHarnessFeedback"
@@ -2346,6 +2346,10 @@
         {
           "status": 404,
           "detail": "f\"No feedback {feedback_id!r} in this session.\""
+        },
+        {
+          "status": 409,
+          "detail": "\"Feedback could not be withdrawn; refresh its record.\""
         },
         {
           "status": 404,
@@ -2411,6 +2415,10 @@
         {
           "status": 404,
           "detail": "f\"No feedback {feedback_id!r} in this session.\""
+        },
+        {
+          "status": 409,
+          "detail": "\"Feedback could not be confirmed; refresh its record.\""
         },
         {
           "status": 400,

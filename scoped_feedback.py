@@ -36,7 +36,7 @@ import hashlib
 import json
 import re
 from dataclasses import dataclass, replace
-from typing import Any, Iterable, Mapping, Sequence
+from typing import Any, Callable, Iterable, Mapping, Sequence
 
 PS_SCHEMA_VERSION = 1
 
@@ -72,7 +72,7 @@ class FeedbackError(ValueError):
 
 
 class FeedbackConflict(RuntimeError):
-    """Two pieces of live feedback contradict each other on the same scope."""
+    """Feedback cannot be safely combined or written without a conflicting identity."""
 
 
 class PreferenceDrift(RuntimeError):
@@ -797,13 +797,46 @@ class FeedbackStore:
             ).fetchall()
         return [Feedback.from_mapping(json.loads(row["record_json"])) for row in rows]
 
-    def delete(self, feedback_id: str) -> Feedback:
-        """Remove feedback from the live set, keeping the record that it existed.
+    def _update_atomic(
+        self, feedback_id: str, session_id: str | None, change: Callable[[Feedback], Feedback]
+    ) -> Feedback | None:
+        """Serialize a read and its update; never transfer a record or recreate a missing one."""
+        identifier = _ps_text(feedback_id, "feedback_id", 120)
+        if session_id is not None:
+            session_id = _ps_text(session_id, "session_id", 120)
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute(
+                "SELECT session_id, artifact_id, artifact_sha256, scope_kind, record_json "
+                "FROM scoped_feedback WHERE feedback_id = ?", (identifier,)
+            ).fetchone()
+            if row is None or (session_id is not None and row["session_id"] != session_id):
+                return None
+            existing = Feedback.from_mapping(json.loads(row["record_json"]))
+            binding = (existing.feedback_id, existing.session_id, existing.artifact_id, existing.artifact_sha256, existing.scope_kind)
+            if binding != (identifier, row["session_id"], row["artifact_id"], row["artifact_sha256"], row["scope_kind"]):
+                raise FeedbackConflict("feedback record does not match its stored binding")
+            updated = change(existing)
+            if binding != (updated.feedback_id, updated.session_id, updated.artifact_id, updated.artifact_sha256, updated.scope_kind):
+                raise FeedbackConflict("feedback update attempted to change its binding")
+            cursor = connection.execute(
+                "UPDATE scoped_feedback SET verbatim = ?, record_json = ?, updated_at = CURRENT_TIMESTAMP "
+                "WHERE feedback_id = ?",
+                (updated.verbatim, json.dumps(updated.to_mapping(), sort_keys=True), identifier),
+            )
+            if cursor.rowcount != 1:
+                raise FeedbackConflict("feedback record changed during its update")
+            return updated
 
-        A deleted item is skipped by ``live``, so no revision is built from it, and its words
-        remain readable for anyone asking what was asked for and then withdrawn.
-        """
-        existing = self.get(feedback_id)
-        if existing is None:
+    def confirm_for_session(self, feedback_id: str, session_id: str, *, confirmed_by: str) -> Feedback | None:
+        return self._update_atomic(feedback_id, session_id, lambda existing: confirm(existing, confirmed_by=confirmed_by))
+
+    def withdraw_for_session(self, feedback_id: str, session_id: str) -> Feedback | None:
+        return self._update_atomic(feedback_id, session_id, lambda existing: replace(existing, deleted=True))
+
+    def delete(self, feedback_id: str) -> Feedback:
+        """Withdraw a record without removing its words; repeated withdrawal stays idempotent."""
+        updated = self._update_atomic(feedback_id, None, lambda existing: replace(existing, deleted=True))
+        if updated is None:
             raise FeedbackError(f"no feedback {feedback_id!r} to delete")
-        return self.put(replace(existing, deleted=True))
+        return updated

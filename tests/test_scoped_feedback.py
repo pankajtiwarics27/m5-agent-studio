@@ -9,6 +9,7 @@ looking would fail rather than pass quietly.
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import replace
 from threading import Barrier
 
 import pytest
@@ -118,6 +119,23 @@ def test_atomic_put_refuses_same_session_artifact_race(tmp_path):
     winner = next(artifact for result, artifact in outcomes if result == "written")
     assert store.get("same").artifact_id == winner
     assert len(store.list()) == 1
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"feedback_id": "other"}, {"session_id": "other"}, {"artifact_id": "other.html"},
+        {"artifact_sha256": SHA_B}, {"scope_kind": "preference"},
+    ],
+    ids=["id", "session", "artifact", "version", "scope"],
+)
+def test_atomic_update_rejects_a_transform_that_rebinds_the_record(tmp_path, changes):
+    store = ps.FeedbackStore(tmp_path / "feedback.db")
+    original = _feedback(feedback_id="shared", session_id="a")
+    store.create(original)
+    with pytest.raises(ps.FeedbackConflict):
+        store._update_atomic("shared", "a", lambda record: replace(record, **changes))
+    assert store.get("shared") == original
 
 
 def test_atomic_create_refuses_identity_collisions_even_when_racing(tmp_path):

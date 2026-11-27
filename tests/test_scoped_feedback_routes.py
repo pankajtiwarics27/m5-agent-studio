@@ -9,7 +9,13 @@ written here can be read later as acceptance or permission.
 from __future__ import annotations
 
 import subprocess
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from threading import Event
+
+import pytest
+
+import scoped_feedback as feedback_module
 
 SHA_A = "a" * 64
 SHA_B = "b" * 64
@@ -352,6 +358,79 @@ def test_capture_collision_cannot_replace_a_session_record_or_its_history(tmp_pa
     assert len(retained) == 1 and retained[0]["deleted"] is True
     assert retained[0]["verbatim"] == "original"
     assert _list(client, other).json()["items"] == []
+
+
+def test_confirm_and_withdraw_refuse_a_contradictory_stored_binding(tmp_path, monkeypatch):
+    studio, client = _harness_client(tmp_path, monkeypatch)
+    session = _session(studio)
+    assert _capture(client, session, feedback_id="bad", verbatim="original").status_code == 200
+    store = studio.get_scoped_feedback_store()
+    with store._connect() as connection:
+        connection.execute("UPDATE scoped_feedback SET artifact_id = 'other.html' WHERE feedback_id = 'bad'")
+        before = tuple(connection.execute("SELECT * FROM scoped_feedback WHERE feedback_id = 'bad'").fetchone())
+    events = studio._read_harness_events(session)
+    confirmation = client.post(f"/api/harness/sessions/{session}/feedback/bad/confirm", json={"confirmed_by": "owner"})
+    withdrawal = client.delete(f"/api/harness/sessions/{session}/feedback/bad")
+    assert confirmation.status_code == 409 and withdrawal.status_code == 409
+    with store._connect() as connection:
+        assert tuple(connection.execute("SELECT * FROM scoped_feedback WHERE feedback_id = 'bad'").fetchone()) == before
+    assert studio._read_harness_events(session) == events
+
+
+@pytest.mark.parametrize("first", ["confirm", "withdraw"])
+def test_confirm_and_withdraw_serialize_without_losing_either_change(tmp_path, monkeypatch, first):
+    studio, client = _harness_client(tmp_path, monkeypatch)
+    session = _session(studio)
+    assert _capture(client, session, feedback_id="race", verbatim="original").status_code == 200
+    entered, release, second_started, second_done = Event(), Event(), Event(), Event()
+    if first == "confirm":
+        original = feedback_module.confirm
+
+        def paused_confirm(*args, **kwargs):
+            entered.set()
+            if not release.wait(5):
+                raise RuntimeError("confirmation test was not released")
+            return original(*args, **kwargs)
+
+        monkeypatch.setattr(feedback_module, "confirm", paused_confirm)
+    else:
+        original = feedback_module.replace
+
+        def paused_replace(record, **kwargs):
+            if kwargs.get("deleted") is True:
+                entered.set()
+                if not release.wait(5):
+                    raise RuntimeError("withdrawal test was not released")
+            return original(record, **kwargs)
+
+        monkeypatch.setattr(feedback_module, "replace", paused_replace)
+
+    def request(action):
+        if action == "confirm":
+            return client.post(f"/api/harness/sessions/{session}/feedback/race/confirm", json={"confirmed_by": "owner"})
+        return client.delete(f"/api/harness/sessions/{session}/feedback/race")
+
+    def second_request():
+        second_started.set()
+        try:
+            return request("withdraw" if first == "confirm" else "confirm")
+        finally:
+            second_done.set()
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        one = pool.submit(request, first)
+        try:
+            assert entered.wait(5), "first update did not reach its decision"
+            two = pool.submit(second_request)
+            assert second_started.wait(5), "second update did not start"
+            assert not second_done.wait(0.3), "second update escaped while the first held the record"
+        finally:
+            release.set()
+        assert one.result(timeout=10).status_code == 200
+        assert two.result(timeout=10).status_code == 200
+    stored = studio.get_scoped_feedback_store().get("race")
+    assert stored.confirmed is True and stored.confirmed_by == "owner" and stored.deleted is True
+    assert stored.verbatim == "original"
 
 
 def test_promotion_cannot_replace_another_sessions_feedback(tmp_path, monkeypatch):
