@@ -52,6 +52,11 @@ scope with a different feedback target. Approval text and approver drafts are re
 per target in page memory only, not across reload. An approval sent before leaving may
 still have been recorded and is reported as uncertain when returning.
 
+A later [feedback scope audit](project-workspace-feedback-scope-audit.md) reproduced a
+separate unresolved problem: a current-diff file can be presented as a region of the first
+bound artifact without an established relationship, and the UI's selection kind does not
+match what the route records. Fencing does not resolve that scope mismatch.
+
 ## Next bounded slice
 
 1. The current feedback slice covers delayed and reordered responses, modal invalidation,
