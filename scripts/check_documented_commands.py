@@ -111,7 +111,7 @@ class DocFlagReport:
     checked: list[DocCommand] = field(default_factory=list)
     skipped: list[DocCommand] = field(default_factory=list)
     problems: list[DocFlagProblem] = field(default_factory=list)
-    #: Literal invocations whose parser was unreadable; unlike unresolved, this counts each line.
+    #: Literal invocations whose parser or argument scope was unreadable; counts each invocation.
     unchecked: list[DocCommand] = field(default_factory=list)
     unresolved: list[str] = field(default_factory=list)
     #: JavaScript scripts whose flags are unioned across regions or a file-wide fallback.
@@ -301,6 +301,19 @@ def flags_a_script_accepts(path: Path) -> ParserShape:
     except SyntaxError:
         return ParserShape(frozenset(), {}, False, "not parseable as Python")
     loop_names = _loop_bound_names(tree)
+    named_calls = {
+        id(node.value)
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) for target in node.targets)
+    }
+    for node in ast.walk(tree):
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "add_parser"
+            and id(node) not in named_calls
+        ):
+            return ParserShape(frozenset(), {}, False, "subparser is not assigned to a named variable")
 
     # Which variable holds a parser, and for which subcommand names.
     subcommands: dict[str, set[str]] = {}
@@ -378,18 +391,14 @@ def accepts_for(command: DocCommand, root: Path) -> tuple[frozenset[str], bool]:
 
 
 def unresolved_scripts(root: Path) -> tuple[str, ...]:
-    """Scripts referenced by the docs whose argument wiring this module cannot read."""
+    """Scripts with invocations whose parser or argument scope cannot be read."""
     commands, _ = documented_commands(root)
-    unresolved: set[str] = set()
-    for command in commands:
-        _, static = accepts_for(command, root)
-        if not static:
-            unresolved.add(command.script)
-    return tuple(sorted(unresolved))
+    _, unchecked = check_flags(commands, root)
+    return tuple(sorted({command.script for command in unchecked}))
 
 
 def check_flags(commands: Iterable[DocCommand], root: Path) -> tuple[list[DocFlagProblem], list[DocCommand]]:
-    """Return (problems, commands whose script could not be read statically)."""
+    """Return (problems, commands whose parser or invocation scope could not be read)."""
     problems: list[DocFlagProblem] = []
     unchecked: list[DocCommand] = []
     cache: dict[tuple[str, str], tuple[frozenset[str], bool]] = {}
@@ -407,14 +416,18 @@ def check_flags(commands: Iterable[DocCommand], root: Path) -> tuple[list[DocFla
             unchecked.append(command)
             continue
         shape = shapes[command.script]
-        tokens = [token for token in command.tokens if not token.startswith("-")]
-        # Subcommand scope only means something for a Python script with subparsers; a walk has none.
-        subcommand = (
-            tokens[0] if command.interpreter.startswith("python") and tokens and tokens[0] in shape.subcommand_flags else ""
-        )
+        subcommand = ""
+        if command.interpreter.startswith("python") and shape.subcommand_flags:
+            if command.tokens and command.tokens[0] in shape.subcommand_flags:
+                subcommand = command.tokens[0]
+            elif any(not token.startswith("-") for token in command.tokens):
+                # Root options may take values that look like subcommands. Without their arity or
+                # positional wiring, guessing where the subparser starts can validate a wrong flag.
+                unchecked.append(command)
+                continue
         accepted = (
-            set(shape.root_flags) | set(shape.subcommand_flags.get(subcommand, ()))
-            if command.interpreter.startswith("python")
+            set(shape.subcommand_flags[subcommand]) if subcommand
+            else set(shape.root_flags) if command.interpreter.startswith("python")
             else set(accepted_flags)
         )
         for token in command.tokens:
@@ -477,7 +490,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"documented commands: {len(report.checked) + len(report.skipped)} lines, "
         f"{len(report.checked)} literal candidates, {len(report.skipped)} skipped lines; "
         f"{readable} checked against a static parser, {len(report.unchecked)} unchecked "
-        f"across {len(report.unresolved)} unreadable scripts, {len(report.problems)} problem(s)"
+        f"across {len(report.unresolved)} scripts with unreadable parser or scope, {len(report.problems)} problem(s)"
     )
     if report.skipped:
         print(
@@ -486,7 +499,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             file=sys.stderr,
         )
     if report.unresolved:
-        print(f"not checked (parser not statically readable): {', '.join(report.unresolved)}", file=sys.stderr)
+        print(
+            "not checked (parser or invocation scope not statically readable): "
+            + ", ".join(f"{c.source_path or c.document}:{c.line} ({c.script})" for c in report.unchecked),
+            file=sys.stderr,
+        )
     if report.js_widened:
         print(
             "weaker check (JavaScript flags unioned across regions or file): " + ", ".join(report.js_widened),
