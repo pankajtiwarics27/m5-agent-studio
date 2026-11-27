@@ -7121,6 +7121,9 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
       <div id="harnessEvidenceChange" class="ev-block"></div>
       <div id="harnessEvidenceArtifacts" class="ev-block"></div>
       <div class="ev-block harness-feedback" id="harnessFeedbackBlock">
+        <label class="ev-subheading" for="harnessFeedbackArtifact">Artifact for feedback</label>
+        <select id="harnessFeedbackArtifact" onchange="chooseHarnessFeedbackArtifact(this.value)" disabled aria-describedby="harnessFeedbackArtifactStatus"></select>
+        <p id="harnessFeedbackArtifactStatus" class="ev-note" role="status">Select a session to see recorded artifact versions.</p>
         <div id="harnessFeedbackPanel"></div>
         <form id="harnessFeedbackForm" class="harness-feedback-form" onsubmit="return submitHarnessFeedback(event)">
           <label class="ev-subheading" for="harnessFeedbackText">Feedback on this artifact</label>
@@ -19598,6 +19601,10 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     invalidateHarnessFeedback();
     invalidateHarnessReference();
     harnessEvidencePayload = null;
+    const choice = document.getElementById("harnessFeedbackArtifact");
+    const choiceStatus = document.getElementById("harnessFeedbackArtifactStatus");
+    if (choice) { choice.innerHTML = ""; choice.disabled = true; }
+    if (choiceStatus) choiceStatus.textContent = "Recorded artifact versions are unavailable until the session is read.";
     for (const id of ["harnessEvidenceMeta", "harnessEvidenceVerdict", "harnessEvidenceSpec", "harnessEvidenceObserved", "harnessEvidenceChange", "harnessEvidenceArtifacts", "harnessEvidenceLimits"]) {
       const node = document.getElementById(id);
       if (node) node.textContent = "";
@@ -19899,6 +19906,8 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
   // Drafts stay in this page only, and are never carried to another artifact version.
   const harnessFeedbackDrafts = new Map();
   const harnessFeedbackUnsettled = new Set();
+  // Per-page preference only; a missing old version must never silently select another.
+  const harnessFeedbackPreferredTargets = new Map();
 
   function harnessFeedbackKey(target) {
     return target && target.sessionId && target.artifactId && target.digest
@@ -19927,14 +19936,82 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
       && String(target.sessionId) === String(activeHarnessId || "");
   }
 
-  // The artifact version feedback is bound to. It is the latest checkpoint's recorded artifact
-  // for this session; without one there is no version to pin to, and the pane says so rather
-  // than accepting a comment it could never check for staleness.
-  function harnessFeedbackTarget(task, sessionId) {
-    const versions = task && Array.isArray(task.session_artifact_versions) ? task.session_artifact_versions : [];
-    const first = versions.find(version => version && typeof version.artifact_id === "string" && harnessFeedbackDigest(version.content_sha256));
-    if (!first) return null;
-    return { sessionId: String(sessionId || ""), artifactId: first.artifact_id, digest: harnessFeedbackDigest(first.content_sha256) };
+  // Only identities supported by the selected session's integrity-checked checkpoint can
+  // appear as feedback targets. A malformed or contradictory response is not an empty list.
+  function harnessFeedbackTargets(task, sessionId) {
+    if (!task || !sessionId || ![null, ""].includes(task.checkpoint_integrity_error) || !Array.isArray(task.session_artifact_versions)) return null;
+    const versions = task.session_artifact_versions;
+    const checkpoint = task.latest_checkpoint;
+    if (checkpoint === null && versions.length === 0) return [];
+    if (!checkpoint || checkpoint.task_id !== sessionId || !Array.isArray(checkpoint.evidence_refs)
+      || checkpoint.evidence_refs.some(ref => !ref || typeof ref.kind !== "string" || typeof ref.ref_id !== "string" || typeof ref.sha256 !== "string")) return null;
+    const keys = new Set();
+    const targets = [];
+    for (const version of versions) {
+      if (!version || version.session_id !== sessionId || typeof version.artifact_id !== "string" || !version.artifact_id.trim()
+        || !harnessFeedbackDigest(version.content_sha256) || !harnessFeedbackDigest(version.identity_sha256)
+        || version.contributes_a_verified_version !== true || version.rechecked_against_current_content !== false
+        || version.is_global_lineage !== false || version.is_workspace_snapshot !== false) return null;
+      const digest = harnessFeedbackDigest(version.content_sha256);
+      if (!checkpoint.evidence_refs.some(ref => ref && ref.kind === "artifact" && ref.ref_id === version.artifact_id && harnessFeedbackDigest(ref.sha256) === digest)) return null;
+      const target = {sessionId, artifactId: version.artifact_id, digest};
+      const key = harnessFeedbackKey(target);
+      if (keys.has(key)) return null;
+      keys.add(key);
+      targets.push(target);
+    }
+    if (checkpoint.evidence_refs.some(ref => ref.kind === "artifact" && harnessFeedbackDigest(ref.sha256)
+      && !keys.has(harnessFeedbackKey({sessionId, artifactId: ref.ref_id, digest: harnessFeedbackDigest(ref.sha256)})))) return null;
+    return targets;
+  }
+
+  function renderHarnessFeedbackChoices(payload) {
+    const select = document.getElementById("harnessFeedbackArtifact");
+    const status = document.getElementById("harnessFeedbackArtifactStatus");
+    const targets = payload && payload.sessionId === activeHarnessId ? harnessFeedbackTargets(payload.task, payload.sessionId) : null;
+    const shown = (targets || []).slice(0, 20);
+    const preferred = payload ? harnessFeedbackPreferredTargets.get(payload.sessionId) : "";
+    const preferredIndex = preferred ? shown.findIndex(target => harnessFeedbackKey(target) === preferred) : 0;
+    const missingPreferred = Boolean(preferred && preferredIndex < 0);
+    if (select) {
+      select.innerHTML = "";
+      if (missingPreferred && shown.length) {
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "Choose an artifact";
+        placeholder.disabled = true;
+        select.appendChild(placeholder);
+      }
+      for (const [index, target] of shown.entries()) {
+        const option = document.createElement("option");
+        option.value = String(index);
+        option.textContent = `${target.artifactId.slice(0, 256)} · sha256 ${target.digest.slice(0, 12)}`;
+        select.appendChild(option);
+      }
+      if (shown.length) select.value = missingPreferred ? "" : String(preferredIndex);
+      select.disabled = !shown.length || (!missingPreferred && shown.length < 2);
+    }
+    if (status) status.textContent = !targets ? "Recorded artifact versions are unavailable or invalid; feedback cannot be bound."
+      : !targets.length ? "No recorded artifact versions are available for feedback."
+      : `${targets.length > 20 ? `Showing 20 of ${targets.length}. ` : ""}${missingPreferred ? "The previously selected version is no longer available here; choose an artifact." : targets.length === 1 ? "One recorded artifact is available." : "Choose the recorded artifact for feedback."} Current files have not been rechecked.`;
+    return !missingPreferred && shown.length ? shown[preferredIndex] : null;
+  }
+
+  function chooseHarnessFeedbackArtifact(value) {
+    const payload = harnessEvidencePayload;
+    const targets = payload && payload.sessionId === activeHarnessId ? harnessFeedbackTargets(payload.task, payload.sessionId) : null;
+    const index = typeof value === "string" && /^(0|[1-9][0-9]*)$/.test(value) ? Number(value) : -1;
+    const target = targets && Number.isSafeInteger(index) && index >= 0 && index < Math.min(20, targets.length) ? targets[index] : null;
+    if (!target) {
+      invalidateHarnessFeedback();
+      invalidateHarnessReference();
+      const status = document.getElementById("harnessFeedbackArtifactStatus");
+      if (status) status.textContent = "That artifact selection is unavailable; nothing was bound.";
+      return;
+    }
+    harnessFeedbackPreferredTargets.set(payload.sessionId, harnessFeedbackKey(target));
+    loadHarnessFeedback(target);
+    loadHarnessReferences(payload.sessionId, target);
   }
 
   async function loadHarnessFeedback(target) {
@@ -20136,7 +20213,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     }
     // AP-019: feedback is loaded from the server for exactly the version the panel is showing,
     // so a comment is always recorded against what the reader is looking at.
-    const target = harnessFeedbackTarget(payload.task, payload.sessionId);
+    const target = renderHarnessFeedbackChoices(payload);
     if (target) {
       loadHarnessFeedback(target);
     } else {
@@ -20706,7 +20783,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
       label: "Bound artifact",
       value: model.artifactId || "artifact identity unavailable",
       mono: true,
-      note: "This is the first eligible recorded artifact in the session; choosing another artifact is not available here. The recorded content has not been rechecked against current files.",
+      note: "This is the selected session checkpoint artifact. The recorded content has not been rechecked against current files.",
     });
     rows.push({
       label: "Bound to version",

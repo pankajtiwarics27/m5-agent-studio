@@ -333,3 +333,16 @@ def test_feedback_view_fences_races_and_keeps_drafts_by_version():
     )
     assert result.returncode == 0, result.stdout + result.stderr
     assert "feedback fencing probe passed" in result.stdout
+
+
+def test_feedback_artifact_choices_are_session_bound_and_fence_races():
+    root = Path(__file__).resolve().parents[1]
+    result = subprocess.run(
+        ["node", "tests/feedback_artifact_choice_probe.cjs"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "feedback artifact chooser probe passed" in result.stdout

@@ -1,5 +1,7 @@
 # Feedback scope: interim file-selection refusal
 
+This document records the original containment slice. A subsequent [artifact chooser](project-workspace-feedback-artifact-choice.md) now permits selection among a bounded set of checkpoint-recorded artifacts; the file-selection and server-trust limitations below remain.
+
 Issue [413](https://github.com/pankajtiwarics27/m5-agent-studio/issues/413) exposed that a
 current-worktree diff path could be sent as a region of the first checkpoint artifact, even
 when no relationship had been established. This bounded mitigation makes diff rows inert,

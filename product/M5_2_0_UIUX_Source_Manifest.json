@@ -12,9 +12,9 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "4d7170e91f6830eb477655cd8b2f956402bc6853dcf4388ea52155d93de33324",
-      "bytes": 1145447,
-      "lines": 19474
+      "sha256": "85da77e41ea6b18ace1f28113a060965d5ac4286e9c2996700a078fd6d03e814",
+      "bytes": 1150632,
+      "lines": 19551
     },
     {
       "path": "app.py",
@@ -26,9 +26,9 @@
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "3a20de8ddf14217c89922fc21da6fdb1e98214394cf5fbf87c8860798767f59a",
-      "bytes": 4797411,
-      "lines": 94223
+      "sha256": "a7421a7543d1e94a81d2058ffca632c2e96dd689f3c5a133aed30887ea10161c",
+      "bytes": 4802596,
+      "lines": 94300
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -460,8 +460,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "4d7170e91f6830eb477655cd8b2f956402bc6853dcf4388ea52155d93de33324",
-    "lines": 19474,
+    "sha256": "85da77e41ea6b18ace1f28113a060965d5ac4286e9c2996700a078fd6d03e814",
+    "lines": 19551,
     "tab_count": 6,
     "tabs": [
       {

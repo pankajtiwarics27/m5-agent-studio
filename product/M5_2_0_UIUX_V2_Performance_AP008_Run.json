@@ -1,14 +1,14 @@
 {
   "story": "UIV2-29",
   "git": {
-    "head": "228d05c34302bc22fb9e0ec0110fe529b7e2458e",
+    "head": "fa0c7015d1ece7a34a1199896b31f3c967327eb9",
     "dirty": true
   },
   "source_sha256": {
-    "static/index.html": "4d7170e91f6830eb477655cd8b2f956402bc6853dcf4388ea52155d93de33324",
+    "static/index.html": "85da77e41ea6b18ace1f28113a060965d5ac4286e9c2996700a078fd6d03e814",
     "scripts/uiv2_performance_safety_walk.mjs": "db65e34744d881132250aba25da39f6d239adcf43c407ac4ebaf85f840070643"
   },
-  "generated_at": "2026-11-27T10:36:34.618Z",
+  "generated_at": "2026-11-27T11:28:02.275Z",
   "environment": {
     "node": "v22.22.3",
     "platform": "linux",
@@ -54,45 +54,45 @@
       },
       "fast": {
         "model": "Gemma-4-21B-REAP-4bit",
-        "elapsed_ms": 333.80000001192093,
+        "elapsed_ms": 337.09999999403954,
         "renders": 18,
         "schedules": 58,
         "model_tokens": 58,
-        "sse_per_second": 173.757,
+        "sse_per_second": 172.056,
         "complete_chars": 330
       }
     },
     "harness": {
       "memory": {
         "baseline": {
-          "Nodes": 8667,
+          "Nodes": 8683,
           "Documents": 2,
-          "JSEventListeners": 343,
-          "JSHeapUsedSize": 3423240,
+          "JSEventListeners": 344,
+          "JSHeapUsedSize": 3425984,
           "JSHeapTotalSize": 4194304,
           "LayoutCount": 1,
           "RecalcStyleCount": 3
         },
         "after_cycle_1": {
-          "Nodes": 8667,
+          "Nodes": 8683,
           "Documents": 2,
-          "JSEventListeners": 343,
-          "JSHeapUsedSize": 3362072,
+          "JSEventListeners": 344,
+          "JSHeapUsedSize": 3388252,
           "JSHeapTotalSize": 4165632,
           "LayoutCount": 123,
           "RecalcStyleCount": 245
         },
         "after_cycle_2": {
-          "Nodes": 8667,
+          "Nodes": 8683,
           "Documents": 2,
-          "JSEventListeners": 343,
-          "JSHeapUsedSize": 3381508,
+          "JSEventListeners": 344,
+          "JSHeapUsedSize": 3378828,
           "JSHeapTotalSize": 4165632,
           "LayoutCount": 245,
           "RecalcStyleCount": 487
         },
         "cycle_1": {
-          "elapsed_ms": 3971.800000011921,
+          "elapsed_ms": 3969.7000000178814,
           "cursor": 18000,
           "cached": 5000,
           "cards": 300,
@@ -100,7 +100,7 @@
           "last": 18000
         },
         "cycle_2": {
-          "elapsed_ms": 3973.9000000059605,
+          "elapsed_ms": 3974.2000000178814,
           "cursor": 30000,
           "cached": 5000,
           "cards": 300,
@@ -111,9 +111,9 @@
       },
       "steady": {
         "calls": 20,
-        "mean_ms": 2.0150000020861625,
-        "p95_ms": 2.800000011920929,
-        "max_ms": 2.800000011920929,
+        "mean_ms": 2.594999997317791,
+        "p95_ms": 3.5999999940395355,
+        "max_ms": 3.699999988079071,
         "cards": 300
       }
     },
@@ -121,10 +121,10 @@
       {
         "viewport": "1640x900",
         "theme": "light",
-        "cls_total": 0.18827,
-        "cls_internal_stream": 0.18827,
+        "cls_total": 0.21757,
+        "cls_internal_stream": 0.21757,
         "cls_external_shell": 0,
-        "shifts": 6,
+        "shifts": 7,
         "overflow": 0,
         "max_geometry_delta": 0,
         "cards": 300,
@@ -145,10 +145,10 @@
       {
         "viewport": "1440x900",
         "theme": "light",
-        "cls_total": 0.22974,
-        "cls_internal_stream": 0.22974,
+        "cls_total": 0.19692,
+        "cls_internal_stream": 0.19692,
         "cls_external_shell": 0,
-        "shifts": 7,
+        "shifts": 6,
         "overflow": 0,
         "max_geometry_delta": 0,
         "cards": 300,
@@ -169,10 +169,10 @@
       {
         "viewport": "1280x800",
         "theme": "light",
-        "cls_total": 0.18073,
-        "cls_internal_stream": 0.18073,
+        "cls_total": 0.15491,
+        "cls_internal_stream": 0.15491,
         "cls_external_shell": 0,
-        "shifts": 7,
+        "shifts": 6,
         "overflow": 0,
         "max_geometry_delta": 0,
         "cards": 300,
@@ -245,7 +245,7 @@
       "group": "sse",
       "step": "the measured fast fixture actually exceeds fifty scheduled SSE updates per second",
       "passed": true,
-      "detail": "rate=173.8/s elapsed=333.8ms schedules=58"
+      "detail": "rate=172.1/s elapsed=337.1ms schedules=58"
     },
     {
       "group": "dom-memory",
@@ -269,13 +269,13 @@
       "group": "dom-memory",
       "step": "post-GC document nodes plateau instead of growing with the event count",
       "passed": true,
-      "detail": "baseline=8667 cycle1=8667 cycle2=8667 delta=0"
+      "detail": "baseline=8683 cycle1=8683 cycle2=8683 delta=0"
     },
     {
       "group": "dom-memory",
       "step": "post-GC JS heap remains within the declared repeated-cycle plateau budgets",
       "passed": true,
-      "detail": "baseline=3423240 cycle1=3362072 cycle2=3381508 cycle_delta=19436 baseline_delta=-41732"
+      "detail": "baseline=3425984 cycle1=3388252 cycle2=3378828 cycle_delta=-9424 baseline_delta=-47156"
     },
     {
       "group": "dom-memory",
@@ -287,13 +287,13 @@
       "group": "dom-memory",
       "step": "ten-event frames retain the existing four-millisecond full-window budget",
       "passed": true,
-      "detail": "{\"calls\":20,\"mean_ms\":2.0150000020861625,\"p95_ms\":2.800000011920929,\"max_ms\":2.800000011920929,\"cards\":300}"
+      "detail": "{\"calls\":20,\"mean_ms\":2.594999997317791,\"p95_ms\":3.5999999940395355,\"max_ms\":3.699999988079071,\"cards\":300}"
     },
     {
       "group": "layout",
       "step": "1640x900 light: streaming shifts neither shell geometry nor the page",
       "passed": true,
-      "detail": "{\"cls_total\":0.18827,\"cls_internal_stream\":0.18827,\"cls_external_shell\":0,\"shifts\":6,\"overflow\":0,\"max_geometry_delta\":0,\"cards\":300,\"cursor\":30302}",
+      "detail": "{\"cls_total\":0.21757,\"cls_internal_stream\":0.21757,\"cls_external_shell\":0,\"shifts\":7,\"overflow\":0,\"max_geometry_delta\":0,\"cards\":300,\"cursor\":30302}",
       "viewport": "1640x900",
       "theme": "light",
       "pane": "harness"
@@ -311,7 +311,7 @@
       "group": "layout",
       "step": "1440x900 light: streaming shifts neither shell geometry nor the page",
       "passed": true,
-      "detail": "{\"cls_total\":0.22974,\"cls_internal_stream\":0.22974,\"cls_external_shell\":0,\"shifts\":7,\"overflow\":0,\"max_geometry_delta\":0,\"cards\":300,\"cursor\":30502}",
+      "detail": "{\"cls_total\":0.19692,\"cls_internal_stream\":0.19692,\"cls_external_shell\":0,\"shifts\":6,\"overflow\":0,\"max_geometry_delta\":0,\"cards\":300,\"cursor\":30502}",
       "viewport": "1440x900",
       "theme": "light",
       "pane": "harness"
@@ -329,7 +329,7 @@
       "group": "layout",
       "step": "1280x800 light: streaming shifts neither shell geometry nor the page",
       "passed": true,
-      "detail": "{\"cls_total\":0.18073,\"cls_internal_stream\":0.18073,\"cls_external_shell\":0,\"shifts\":7,\"overflow\":0,\"max_geometry_delta\":0,\"cards\":300,\"cursor\":30702}",
+      "detail": "{\"cls_total\":0.15491,\"cls_internal_stream\":0.15491,\"cls_external_shell\":0,\"shifts\":6,\"overflow\":0,\"max_geometry_delta\":0,\"cards\":300,\"cursor\":30702}",
       "viewport": "1280x800",
       "theme": "light",
       "pane": "harness"
@@ -371,7 +371,7 @@
   "captures": [
     {
       "path": "chat-midstream.png",
-      "sha256": "7a14a79cce4ec74ab1315fd3bc08ebdff39c7889c5b1ef32e6754258bca1a863",
+      "sha256": "c9d11d9732897ef587a71a4bb37ce9f0806fbdafa3004adc0496ec9d677ed23f",
       "group": "sse",
       "viewport": "1440x900",
       "theme": "dark",
@@ -380,7 +380,7 @@
     },
     {
       "path": "chat-complete.png",
-      "sha256": "19a50bd5e246a0935235eac2806e67d4579eec48ada0008558bab7bb47fb6b03",
+      "sha256": "54acb654f409e503759b2865bf5c1e162eaf609d5d99b9408f69aba197fdbb5a",
       "group": "sse",
       "viewport": "1440x900",
       "theme": "dark",
@@ -389,7 +389,7 @@
     },
     {
       "path": "chat-high-frequency-complete.png",
-      "sha256": "f929e55255c6ef17194c3ffcb4b580d640c598ec9c141af453196170c98e00b6",
+      "sha256": "3d9b19371cf0a55689176ed60c211c739f7b11f2b7bc313582a6cd19c83dd5ec",
       "group": "sse",
       "viewport": "1440x900",
       "theme": "dark",
@@ -398,7 +398,7 @@
     },
     {
       "path": "layout/light/1640x900-harness.png",
-      "sha256": "d0c6f414dd4472b31657a8c66b1160f795f4c497d5a70a9e7e84fcb22be3b39a",
+      "sha256": "cebe0a88101b38560f12636591ddd4c560eb015fe5e21369c63d82c9ad2a101b",
       "group": "layout",
       "viewport": "1640x900",
       "theme": "light",
@@ -407,7 +407,7 @@
     },
     {
       "path": "layout/dark/1640x900-harness.png",
-      "sha256": "c15b42c87b35e67bcc2604db30b34d16d76847a031e49d7489ed4ab14e7bc7c6",
+      "sha256": "344321819d17068f97d64046054515a10a2c83d0d34d0eceb8dc30733fe90fca",
       "group": "layout",
       "viewport": "1640x900",
       "theme": "dark",
@@ -416,7 +416,7 @@
     },
     {
       "path": "layout/light/1440x900-harness.png",
-      "sha256": "b8b30ce32452abd689ab5823501ba7155b5712787e11d10dad8cfe26d1e2dccc",
+      "sha256": "fb9aba9c167e54e4283602670d6faaed57ad7563fca6c12c8ddb672abad77b97",
       "group": "layout",
       "viewport": "1440x900",
       "theme": "light",
@@ -425,7 +425,7 @@
     },
     {
       "path": "layout/dark/1440x900-harness.png",
-      "sha256": "990e25d15c8957b3a28a6edce91a37eb83d76655944e156fe00ccb753950ee40",
+      "sha256": "bd6b81fd9f3d004cd05dbf80b688c7ec08f8a355a1de6577422aad915f6f7cb2",
       "group": "layout",
       "viewport": "1440x900",
       "theme": "dark",
@@ -434,7 +434,7 @@
     },
     {
       "path": "layout/light/1280x800-harness.png",
-      "sha256": "8d1111f1a10323af69cea13a7fd0a3787e876d51373d1780a1e8e51dedef5652",
+      "sha256": "92195d919530c67f098270377f8c19b9fe1b003f0065b7fa130d88be83439756",
       "group": "layout",
       "viewport": "1280x800",
       "theme": "light",
@@ -443,7 +443,7 @@
     },
     {
       "path": "layout/dark/1280x800-harness.png",
-      "sha256": "46c6a7a86b06e6f82e1e4e47f8746eaffeb54e1e7b10683858c93b36f06b46d1",
+      "sha256": "6bf4a8379391805f84d87905e26790c0daadd624c8ab0ce19a711c3e3bb000ee",
       "group": "layout",
       "viewport": "1280x800",
       "theme": "dark",

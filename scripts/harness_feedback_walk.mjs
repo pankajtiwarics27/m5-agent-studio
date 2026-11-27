@@ -411,7 +411,46 @@ async function main() {
     });
     check(scopeBefore.files.some(text => text.includes("hero.html")) && scopeBefore.files.some(text => text.includes("z-other.txt")), "7. the real diff contains both bound and unrelated files", JSON.stringify(scopeBefore));
     check(scopeBefore.interactive === 0 && /File selection is unavailable/.test(scopeBefore.status), "7. diff file rows do not claim a selectable artifact region", JSON.stringify(scopeBefore));
-    check(scopeBefore.panel.includes(artifactId) && /first eligible recorded artifact/i.test(scopeBefore.panel) && /not been rechecked/i.test(scopeBefore.panel), "7. the composer names its first bound artifact and its limits", scopeBefore.panel.slice(0, 600));
+    check(scopeBefore.panel.includes(artifactId) && /selected session checkpoint artifact/i.test(scopeBefore.panel) && /not been rechecked/i.test(scopeBefore.panel), "7. the composer names its selected artifact and its limits", scopeBefore.panel.slice(0, 600));
+    const targets = await page.evaluate(async sessionId => {
+      const response = await fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/task`);
+      const task = await response.json();
+      const select = document.getElementById('harnessFeedbackArtifact');
+      return {ok: response.ok, checkpoint: task.latest_checkpoint, integrity: task.checkpoint_integrity_error, versions: task.session_artifact_versions, disabled: select.disabled,
+        options: [...select.options].map(option => ({value: option.value, text: option.textContent}))};
+    }, ids.main);
+    const secondVersion = targets.versions.find(version => version.artifact_id === 'support.css');
+    const secondOption = targets.options.find(option => option.text.startsWith('support.css ·'));
+    check(Boolean(targets.ok && secondVersion && secondOption && !targets.disabled && targets.options.length === 2), '7. the chooser exposes both recorded checkpoint artifacts', JSON.stringify(targets));
+    await page.evaluate(() => { document.getElementById('harnessFeedbackText').value = 'draft for hero'; });
+    await page.select('#harnessFeedbackArtifact', secondOption.value);
+    await sleep(args.settleMs * 10);
+    const secondBinding = await page.evaluate(() => ({panel: document.getElementById('harnessFeedbackPanel').textContent, draft: document.getElementById('harnessFeedbackText').value}));
+    check(secondBinding.panel.includes('support.css') && secondBinding.panel.includes(secondVersion.content_sha256) && secondBinding.draft === '', '7. choosing the second artifact changes the binding without carrying the first draft', JSON.stringify(secondBinding));
+    await page.evaluate(() => { document.getElementById('harnessFeedbackText').value = 'draft for support'; closeHarnessEvidenceModal(); });
+    await sleep(args.settleMs * 3);
+    await openFeedbackPane();
+    const reopenedChoice = await page.evaluate(() => ({value: document.getElementById('harnessFeedbackArtifact').value,
+      panel: document.getElementById('harnessFeedbackPanel').textContent, draft: document.getElementById('harnessFeedbackText').value}));
+    check(reopenedChoice.value === secondOption.value && reopenedChoice.panel.includes('support.css') && reopenedChoice.draft === 'draft for support', '7. reopening preserves the selected version and its page-memory draft', JSON.stringify(reopenedChoice));
+    await page.evaluate(() => {
+      const field = document.getElementById('harnessFeedbackText');
+      field.value = 'the support stylesheet needs review';
+      Array.from(document.querySelectorAll('#harnessFeedbackBlock button')).find(n => /Record feedback/i.test(n.innerText)).click();
+    });
+    await sleep(args.settleMs * 10);
+    const secondRecord = await page.evaluate(async ({id, sha}) => {
+      const response = await fetch(`/api/harness/sessions/${encodeURIComponent(id)}/feedback?artifact_id=support.css&artifact_sha256=${sha}`);
+      return response.json();
+    }, {id: ids.main, sha: secondVersion.content_sha256});
+    const secondItem = (secondRecord.items || []).find(item => item.verbatim === 'the support stylesheet needs review');
+    const firstRecord = await served(ids.main, digest);
+    check(Boolean(secondItem && secondItem.artifact_id === 'support.css' && secondItem.artifact_sha256 === secondVersion.content_sha256 && secondItem.scope_kind === 'artifact' && secondItem.selection === null
+      && !(firstRecord.items || []).some(item => item.verbatim === secondItem.verbatim)), '7. the real route records feedback only against the chosen second artifact', JSON.stringify(secondItem));
+    await page.select('#harnessFeedbackArtifact', targets.options.find(option => option.text.startsWith(`${artifactId} ·`)).value);
+    await sleep(args.settleMs * 10);
+    const firstBinding = await page.evaluate(() => ({panel: document.getElementById('harnessFeedbackPanel').textContent, draft: document.getElementById('harnessFeedbackText').value}));
+    check(firstBinding.panel.includes(artifactId) && firstBinding.panel.includes(digest) && firstBinding.draft === 'draft for hero', '7. returning restores the first artifact and its own unsent draft', JSON.stringify(firstBinding));
     await page.evaluate(() => selectHarnessFeedbackRegion("z-other.txt"));
     const refused = await page.evaluate(() => ({status: document.getElementById("harnessFeedbackSelection").textContent, text: document.getElementById("harnessFeedbackPanel").textContent, selection: harnessFeedbackSelection}));
     check(/File selection is unavailable/.test(refused.status) && /File selection is unavailable/.test(refused.text) && refused.selection === null, "7. the legacy selection entry point refuses an unrelated path", JSON.stringify(refused));
@@ -499,16 +538,20 @@ async function main() {
         const node = document.getElementById('harnessWorkspaceArtifacts');
         review.open = true;
         node.scrollIntoView({block: 'nearest'});
-        const box = node.getBoundingClientRect();
         const container = review.getBoundingClientRect();
-        return {text: node.textContent, width: box.width, height: box.height,
-          left: box.left, right: box.right, top: box.top, bottom: box.bottom,
-          containerTop: container.top, containerBottom: container.bottom,
+        review.scrollTop += node.getBoundingClientRect().top - container.top - 4;
+        const first = node.getBoundingClientRect();
+        const firstVisible = first.top >= container.top - 1 && first.top < container.bottom;
+        review.scrollTop += node.getBoundingClientRect().bottom - container.bottom + 4;
+        const last = node.getBoundingClientRect();
+        const lastVisible = last.bottom <= container.bottom + 1 && last.bottom > container.top;
+        return {text: node.textContent, width: last.width, height: last.height,
+          left: last.left, right: last.right, firstVisible, lastVisible,
+          contentOverflow: Math.max(0, node.scrollHeight - node.clientHeight),
           viewportWidth: innerWidth, documentOverflow: Math.max(0, document.documentElement.scrollWidth - innerWidth)};
       });
       check(Boolean(panel.text.includes(adjacentArtifact.version.identity_sha256.slice(0, 12)) && panel.width > 100 && panel.height > 0
-        && panel.left >= -1 && panel.right <= panel.viewportWidth + 1 && panel.top >= panel.containerTop - 1
-        && panel.bottom <= panel.containerBottom + 1 && panel.documentOverflow === 0),
+        && panel.left >= -1 && panel.right <= panel.viewportWidth + 1 && panel.firstVisible && panel.lastVisible && panel.contentOverflow === 0 && panel.documentOverflow === 0),
         `adjacent checkpoint is readable without horizontal overflow at ${width} CSS pixels`, JSON.stringify(panel));
       await openFeedbackPane();
       return paneVisible();

@@ -47,28 +47,28 @@ through `setStatus()`, so the state, the tone and the label cannot disagree.
 |---|---|---|---|
 | (unnamed) | `ok` | no | 2565 |
 | `#dockerStateBadge` | `neutral` | no | 2612 |
-| `#sdlcProgressBadge` | `neutral` | no | 3300 |
-| `#startReadinessPill` | `neutral` | yes | 3427 |
-| `#startRecentSummary` | `neutral` | yes | 3455 |
-| `#onboardingSummary` | `neutral` | yes | 3473 |
-| `#startHealthSummary` | `neutral` | yes | 3514 |
-| `#startWorkspaceSummary` | `neutral` | yes | 3534 |
-| `#harnessActiveStatusBadge` | `info` | yes | 3591 |
-| `#hallStatusBadge` | `info` | yes | 3785 |
-| `#councilReadinessCount` | `neutral` | no | 3799 |
-| `#pipelineWorkspaceState` | `info` | no | 3959 |
-| (unnamed) | `warn` | no | 7507 |
-| (unnamed) | `warn` | no | 7605 |
-| (unnamed) | `neutral` | no | 11610 |
-| (unnamed) | `busy` | no | 11611 |
-| (unnamed) | `ok` | no | 11612 |
-| (unnamed) | `warn` | no | 11613 |
-| (unnamed) | `warn` | no | 11614 |
-| (unnamed) | `warn` | no | 11615 |
-| (unnamed) | `danger` | no | 11616 |
+| `#sdlcProgressBadge` | `neutral` | no | 3303 |
+| `#startReadinessPill` | `neutral` | yes | 3430 |
+| `#startRecentSummary` | `neutral` | yes | 3458 |
+| `#onboardingSummary` | `neutral` | yes | 3476 |
+| `#startHealthSummary` | `neutral` | yes | 3517 |
+| `#startWorkspaceSummary` | `neutral` | yes | 3537 |
+| `#harnessActiveStatusBadge` | `info` | yes | 3594 |
+| `#hallStatusBadge` | `info` | yes | 3788 |
+| `#councilReadinessCount` | `neutral` | no | 3802 |
+| `#pipelineWorkspaceState` | `info` | no | 3962 |
+| (unnamed) | `warn` | no | 7510 |
+| (unnamed) | `warn` | no | 7608 |
+| (unnamed) | `neutral` | no | 11613 |
+| (unnamed) | `busy` | no | 11614 |
+| (unnamed) | `ok` | no | 11615 |
+| (unnamed) | `warn` | no | 11616 |
 | (unnamed) | `warn` | no | 11617 |
 | (unnamed) | `warn` | no | 11618 |
-| (unnamed) | `neutral` | no | 11619 |
+| (unnamed) | `danger` | no | 11619 |
+| (unnamed) | `warn` | no | 11620 |
+| (unnamed) | `warn` | no | 11621 |
+| (unnamed) | `neutral` | no | 11622 |
 
 ## Writers
 

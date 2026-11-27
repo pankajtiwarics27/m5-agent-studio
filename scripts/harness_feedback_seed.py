@@ -87,6 +87,7 @@ def _build_workspace(root: Path) -> Path:
     workspace.mkdir(parents=True, exist_ok=True)
     (workspace / ARTIFACT_ID).write_text(OLD_SOURCE, encoding="utf-8")
     (workspace / "z-other.txt").write_text("before\n", encoding="utf-8")
+    (workspace / "support.css").write_text("body { color: navy; }\n", encoding="utf-8")
     _git(workspace, "init", "-q")
     _git(workspace, "config", "user.email", "walk@example.invalid")
     _git(workspace, "config", "user.name", "AP-019 walk")
@@ -173,7 +174,14 @@ def prepare(environment: demo_tour.DemoEnvironment):
                     sha256=digest,
                     summary="the page this session produced",
                 )
-            ],
+            ] + ([
+                studio.workflow_checkpoints.EvidenceRef(
+                    kind="artifact",
+                    ref_id="support.css",
+                    sha256=hashlib.sha256(b"body { color: navy; }\n").hexdigest(),
+                    summary="a second recorded artifact",
+                )
+            ] if key == "main" else []),
         )
         studio._append_harness_event(
             session_id,
