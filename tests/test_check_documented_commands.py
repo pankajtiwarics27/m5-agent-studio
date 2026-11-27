@@ -20,6 +20,8 @@ documentation check that executed them would edit the tree it is checking.
 from __future__ import annotations
 
 from pathlib import Path
+import subprocess
+import sys
 
 import pytest
 
@@ -90,22 +92,97 @@ def test_a_valid_command_produces_no_problem(tmp_path: Path) -> None:
     assert cdc.check_repository(tmp_path).ok is True
 
 
-def test_a_root_level_flag_applies_to_every_subcommand(tmp_path: Path) -> None:
+def test_root_flag_after_subcommand_is_not_accepted(tmp_path: Path) -> None:
     body = '''
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--verbose", action="store_true")
-    sub = parser.add_subparsers()
-    package = sub.add_parser("package")
-    package.add_argument("--version")
+parser = argparse.ArgumentParser()
+parser.add_argument("--verbose", action="store_true")
+sub = parser.add_subparsers()
+package = sub.add_parser("package")
+package.add_argument("--version")
+parser.parse_args()
 '''
     (tmp_path / "scripts").mkdir()
-    _script(tmp_path / "scripts", body)
-    shape = cdc.flags_a_script_accepts(tmp_path / "scripts" / "tool.py")
-    assert "--verbose" in shape.root_flags
+    script = _script(tmp_path / "scripts", body)
+    # Real argparse rejects the invocation that the previous root/subparser union accepted.
+    actual = subprocess.run([sys.executable, str(script), "package", "--verbose"], capture_output=True, text=True)
+    assert actual.returncode != 0 and "unrecognized arguments: --verbose" in actual.stderr
     commands = [cdc.DocCommand("page.md", 1, "scripts/tool.py", ("package", "--verbose"))]
     problems, unchecked = cdc.check_flags(commands, tmp_path)
-    assert problems == [] and unchecked == []
+    assert not unchecked and [p.flag for p in problems] == ["--verbose"]
+
+
+def test_flag_declared_on_both_root_and_subcommand_is_accepted_after_subcommand(tmp_path: Path) -> None:
+    (tmp_path / "scripts").mkdir()
+    _script(tmp_path / "scripts", '''
+p = argparse.ArgumentParser()
+p.add_argument("--verbose", action="store_true")
+s = p.add_subparsers()
+cmd = s.add_parser("package")
+cmd.add_argument("--verbose", action="store_true")
+''')
+    commands = [cdc.DocCommand("page.md", 1, "scripts/tool.py", ("package", "--verbose"))]
+    problems, unchecked = cdc.check_flags(commands, tmp_path)
+    assert not problems and not unchecked
+
+
+def test_root_option_before_subcommand_is_unchecked_rather_than_guessed(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    (tmp_path / "scripts").mkdir()
+    _script(tmp_path / "scripts", '''
+p = argparse.ArgumentParser()
+p.add_argument("--format")
+s = p.add_subparsers()
+cmd = s.add_parser("package")
+cmd.add_argument("--output")
+''')
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "page.md").write_text(
+        'python scripts/tool.py --format package package --output result\n', encoding="utf-8"
+    )
+    report = cdc.check_repository(tmp_path)
+    assert not report.problems and not report.ok
+    assert len(report.unchecked) == 1 and report.unresolved == ["scripts/tool.py"]
+    assert cdc.unresolved_scripts(tmp_path) == ("scripts/tool.py",)
+    assert cdc.main([str(tmp_path)]) == 1
+    assert "not checked (parser or invocation scope not statically readable): docs/page.md:1 (scripts/tool.py)" in capsys.readouterr().err
+
+
+def test_unknown_subcommand_does_not_validate_a_root_flag(tmp_path: Path) -> None:
+    (tmp_path / "scripts").mkdir()
+    _script(tmp_path / "scripts", '''
+p = argparse.ArgumentParser()
+p.add_argument("--verbose", action="store_true")
+s = p.add_subparsers()
+cmd = s.add_parser("package")
+''')
+    command = cdc.DocCommand("page.md", 1, "scripts/tool.py", ("unknown", "--verbose"))
+    problems, unchecked = cdc.check_flags([command], tmp_path)
+    assert not problems and unchecked == [command]
+
+
+def test_an_unassigned_subparser_is_not_silently_ignored(tmp_path: Path) -> None:
+    path = _script(tmp_path, '''
+p = argparse.ArgumentParser()
+p.add_argument("--verbose", action="store_true")
+s = p.add_subparsers()
+s.add_parser("package")
+''')
+    shape = cdc.flags_a_script_accepts(path)
+    assert not shape.static and "subparser is not assigned" in shape.reason
+
+
+def test_root_only_options_without_positional_tokens_remain_checked(tmp_path: Path) -> None:
+    (tmp_path / "scripts").mkdir()
+    _script(tmp_path / "scripts", '''
+p = argparse.ArgumentParser()
+p.add_argument("--verbose", action="store_true")
+s = p.add_subparsers()
+cmd = s.add_parser("package")
+''')
+    command = cdc.DocCommand("page.md", 1, "scripts/tool.py", ("--verbose",))
+    problems, unchecked = cdc.check_flags([command], tmp_path)
+    assert not problems and not unchecked
 
 
 # ── abstention: never a false pass, never a false finding ────────────────────────────────────────
@@ -460,8 +537,8 @@ def test_indirect_node_argv_is_reported_unchecked_not_as_a_flag_problem(
     assert not report.ok and not report.problems
     assert cdc.main([str(tmp_path)]) == 1
     output = capsys.readouterr()
-    assert "0 checked against a static parser, 1 unchecked across 1 unreadable scripts" in output.out
-    assert "not checked (parser not statically readable): scripts/helper.js" in output.err
+    assert "0 checked against a static parser, 1 unchecked across 1 scripts with unreadable parser or scope" in output.out
+    assert "not checked (parser or invocation scope not statically readable): docs/page.md:1 (scripts/helper.js)" in output.err
 
 
 # ── the repository, which is the reason this exists ─────────────────────────────────────────────
@@ -536,18 +613,13 @@ def test_the_repository_check_actually_reads_commands() -> None:
     assert any(command.script == "scripts/db_maintenance.py" for command in report.checked)
 
 
-def test_every_unchecked_script_is_named_with_its_reason() -> None:
-    """Abstention is allowed; silence is not. Each unchecked script must say why it could not be read."""
+def test_every_unchecked_invocation_is_named() -> None:
+    """Abstention is allowed; silence is not, including when only the invocation scope is unknown."""
     report = cdc.check_repository(PROJECT_ROOT)
+    assert {command.script for command in report.unchecked} == set(report.unresolved)
     for command in report.unchecked:
-        path = PROJECT_ROOT / command.script
-        shape = (
-            cdc.flags_a_script_accepts(path)
-            if command.interpreter.startswith("python")
-            else cdc.flags_a_js_script_accepts(path)
-        )
-        assert shape.static is False
-        assert shape.reason, f"{command.script} was skipped without saying why"
+        problems, unchecked = cdc.check_flags([command], PROJECT_ROOT)
+        assert not problems and unchecked == [command]
 
 
 @pytest.mark.parametrize("reverse", [False, True])
@@ -593,9 +665,9 @@ def test_cli_counts_unchecked_invocations_not_only_distinct_scripts(
     assert report.unresolved == ["scripts/plain.py"]
     assert cdc.main([str(tmp_path)]) == 0
     output = capsys.readouterr()
-    assert "1 checked against a static parser, 2 unchecked across 1 unreadable scripts" in output.out
+    assert "1 checked against a static parser, 2 unchecked across 1 scripts with unreadable parser or scope" in output.out
     assert "parser built at runtime" not in output.err
-    assert "not checked (parser not statically readable): scripts/plain.py" in output.err
+    assert "docs/page.md:1 (scripts/plain.py), docs/page.md:2 (scripts/plain.py)" in output.err
 
 
 def test_cli_does_not_call_every_skipped_line_a_placeholder(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

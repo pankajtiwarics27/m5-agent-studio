@@ -62,11 +62,17 @@ The obvious implementation collects every `add_argument` in the file and checks 
 against the union. That version was written first and **reported `package --root` as valid**, by
 borrowing `--root` from `install` — the original defect reproduced inside its own detector.
 
-It now keeps the root parser's flags apart from each subparser's, and checks a command against the
-union of the flags in its own scope. A subparser built in a loop (`for name in ("install", "update")`)
-is resolved when the names are literals, and those commands are reported as **widened**: one iteration
-may add a flag another does not, so a pass there is weaker than a pass elsewhere. The report says so
-rather than implying precision it does not have.
+It keeps root and subparser flags apart. When the first argument is a recognized subcommand, only that
+subparser's flags are checked after it: a root-only flag there is rejected by `argparse`, even though
+the previous root/subparser union incorrectly accepted it. A root flag before a subcommand is left
+unchecked when its value or positional wiring could be confused with the subcommand; an unknown
+positional token also causes abstention. Each unchecked invocation is named by file and line. An
+unassigned `add_parser` likewise makes the parser unreadable, rather than silently disappearing.
+
+A subparser built in a loop (`for name in ("install", "update")`) is resolved when the names are
+literals, and those commands are reported as **widened**: one iteration may add a flag another does
+not, so a pass there is weaker than a pass elsewhere. The report says so rather than implying precision
+it does not have. The checker still does not validate argument sufficiency or execute the command.
 
 ## Abstention
 
@@ -141,7 +147,10 @@ mutations covered shell operators, comment handling, continuation boundaries, qu
 skipped-location reporting; each was caught and the restored tests passed. Four mutations verified the
 empty-coverage failure, exclusion of unreadable invocations from the count, its diagnostic, and the
 separate partial-coverage behavior. A fifth caught the library entry point defaulting to `scripts/`
-instead of the repository root; the restored tests passed.
+instead of the repository root; the restored tests passed. Eight further mutations tested root versus
+subcommand flags, ambiguous and unknown scope, root-only flags, unassigned subparsers, and reporting;
+each was caught and the restored tests passed. The root-flag ordering regression also executes a small
+real `argparse` fixture to establish that the formerly accepted command actually fails.
 
 ## Verification
 
