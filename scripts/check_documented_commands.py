@@ -123,8 +123,13 @@ class DocFlagReport:
     counter_examples: list[str] = field(default_factory=list)
 
     @property
+    def readable_count(self) -> int:
+        """Literal invocations whose parser was actually read, not unique script names."""
+        return len(self.checked) - len(self.unchecked)
+
+    @property
     def ok(self) -> bool:
-        return not self.problems
+        return not self.problems and self.readable_count > 0
 
 
 def _markdown_files(root: Path) -> Iterator[Path]:
@@ -431,7 +436,7 @@ def check_flags(commands: Iterable[DocCommand], root: Path) -> tuple[list[DocFla
     return problems, unchecked
 
 
-def check_repository(root: Path = _ROOT) -> DocFlagReport:
+def check_repository(root: Path = _ROOT.parent) -> DocFlagReport:
     """Check every documentation line this module can read, and count what it could not."""
     commands, skipped = documented_commands(root)
     problems, unchecked = check_flags(commands, root)
@@ -457,7 +462,7 @@ def check_repository(root: Path = _ROOT) -> DocFlagReport:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """CLI: exit 0 when every readable documented flag exists, 1 on a problem, 0 with a note otherwise."""
+    """CLI: fail on a flag problem or zero readable invocations; report partial coverage separately."""
     import sys
 
     args = list(sys.argv[1:] if argv is None else argv)
@@ -465,7 +470,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     report = check_repository(root)
     for problem in report.problems:
         print(f"doc flag: {problem.describe()}", file=sys.stderr)
-    readable = len(report.checked) - len(report.unchecked)
+    readable = report.readable_count
+    if readable == 0:
+        print("doc flag: no documented invocations could be checked; coverage is empty", file=sys.stderr)
     print(
         f"documented commands: {len(report.checked) + len(report.skipped)} lines, "
         f"{len(report.checked)} literal candidates, {len(report.skipped)} skipped lines; "

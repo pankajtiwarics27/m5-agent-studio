@@ -42,8 +42,11 @@ parser: skipped commands have not been validated. Inline shell comments are excl
 commands containing `;` or `&` are skipped rather than checked as one invocation, even when those
 characters are quoted. Continuations with single quotes before a join are conservatively skipped,
 because the reader does not determine shell quote state. The output lists each skipped command's
-repository-relative path and line, and names scripts it could not read statically — a checker that
-silently reads nothing would pass forever.
+repository-relative path and line, and names scripts it could not read statically. If **zero**
+invocations can be checked, the report and CLI fail explicitly: an empty directory, a page with no
+commands, an all-skipped set, and an all-unreadable set must not pass as successful checks. With at
+least one readable invocation, skips and unreadable scripts are still reported as partial coverage,
+not silently promoted to checked commands.
 
 ## Static, not executed
 
@@ -135,7 +138,10 @@ mutations were caught, and the restored Python and JavaScript command-checker te
 mutations tested Python and Node continuations, exact shell joining, escaped backslashes, placeholders,
 boundaries, and malformed counter-examples; each was caught and the restored tests passed. Seven further
 mutations covered shell operators, comment handling, continuation boundaries, quote uncertainty and
-skipped-location reporting; each was caught and the restored tests passed.
+skipped-location reporting; each was caught and the restored tests passed. Four mutations verified the
+empty-coverage failure, exclusion of unreadable invocations from the count, its diagnostic, and the
+separate partial-coverage behavior. A fifth caught the library entry point defaulting to `scripts/`
+instead of the repository root; the restored tests passed.
 
 ## Verification
 
