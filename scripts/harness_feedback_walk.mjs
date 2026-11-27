@@ -26,8 +26,7 @@
  *      averaged into one change;
  *   6. feedback given against an OLDER version is shown as stale and is not counted as
  *      applying to the version on screen;
- *   7. a region can be selected for a comment, the selection is stated in words, and clearing
- *      it returns the composer to artifact scope;
+ *   7. worktree file selection is refused, and feedback remains artifact-scoped;
  *   8. withdrawing a comment goes through `DELETE …/feedback/{id}` and the item stops applying
  *      while the record of what was said stays in the store;
  *   9. words, ids and regions that are markup are drawn as text: no element, no handler, no
@@ -51,6 +50,7 @@ const DEFAULTS = {
   mainSessionId: "",
   staleSessionId: "",
   hostileSessionId: "",
+  otherSessionId: "",
   artifactId: "hero.html",
   port: 0,
 };
@@ -71,6 +71,7 @@ function parseArgs(argv) {
       case "--main-session": args.mainSessionId = next(); break;
       case "--stale-session": args.staleSessionId = next(); break;
       case "--hostile-session": args.hostileSessionId = next(); break;
+      case "--other-session": args.otherSessionId = next(); break;
       case "--artifact-id": args.artifactId = next(); break;
       case "--port": args.port = Number(next()); break;
       case "--screenshots": args.screenshots = next(); break;
@@ -87,7 +88,7 @@ function parseArgs(argv) {
 function usage() {
   return [
     "Usage: node scripts/harness_feedback_walk.mjs [--screenshots DIR] [--json]",
-    "       --base-url URL --token TOKEN --main-session ID --stale-session ID --hostile-session ID",
+    "       --base-url URL --token TOKEN --main-session ID --stale-session ID --hostile-session ID --other-session ID",
     "",
     "Without --base-url the walk starts scripts/harness_feedback_seed.py itself, so every record",
     "it reads was written by the running server's own routes. This script refuses to report a",
@@ -179,6 +180,7 @@ async function main() {
     main: args.mainSessionId,
     stale: args.staleSessionId,
     hostile: args.hostileSessionId,
+    other: args.otherSessionId,
   };
   let artifactId = args.artifactId;
   let hostileText = "";
@@ -190,10 +192,12 @@ async function main() {
       main: ids.main || seed.ready.main_session_id,
       stale: ids.stale || seed.ready.stale_session_id,
       hostile: ids.hostile || seed.ready.hostile_session_id,
+      other: ids.other || seed.ready.other_session_id,
     };
     artifactId = seed.ready.artifact_id || artifactId;
     hostileText = seed.ready.hostile_text || "";
   }
+  if (!ids.other || ids.other === ids.main) throw new Error("a distinct --other-session is required for checkpoint switching checks");
   if (!(await waitForHttp(`${baseUrl}/healthz`, args.timeoutMs))) {
     throw new Error(`the app did not become healthy at ${baseUrl}`);
   }
@@ -295,6 +299,35 @@ async function main() {
 
     // ---- 1. the pane draws what was said, at its scope, next to the version ----
     await openSession(ids.main);
+    const adjacentArtifact = await page.evaluate(async sessionId => {
+      const response = await fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/state`);
+      const state = await response.json();
+      const node = document.getElementById('harnessWorkspaceArtifacts');
+      const version = state.session_artifact_versions && state.session_artifact_versions[0];
+      return {ok: response.ok, id: state.session_id, version, text: node ? node.textContent : '', children: node ? node.children.length : -1};
+    }, ids.main);
+    check(Boolean(adjacentArtifact.ok && adjacentArtifact.id === ids.main && adjacentArtifact.version
+      && adjacentArtifact.text.includes(adjacentArtifact.version.artifact_id)
+      && adjacentArtifact.text.includes(adjacentArtifact.version.identity_sha256.slice(0, 12))
+      && /not been rechecked against current files/.test(adjacentArtifact.text)
+      && adjacentArtifact.children === 0), 'adjacent panel reflects this session checkpoint version as inert text', JSON.stringify(adjacentArtifact));
+    const immediateSwitch = await page.evaluate(id => {
+      selectHarnessSession(id);
+      return document.getElementById('harnessWorkspaceArtifacts').textContent;
+    }, ids.other);
+    check(!immediateSwitch.includes(adjacentArtifact.version.identity_sha256.slice(0, 12)), 'switch immediately clears the previous checkpoint', immediateSwitch);
+    await sleep(args.settleMs * 14);
+    const otherArtifact = await page.evaluate(async id => {
+      const response = await fetch(`/api/harness/sessions/${encodeURIComponent(id)}/state`);
+      const state = await response.json();
+      return {ok: response.ok, id: state.session_id, version: state.session_artifact_versions?.[0], text: document.getElementById('harnessWorkspaceArtifacts').textContent};
+    }, ids.other);
+    check(Boolean(otherArtifact.ok && otherArtifact.id === ids.other && otherArtifact.version
+      && otherArtifact.version.identity_sha256 !== adjacentArtifact.version.identity_sha256
+      && otherArtifact.text.includes(otherArtifact.version.identity_sha256.slice(0, 12))
+      && !otherArtifact.text.includes(adjacentArtifact.version.identity_sha256.slice(0, 12))), 'switch shows only the other session checkpoint', JSON.stringify(otherArtifact));
+    await openSession(ids.main);
+    check((await page.$eval('#harnessWorkspaceArtifacts', node => node.textContent)).includes(adjacentArtifact.version.identity_sha256.slice(0, 12)), 'switching back restores the selected checkpoint');
     await openFeedbackPane();
     check(await paneVisible(), "1. the feedback pane is drawn in the evidence modal");
     let text = await paneText();
@@ -363,25 +396,67 @@ async function main() {
 
     if (args.screenshots) await page.screenshot({ path: `${args.screenshots}/feedback-stale.png` });
 
-    // ---- 7. a region can be selected, stated in words, and cleared ----
+    // ---- 7. worktree paths are not presented as checkpoint artifact regions ----
     await openSession(ids.main);
     await openFeedbackPane();
     check(await composerReady(), "7. the composer is present and enabled");
-    const selected = await page.evaluate(() => {
-      const row = document.querySelector("#harnessEvidenceChange [data-feedback-region]");
-      if (!row) return "";
-      row.click();
-      return row.dataset.feedbackRegion || "";
+    const scopeBefore = await page.evaluate(() => {
+      const panel = document.getElementById("harnessFeedbackPanel");
+      const status = document.getElementById("harnessFeedbackSelection");
+      const rows = [...document.querySelectorAll("#harnessEvidenceChange .ev-file")];
+      const files = rows.map(row => row.textContent);
+      rows.forEach(row => row.click());
+      return {panel: panel.textContent, status: status.textContent, files,
+        interactive: rows.filter(row => row.hasAttribute("onclick") || row.hasAttribute("tabindex") || row.getAttribute("role") === "button").length};
     });
-    await sleep(args.settleMs * 4);
-    check(Boolean(selected), "7. a region in the diff can be selected for the comment", selected);
-    let status = await page.evaluate(() => (document.getElementById("harnessFeedbackSelection") || {}).textContent || "");
-    check(new RegExp(`Narrowed to region: ${selected.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`).test(status), "7. the composer states in words what the comment will apply to", status);
-    await page.evaluate(() => clearHarnessFeedbackSelection());
+    check(scopeBefore.files.some(text => text.includes("hero.html")) && scopeBefore.files.some(text => text.includes("z-other.txt")), "7. the real diff contains both bound and unrelated files", JSON.stringify(scopeBefore));
+    check(scopeBefore.interactive === 0 && /File selection is unavailable/.test(scopeBefore.status), "7. diff file rows do not claim a selectable artifact region", JSON.stringify(scopeBefore));
+    check(scopeBefore.panel.includes(artifactId) && /selected session checkpoint artifact/i.test(scopeBefore.panel) && /not been rechecked/i.test(scopeBefore.panel), "7. the composer names its selected artifact and its limits", scopeBefore.panel.slice(0, 600));
+    const targets = await page.evaluate(async sessionId => {
+      const response = await fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/task`);
+      const task = await response.json();
+      const select = document.getElementById('harnessFeedbackArtifact');
+      return {ok: response.ok, checkpoint: task.latest_checkpoint, integrity: task.checkpoint_integrity_error, versions: task.session_artifact_versions, disabled: select.disabled,
+        options: [...select.options].map(option => ({value: option.value, text: option.textContent}))};
+    }, ids.main);
+    const secondVersion = targets.versions.find(version => version.artifact_id === 'support.css');
+    const secondOption = targets.options.find(option => option.text.startsWith('support.css ·'));
+    check(Boolean(targets.ok && secondVersion && secondOption && !targets.disabled && targets.options.length === 2), '7. the chooser exposes both recorded checkpoint artifacts', JSON.stringify(targets));
+    await page.evaluate(() => { document.getElementById('harnessFeedbackText').value = 'draft for hero'; });
+    await page.select('#harnessFeedbackArtifact', secondOption.value);
+    await sleep(args.settleMs * 10);
+    const secondBinding = await page.evaluate(() => ({panel: document.getElementById('harnessFeedbackPanel').textContent, draft: document.getElementById('harnessFeedbackText').value}));
+    check(secondBinding.panel.includes('support.css') && secondBinding.panel.includes(secondVersion.content_sha256) && secondBinding.draft === '', '7. choosing the second artifact changes the binding without carrying the first draft', JSON.stringify(secondBinding));
+    await page.evaluate(() => { document.getElementById('harnessFeedbackText').value = 'draft for support'; closeHarnessEvidenceModal(); });
     await sleep(args.settleMs * 3);
-    status = await page.evaluate(() => (document.getElementById("harnessFeedbackSelection") || {}).textContent || "");
-    check(/No selection/i.test(status) && /artifact version only/i.test(status), "7. clearing the selection returns the composer to artifact scope", status);
+    await openFeedbackPane();
+    const reopenedChoice = await page.evaluate(() => ({value: document.getElementById('harnessFeedbackArtifact').value,
+      panel: document.getElementById('harnessFeedbackPanel').textContent, draft: document.getElementById('harnessFeedbackText').value}));
+    check(reopenedChoice.value === secondOption.value && reopenedChoice.panel.includes('support.css') && reopenedChoice.draft === 'draft for support', '7. reopening preserves the selected version and its page-memory draft', JSON.stringify(reopenedChoice));
+    await page.evaluate(() => {
+      const field = document.getElementById('harnessFeedbackText');
+      field.value = 'the support stylesheet needs review';
+      Array.from(document.querySelectorAll('#harnessFeedbackBlock button')).find(n => /Record feedback/i.test(n.innerText)).click();
+    });
+    await sleep(args.settleMs * 10);
+    const secondRecord = await page.evaluate(async ({id, sha}) => {
+      const response = await fetch(`/api/harness/sessions/${encodeURIComponent(id)}/feedback?artifact_id=support.css&artifact_sha256=${sha}`);
+      return response.json();
+    }, {id: ids.main, sha: secondVersion.content_sha256});
+    const secondItem = (secondRecord.items || []).find(item => item.verbatim === 'the support stylesheet needs review');
+    const firstRecord = await served(ids.main, digest);
+    check(Boolean(secondItem && secondItem.artifact_id === 'support.css' && secondItem.artifact_sha256 === secondVersion.content_sha256 && secondItem.scope_kind === 'artifact' && secondItem.selection === null
+      && !(firstRecord.items || []).some(item => item.verbatim === secondItem.verbatim)), '7. the real route records feedback only against the chosen second artifact', JSON.stringify(secondItem));
+    await page.select('#harnessFeedbackArtifact', targets.options.find(option => option.text.startsWith(`${artifactId} ·`)).value);
+    await sleep(args.settleMs * 10);
+    const firstBinding = await page.evaluate(() => ({panel: document.getElementById('harnessFeedbackPanel').textContent, draft: document.getElementById('harnessFeedbackText').value}));
+    check(firstBinding.panel.includes(artifactId) && firstBinding.panel.includes(digest) && firstBinding.draft === 'draft for hero', '7. returning restores the first artifact and its own unsent draft', JSON.stringify(firstBinding));
+    await page.evaluate(() => selectHarnessFeedbackRegion("z-other.txt"));
+    const refused = await page.evaluate(() => ({status: document.getElementById("harnessFeedbackSelection").textContent, text: document.getElementById("harnessFeedbackPanel").textContent, selection: harnessFeedbackSelection}));
+    check(/File selection is unavailable/.test(refused.status) && /File selection is unavailable/.test(refused.text) && refused.selection === null, "7. the legacy selection entry point refuses an unrelated path", JSON.stringify(refused));
 
+    // Exercise the submit fence even if old in-page code somehow retained a selection.
+    await page.evaluate(digestValue => { harnessFeedbackSelection = {locatorKind: "region", locator: "z-other.txt", artifactSha256: digestValue}; }, digest);
     // ---- 8. a comment can be withdrawn, and the record survives ----
     const submitted = await page.evaluate(async () => {
       const field = document.getElementById("harnessFeedbackText");
@@ -397,7 +472,7 @@ async function main() {
     let recorded = await served(ids.main, digest);
     const typed = (recorded.items || []).find((item) => item.verbatim === "the footer needs the year");
     check(Boolean(typed), "8. typed words reached the store through the real route", JSON.stringify((recorded.items || []).map((i) => i.verbatim)).slice(0, 200));
-    check(typed && typed.scope_kind === "artifact", "8. with no selection it was recorded at artifact scope");
+    check(typed && typed.scope_kind === "artifact" && typed.artifact_id === artifactId && typed.artifact_sha256 === digest && typed.selection === null, "8. feedback is recorded only against the named artifact version without a selected region", JSON.stringify(typed));
     await page.evaluate(() => {
       const rows = Array.from(document.querySelectorAll("#harnessFeedbackPanel li"));
       const row = rows.find((n) => /the footer needs the year/.test(n.innerText));
@@ -458,6 +533,26 @@ async function main() {
       await page.setViewport({ width, height, ...extra });
       await sleep(args.settleMs * 8);
       await openSession(ids.main);
+      const panel = await page.evaluate(() => {
+        const review = document.getElementById('harnessWorkspaceReview');
+        const node = document.getElementById('harnessWorkspaceArtifacts');
+        review.open = true;
+        node.scrollIntoView({block: 'nearest'});
+        const container = review.getBoundingClientRect();
+        review.scrollTop += node.getBoundingClientRect().top - container.top - 4;
+        const first = node.getBoundingClientRect();
+        const firstVisible = first.top >= container.top - 1 && first.top < container.bottom;
+        review.scrollTop += node.getBoundingClientRect().bottom - container.bottom + 4;
+        const last = node.getBoundingClientRect();
+        const lastVisible = last.bottom <= container.bottom + 1 && last.bottom > container.top;
+        return {text: node.textContent, width: last.width, height: last.height,
+          left: last.left, right: last.right, firstVisible, lastVisible,
+          contentOverflow: Math.max(0, node.scrollHeight - node.clientHeight),
+          viewportWidth: innerWidth, documentOverflow: Math.max(0, document.documentElement.scrollWidth - innerWidth)};
+      });
+      check(Boolean(panel.text.includes(adjacentArtifact.version.identity_sha256.slice(0, 12)) && panel.width > 100 && panel.height > 0
+        && panel.left >= -1 && panel.right <= panel.viewportWidth + 1 && panel.firstVisible && panel.lastVisible && panel.contentOverflow === 0 && panel.documentOverflow === 0),
+        `adjacent checkpoint is readable without horizontal overflow at ${width} CSS pixels`, JSON.stringify(panel));
       await openFeedbackPane();
       return paneVisible();
     }

@@ -8,6 +8,10 @@ looking would fail rather than pass quietly.
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import replace
+from threading import Barrier
+
 import pytest
 
 import scoped_feedback as ps
@@ -32,6 +36,129 @@ def _feedback(**overrides):
     )
     base.update(overrides)
     return ps.capture(**base)
+
+
+def test_put_does_not_transfer_record_to_another_session(tmp_path):
+    store = ps.FeedbackStore(tmp_path / "feedback.db")
+    original = _feedback(feedback_id="shared", session_id="a", verbatim="original")
+    store.put(original)
+    with pytest.raises(ps.FeedbackConflict):
+        store.put(_feedback(feedback_id="shared", session_id="b", verbatim="replacement"))
+    assert store.get("shared") == original
+    confirmed = ps.confirm(original, confirmed_by="owner")
+    store.put(confirmed)
+    assert store.get("shared") == confirmed
+    legacy = _feedback(feedback_id="legacy", verbatim="unassigned")
+    store.put(legacy)
+    with store._connect() as connection:
+        connection.execute("UPDATE scoped_feedback SET session_id = '' WHERE feedback_id = 'legacy'")
+    with pytest.raises(ps.FeedbackConflict):
+        store.put(_feedback(feedback_id="legacy", session_id="a", verbatim="claimed"))
+    assert store.get("legacy") == legacy
+    with store._connect() as connection:
+        assert connection.execute("SELECT session_id FROM scoped_feedback WHERE feedback_id = 'legacy'").fetchone()[0] == ""
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"artifact_id": "other.html"},
+        {"artifact_sha256": SHA_B},
+        {"selection": _selection()},
+    ],
+    ids=["artifact", "version", "scope"],
+)
+def test_put_cannot_rebind_an_identity_within_a_session(tmp_path, changes):
+    store = ps.FeedbackStore(tmp_path / "feedback.db")
+    original = _feedback(feedback_id="shared", session_id="a", verbatim="original")
+    store.put(original)
+    candidate = _feedback(feedback_id="shared", session_id="a", verbatim="replacement", **changes)
+    with pytest.raises(ps.FeedbackConflict):
+        store.put(candidate)
+    assert store.get("shared") == original
+
+
+def test_atomic_put_does_not_transfer_record_in_a_race(tmp_path):
+    store = ps.FeedbackStore(tmp_path / "feedback.db")
+    barrier = Barrier(2, timeout=5)
+
+    def put(session):
+        record = _feedback(feedback_id="same", session_id=session, verbatim=session)
+        barrier.wait()
+        try:
+            store.put(record)
+            return ("written", session)
+        except ps.FeedbackConflict:
+            return ("conflict", session)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        outcomes = list(pool.map(put, ("session-a", "session-b")))
+    assert sorted(result for result, _ in outcomes) == ["conflict", "written"]
+    winner = next(session for result, session in outcomes if result == "written")
+    stored = store.get("same")
+    assert stored.session_id == winner and stored.verbatim == winner
+    assert len(store.list()) == 1
+
+
+def test_atomic_put_refuses_same_session_artifact_race(tmp_path):
+    store = ps.FeedbackStore(tmp_path / "feedback.db")
+    barrier = Barrier(2, timeout=5)
+
+    def put(artifact):
+        record = _feedback(feedback_id="same", session_id="a", artifact_id=artifact)
+        barrier.wait()
+        try:
+            store.put(record)
+            return ("written", artifact)
+        except ps.FeedbackConflict:
+            return ("conflict", artifact)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        outcomes = list(pool.map(put, ("a.html", "b.html")))
+    assert sorted(result for result, _ in outcomes) == ["conflict", "written"]
+    winner = next(artifact for result, artifact in outcomes if result == "written")
+    assert store.get("same").artifact_id == winner
+    assert len(store.list()) == 1
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"feedback_id": "other"}, {"session_id": "other"}, {"artifact_id": "other.html"},
+        {"artifact_sha256": SHA_B}, {"scope_kind": "preference"},
+    ],
+    ids=["id", "session", "artifact", "version", "scope"],
+)
+def test_atomic_update_rejects_a_transform_that_rebinds_the_record(tmp_path, changes):
+    store = ps.FeedbackStore(tmp_path / "feedback.db")
+    original = _feedback(feedback_id="shared", session_id="a")
+    store.create(original)
+    with pytest.raises(ps.FeedbackConflict):
+        store._update_atomic("shared", "a", lambda record: replace(record, **changes))
+    assert store.get("shared") == original
+
+
+def test_atomic_create_refuses_identity_collisions_even_when_racing(tmp_path):
+    store = ps.FeedbackStore(tmp_path / "feedback.db")
+    barrier = Barrier(2, timeout=5)
+
+    def create(session):
+        record = _feedback(feedback_id="shared", session_id=session, verbatim=session)
+        barrier.wait()
+        try:
+            store.create(record)
+            return ("created", session)
+        except ps.FeedbackConflict:
+            return ("conflict", session)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        outcomes = list(pool.map(create, ("session-a", "session-b")))
+    assert sorted(result for result, _ in outcomes) == ["conflict", "created"]
+    winner = next(session for result, session in outcomes if result == "created")
+    stored = store.get("shared")
+    assert stored.session_id == winner
+    assert stored.verbatim == winner
+    assert len(store.list()) == 1
 
 
 # ── scope follows what was pointed at ────────────────────────────────────────────────────

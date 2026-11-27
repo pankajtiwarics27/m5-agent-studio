@@ -16,12 +16,12 @@ Environment: `linux` / `x64`, 2 CPUs, Node `v22.22.3`, `Python 3.11.2`, `Headles
 
 | Metric | Actual | Gate |
 | --- | ---: | ---: |
-| Fast real SSE schedules | 58 in 337.3ms (172.0/s) | ≥20 and ≥50/s |
-| Coalesced chat renders | 18 | fewer than 58 schedules, complete text retained |
-| Full-window ten-event frame | mean 1.91ms; nearest-rank p95 2.80ms; max 2.80ms | mean ≤4ms |
+| Fast real SSE schedules | 58 in 333.4ms (174.0/s) | ≥20 and ≥50/s |
+| Coalesced chat renders | 19 | fewer than 58 schedules, complete text retained |
+| Full-window ten-event frame | mean 2.64ms; nearest-rank p95 4.10ms; max 4.20ms | mean ≤4ms |
 | Events / cache / cards | 30,000 / 5,000 / 300 | 5,000 / 300 ceilings |
-| Post-GC document nodes | 8660 → 8660 → 8660 | repeated-cycle growth ≤64 |
-| Post-GC JS heap | 3.25 MiB → 3.21 MiB → 3.22 MiB | cycle growth ≤8 MiB; baseline growth ≤16 MiB |
+| Post-GC document nodes | 8683 → 8683 → 8683 | repeated-cycle growth ≤64 |
+| Post-GC JS heap | 3.27 MiB → 3.20 MiB → 3.22 MiB | cycle growth ≤8 MiB; baseline growth ≤16 MiB |
 
 Memory readings use CDP `Performance.getMetrics` immediately after `HeapProfiler.collectGarbage`. They are repeated-cycle plateau checks, not a claim that a browser never allocates during a frame.
 
@@ -31,14 +31,14 @@ Streaming intentionally moves cards inside the trajectory scroller. The gate rep
 
 | Viewport | Theme | Total shift | Internal stream | External shell | Geometry delta | Overflow |
 | --- | --- | ---: | ---: | ---: | ---: | ---: |
-| 1640x900 | light | 0.15210 | 0.15210 | 0.00000 | 0.00px | 0px |
-| 1640x900 | dark | 0.24490 | 0.24490 | 0.00000 | 0.00px | 0px |
-| 1440x900 | light | 0.22236 | 0.22236 | 0.00000 | 0.00px | 0px |
-| 1440x900 | dark | 0.31766 | 0.31766 | 0.00000 | 0.00px | 0px |
-| 1280x800 | light | 0.17168 | 0.17168 | 0.00000 | 0.00px | 0px |
-| 1280x800 | dark | 0.28614 | 0.28614 | 0.00000 | 0.00px | 0px |
-| 390x844 | light | 0.65698 | 0.65698 | 0.00000 | 0.00px | 0px |
-| 390x844 | dark | 0.93855 | 0.93855 | 0.00000 | 0.00px | 0px |
+| 1640x900 | light | 0.18827 | 0.18827 | 0.00000 | 0.00px | 0px |
+| 1640x900 | dark | 0.29613 | 0.29613 | 0.00000 | 0.00px | 0px |
+| 1440x900 | light | 0.22974 | 0.22974 | 0.00000 | 0.00px | 0px |
+| 1440x900 | dark | 0.32820 | 0.32820 | 0.00000 | 0.00px | 0px |
+| 1280x800 | light | 0.15491 | 0.15491 | 0.00000 | 0.00px | 0px |
+| 1280x800 | dark | 0.25818 | 0.25818 | 0.00000 | 0.00px | 0px |
+| 390x844 | light | 0.18951 | 0.18951 | 0.00000 | 0.00px | 0px |
+| 390x844 | dark | 0.27073 | 0.27073 | 0.00000 | 0.00px | 0px |
 
 ## Executed backend and isolation run
 

@@ -12,10 +12,10 @@ Start shows the five most recent Harness sessions as buttons that open them wher
 
 | Status | Tone | Label | Written at |
 |---|---|---|---|
-| `blocked` | danger | blocked | app.py:16139 (1×) |
-| `cancelled` | warn | stopped by you | app.py:16014 (7×) |
-| `completed` | ok | completed | app.py:21243 (4×) |
-| `error` | danger | failed | app.py:21374 (4×) |
+| `blocked` | danger | blocked | app.py:16142 (1×) |
+| `cancelled` | warn | stopped by you | app.py:16017 (7×) |
+| `completed` | ok | completed | app.py:21246 (4×) |
+| `error` | danger | failed | app.py:21377 (4×) |
 | `idle` | info | ready | app.py:2377 (2×) |
 | `paused` | warn | paused | app.py:13142 (11×) |
 | `running` | busy | running | app.py:9224 (11×) |

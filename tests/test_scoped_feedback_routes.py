@@ -8,6 +8,15 @@ written here can be read later as acceptance or permission.
 
 from __future__ import annotations
 
+import subprocess
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+from threading import Event
+
+import pytest
+
+import scoped_feedback as feedback_module
+
 SHA_A = "a" * 64
 SHA_B = "b" * 64
 
@@ -317,3 +326,313 @@ def test_one_run_cannot_confirm_or_withdraw_another_runs_comment(tmp_path, monke
     still = _list(client, owner).json()
     assert [item["feedback_id"] for item in still["items"]] == ["fb-owner"]
     assert still["items"][0]["deleted"] is False
+
+
+def test_capture_collision_cannot_replace_a_session_record_or_its_history(tmp_path, monkeypatch):
+    studio, client = _harness_client(tmp_path, monkeypatch)
+    owner = _session(studio)
+    other = _session(studio)
+    first = _capture(client, owner, feedback_id="shared-id", verbatim="original")
+    assert first.status_code == 200
+    confirmed = client.post(
+        f"/api/harness/sessions/{owner}/feedback/shared-id/confirm", json={"confirmed_by": "owner"}
+    )
+    assert confirmed.status_code == 200
+    before = _list(client, owner).json()["items"]
+    assert len(before) == 1 and before[0]["confirmed"] is True
+    events_before = {session: studio._read_harness_events(session) for session in (owner, other)}
+
+    for session in (owner, other):
+        collision = _capture(client, session, feedback_id="shared-id", verbatim="replacement")
+        assert collision.status_code == 409, collision.text
+        assert "no new feedback was recorded" in collision.json()["detail"]
+    assert _list(client, owner).json()["items"] == before
+    assert _list(client, other).json()["items"] == []
+    assert {session: studio._read_harness_events(session) for session in (owner, other)} == events_before
+    assert studio.get_scoped_feedback_store().get("shared-id").verbatim == "original"
+
+    removed = client.delete(f"/api/harness/sessions/{owner}/feedback/shared-id")
+    assert removed.status_code == 200
+    assert _capture(client, other, feedback_id="shared-id", verbatim="resurrect").status_code == 409
+    retained = _list(client, owner).json()["items"]
+    assert len(retained) == 1 and retained[0]["deleted"] is True
+    assert retained[0]["verbatim"] == "original"
+    assert _list(client, other).json()["items"] == []
+
+
+def test_confirm_and_withdraw_refuse_a_contradictory_stored_binding(tmp_path, monkeypatch):
+    studio, client = _harness_client(tmp_path, monkeypatch)
+    session = _session(studio)
+    assert _capture(client, session, feedback_id="bad", verbatim="original").status_code == 200
+    store = studio.get_scoped_feedback_store()
+    with store._connect() as connection:
+        connection.execute("UPDATE scoped_feedback SET artifact_id = 'other.html' WHERE feedback_id = 'bad'")
+        before = tuple(connection.execute("SELECT * FROM scoped_feedback WHERE feedback_id = 'bad'").fetchone())
+    events = studio._read_harness_events(session)
+    confirmation = client.post(f"/api/harness/sessions/{session}/feedback/bad/confirm", json={"confirmed_by": "owner"})
+    withdrawal = client.delete(f"/api/harness/sessions/{session}/feedback/bad")
+    assert confirmation.status_code == 409 and withdrawal.status_code == 409
+    with store._connect() as connection:
+        assert tuple(connection.execute("SELECT * FROM scoped_feedback WHERE feedback_id = 'bad'").fetchone()) == before
+    assert studio._read_harness_events(session) == events
+
+
+@pytest.mark.parametrize("first", ["confirm", "withdraw"])
+def test_confirm_and_withdraw_serialize_without_losing_either_change(tmp_path, monkeypatch, first):
+    studio, client = _harness_client(tmp_path, monkeypatch)
+    session = _session(studio)
+    assert _capture(client, session, feedback_id="race", verbatim="original").status_code == 200
+    entered, release, second_started, second_done = Event(), Event(), Event(), Event()
+    if first == "confirm":
+        original = feedback_module.confirm
+
+        def paused_confirm(*args, **kwargs):
+            entered.set()
+            if not release.wait(5):
+                raise RuntimeError("confirmation test was not released")
+            return original(*args, **kwargs)
+
+        monkeypatch.setattr(feedback_module, "confirm", paused_confirm)
+    else:
+        original = feedback_module.replace
+
+        def paused_replace(record, **kwargs):
+            if kwargs.get("deleted") is True:
+                entered.set()
+                if not release.wait(5):
+                    raise RuntimeError("withdrawal test was not released")
+            return original(record, **kwargs)
+
+        monkeypatch.setattr(feedback_module, "replace", paused_replace)
+
+    def request(action):
+        if action == "confirm":
+            return client.post(f"/api/harness/sessions/{session}/feedback/race/confirm", json={"confirmed_by": "owner"})
+        return client.delete(f"/api/harness/sessions/{session}/feedback/race")
+
+    def second_request():
+        second_started.set()
+        try:
+            return request("withdraw" if first == "confirm" else "confirm")
+        finally:
+            second_done.set()
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        one = pool.submit(request, first)
+        try:
+            assert entered.wait(5), "first update did not reach its decision"
+            two = pool.submit(second_request)
+            assert second_started.wait(5), "second update did not start"
+            assert not second_done.wait(0.3), "second update escaped while the first held the record"
+        finally:
+            release.set()
+        assert one.result(timeout=10).status_code == 200
+        assert two.result(timeout=10).status_code == 200
+    stored = studio.get_scoped_feedback_store().get("race")
+    assert stored.confirmed is True and stored.confirmed_by == "owner" and stored.deleted is True
+    assert stored.verbatim == "original"
+
+
+@pytest.mark.parametrize("first", ["promote", "withdraw"])
+def test_promotion_and_withdrawal_serialize_on_the_source(tmp_path, monkeypatch, first):
+    studio, client = _harness_client(tmp_path, monkeypatch)
+    session = _session(studio)
+    assert _capture(client, session, feedback_id="race-promote", verbatim="original", material=False).status_code == 200
+    entered, release, second_started, second_done = Event(), Event(), Event(), Event()
+    if first == "promote":
+        original = feedback_module.promote
+
+        def paused_promote(*args, **kwargs):
+            entered.set()
+            if not release.wait(5):
+                raise RuntimeError("promotion test was not released")
+            return original(*args, **kwargs)
+
+        monkeypatch.setattr(feedback_module, "promote", paused_promote)
+    else:
+        original = feedback_module.replace
+
+        def paused_replace(record, **kwargs):
+            if kwargs.get("deleted") is True:
+                entered.set()
+                if not release.wait(5):
+                    raise RuntimeError("withdrawal test was not released")
+            return original(record, **kwargs)
+
+        monkeypatch.setattr(feedback_module, "replace", paused_replace)
+
+    def request(action):
+        base = f"/api/harness/sessions/{session}/feedback/race-promote"
+        if action == "promote":
+            return client.post(f"{base}/promote", json={"basis": "reason", "promoted_by": "owner"})
+        return client.delete(base)
+
+    def second_request():
+        second_started.set()
+        try:
+            return request("withdraw" if first == "promote" else "promote")
+        finally:
+            second_done.set()
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        one = pool.submit(request, first)
+        try:
+            assert entered.wait(5), "first update did not reach its decision"
+            two = pool.submit(second_request)
+            assert second_started.wait(5), "second update did not start"
+            assert not second_done.wait(0.3), "second update escaped while the first held the record"
+        finally:
+            release.set()
+        first_response = one.result(timeout=10)
+        second_response = two.result(timeout=10)
+        assert first_response.status_code == second_response.status_code == 200
+    promotion = first_response if first == "promote" else second_response
+    assert promotion.json()["feedback"]["deleted"] is (first == "withdraw")
+    store = studio.get_scoped_feedback_store()
+    assert store.get("race-promote").deleted is True
+    assert store.get("race-promote@preference").deleted is (first == "withdraw")
+
+
+def test_promotion_waits_for_an_inflight_confirmation(tmp_path, monkeypatch):
+    studio, client = _harness_client(tmp_path, monkeypatch)
+    session = _session(studio)
+    assert _capture(client, session, feedback_id="needs-confirm").status_code == 200
+    entered, release, started, done = Event(), Event(), Event(), Event()
+    original = feedback_module.confirm
+
+    def paused_confirm(*args, **kwargs):
+        entered.set()
+        if not release.wait(5):
+            raise RuntimeError("confirmation test was not released")
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(feedback_module, "confirm", paused_confirm)
+    base = f"/api/harness/sessions/{session}/feedback/needs-confirm"
+
+    def promote_after_start():
+        started.set()
+        try:
+            return client.post(f"{base}/promote", json={"basis": "reason", "promoted_by": "owner"})
+        finally:
+            done.set()
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        confirmation = pool.submit(client.post, f"{base}/confirm", json={"confirmed_by": "owner"})
+        try:
+            assert entered.wait(5)
+            promotion = pool.submit(promote_after_start)
+            assert started.wait(5)
+            assert not done.wait(0.3), "promotion escaped before confirmation completed"
+        finally:
+            release.set()
+        assert confirmation.result(timeout=10).status_code == 200
+        result = promotion.result(timeout=10)
+    assert result.status_code == 200, result.text
+    assert result.json()["feedback"]["scope_kind"] == "preference"
+    assert studio.get_scoped_feedback_store().get("needs-confirm").confirmed is True
+
+
+def test_promotion_refuses_a_contradictory_stored_source_binding(tmp_path, monkeypatch):
+    studio, client = _harness_client(tmp_path, monkeypatch)
+    session = _session(studio)
+    assert _capture(client, session, feedback_id="bad-promote", material=False).status_code == 200
+    store = studio.get_scoped_feedback_store()
+    with store._connect() as connection:
+        connection.execute("UPDATE scoped_feedback SET artifact_id = 'other.html' WHERE feedback_id = 'bad-promote'")
+        before = tuple(connection.execute("SELECT * FROM scoped_feedback WHERE feedback_id = 'bad-promote'").fetchone())
+    events = studio._read_harness_events(session)
+    result = client.post(f"/api/harness/sessions/{session}/feedback/bad-promote/promote", json={"basis": "reason"})
+    assert result.status_code == 409
+    with store._connect() as connection:
+        assert tuple(connection.execute("SELECT * FROM scoped_feedback WHERE feedback_id = 'bad-promote'").fetchone()) == before
+    assert store.get("bad-promote@preference") is None
+    assert studio._read_harness_events(session) == events
+
+
+def test_promotion_cannot_read_another_sessions_source(tmp_path, monkeypatch):
+    studio, client = _harness_client(tmp_path, monkeypatch)
+    owner, other = _session(studio), _session(studio)
+    assert _capture(client, owner, feedback_id="foreign", material=False).status_code == 200
+    before = _list(client, owner).json()["items"]
+    events = studio._read_harness_events(other)
+    result = client.post(f"/api/harness/sessions/{other}/feedback/foreign/promote", json={"basis": "reason"})
+    assert result.status_code == 404, result.text
+    assert _list(client, owner).json()["items"] == before
+    assert _list(client, other).json()["items"] == []
+    assert studio.get_scoped_feedback_store().get("foreign@preference") is None
+    assert studio._read_harness_events(other) == events
+
+
+def test_promotion_cannot_replace_another_sessions_feedback(tmp_path, monkeypatch):
+    studio, client = _harness_client(tmp_path, monkeypatch)
+    owner, other = _session(studio), _session(studio)
+    assert _capture(client, owner, feedback_id="shared@preference", verbatim="original").status_code == 200
+    assert _capture(client, other, feedback_id="shared", verbatim="other", material=False).status_code == 200
+    original = _list(client, owner).json()["items"]
+    other_before = _list(client, other).json()["items"]
+    events_before = studio._read_harness_events(other)
+    result = client.post(
+        f"/api/harness/sessions/{other}/feedback/shared/promote",
+        json={"basis": "repeated correction", "promoted_by": "owner"},
+    )
+    assert result.status_code == 409, result.text
+    assert "no promotion was recorded" in result.json()["detail"]
+    assert _list(client, owner).json()["items"] == original
+    assert _list(client, other).json()["items"] == other_before
+    assert studio._read_harness_events(other) == events_before
+
+
+def test_promotion_cannot_overwrite_same_session_artifact_with_derived_id(tmp_path, monkeypatch):
+    studio, client = _harness_client(tmp_path, monkeypatch)
+    session = _session(studio)
+    assert _capture(client, session, feedback_id="shared@preference", verbatim="original").status_code == 200
+    assert _capture(client, session, feedback_id="shared", verbatim="other", material=False).status_code == 200
+    before = _list(client, session).json()["items"]
+    events = studio._read_harness_events(session)
+    result = client.post(
+        f"/api/harness/sessions/{session}/feedback/shared/promote",
+        json={"basis": "repeated correction", "promoted_by": "owner"},
+    )
+    assert result.status_code == 409, result.text
+    assert "no promotion was recorded" in result.json()["detail"]
+    assert _list(client, session).json()["items"] == before
+    assert studio._read_harness_events(session) == events
+
+
+def test_repeating_promotion_in_same_session_preserves_existing_behavior(tmp_path, monkeypatch):
+    studio, client = _harness_client(tmp_path, monkeypatch)
+    session = _session(studio)
+    assert _capture(client, session, feedback_id="initial", material=False).status_code == 200
+    path = f"/api/harness/sessions/{session}/feedback/initial/promote"
+    for _ in range(2):
+        result = client.post(path, json={"basis": "same reason", "promoted_by": "owner"})
+        assert result.status_code == 200, result.text
+        assert result.json()["feedback"]["feedback_id"] == "initial@preference"
+        assert result.json()["feedback"]["scope_kind"] == "preference"
+    assert len(_list(client, session).json()["items"]) == 2
+
+
+def test_feedback_view_fences_races_and_keeps_drafts_by_version():
+    root = Path(__file__).resolve().parents[1]
+    result = subprocess.run(
+        ["node", "tests/feedback_fencing_probe.cjs"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "feedback fencing probe passed" in result.stdout
+
+
+def test_feedback_artifact_choices_are_session_bound_and_fence_races():
+    root = Path(__file__).resolve().parents[1]
+    result = subprocess.run(
+        ["node", "tests/feedback_artifact_choice_probe.cjs"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "feedback artifact chooser probe passed" in result.stdout

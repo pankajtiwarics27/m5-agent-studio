@@ -241,14 +241,11 @@ def build_inventory() -> dict:
     )
     activatable = [entry for entry in targets if "data-key-activate" in entry["attrs"]]
     check(
-        "the remaining eight non-native controls retain delegated keyboard activation",
-        # The two configured skill/MCP pill templates became one native button
-        # template in the owner-requested integration picker. Keep the remaining
-        # delegated-control count pinned; do not silently accept new custom controls.
-        # AP-019 adds exactly one, and it is a diff row: `div.ev-file` is a selectable
-        # region inside the change list, so it carries role/tabindex/data-key-activate
-        # and is activated by the same delegated handler as the rest.
-        len(activatable) == 8,
+        "the remaining seven non-native controls retain delegated keyboard activation",
+        # The former AP-019 diff-row control is temporarily inert: a current worktree
+        # path cannot establish a region of a checkpoint artifact (issue 413).
+        # Keep the remaining controls pinned; new or missing controls are findings.
+        len(activatable) == 7,
         f"{len(activatable)} activatable click targets: "
         + "; ".join(f"{entry['tag']}.{entry['class']}" for entry in activatable),
     )

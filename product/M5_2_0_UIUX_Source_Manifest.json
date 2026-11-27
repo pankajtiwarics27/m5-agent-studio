@@ -12,23 +12,23 @@
     {
       "path": "static/index.html",
       "role": "the entire browser UI: markup, styles and script in one file",
-      "sha256": "848af209461f2a56227f818208f644cca89ab99e1fd85a71a547c699fac0d3ea",
-      "bytes": 1135005,
-      "lines": 19309
+      "sha256": "85da77e41ea6b18ace1f28113a060965d5ac4286e9c2996700a078fd6d03e814",
+      "bytes": 1150632,
+      "lines": 19551
     },
     {
       "path": "app.py",
       "role": "the FastAPI server the UI talks to; source of the route table",
-      "sha256": "64a4c11591a984553c46bd65f868e32738a8420bb11a96e2352fde864cdbbb3b",
-      "bytes": 1142535,
-      "lines": 24540
+      "sha256": "e699ac18919e737e7b161cdc05699f1ddc65b596692a94ac267358172d8f5517",
+      "bytes": 1142887,
+      "lines": 24543
     },
     {
       "path": "studio.py",
       "role": "generated standalone bundle; must be rebuilt, never hand-edited",
-      "sha256": "cfb2cfd80369d3354e63539cae5a7da70e89dd4b336e1aedc99dfcf4582d8c66",
-      "bytes": 4786969,
-      "lines": 94058
+      "sha256": "7faa02a67d96435dcaf0e43902169e7a7b2a0ccfb23ca36555aad380cc8ec2d0",
+      "bytes": 4808106,
+      "lines": 94392
     },
     {
       "path": "design-system/m5-agentic-studio/MASTER.md",
@@ -306,9 +306,9 @@
     {
       "path": "tests/test_presentations.py",
       "role": "shared Chat, Start and overlay presentation contract tests",
-      "sha256": "8b0276a94f3c455d2209d8a60bb2cfd6d50c2a702dfa31545d01a24e89291ffe",
-      "bytes": 11958,
-      "lines": 310
+      "sha256": "5cf2134ae67d4dca7c0673a45cea46915ceed9c596507f700cccd839ebef51ac",
+      "bytes": 12541,
+      "lines": 325
     },
     {
       "path": "scripts/chat_composer_walk.mjs",
@@ -460,8 +460,8 @@
   ],
   "frontend": {
     "path": "static/index.html",
-    "sha256": "848af209461f2a56227f818208f644cca89ab99e1fd85a71a547c699fac0d3ea",
-    "lines": 19309,
+    "sha256": "85da77e41ea6b18ace1f28113a060965d5ac4286e9c2996700a078fd6d03e814",
+    "lines": 19551,
     "tab_count": 6,
     "tabs": [
       {
@@ -578,7 +578,7 @@
   },
   "api": {
     "path": "app.py",
-    "sha256": "64a4c11591a984553c46bd65f868e32738a8420bb11a96e2352fde864cdbbb3b",
+    "sha256": "e699ac18919e737e7b161cdc05699f1ddc65b596692a94ac267358172d8f5517",
     "route_count": 134,
     "by_method": {
       "DELETE": 8,

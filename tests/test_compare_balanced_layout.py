@@ -16,6 +16,7 @@ import importlib.util
 import json
 import re
 import struct
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -261,3 +262,35 @@ def test_the_readme_names_the_producer_and_the_fixture():
     readme = (MEDIA / "README.md").read_text(encoding="utf-8")
     assert "scripts/compare_balanced_walk.mjs" in readme
     assert "council_readiness_seed.py" in readme
+
+
+def test_columns_and_single_answer_note_follow_existing_results():
+    source = FRONTEND.read_text(encoding="utf-8")
+    start = source.index("  function renderDebateColumns() {")
+    end = source.index("\n  function updateDebateRunControl()", start)
+    function = source[start:end]
+    script = """
+const assert = require('node:assert/strict');
+let selected = [], panels = [];
+const grid = {style: {setProperty: (key, value) => { grid.columns = value; }}, dataset: {}};
+const note = {hidden: false, textContent: ''};
+const document = {getElementById: id => id === 'debateGrid' ? grid : note};
+const debateSelectedModels = () => selected;
+const debatePanels = () => panels;
+""" + function + """
+function check(p, s, count, hidden, fragment) {
+  panels = Array(p); selected = Array(s);
+  assert.equal(renderDebateColumns(), count);
+  assert.equal(grid.columns, String(count || 1));
+  assert.equal(grid.dataset.count, String(count));
+  assert.equal(note.hidden, hidden);
+  assert.ok(note.textContent.includes(fragment), note.textContent);
+}
+check(1, 2, 1, false, 'this is a single answer');
+check(2, 1, 2, true, '');
+check(0, 1, 1, false, 'One model selected');
+check(0, 2, 2, true, '');
+check(0, 0, 0, true, '');
+"""
+    result = subprocess.run(["node", "-e", script], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, json.dumps({"stdout": result.stdout, "stderr": result.stderr})

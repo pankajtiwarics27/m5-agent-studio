@@ -6256,6 +6256,16 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
 #harnessGitBadge { max-width: 84px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #pane-harness .harness-main { min-width: 0; min-height: 0; overflow-y: auto; position: relative; }
 #pane-harness .harness-stream { width: 100%; max-width: 900px; margin: 0 auto; padding: 24px; min-height: 120px; }
+/* Session work and its existing inert workspace review share one bounded surface. */
+#pane-harness .harness-workspace-layout { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; min-height: 260px; }
+#pane-harness .harness-workspace-layout .harness-stream { flex: 1 1 auto; min-width: 0; }
+#pane-harness .harness-workspace-review { flex: 0 1 auto; max-height: min(32vh, 240px); overflow: auto; }
+@media (min-width: 1280px) {
+  #pane-harness .harness-workspace-layout { flex-direction: row; align-items: stretch; }
+  #pane-harness .harness-workspace-layout .harness-stream { width: auto; margin: 0; }
+  #pane-harness .harness-workspace-review { flex: 0 0 36%; max-width: 440px; max-height: none; margin: 12px 24px 12px 0; }
+}
+#pane-harness .harness-main:has(.harness-welcome) .harness-workspace-layout { flex: 0 0 auto; min-height: 0; margin-top: auto; }
 #pane-harness .harness-main:has(.harness-welcome) .harness-stages,
 #pane-harness .harness-main:has(.harness-welcome) #harnessInfoBanner,
 #pane-harness .harness-main:has(.harness-welcome) .harness-workspace-review { display: none !important; }
@@ -7111,14 +7121,17 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
       <div id="harnessEvidenceChange" class="ev-block"></div>
       <div id="harnessEvidenceArtifacts" class="ev-block"></div>
       <div class="ev-block harness-feedback" id="harnessFeedbackBlock">
+        <label class="ev-subheading" for="harnessFeedbackArtifact">Artifact for feedback</label>
+        <select id="harnessFeedbackArtifact" onchange="chooseHarnessFeedbackArtifact(this.value)" disabled aria-describedby="harnessFeedbackArtifactStatus"></select>
+        <p id="harnessFeedbackArtifactStatus" class="ev-note" role="status">Select a session to see recorded artifact versions.</p>
         <div id="harnessFeedbackPanel"></div>
         <form id="harnessFeedbackForm" class="harness-feedback-form" onsubmit="return submitHarnessFeedback(event)">
           <label class="ev-subheading" for="harnessFeedbackText">Feedback on this artifact</label>
-          <textarea id="harnessFeedbackText" rows="2" maxlength="2000" placeholder="Say what should change. A region you select narrows this to that region; without a selection it applies to this artifact version only."></textarea>
+          <textarea id="harnessFeedbackText" rows="2" maxlength="2000" placeholder="Say what should change on the bound artifact version."></textarea>
           <div class="harness-feedback-actions">
             <button type="button" class="btn btn-xs btn-primary" onclick="submitHarnessFeedback(event)">Record feedback</button>
-            <button type="button" class="btn btn-xs" onclick="clearHarnessFeedbackSelection()">Clear selection</button>
-            <span id="harnessFeedbackSelection" class="ev-note" role="status"></span>
+            <button type="button" class="btn btn-xs" onclick="clearHarnessFeedbackSelection()" disabled>Clear selection</button>
+            <span id="harnessFeedbackSelection" class="ev-note" role="status">File selection is unavailable; feedback applies to the bound artifact version.</span>
           </div>
           <p class="ev-note">Recording a comment is not accepting the artifact and does not publish anything. A preference is never inferred from one comment; widening is a separate decision with a stated reason.</p>
         </form>
@@ -7575,20 +7588,6 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
             </div>
           </div>
 
-          <details id="harnessWorkspaceReview" class="harness-workspace-review" ontoggle="if (this.open) refreshHarnessWorkspaceReview()">
-            <summary>Files, progress &amp; resources</summary>
-            <div class="harness-workspace-review-body">
-              <p id="harnessWorkspaceProgress" role="status">Select a session to see its recorded progress.</p>
-              <p id="harnessWorkspaceContractFiles" role="status">Select a session to see its verification file requirements.</p>
-              <p id="harnessWorkspaceVersions" role="status" aria-live="polite">Open this section to inspect recorded workspace snapshots.</p>
-              <p id="harnessWorkspaceDiffState" role="status" aria-live="polite">Open this section to inspect workspace changes.</p>
-              <pre id="harnessWorkspaceDiffPreview" aria-label="Inert text preview of workspace changes" hidden></pre>
-              <p>Preview is inert text, not an active website. Source references and artifact versions are not available here. Workspace snapshots are recovery records, not artifact versions; changes shown are current and may differ from a snapshot.</p>
-              <button type="button" class="btn btn-xs" onclick="refreshHarnessWorkspaceReview()">Refresh workspace review</button>
-              <button type="button" class="btn btn-xs" onclick="openHarnessEvidenceModal()">Verification &amp; artifacts</button>
-            </div>
-          </details>
-
           <!-- Recovery: the state the run was left in, what survived it, and the way
                forward. Present only when the task is not simply ready or finished, and
                built from `GET …/state` + `GET …/task` - no route was added for it. -->
@@ -7627,7 +7626,23 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
           <!-- Trajectory Stream -->
           <div id="harnessRefusalState"></div>
           <div id="harnessStreamState"></div>
+          <div class="harness-workspace-layout">
           <div id="harnessStream" class="harness-stream"></div>
+          <details id="harnessWorkspaceReview" class="harness-workspace-review" ontoggle="if (this.open) refreshHarnessWorkspaceReview()">
+            <summary>Files, progress &amp; resources</summary>
+            <div class="harness-workspace-review-body">
+              <p id="harnessWorkspaceProgress" role="status">Select a session to see its recorded progress.</p>
+              <p id="harnessWorkspaceContractFiles" role="status">Select a session to see its verification file requirements.</p>
+              <p id="harnessWorkspaceArtifacts" role="status" style="white-space:pre-line;">Select a session to see recorded artifact versions.</p>
+              <p id="harnessWorkspaceVersions" role="status" aria-live="polite">Open this section to inspect recorded workspace snapshots.</p>
+              <p id="harnessWorkspaceDiffState" role="status" aria-live="polite">Open this section to inspect workspace changes.</p>
+              <pre id="harnessWorkspaceDiffPreview" aria-label="Inert text preview of workspace changes" hidden></pre>
+              <p>Preview is inert text, not an active website. Workspace snapshots are recovery records, not artifact versions; changes shown are current and may differ from a snapshot. Source references are not available here.</p>
+              <button type="button" class="btn btn-xs" onclick="refreshHarnessWorkspaceReview()">Refresh workspace review</button>
+              <button type="button" class="btn btn-xs" onclick="openHarnessEvidenceModal()">Verification &amp; artifacts</button>
+            </div>
+          </details>
+          </div>
 
           <!-- One task composer; existing payload controls and run guards are unchanged. -->
           <div class="hall-composer task-composer">
@@ -16015,7 +16030,9 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     const note = document.getElementById("debateColumnsNote");
     const chosen = debateSelectedModels();
     const panels = debatePanels();
-    const count = Math.max(panels.length, chosen.length);
+    // Existing results describe the previous run, not the next set of model picks.
+    // Only use the selection while no result panels are present.
+    const count = panels.length || chosen.length;
     if (grid) {
       const columns = Math.max(1, Math.min(count, 4));
       grid.style.setProperty("--debate-cols", String(columns));
@@ -18131,6 +18148,38 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     node.textContent = `${prefix}required files: ${describe(spec.required_files)} · required modified files: ${describe(spec.required_modified_files)}. These are requirements, not proof that files exist or were modified.`;
   }
 
+  function renderHarnessWorkspaceArtifacts() {
+    const node = document.getElementById("harnessWorkspaceArtifacts");
+    if (!node) return;
+    const state = harnessSnapshot;
+    if (!activeHarnessId) { node.textContent = "Select a session to see recorded artifact versions."; return; }
+    if (!state || state.session_id !== activeHarnessId || !("checkpoint_integrity_error" in state) || !("latest_checkpoint" in state)) {
+      node.textContent = "Recorded artifact versions are unavailable; the session snapshot could not be confirmed."; return;
+    }
+    if (state.checkpoint_integrity_error) {
+      node.textContent = "Recorded artifact versions are unavailable because checkpoint integrity could not be confirmed."; return;
+    }
+    const versions = state.session_artifact_versions;
+    const validDigest = value => typeof value === "string" && /^[0-9a-f]{64}$/.test(value);
+    if (!Array.isArray(versions) || (!state.latest_checkpoint && versions.length) || versions.some(version =>
+      !version || version.session_id !== activeHarnessId || typeof version.artifact_id !== "string" || !version.artifact_id.trim()
+      || !validDigest(version.content_sha256) || !validDigest(version.identity_sha256)
+      || !["content_only", "content+provenance"].includes(version.identity_basis)
+      || !Array.isArray(version.identity_axes_absent) || version.identity_axes_absent.some(axis => typeof axis !== "string")
+      || version.contributes_a_verified_version !== true || version.rechecked_against_current_content !== false
+      || version.is_global_lineage !== false || version.is_workspace_snapshot !== false)) {
+      node.textContent = "Recorded artifact versions are unavailable because the session record is invalid."; return;
+    }
+    const stale = document.querySelector("#harnessSnapshotState .presentation");
+    const prefix = stale ? "Last known checkpoint (may be stale)" : "Latest checkpoint";
+    if (!versions.length) { node.textContent = `${prefix}: no artifact versions derivable from recorded references.`; return; }
+    const lines = versions.slice(0, 5).map(version => {
+      const missing = version.identity_axes_absent.length ? `; not recorded: ${version.identity_axes_absent.join(", ").slice(0, 180)}` : "";
+      return `${version.artifact_id.slice(0, 256)} · version ${version.identity_sha256.slice(0, 12)} · ${version.identity_basis}${missing}`;
+    });
+    node.textContent = `${prefix}: ${versions.length} recorded artifact version(s).\n${lines.join("\n")}${versions.length > 5 ? `\nShowing 5 of ${versions.length}.` : ""}\nRecorded identities have not been rechecked against current files; they are not approval.`;
+  }
+
   function resetHarnessWorkspaceReview() {
     harnessWorkspaceReviewSerial += 1;
     const status = document.getElementById("harnessWorkspaceDiffState");
@@ -18141,6 +18190,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     if (preview) { preview.textContent = ""; preview.hidden = true; }
     renderHarnessWorkspaceProgress();
     renderHarnessWorkspaceContractFiles();
+    renderHarnessWorkspaceArtifacts();
     const panel = document.getElementById("harnessWorkspaceReview");
     if (activeHarnessId && panel && panel.open) refreshHarnessWorkspaceReview();
   }
@@ -18178,6 +18228,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     const readSerial = ++harnessWorkspaceReviewSerial;
     renderHarnessWorkspaceProgress();
     renderHarnessWorkspaceContractFiles();
+    renderHarnessWorkspaceArtifacts();
     refreshHarnessWorkspaceSnapshots(sessionId, readSerial);
     preview.textContent = "";
     preview.hidden = true;
@@ -18207,6 +18258,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     if (!state) return;
     renderHarnessWorkspaceProgress();
     renderHarnessWorkspaceContractFiles();
+    renderHarnessWorkspaceArtifacts();
     const badge = document.getElementById("harnessActiveStatusBadge");
     const b = harnessStatusBadge(state);
     if (badge) setStatus(badge, b.cls, b.label);
@@ -18240,6 +18292,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     if (hadFocus && panel) panel.querySelector("button")?.focus();
     renderHarnessWorkspaceProgress();
     renderHarnessWorkspaceContractFiles();
+    renderHarnessWorkspaceArtifacts();
     return panel;
   }
 
@@ -19545,7 +19598,13 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
 
   function invalidateHarnessEvidence() {
     harnessEvidenceReadSerial += 1;
+    invalidateHarnessFeedback();
+    invalidateHarnessReference();
     harnessEvidencePayload = null;
+    const choice = document.getElementById("harnessFeedbackArtifact");
+    const choiceStatus = document.getElementById("harnessFeedbackArtifactStatus");
+    if (choice) { choice.innerHTML = ""; choice.disabled = true; }
+    if (choiceStatus) choiceStatus.textContent = "Recorded artifact versions are unavailable until the session is read.";
     for (const id of ["harnessEvidenceMeta", "harnessEvidenceVerdict", "harnessEvidenceSpec", "harnessEvidenceObserved", "harnessEvidenceChange", "harnessEvidenceArtifacts", "harnessEvidenceLimits"]) {
       const node = document.getElementById(id);
       if (node) node.textContent = "";
@@ -19707,7 +19766,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     const added = files.reduce((total, file) => total + file.added, 0);
     const deleted = files.reduce((total, file) => total + file.deleted, 0);
     const rows = files.length
-      ? files.map(file => `<div class="ev-file" role="button" tabindex="0" data-key-activate title="Narrow feedback to this file" aria-pressed="${harnessFeedbackSelection && harnessFeedbackSelection.locator === file.path ? "true" : "false"}" data-feedback-region="${escapeHtml(file.path)}" onclick="selectHarnessFeedbackRegion(this.dataset.feedbackRegion)">
+      ? files.map(file => `<div class="ev-file">
           <span class="ev-file-path mono">${escapeHtml(file.path)}</span>
           <span class="ev-file-add mono">+${escapeHtml(String(file.added))}</span>
           <span class="ev-file-del mono">-${escapeHtml(String(file.deleted))}</span>
@@ -19724,7 +19783,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
       ${rows}
       <div class="ev-actions"><button class="btn btn-xs" type="button" onclick="openHarnessDiffModal()">Read the full unified diff</button></div>
       <p class="ev-note">This diff is the worktree as it is now, not a copy frozen at the verdict: a change made after the turn appears here too.</p>
-      <p class="ev-note">Selecting a file above narrows the feedback to that region. Selecting nothing is fine: the comment then applies to this artifact version as a whole.</p>`;
+      <p class="ev-note">These worktree files cannot be selected as artifact regions here. Feedback applies to the bound artifact version, not to a selected file.</p>`;
   }
 
   function harnessCheckpointReferencesHtml(task, sessionId) {
@@ -19841,32 +19900,144 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
   let harnessFeedbackPayload = null;     // {sessionId, artifactId, digest, data, error}
   let harnessFeedbackSelection = null;   // {locatorKind, locator, artifactSha256}
   let harnessFeedbackNote = null;        // {tone, text}
+  let harnessFeedbackGeneration = 0;
+  let harnessFeedbackTargetKey = "";
+  let harnessFeedbackLoading = false;
+  // Drafts stay in this page only, and are never carried to another artifact version.
+  const harnessFeedbackDrafts = new Map();
+  const harnessFeedbackUnsettled = new Set();
+  // Per-page preference only; a missing old version must never silently select another.
+  const harnessFeedbackPreferredTargets = new Map();
 
-  // The artifact version feedback is bound to. It is the latest checkpoint's recorded artifact
-  // for this session; without one there is no version to pin to, and the pane says so rather
-  // than accepting a comment it could never check for staleness.
-  function harnessFeedbackTarget(task, sessionId) {
-    const versions = task && Array.isArray(task.session_artifact_versions) ? task.session_artifact_versions : [];
-    const first = versions.find(version => version && typeof version.artifact_id === "string" && harnessFeedbackDigest(version.content_sha256));
-    if (!first) return null;
-    return { sessionId: String(sessionId || ""), artifactId: first.artifact_id, digest: harnessFeedbackDigest(first.content_sha256) };
+  function harnessFeedbackKey(target) {
+    return target && target.sessionId && target.artifactId && target.digest
+      ? JSON.stringify([target.sessionId, target.artifactId, target.digest]) : "";
+  }
+
+  function invalidateHarnessFeedback() {
+    harnessFeedbackGeneration += 1;
+    const field = document.getElementById("harnessFeedbackText");
+    if (field && harnessFeedbackTargetKey) {
+      if (field.value) harnessFeedbackDrafts.set(harnessFeedbackTargetKey, field.value);
+      else harnessFeedbackDrafts.delete(harnessFeedbackTargetKey);
+    }
+    if (field) field.value = "";
+    harnessFeedbackTargetKey = "";
+    harnessFeedbackPayload = null;
+    harnessFeedbackSelection = null;
+    harnessFeedbackNote = null;
+    harnessFeedbackLoading = false;
+    renderHarnessFeedback();
+  }
+
+  function harnessFeedbackIsCurrent(generation, target) {
+    return generation === harnessFeedbackGeneration
+      && harnessFeedbackTargetKey === harnessFeedbackKey(target)
+      && String(target.sessionId) === String(activeHarnessId || "");
+  }
+
+  // Only identities supported by the selected session's integrity-checked checkpoint can
+  // appear as feedback targets. A malformed or contradictory response is not an empty list.
+  function harnessFeedbackTargets(task, sessionId) {
+    if (!task || !sessionId || ![null, ""].includes(task.checkpoint_integrity_error) || !Array.isArray(task.session_artifact_versions)) return null;
+    const versions = task.session_artifact_versions;
+    const checkpoint = task.latest_checkpoint;
+    if (checkpoint === null && versions.length === 0) return [];
+    if (!checkpoint || checkpoint.task_id !== sessionId || !Array.isArray(checkpoint.evidence_refs)
+      || checkpoint.evidence_refs.some(ref => !ref || typeof ref.kind !== "string" || typeof ref.ref_id !== "string" || typeof ref.sha256 !== "string")) return null;
+    const keys = new Set();
+    const targets = [];
+    for (const version of versions) {
+      if (!version || version.session_id !== sessionId || typeof version.artifact_id !== "string" || !version.artifact_id.trim()
+        || !harnessFeedbackDigest(version.content_sha256) || !harnessFeedbackDigest(version.identity_sha256)
+        || version.contributes_a_verified_version !== true || version.rechecked_against_current_content !== false
+        || version.is_global_lineage !== false || version.is_workspace_snapshot !== false) return null;
+      const digest = harnessFeedbackDigest(version.content_sha256);
+      if (!checkpoint.evidence_refs.some(ref => ref && ref.kind === "artifact" && ref.ref_id === version.artifact_id && harnessFeedbackDigest(ref.sha256) === digest)) return null;
+      const target = {sessionId, artifactId: version.artifact_id, digest};
+      const key = harnessFeedbackKey(target);
+      if (keys.has(key)) return null;
+      keys.add(key);
+      targets.push(target);
+    }
+    if (checkpoint.evidence_refs.some(ref => ref.kind === "artifact" && harnessFeedbackDigest(ref.sha256)
+      && !keys.has(harnessFeedbackKey({sessionId, artifactId: ref.ref_id, digest: harnessFeedbackDigest(ref.sha256)})))) return null;
+    return targets;
+  }
+
+  function renderHarnessFeedbackChoices(payload) {
+    const select = document.getElementById("harnessFeedbackArtifact");
+    const status = document.getElementById("harnessFeedbackArtifactStatus");
+    const targets = payload && payload.sessionId === activeHarnessId ? harnessFeedbackTargets(payload.task, payload.sessionId) : null;
+    const shown = (targets || []).slice(0, 20);
+    const preferred = payload ? harnessFeedbackPreferredTargets.get(payload.sessionId) : "";
+    const preferredIndex = preferred ? shown.findIndex(target => harnessFeedbackKey(target) === preferred) : 0;
+    const missingPreferred = Boolean(preferred && preferredIndex < 0);
+    if (select) {
+      select.innerHTML = "";
+      if (missingPreferred && shown.length) {
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "Choose an artifact";
+        placeholder.disabled = true;
+        select.appendChild(placeholder);
+      }
+      for (const [index, target] of shown.entries()) {
+        const option = document.createElement("option");
+        option.value = String(index);
+        option.textContent = `${target.artifactId.slice(0, 256)} · sha256 ${target.digest.slice(0, 12)}`;
+        select.appendChild(option);
+      }
+      if (shown.length) select.value = missingPreferred ? "" : String(preferredIndex);
+      select.disabled = !shown.length || (!missingPreferred && shown.length < 2);
+    }
+    if (status) status.textContent = !targets ? "Recorded artifact versions are unavailable or invalid; feedback cannot be bound."
+      : !targets.length ? "No recorded artifact versions are available for feedback."
+      : `${targets.length > 20 ? `Showing 20 of ${targets.length}. ` : ""}${missingPreferred ? "The previously selected version is no longer available here; choose an artifact." : targets.length === 1 ? "One recorded artifact is available." : "Choose the recorded artifact for feedback."} Current files have not been rechecked.`;
+    return !missingPreferred && shown.length ? shown[preferredIndex] : null;
+  }
+
+  function chooseHarnessFeedbackArtifact(value) {
+    const payload = harnessEvidencePayload;
+    const targets = payload && payload.sessionId === activeHarnessId ? harnessFeedbackTargets(payload.task, payload.sessionId) : null;
+    const index = typeof value === "string" && /^(0|[1-9][0-9]*)$/.test(value) ? Number(value) : -1;
+    const target = targets && Number.isSafeInteger(index) && index >= 0 && index < Math.min(20, targets.length) ? targets[index] : null;
+    if (!target) {
+      invalidateHarnessFeedback();
+      invalidateHarnessReference();
+      const status = document.getElementById("harnessFeedbackArtifactStatus");
+      if (status) status.textContent = "That artifact selection is unavailable; nothing was bound.";
+      return;
+    }
+    harnessFeedbackPreferredTargets.set(payload.sessionId, harnessFeedbackKey(target));
+    loadHarnessFeedback(target);
+    loadHarnessReferences(payload.sessionId, target);
   }
 
   async function loadHarnessFeedback(target) {
-    if (!target || !target.sessionId) {
-      harnessFeedbackPayload = null;
-      return;
+    invalidateHarnessFeedback();
+    const generation = harnessFeedbackGeneration;
+    const key = harnessFeedbackKey(target);
+    if (!key || String(target.sessionId) !== String(activeHarnessId || "")) return;
+    harnessFeedbackTargetKey = key;
+    if (harnessFeedbackUnsettled.has(key)) {
+      harnessFeedbackNote = { tone: "warn", text: "A feedback submission was sent before you left this view. It may have been recorded; check the record before sending again." };
     }
+    const field = document.getElementById("harnessFeedbackText");
+    if (field) field.value = harnessFeedbackDrafts.get(key) || "";
+    harnessFeedbackLoading = true;
+    renderHarnessFeedback();
     try {
       const url = `/api/harness/sessions/${encodeURIComponent(target.sessionId)}/feedback?artifact_id=${encodeURIComponent(target.artifactId)}&artifact_sha256=${target.digest}`;
       const response = await fetch(url);
       const data = response.ok ? await response.json() : { error: `HTTP ${response.status}` };
-      // A response for a session that is no longer active must not be drawn over the new one.
-      if (String(target.sessionId) !== String(activeHarnessId || "")) return;
+      if (!harnessFeedbackIsCurrent(generation, target)) return;
       harnessFeedbackPayload = { ...target, data, error: response.ok ? "" : (data.detail || data.error || "read failed") };
     } catch (error) {
+      if (!harnessFeedbackIsCurrent(generation, target)) return;
       harnessFeedbackPayload = { ...target, data: null, error: `the request never reached the server: ${error.message}` };
     }
+    harnessFeedbackLoading = false;
     renderHarnessFeedback();
   }
 
@@ -19880,9 +20051,13 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     if (!host) return;
     const note = harnessFeedbackNote;
     const noteHtml = note ? `<p class="ev-note" data-tone="${escapeHtml(note.tone)}">${escapeHtml(note.text)}</p>` : "";
+    if (harnessFeedbackLoading) {
+      host.innerHTML = `<div class="ev-heading">Feedback</div><p class="ev-note">Reading feedback for this artifact version…</p>`;
+      return;
+    }
     if (!harnessFeedbackPayload) {
       host.innerHTML = `<div class="ev-heading">Feedback</div>
-        <p class="ev-note">No artifact version is recorded for this session yet, so there is nothing to bind feedback to. A comment that cannot name its version cannot be checked for staleness later.</p>${noteHtml}`;
+        <p class="ev-note">No artifact version is available here. It may not be recorded, or the session read may be incomplete. Feedback cannot be bound until a version is available.</p>${noteHtml}`;
       return;
     }
     if (harnessFeedbackPayload.error) {
@@ -19893,28 +20068,15 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     host.innerHTML = harnessFeedbackHtml(harnessFeedbackPayload.data) + noteHtml;
     const status = document.getElementById("harnessFeedbackSelection");
     if (status) {
-      status.textContent = harnessFeedbackSelection
-        ? `Narrowed to ${harnessFeedbackSelection.locatorKind}: ${harnessFeedbackSelection.locator}`
-        : "No selection: this will apply to this artifact version only";
+      status.textContent = "File selection is unavailable; feedback applies to the bound artifact version.";
     }
   }
 
-  // A region is a convenience, never a requirement. Whatever is selected has to name the
-  // version it was selected on, because a region id from one version means nothing in another.
-  function selectHarnessFeedbackRegion(locator) {
-    const payload = harnessFeedbackPayload;
-    const name = harnessFeedbackText(locator, 300);
-    if (!payload || payload.error || !name) {
-      harnessFeedbackSay("A region can only be selected once an artifact version is bound, so nothing was narrowed.", "warn");
-      return;
-    }
-    if (harnessFeedbackSelection && harnessFeedbackSelection.locator === name) {
-      clearHarnessFeedbackSelection();
-      return;
-    }
-    harnessFeedbackSelection = { locatorKind: "region", locator: name, artifactSha256: payload.digest };
-    if (harnessFeedbackNote && harnessFeedbackNote.tone === "warn") harnessFeedbackNote = null;
-    renderHarnessFeedback();
+  // A current worktree path does not establish a region of the checkpoint artifact.
+  // Keep the legacy entry point fail-closed until a verifiable selection is available.
+  function selectHarnessFeedbackRegion(_locator) {
+    harnessFeedbackSelection = null;
+    harnessFeedbackSay("File selection is unavailable; feedback applies to the bound artifact version.", "warn");
     refreshHarnessEvidenceSelection();
   }
 
@@ -19937,7 +20099,8 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
   // reading must not later be told they approved the work.
   async function confirmHarnessFeedback(feedbackId) {
     const payload = harnessFeedbackPayload;
-    if (!payload || payload.error) return;
+    const generation = harnessFeedbackGeneration;
+    if (!payload || payload.error || !harnessFeedbackIsCurrent(generation, payload)) return;
     try {
       const response = await fetch(`/api/harness/sessions/${encodeURIComponent(payload.sessionId)}/feedback/${encodeURIComponent(feedbackId)}/confirm`, {
         method: "POST",
@@ -19945,6 +20108,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
         body: JSON.stringify({ confirmed_by: "owner" }),
       });
       const data = await response.json().catch(() => null);
+      if (!harnessFeedbackIsCurrent(generation, payload)) return;
       if (!response.ok) {
         harnessFeedbackSay(`The confirmation was refused: ${(data && (data.detail || data.error)) || `HTTP ${response.status}`}`, "danger");
         return;
@@ -19953,17 +20117,20 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
       harnessFeedbackNote = { tone: "ok", text: "Reading confirmed. That settles what the words meant, and nothing about whether the work is accepted." };
       renderHarnessFeedback();
     } catch (error) {
-      harnessFeedbackSay(`The request never reached the server: ${error.message}`, "danger");
+      if (!harnessFeedbackIsCurrent(generation, payload)) return;
+      harnessFeedbackSay(`The response was not received: ${error.message}. Refresh the record before retrying.`, "danger");
     }
   }
 
   // Withdrawing is not deleting the history: the server keeps the record and stops counting it.
   async function withdrawHarnessFeedback(feedbackId) {
     const payload = harnessFeedbackPayload;
-    if (!payload || payload.error) return;
+    const generation = harnessFeedbackGeneration;
+    if (!payload || payload.error || !harnessFeedbackIsCurrent(generation, payload)) return;
     try {
       const response = await fetch(`/api/harness/sessions/${encodeURIComponent(payload.sessionId)}/feedback/${encodeURIComponent(feedbackId)}`, { method: "DELETE" });
       const data = await response.json().catch(() => null);
+      if (!harnessFeedbackIsCurrent(generation, payload)) return;
       if (!response.ok) {
         harnessFeedbackSay(`The withdrawal was refused: ${(data && (data.detail || data.error)) || `HTTP ${response.status}`}`, "danger");
         return;
@@ -19972,16 +20139,19 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
       harnessFeedbackNote = { tone: "ok", text: "Withdrawn. The record of what was said stays where it is; it no longer applies to this version." };
       renderHarnessFeedback();
     } catch (error) {
-      harnessFeedbackSay(`The request never reached the server: ${error.message}`, "danger");
+      if (!harnessFeedbackIsCurrent(generation, payload)) return;
+      harnessFeedbackSay(`The response was not received: ${error.message}. Refresh the record before retrying.`, "danger");
     }
   }
 
   async function submitHarnessFeedback(event) {
     if (event && event.preventDefault) event.preventDefault();
     const payload = harnessFeedbackPayload;
+    const generation = harnessFeedbackGeneration;
     const field = document.getElementById("harnessFeedbackText");
-    const text = field ? String(field.value || "").trim() : "";
-    if (!payload || payload.error) {
+    const originalText = field ? String(field.value || "") : "";
+    const text = originalText.trim();
+    if (!payload || payload.error || !harnessFeedbackIsCurrent(generation, payload)) {
       harnessFeedbackSay("There is no artifact version to record this against, so nothing was sent.", "warn");
       return false;
     }
@@ -19989,7 +20159,9 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
       harnessFeedbackSay("Nothing was recorded: say what should change, or use a quick action.", "warn");
       return false;
     }
+    harnessFeedbackUnsettled.add(harnessFeedbackTargetKey);
     try {
+      // No worktree path is sent as an artifact region; plain feedback remains available.
       const response = await fetch(`/api/harness/sessions/${encodeURIComponent(payload.sessionId)}/feedback`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -19997,21 +20169,27 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
           artifact_id: payload.artifactId,
           artifact_sha256: payload.digest,
           verbatim: text,
-          selection: harnessFeedbackSelection,
+          selection: null,
         }),
       });
       const data = await response.json().catch(() => null);
+      if (!harnessFeedbackIsCurrent(generation, payload)) return;
+      harnessFeedbackUnsettled.delete(harnessFeedbackTargetKey);
       if (!response.ok) {
         harnessFeedbackSay(`The record was refused: ${(data && (data.detail || data.error)) || `HTTP ${response.status}`}`, "danger");
         return false;
       }
-      if (field) field.value = "";
+      if (field && field.value === originalText) {
+        field.value = "";
+        harnessFeedbackDrafts.delete(harnessFeedbackTargetKey);
+      }
       harnessFeedbackSelection = null;
       harnessFeedbackPayload = { ...payload, data, error: "" };
       harnessFeedbackNote = { tone: "ok", text: "Recorded against this version. Confirming what it means is a separate step, and neither one accepts the artifact." };
       renderHarnessFeedback();
     } catch (error) {
-      harnessFeedbackSay(`The request never reached the server: ${error.message}`, "danger");
+      if (!harnessFeedbackIsCurrent(generation, payload)) return;
+      harnessFeedbackSay(`The response was not received: ${error.message}. The comment may have been recorded; refresh and check before retrying.`, "danger");
     }
     return false;
   }
@@ -20035,12 +20213,11 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     }
     // AP-019: feedback is loaded from the server for exactly the version the panel is showing,
     // so a comment is always recorded against what the reader is looking at.
-    const target = harnessFeedbackTarget(payload.task, payload.sessionId);
+    const target = renderHarnessFeedbackChoices(payload);
     if (target) {
       loadHarnessFeedback(target);
     } else {
-      harnessFeedbackPayload = null;
-      renderHarnessFeedback();
+      invalidateHarnessFeedback();
     }
     // AP-020: references belong to the project, not to the artifact, so they are read from the
     // session's own scope even when this session has no artifact version of its own yet. The
@@ -20602,6 +20779,12 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
         <p class="ev-note">This artifact has no recorded version, so feedback cannot be pinned to it. A comment that cannot name its version cannot be checked for staleness later, so none is accepted here.</p>`;
     }
     const rows = [];
+    rows.push({
+      label: "Bound artifact",
+      value: model.artifactId || "artifact identity unavailable",
+      mono: true,
+      note: "This is the selected session checkpoint artifact. The recorded content has not been rechecked against current files.",
+    });
     rows.push({
       label: "Bound to version",
       value: `sha256 ${model.digest}`,
@@ -21244,8 +21427,38 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
   // It also refuses to pretend to be the owner. The approver name is typed by the human and
   // recorded as `owner:<name>`; there is no stored identity this pane could borrow, and an
   // invented one would be exactly the fabricated approval the module exists to reject.
-  let harnessReferencePayload = null; // {scope, data, error}
+  let harnessReferencePayload = null; // {scope, data, error, sessionId, targetKey}
   let harnessReferenceNote = null;    // {tone, text}
+  let harnessReferenceGeneration = 0;
+  let harnessReferenceTargetKey = "";
+  let harnessReferenceLoading = false;
+  const harnessReferenceDrafts = new Map();
+  const harnessReferenceUnsettled = new Set();
+
+  function invalidateHarnessReference() {
+    harnessReferenceGeneration += 1;
+    const approver = document.getElementById("harnessReferenceApprover");
+    const statement = document.getElementById("harnessReferenceStatement");
+    if (harnessReferenceTargetKey && approver && statement) {
+      if (approver.value || statement.value) harnessReferenceDrafts.set(harnessReferenceTargetKey, { approver: approver.value, statement: statement.value });
+      else harnessReferenceDrafts.delete(harnessReferenceTargetKey);
+    }
+    if (approver) approver.value = "";
+    if (statement) statement.value = "";
+    harnessReferenceTargetKey = "";
+    harnessReferencePayload = null;
+    harnessReferenceNote = null;
+    harnessReferenceLoading = false;
+    const inline = document.getElementById("harnessReferenceNote");
+    if (inline) inline.textContent = "";
+    renderHarnessReference();
+  }
+
+  function harnessReferenceIsCurrent(generation, sessionId, target) {
+    return generation === harnessReferenceGeneration
+      && String(sessionId) === String(activeHarnessId || "")
+      && harnessReferenceTargetKey === harnessFeedbackKey(target);
+  }
 
   const HARNESS_REFERENCE_CANNOT_SETTLE_DEFAULT = [
     "new code working",
@@ -21342,9 +21555,13 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     const noteHtml = note
       ? `<p class="ev-note" data-tone="${escapeHtml(note.tone)}">${escapeHtml(note.text)}</p>`
       : "";
+    if (harnessReferenceLoading) {
+      host.innerHTML = `<div class="ev-heading">References</div><p class="ev-note">Reading references for this project…</p>${noteHtml}`;
+      return;
+    }
     if (!harnessReferencePayload) {
       host.innerHTML = `<div class="ev-heading">References</div>
-        <p class="ev-note">No project is open, so there are no references to show.</p>${noteHtml}`;
+        <p class="ev-note">References are not available here; select a session with a recorded artifact version and read its project records.</p>${noteHtml}`;
       return;
     }
     if (harnessReferencePayload.error) {
@@ -21375,24 +21592,34 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
   // The target is the recorded artifact version of the session, exactly as AP-019 binds
   // feedback to it: a reference to a version nobody recorded is a reference to a rumour.
   async function loadHarnessReferences(sessionId, target) {
-    if (!sessionId || !target) {
-      harnessReferencePayload = null;
-      renderHarnessReference();
-      return;
-    }
+    invalidateHarnessReference();
+    const generation = harnessReferenceGeneration;
+    const key = harnessFeedbackKey(target);
+    if (!sessionId || !key || String(target.sessionId) !== String(sessionId) || String(sessionId) !== String(activeHarnessId || "")) return;
+    harnessReferenceTargetKey = key;
+    const draft = harnessReferenceDrafts.get(key);
+    const approver = document.getElementById("harnessReferenceApprover");
+    const statement = document.getElementById("harnessReferenceStatement");
+    if (approver) approver.value = draft ? draft.approver : "";
+    if (statement) statement.value = draft ? draft.statement : "";
+    if (harnessReferenceUnsettled.has(key)) harnessReferenceNote = { tone: "warn", text: "An approval was sent before you left this view. It may have been recorded; check the project records before trying again." };
+    harnessReferenceLoading = true;
+    renderHarnessReference();
     try {
       const response = await fetch(`/api/reference-benchmarks?session_id=${encodeURIComponent(sessionId)}`);
       const data = await response.json().catch(() => null);
-      if (String(sessionId) !== String(activeHarnessId || "")) return; // a stale answer never lands on the new session
+      if (!harnessReferenceIsCurrent(generation, sessionId, target)) return;
       harnessReferencePayload = {
+        sessionId, targetKey: key,
         scope: data && data.project_scope_id ? data.project_scope_id : "",
         data: response.ok ? data : null,
         error: response.ok ? "" : ((data && (data.detail || data.error)) || `HTTP ${response.status}`),
       };
     } catch (error) {
-      if (String(sessionId) !== String(activeHarnessId || "")) return;
-      harnessReferencePayload = { scope: "", data: null, error: `the request never reached the server: ${error.message}` };
+      if (!harnessReferenceIsCurrent(generation, sessionId, target)) return;
+      harnessReferencePayload = { sessionId, targetKey: key, scope: "", data: null, error: `the reference read failed: ${error.message}` };
     }
+    harnessReferenceLoading = false;
     renderHarnessReference();
   }
 
@@ -21403,12 +21630,14 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     if (event && event.preventDefault) event.preventDefault();
     const payload = harnessReferencePayload;
     const target = harnessFeedbackPayload;
+    const generation = harnessReferenceGeneration;
     const approverField = document.getElementById("harnessReferenceApprover");
     const statementField = document.getElementById("harnessReferenceStatement");
     const approver = approverField ? String(approverField.value || "").trim() : "";
-    const statement = statementField ? String(statementField.value || "").trim() : "";
+    const originalStatement = statementField ? String(statementField.value || "") : "";
+    const statement = originalStatement.trim();
 
-    if (!payload || payload.error || !payload.scope) {
+    if (!payload || payload.error || !payload.scope || !target || payload.targetKey !== harnessFeedbackKey(target) || !harnessReferenceIsCurrent(generation, payload.sessionId, target)) {
       harnessReferenceSay("This project's references could not be read, so nothing was recorded. Reload the pane first.", "warn");
       return false;
     }
@@ -21424,6 +21653,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
       harnessReferenceSay("Nothing was recorded: say in your own words what you are approving, or the record would be a click the agent wrote for you.", "warn");
       return false;
     }
+    harnessReferenceUnsettled.add(payload.targetKey);
     try {
       const response = await fetch("/api/reference-benchmarks", {
         method: "POST",
@@ -21447,18 +21677,25 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
         }),
       });
       const data = await response.json().catch(() => null);
+      if (!harnessReferenceIsCurrent(generation, payload.sessionId, target)) return false;
+      harnessReferenceUnsettled.delete(payload.targetKey);
       if (!response.ok) {
         harnessReferenceSay(`The record was refused: ${(data && (data.detail || data.error)) || `HTTP ${response.status}`}`, "danger");
         return false;
       }
-      if (statementField) statementField.value = "";
+      if (statementField && statementField.value === originalStatement) statementField.value = "";
+      const refresh = loadHarnessReferences(payload.sessionId, target);
+      const refreshGeneration = harnessReferenceGeneration;
+      await refresh;
+      if (!harnessReferenceIsCurrent(refreshGeneration, payload.sessionId, target)) return false;
       harnessReferenceNote = {
         tone: "ok",
         text: "Recorded as a reference, with your words as the approval. It settles reuse of this style, not the next artifact, and it does not accept or publish anything.",
       };
-      await loadHarnessReferences(payload.sessionId || activeHarnessId, target);
+      renderHarnessReference();
     } catch (error) {
-      harnessReferenceSay(`The request never reached the server: ${error.message}`, "danger");
+      if (!harnessReferenceIsCurrent(generation, payload.sessionId, target)) return false;
+      harnessReferenceSay(`The response was not received: ${error.message}. The approval may have been recorded; refresh and check before retrying.`, "danger");
     }
     return false;
   }
@@ -23277,7 +23514,12 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     });
   } catch (_) { applyTheme("dark"); }
   applyShortcutHints();
-  presentDebateEmpty();
+  // Open only after the handlers above exist; an HTML open attribute can fire toggle during parsing.
+  const workspaceReview = document.getElementById("harnessWorkspaceReview");
+  if (workspaceReview) workspaceReview.open = true;
+  // The Compare pane may already have restored a local run during initialization.
+  // Do not overwrite a restored verdict or label existing panels as an empty pane.
+  if (!debatePanels().length && !debateSynth.m) presentDebateEmpty();
   presentHallEmpty();
   // A checkpoint outlives the page it was written on: drawing it here is what makes a failed
   // run recoverable after a reload, rather than a thing the reader had to be watching for.
@@ -35108,7 +35350,9 @@ async def api_capture_scoped_feedback(session_id: str, request: Request) -> JSON
             # something the caller did not ask for.
             scope_kind=str(body["scope_kind"]) if body.get("scope_kind") else None,
         )
-        get_scoped_feedback_store().put(record)
+        get_scoped_feedback_store().create(record)
+    except scoped_feedback.FeedbackConflict as exc:
+        raise HTTPException(status_code=409, detail="Feedback identity already exists; no new feedback was recorded.") from exc
     except scoped_feedback.FeedbackError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -35137,12 +35381,11 @@ async def api_confirm_scoped_feedback(session_id: str, feedback_id: str, request
     who = str((body or {}).get("confirmed_by") or "").strip() if isinstance(body, dict) else ""
     store = get_scoped_feedback_store()
     try:
-        existing = store.get(feedback_id)
-        if existing is None or existing.session_id != session_id:
-            # A comment belongs to the run it was given in. Answering 404 for another run's id
-            # is the honest reply: it is not this session's feedback to settle.
+        updated = store.confirm_for_session(feedback_id, session_id, confirmed_by=who or "owner")
+        if updated is None:
             raise HTTPException(status_code=404, detail=f"No feedback {feedback_id!r} in this session.")
-        updated = store.put(scoped_feedback.confirm(existing, confirmed_by=who or "owner"))
+    except scoped_feedback.FeedbackConflict as exc:
+        raise HTTPException(status_code=409, detail="Feedback could not be confirmed; refresh its record.") from exc
     except scoped_feedback.FeedbackError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return JSONResponse(
@@ -35161,19 +35404,20 @@ async def api_promote_scoped_feedback(session_id: str, feedback_id: str, request
     if not isinstance(body, dict):
         raise HTTPException(status_code=400, detail="Promotion needs a JSON body with a basis.")
     store = get_scoped_feedback_store()
-    existing = store.get(feedback_id)
-    if existing is None or existing.session_id != session_id:
-        raise HTTPException(status_code=404, detail=f"No feedback {feedback_id!r} in this session.")
     try:
-        promoted = scoped_feedback.promote(
-            existing,
+        promoted = store.promote_for_session(
+            feedback_id,
+            session_id,
             basis=str(body.get("basis") or ""),
             promoted_by=str(body.get("promoted_by") or "owner"),
             scope_kind=str(body.get("scope_kind") or "preference"),
         )
+        if promoted is None:
+            raise HTTPException(status_code=404, detail=f"No feedback {feedback_id!r} in this session.")
     except scoped_feedback.FeedbackError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    store.put(promoted)
+    except scoped_feedback.FeedbackConflict as exc:
+        raise HTTPException(status_code=409, detail="Feedback identity or binding conflicted; no promotion was recorded.") from exc
     _append_harness_event(
         session_id, "feedback/promoted", {"feedback_id": promoted.feedback_id, "scope_kind": promoted.scope_kind}
     )
@@ -35187,11 +35431,12 @@ async def api_delete_scoped_feedback(session_id: str, feedback_id: str) -> JSONR
     """Withdraw retained feedback. The record survives; the live set does not include it."""
     _require_well_formed_session(session_id)
     store = get_scoped_feedback_store()
-    existing = store.get(feedback_id)
-    if existing is None or existing.session_id != session_id:
-        raise HTTPException(status_code=404, detail=f"No feedback {feedback_id!r} in this session.")
     try:
-        removed = store.delete(feedback_id)
+        removed = store.withdraw_for_session(feedback_id, session_id)
+        if removed is None:
+            raise HTTPException(status_code=404, detail=f"No feedback {feedback_id!r} in this session.")
+    except scoped_feedback.FeedbackConflict as exc:
+        raise HTTPException(status_code=409, detail="Feedback could not be withdrawn; refresh its record.") from exc
     except scoped_feedback.FeedbackError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     _append_harness_event(session_id, "feedback/deleted", {"feedback_id": feedback_id})
@@ -57007,7 +57252,7 @@ import hashlib
 import json
 import re
 from dataclasses import dataclass, replace
-from typing import Any, Iterable, Mapping, Sequence
+from typing import Any, Callable, Iterable, Mapping, Sequence
 
 PS_SCHEMA_VERSION = 1
 
@@ -57043,7 +57288,7 @@ class FeedbackError(ValueError):
 
 
 class FeedbackConflict(RuntimeError):
-    """Two pieces of live feedback contradict each other on the same scope."""
+    """Feedback cannot be safely combined or written without a conflicting identity."""
 
 
 class PreferenceDrift(RuntimeError):
@@ -57671,11 +57916,35 @@ class FeedbackStore:
         connection.row_factory = sqlite3.Row
         return connection
 
-    def put(self, record: Feedback) -> Feedback:
-        """Insert or replace one record. The id is the identity; a put cannot fork history."""
+    def create(self, record: Feedback) -> Feedback:
+        """Insert a new feedback identity, atomically refusing any existing identity."""
         payload = json.dumps(record.to_mapping(), sort_keys=True)
         with self._connect() as connection:
-            connection.execute(
+            cursor = connection.execute(
+                """
+                INSERT INTO scoped_feedback (
+                    feedback_id, session_id, artifact_id, artifact_sha256, scope_kind, verbatim, record_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(feedback_id) DO NOTHING
+                """,
+                (
+                    record.feedback_id,
+                    record.session_id,
+                    record.artifact_id,
+                    record.artifact_sha256,
+                    record.scope_kind,
+                    record.verbatim,
+                    payload,
+                ),
+            )
+            if cursor.rowcount != 1:
+                raise FeedbackConflict("feedback identity already exists; no new feedback was recorded")
+        return record
+
+    def _put_on_connection(self, connection: Any, record: Feedback) -> Feedback:
+        """Write using the caller's transaction, retaining the record's existing binding."""
+        payload = json.dumps(record.to_mapping(), sort_keys=True)
+        cursor = connection.execute(
                 """
                 INSERT INTO scoped_feedback (
                     feedback_id, session_id, artifact_id, artifact_sha256, scope_kind, verbatim, record_json
@@ -57688,6 +57957,10 @@ class FeedbackStore:
                     verbatim = excluded.verbatim,
                     record_json = excluded.record_json,
                     updated_at = CURRENT_TIMESTAMP
+                WHERE scoped_feedback.session_id = excluded.session_id
+                  AND scoped_feedback.artifact_id = excluded.artifact_id
+                  AND scoped_feedback.artifact_sha256 = excluded.artifact_sha256
+                  AND scoped_feedback.scope_kind = excluded.scope_kind
                 """,
                 (
                     record.feedback_id,
@@ -57698,8 +57971,15 @@ class FeedbackStore:
                     record.verbatim,
                     payload,
                 ),
-            )
+        )
+        if cursor.rowcount != 1:
+            raise FeedbackConflict("feedback identity has a different recorded binding")
         return record
+
+    def put(self, record: Feedback) -> Feedback:
+        """Insert or update a record without changing its session, artifact, version or scope."""
+        with self._connect() as connection:
+            return self._put_on_connection(connection, record)
 
     def get(self, feedback_id: str) -> Feedback | None:
         identifier = _ps_text(feedback_id, "feedback_id", 120)
@@ -57737,16 +58017,70 @@ class FeedbackStore:
             ).fetchall()
         return [Feedback.from_mapping(json.loads(row["record_json"])) for row in rows]
 
-    def delete(self, feedback_id: str) -> Feedback:
-        """Remove feedback from the live set, keeping the record that it existed.
+    def _read_bound(self, connection: Any, identifier: str, session_id: str | None) -> Feedback | None:
+        row = connection.execute(
+            "SELECT session_id, artifact_id, artifact_sha256, scope_kind, record_json "
+            "FROM scoped_feedback WHERE feedback_id = ?", (identifier,)
+        ).fetchone()
+        if row is None or (session_id is not None and row["session_id"] != session_id):
+            return None
+        existing = Feedback.from_mapping(json.loads(row["record_json"]))
+        binding = (existing.feedback_id, existing.session_id, existing.artifact_id, existing.artifact_sha256, existing.scope_kind)
+        if binding != (identifier, row["session_id"], row["artifact_id"], row["artifact_sha256"], row["scope_kind"]):
+            raise FeedbackConflict("feedback record does not match its stored binding")
+        return existing
 
-        A deleted item is skipped by ``live``, so no revision is built from it, and its words
-        remain readable for anyone asking what was asked for and then withdrawn.
-        """
-        existing = self.get(feedback_id)
-        if existing is None:
+    def _update_atomic(
+        self, feedback_id: str, session_id: str | None, change: Callable[[Feedback], Feedback]
+    ) -> Feedback | None:
+        """Serialize a read and its update; never transfer a record or recreate a missing one."""
+        identifier = _ps_text(feedback_id, "feedback_id", 120)
+        if session_id is not None:
+            session_id = _ps_text(session_id, "session_id", 120)
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            existing = self._read_bound(connection, identifier, session_id)
+            if existing is None:
+                return None
+            binding = (existing.feedback_id, existing.session_id, existing.artifact_id, existing.artifact_sha256, existing.scope_kind)
+            updated = change(existing)
+            if binding != (updated.feedback_id, updated.session_id, updated.artifact_id, updated.artifact_sha256, updated.scope_kind):
+                raise FeedbackConflict("feedback update attempted to change its binding")
+            cursor = connection.execute(
+                "UPDATE scoped_feedback SET verbatim = ?, record_json = ?, updated_at = CURRENT_TIMESTAMP "
+                "WHERE feedback_id = ?",
+                (updated.verbatim, json.dumps(updated.to_mapping(), sort_keys=True), identifier),
+            )
+            if cursor.rowcount != 1:
+                raise FeedbackConflict("feedback record changed during its update")
+            return updated
+
+    def promote_for_session(
+        self, feedback_id: str, session_id: str, *, basis: str, promoted_by: str, scope_kind: str
+    ) -> Feedback | None:
+        """Promote the current source and write its derived record in one transaction."""
+        identifier = _ps_text(feedback_id, "feedback_id", 120)
+        session = _ps_text(session_id, "session_id", 120)
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            existing = self._read_bound(connection, identifier, session)
+            if existing is None:
+                return None
+            promoted = promote(existing, basis=basis, promoted_by=promoted_by, scope_kind=scope_kind)
+            return self._put_on_connection(connection, promoted)
+
+    def confirm_for_session(self, feedback_id: str, session_id: str, *, confirmed_by: str) -> Feedback | None:
+        return self._update_atomic(feedback_id, session_id, lambda existing: confirm(existing, confirmed_by=confirmed_by))
+
+    def withdraw_for_session(self, feedback_id: str, session_id: str) -> Feedback | None:
+        return self._update_atomic(feedback_id, session_id, lambda existing: replace(existing, deleted=True))
+
+    def delete(self, feedback_id: str) -> Feedback:
+        """Withdraw a record without removing its words; repeated withdrawal stays idempotent."""
+        updated = self._update_atomic(feedback_id, None, lambda existing: replace(existing, deleted=True))
+        if updated is None:
             raise FeedbackError(f"no feedback {feedback_id!r} to delete")
-        return self.put(replace(existing, deleted=True))
+        return updated
 
 scoped_feedback = sys.modules[__name__]
 

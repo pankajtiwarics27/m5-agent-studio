@@ -8,7 +8,7 @@ and what a revert does and does not touch.
 * Status: **historical-approval-unbound** — Signed in the ledger; this page reports the historical owner record, not a new approval.
 * Approval binding: **unbound** — The historical record has no approved input snapshot and does not establish approval of current inputs.
 * Pinned baseline source commit: `73bc5e417c1508b41127f3d7162c4afdcbcdbfc4` (input artifacts are hashed separately).
-* 6 panes · 21 preserved capabilities · 282 markup controls (169 chrome, 113 panes) · 76 rendered by script.
+* 6 panes · 21 preserved capabilities · 283 markup controls (170 chrome, 113 panes) · 76 rendered by script.
 * 134 routes exist, 83 with a resolved or possible caller, 51 with none observed and 0 unknown due to unresolved edges; 56 state-changing candidates traced.
 * 0 fetch site(s) have 0 unresolved URL or method edge(s) (0 method).
 * Baseline screenshots recorded in the index: 6 of 6 (not provenance-verified).
@@ -28,7 +28,7 @@ separates the historical signature from any explicit binding to current input di
 | # | Ask | Evidence in this package |
 |---|---|---|
 | 1 | Accept the preservation matrix as the baseline P1 must preserve | 21 capability rows across 6 panes, carried row for row from product/M5_2_0_UIUX_Autonomous_Roadmap.json |
-| 2 | Accept the control inventory as the list of controls that must stay reachable | 282 markup controls (169 chrome, 113 panes) plus 76 rendered by script |
+| 2 | Accept the control inventory as the list of controls that must stay reachable | 283 markup controls (170 chrome, 113 panes) plus 76 rendered by script |
 | 3 | Review route candidates and preserve confirmed browser-reachable routes and their gates | 134 routes exist; 83 have a resolved or possible caller; 0 have unknown browser usage due to detected unresolved edges. The trace covers 56 state-changing candidates; the lexical scan is not exhaustive |
 | 4 | Accept that P1 may not weaken the shared boundary | host allowlist (400), cross-origin rejection (403), bearer token (401, 503 when unconfigured), rate limit (429) and body-size limit (413), read from the middleware itself |
 | 5 | Review the rollback path and the state effects of each story | this package adds no migration or privilege; review each story's actual merge, revert and recovery effects, then regenerate artifacts and re-run the checks below |
@@ -113,9 +113,6 @@ An agent session over a workspace, with the diff, approval, and abort controls.
 | button | — | Approve | resolveHarnessApproval('__inventory_probe__','approve','__inventory_probe__') |
 | button | — | + New session | startFreshHarnessDraft() |
 | input | harnessSessionFilter | — | — |
-| summary | — | Files, progress & resources | — |
-| button | — | Refresh workspace review | refreshHarnessWorkspaceReview() |
-| button | — | Verification & artifacts | openHarnessEvidenceModal() |
 | button | harnessTimelineToggle | Session log | toggleHarnessTimeline() |
 | button | — | All | setHarnessEventFilter('all') |
 | button | — | Tools | setHarnessEventFilter('tool') |
@@ -125,6 +122,9 @@ An agent session over a workspace, with the diff, approval, and abort controls.
 | button | harnessTimelineJump | Jump to latest ↓ | jumpToLatestHarnessEvent() |
 | button | harnessTimelineReplay | Replay log | replayHarnessLog() |
 | button | harnessTimelineResync | Resync | harnessResyncFromSnapshot('operator') |
+| summary | — | Files, progress & resources | — |
+| button | — | Refresh workspace review | refreshHarnessWorkspaceReview() |
+| button | — | Verification & artifacts | openHarnessEvidenceModal() |
 | textarea | harnessPromptInput | — | — |
 | select | harnessLeadModel | — | — |
 | select | harnessPolicy | Standard (Ask before Bash) Autonomous (Auto Build & Test) Plan & Audit (Read-Only) | — |
@@ -332,7 +332,7 @@ A single streaming conversation with the selected model.
 
 ## Shared chrome
 
-169 controls: button 100, input 38, select 14, summary 8, textarea 9.
+170 controls: button 100, input 38, select 15, summary 8, textarea 9.
 
 Tabs, command palette, modals and the shared toolbar. A pane story may restyle chrome, but every control here stays reachable: the inventory test fails if one disappears.
 
@@ -395,11 +395,11 @@ provenance; a matching snapshot cannot clear separate review holds.
 | Input | Current digest | Owner-recorded digest |
 |---|---|---|
 | `ledger_content_sha256` | `cb04b1bdf0ec9be6b39d2233496d9e9e53ffb91b0f92397824c9964af333b85f` | `not recorded` |
-| `source_manifest_sha256` | `383211760a6cd3ba327def9cb9ccc55db11a17bda64daf3fdf60ba19a3c51b70` | `not recorded` |
-| `control_inventory_sha256` | `a7719304dc93be02f10e9882d8bc296106e974c2120a201fc5da8f9a49272757` | `not recorded` |
-| `route_map_sha256` | `e72e7d781027703420418cf7616457662798b5bc34bfce5788b9b356f9683a25` | `not recorded` |
-| `authorization_trace_sha256` | `d803505da5b73353a1cf8bd42219272b000bde7c136740f3d7d0b312474b4b1d` | `not recorded` |
-| `frontend_sha256` | `848af209461f2a56227f818208f644cca89ab99e1fd85a71a547c699fac0d3ea` | `not recorded` |
+| `source_manifest_sha256` | `3d2b99c47bcb1cbf149dc089bcac0201ac34aed213d4af48eb638a17168d153c` | `not recorded` |
+| `control_inventory_sha256` | `8c7aede304dea30a97c425500128791d161ab909f3bd9cbea44282d23363cdd6` | `not recorded` |
+| `route_map_sha256` | `158fd40678c45d2264826b4ac68574a1c27767af49d07365574df89df03ee31f` | `not recorded` |
+| `authorization_trace_sha256` | `5707ee3a75812536f5f90ed6769ac54e96ed77b79450e4090c34ebd79d7db25e` | `not recorded` |
+| `frontend_sha256` | `85da77e41ea6b18ace1f28113a060965d5ac4286e9c2996700a078fd6d03e814` | `not recorded` |
 | `screenshot_manifest_sha256` | `b488bf453ae260b6564ae592f0455e3d70cff3121dca1e7c823c7abb270b44d3` | `not recorded` |
 | `screenshot_index_sha256` | `16b0620ca1d02a1b181ad15b3a2b0c6aae9e7aa539654d27ed80d9147189634e` | `not recorded` |
 | `generator_sha256` | `6354fb6769a09fd9281aac05c4477a06ae3edc163bf406964722da5289718d65` | `not recorded` |

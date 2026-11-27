@@ -346,6 +346,7 @@ const assert=require('node:assert/strict');
 let activeHarnessId='one', nodes={}, rendered=[];
 let document={getElementById(id){return nodes[id] ||= {textContent:'old secret'}}};
 function harnessCachedEvents(){return [];} function harnessVerdictTone(){return '';}
+function invalidateHarnessFeedback(){} function invalidateHarnessReference(){} // Covered by the separate fencing probes.
 function renderHarnessEvidence(value){rendered.push(value);} function openOverlay(){} function closeOverlay(){invalidateHarnessEvidence();}
 function showToast(){} let fetch;
 ''' + html[start:end] + r'''
@@ -735,3 +736,54 @@ def test_recorded_artifacts_carry_the_step_that_produced_them(tmp_path):
     # No producer name is invented: the tool that wrote the file is not in the record.
     assert recorded.producer == ""
     assert recorded.to_dict()["producer_version"] == "step:7"
+
+
+def test_adjacent_artifact_versions_are_session_bound_and_honest():
+    html = HTML.read_text(encoding="utf-8")
+    start = html.index("  function renderHarnessWorkspaceArtifacts() {")
+    end = html.index("  function resetHarnessWorkspaceReview()", start)
+    js = r'''
+const assert = require('node:assert/strict');
+let activeHarnessId='session-a', harnessSnapshot=null, stale=false;
+const node={textContent:''};
+const document={getElementById(id){return id==='harnessWorkspaceArtifacts'?node:null},querySelector(){return stale ? {} : null}};
+''' + html[start:end] + r'''
+const version = {session_id:'session-a',artifact_id:'<img src=x onerror=alert(1)>',content_sha256:'a'.repeat(64),identity_sha256:'b'.repeat(64),identity_basis:'content_only',identity_axes_absent:['producer','inputs'],contributes_a_verified_version:true,rechecked_against_current_content:false,is_global_lineage:false,is_workspace_snapshot:false};
+const state = {session_id:'session-a',checkpoint_integrity_error:null,latest_checkpoint:{seq:1},session_artifact_versions:[version]};
+function draw(value){harnessSnapshot=value;renderHarnessWorkspaceArtifacts();return node.textContent;}
+assert.match(draw(state), /1 recorded artifact version/);
+assert.match(node.textContent, /<img src=x onerror=alert\(1\)>/);
+assert.equal(node.innerHTML,undefined);
+assert.match(node.textContent, /content_only; not recorded: producer, inputs/);
+assert.match(node.textContent, /not been rechecked against current files; they are not approval/);
+stale=true; assert.match(draw(state), /Last known checkpoint \(may be stale\)/); stale=false;
+assert.match(draw({...state,session_artifact_versions:[]}), /no artifact versions derivable/);
+assert.match(draw({...state,checkpoint_integrity_error:'bad'}), /unavailable.*integrity/);
+assert.match(draw({...state,session_id:'other'}), /unavailable/);
+assert.match(draw({...state,session_artifact_versions:undefined}), /unavailable.*invalid/);
+assert.match(draw({...state,latest_checkpoint:null}), /unavailable.*invalid/);
+assert.match(draw({...state,session_artifact_versions:[{...version,session_id:'other'}]}), /unavailable.*invalid/);
+assert.match(draw({...state,session_artifact_versions:[{...version,content_sha256:'bad'}]}), /unavailable.*invalid/);
+assert.match(draw({...state,session_artifact_versions:[{...version,is_global_lineage:true}]}), /unavailable.*invalid/);
+assert.match(draw({...state,session_artifact_versions:[{...version,rechecked_against_current_content:true}]}), /unavailable.*invalid/);
+assert.match(draw({...state,session_artifact_versions:Array.from({length:7},()=>version)}), /Showing 5 of 7/);
+assert.equal(node.textContent.split('<img src=x onerror=alert(1)>').length - 1, 5);
+activeHarnessId='other'; assert.match(draw(state), /unavailable/);
+activeHarnessId=null; assert.match(draw(state), /Select a session/);
+console.log('artifact versions renderer complete');
+'''
+    result = subprocess.run(["node", "-"], input=js, text=True, capture_output=True, cwd=ROOT, check=False)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "artifact versions renderer complete" in result.stdout
+
+
+def test_adjacent_artifact_versions_refresh_at_each_snapshot_transition():
+    html = HTML.read_text(encoding="utf-8")
+    for start, end in (
+        ("  function resetHarnessWorkspaceReview()", "  async function refreshHarnessWorkspaceSnapshots("),
+        ("  async function refreshHarnessWorkspaceReview()", "  function applyHarnessSnapshotState("),
+        ("  function applyHarnessSnapshotState(", "  function presentHarnessSnapshotUnavailable("),
+        ("  function presentHarnessSnapshotUnavailable(", "  function clearHarnessSnapshotUnavailable("),
+    ):
+        body = html[html.index(start):html.index(end, html.index(start))]
+        assert "renderHarnessWorkspaceArtifacts();" in body, start

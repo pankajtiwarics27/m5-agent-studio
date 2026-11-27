@@ -8,7 +8,7 @@
   "check_with": "python3 scripts/uiux_control_inventory.py --check",
   "statement": "Every interactive element in static/index.html, attributed to the pane section that contains it, parsed from the markup. Controls rendered only by inline-script templates are counted separately and attributed to the function that renders them; neither list claims to be the whole UI on its own.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "frontend_sha256": "848af209461f2a56227f818208f644cca89ab99e1fd85a71a547c699fac0d3ea",
+  "frontend_sha256": "85da77e41ea6b18ace1f28113a060965d5ac4286e9c2996700a078fd6d03e814",
   "panes": [
     {
       "dom_id": "start",
@@ -172,24 +172,6 @@
           "oninput": "renderHarnessSidebar()"
         },
         {
-          "tag": "summary",
-          "text": "Files, progress & resources"
-        },
-        {
-          "tag": "button",
-          "type": "button",
-          "class": "btn btn-xs",
-          "onclick": "refreshHarnessWorkspaceReview()",
-          "text": "Refresh workspace review"
-        },
-        {
-          "tag": "button",
-          "type": "button",
-          "class": "btn btn-xs",
-          "onclick": "openHarnessEvidenceModal()",
-          "text": "Verification & artifacts"
-        },
-        {
           "tag": "button",
           "id": "harnessTimelineToggle",
           "type": "button",
@@ -278,6 +260,24 @@
           "title": "Re-read the authoritative task state and the whole log",
           "onclick": "harnessResyncFromSnapshot('operator')",
           "text": "Resync"
+        },
+        {
+          "tag": "summary",
+          "text": "Files, progress & resources"
+        },
+        {
+          "tag": "button",
+          "type": "button",
+          "class": "btn btn-xs",
+          "onclick": "refreshHarnessWorkspaceReview()",
+          "text": "Refresh workspace review"
+        },
+        {
+          "tag": "button",
+          "type": "button",
+          "class": "btn btn-xs",
+          "onclick": "openHarnessEvidenceModal()",
+          "text": "Verification & artifacts"
         },
         {
           "tag": "textarea",
@@ -902,11 +902,11 @@
     }
   ],
   "chrome": {
-    "control_count": 169,
+    "control_count": 170,
     "counts": {
       "button": 100,
       "input": 38,
-      "select": 14,
+      "select": 15,
       "summary": 8,
       "textarea": 9
     },
@@ -1649,9 +1649,15 @@
         "text": "Close"
       },
       {
+        "tag": "select",
+        "id": "harnessFeedbackArtifact",
+        "aria-describedby": "harnessFeedbackArtifactStatus",
+        "onchange": "chooseHarnessFeedbackArtifact(this.value)"
+      },
+      {
         "tag": "textarea",
         "id": "harnessFeedbackText",
-        "placeholder": "Say what should change. A region you select narrows this to that region; without a selection it applies to this artifact version only.",
+        "placeholder": "Say what should change on the bound artifact version.",
         "rows": "2"
       },
       {
@@ -2085,9 +2091,9 @@
   },
   "totals": {
     "panes": 6,
-    "markup_controls": 282,
+    "markup_controls": 283,
     "pane_controls": 113,
-    "chrome_controls": 169,
+    "chrome_controls": 170,
     "script_rendered_controls": 76,
     "script_rendered_by_function": {
       "debateModelPageFooter": 2,

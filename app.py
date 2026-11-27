@@ -15835,7 +15835,9 @@ async def api_capture_scoped_feedback(session_id: str, request: Request) -> JSON
             # something the caller did not ask for.
             scope_kind=str(body["scope_kind"]) if body.get("scope_kind") else None,
         )
-        get_scoped_feedback_store().put(record)
+        get_scoped_feedback_store().create(record)
+    except scoped_feedback.FeedbackConflict as exc:
+        raise HTTPException(status_code=409, detail="Feedback identity already exists; no new feedback was recorded.") from exc
     except scoped_feedback.FeedbackError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -15864,12 +15866,11 @@ async def api_confirm_scoped_feedback(session_id: str, feedback_id: str, request
     who = str((body or {}).get("confirmed_by") or "").strip() if isinstance(body, dict) else ""
     store = get_scoped_feedback_store()
     try:
-        existing = store.get(feedback_id)
-        if existing is None or existing.session_id != session_id:
-            # A comment belongs to the run it was given in. Answering 404 for another run's id
-            # is the honest reply: it is not this session's feedback to settle.
+        updated = store.confirm_for_session(feedback_id, session_id, confirmed_by=who or "owner")
+        if updated is None:
             raise HTTPException(status_code=404, detail=f"No feedback {feedback_id!r} in this session.")
-        updated = store.put(scoped_feedback.confirm(existing, confirmed_by=who or "owner"))
+    except scoped_feedback.FeedbackConflict as exc:
+        raise HTTPException(status_code=409, detail="Feedback could not be confirmed; refresh its record.") from exc
     except scoped_feedback.FeedbackError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return JSONResponse(
@@ -15888,19 +15889,20 @@ async def api_promote_scoped_feedback(session_id: str, feedback_id: str, request
     if not isinstance(body, dict):
         raise HTTPException(status_code=400, detail="Promotion needs a JSON body with a basis.")
     store = get_scoped_feedback_store()
-    existing = store.get(feedback_id)
-    if existing is None or existing.session_id != session_id:
-        raise HTTPException(status_code=404, detail=f"No feedback {feedback_id!r} in this session.")
     try:
-        promoted = scoped_feedback.promote(
-            existing,
+        promoted = store.promote_for_session(
+            feedback_id,
+            session_id,
             basis=str(body.get("basis") or ""),
             promoted_by=str(body.get("promoted_by") or "owner"),
             scope_kind=str(body.get("scope_kind") or "preference"),
         )
+        if promoted is None:
+            raise HTTPException(status_code=404, detail=f"No feedback {feedback_id!r} in this session.")
     except scoped_feedback.FeedbackError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    store.put(promoted)
+    except scoped_feedback.FeedbackConflict as exc:
+        raise HTTPException(status_code=409, detail="Feedback identity or binding conflicted; no promotion was recorded.") from exc
     _append_harness_event(
         session_id, "feedback/promoted", {"feedback_id": promoted.feedback_id, "scope_kind": promoted.scope_kind}
     )
@@ -15914,11 +15916,12 @@ async def api_delete_scoped_feedback(session_id: str, feedback_id: str) -> JSONR
     """Withdraw retained feedback. The record survives; the live set does not include it."""
     _require_well_formed_session(session_id)
     store = get_scoped_feedback_store()
-    existing = store.get(feedback_id)
-    if existing is None or existing.session_id != session_id:
-        raise HTTPException(status_code=404, detail=f"No feedback {feedback_id!r} in this session.")
     try:
-        removed = store.delete(feedback_id)
+        removed = store.withdraw_for_session(feedback_id, session_id)
+        if removed is None:
+            raise HTTPException(status_code=404, detail=f"No feedback {feedback_id!r} in this session.")
+    except scoped_feedback.FeedbackConflict as exc:
+        raise HTTPException(status_code=409, detail="Feedback could not be withdrawn; refresh its record.") from exc
     except scoped_feedback.FeedbackError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     _append_harness_event(session_id, "feedback/deleted", {"feedback_id": feedback_id})

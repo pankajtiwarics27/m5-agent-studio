@@ -339,6 +339,14 @@ async function run(args) {
       );
       await shoot(page, "paused-panel");
 
+      const workspaceWide = await page.evaluate(() => {
+        const stream = document.getElementById('harnessStream').getBoundingClientRect();
+        const panel = document.getElementById('harnessWorkspaceReview').getBoundingClientRect();
+        const main = document.querySelector('#pane-harness .harness-main').getBoundingClientRect();
+        return {stream: {left:stream.left, right:stream.right, width:stream.width, height:stream.height}, panel:{left:panel.left, right:panel.right, width:panel.width, height:panel.height}, main:{left:main.left, right:main.right}, open:document.getElementById('harnessWorkspaceReview').open};
+      });
+      record('session workspace is adjacent to the trajectory on wide screens', workspaceWide.open && workspaceWide.stream.width > 300 && workspaceWide.stream.height >= 200 && workspaceWide.panel.width > 200 && workspaceWide.panel.height >= 200 && workspaceWide.stream.right <= workspaceWide.panel.left + 1 && workspaceWide.panel.right <= workspaceWide.main.right + 1, JSON.stringify(workspaceWide));
+
       // The version disclosure reads the real session snapshot route, not the diff
       // and not an invented artifact version. Failures must remain independent.
       const versions = await page.evaluate(async (id) => {
@@ -380,6 +388,12 @@ async function run(args) {
           viewport: window.innerWidth,
         }));
         record(`inert workspace preview at ${width}px in ${theme}`, /<script>/.test(preview.text) && preview.images === 0 && !preview.injected && preview.width <= preview.viewport + 1, JSON.stringify(preview));
+        const stacked = await page.evaluate(() => {
+          const stream = document.getElementById('harnessStream').getBoundingClientRect();
+          const panel = document.getElementById('harnessWorkspaceReview').getBoundingClientRect();
+          return {streamBottom:stream.bottom, panelTop:panel.top, panelWidth:panel.width};
+        });
+        record(`workspace stacks below the trajectory at ${width}px`, stacked.streamBottom <= stacked.panelTop + 1 && stacked.panelWidth > 0, JSON.stringify(stacked));
         await page.focus('#harnessWorkspaceReview summary');
         await page.keyboard.press('Enter');
         const closed = await page.evaluate(() => !document.getElementById('harnessWorkspaceReview').open && document.activeElement.tagName === 'SUMMARY');
