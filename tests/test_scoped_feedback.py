@@ -37,6 +37,49 @@ def _feedback(**overrides):
     return ps.capture(**base)
 
 
+def test_put_does_not_transfer_record_to_another_session(tmp_path):
+    store = ps.FeedbackStore(tmp_path / "feedback.db")
+    original = _feedback(feedback_id="shared", session_id="a", verbatim="original")
+    store.put(original)
+    with pytest.raises(ps.FeedbackConflict):
+        store.put(_feedback(feedback_id="shared", session_id="b", verbatim="replacement"))
+    assert store.get("shared") == original
+    confirmed = ps.confirm(original, confirmed_by="owner")
+    store.put(confirmed)
+    assert store.get("shared") == confirmed
+    legacy = _feedback(feedback_id="legacy", verbatim="unassigned")
+    store.put(legacy)
+    with store._connect() as connection:
+        connection.execute("UPDATE scoped_feedback SET session_id = '' WHERE feedback_id = 'legacy'")
+    with pytest.raises(ps.FeedbackConflict):
+        store.put(_feedback(feedback_id="legacy", session_id="a", verbatim="claimed"))
+    assert store.get("legacy") == legacy
+    with store._connect() as connection:
+        assert connection.execute("SELECT session_id FROM scoped_feedback WHERE feedback_id = 'legacy'").fetchone()[0] == ""
+
+
+def test_atomic_put_does_not_transfer_record_in_a_race(tmp_path):
+    store = ps.FeedbackStore(tmp_path / "feedback.db")
+    barrier = Barrier(2, timeout=5)
+
+    def put(session):
+        record = _feedback(feedback_id="same", session_id=session, verbatim=session)
+        barrier.wait()
+        try:
+            store.put(record)
+            return ("written", session)
+        except ps.FeedbackConflict:
+            return ("conflict", session)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        outcomes = list(pool.map(put, ("session-a", "session-b")))
+    assert sorted(result for result, _ in outcomes) == ["conflict", "written"]
+    winner = next(session for result, session in outcomes if result == "written")
+    stored = store.get("same")
+    assert stored.session_id == winner and stored.verbatim == winner
+    assert len(store.list()) == 1
+
+
 def test_atomic_create_refuses_identity_collisions_even_when_racing(tmp_path):
     store = ps.FeedbackStore(tmp_path / "feedback.db")
     barrier = Barrier(2, timeout=5)

@@ -8,8 +8,8 @@
   "check_with": "python3 scripts/uiux_authorization_trace.py --check",
   "statement": "For state-changing route candidates resolved by the browser map: the shared gates every request passes, handler refusals, referenced authority and durable-state subsystems, and possible effects. The route map is a lexical scan, not proof of exhaustive browser coverage; a reference is evidence of a consultation, not proof of enforcement.",
   "pinned_source_commit": "73bc5e417c1508b41127f3d7162c4afdcbcdbfc4",
-  "app_sha256": "0fdd8f01c5b65646c269dd9ddf093ab8c2577501861f79e2bbb7857d7c6ad0f3",
-  "route_map_sha256": "972fc687726298291464f021977e5fdb8c626639ef9c76be99610f42fe145282",
+  "app_sha256": "ac00f6b3fed92b3b898d902d2822c678d5d4aee3df3832f67b9c2ad9f676c83f",
+  "route_map_sha256": "356324778092c368814448f09440c9bc5230e5fea2b73e0d48442fcd731c86bb",
   "totals": {
     "routes_in_app": 134,
     "state_changing_routes_in_app": 91,
@@ -1153,7 +1153,7 @@
       "method": "POST",
       "path": "/api/harness/gsd-wave",
       "handler": "api_run_gsd_fresh_wave",
-      "handler_line": 21393,
+      "handler_line": 21396,
       "response": "stream",
       "ui_callers": [
         "consumeSSE"
@@ -1233,7 +1233,7 @@
       "method": "POST",
       "path": "/api/harness/run",
       "handler": "api_run_harness_turn",
-      "handler_line": 20434,
+      "handler_line": 20437,
       "response": "stream",
       "ui_callers": [
         "consumeSSE"
@@ -1351,7 +1351,7 @@
       "method": "POST",
       "path": "/api/harness/sdlc/feedback",
       "handler": "api_run_sdlc_feedback_loop",
-      "handler_line": 23261,
+      "handler_line": 23264,
       "response": "stream",
       "ui_callers": [
         "consumeSSE"
@@ -1432,7 +1432,7 @@
       "method": "POST",
       "path": "/api/harness/sdlc/run",
       "handler": "api_run_agile_sdlc_factory",
-      "handler_line": 22927,
+      "handler_line": 22930,
       "response": "stream",
       "ui_callers": [
         "consumeSSE"
@@ -1761,7 +1761,7 @@
       "method": "POST",
       "path": "/api/harness/sessions/{session_id}/cancel",
       "handler": "api_cancel_harness_session",
-      "handler_line": 15933,
+      "handler_line": 15936,
       "response": "json",
       "ui_callers": [
         "harnessRecoveryPost"
@@ -1895,7 +1895,7 @@
       "method": "POST",
       "path": "/api/harness/sessions/{session_id}/contain",
       "handler": "api_contain_harness_session",
-      "handler_line": 16041,
+      "handler_line": 16044,
       "response": "json",
       "ui_callers": [
         "harnessRecoveryPost"
@@ -1971,7 +1971,7 @@
       "method": "POST",
       "path": "/api/harness/sessions/{session_id}/delegations",
       "handler": "api_create_harness_delegation",
-      "handler_line": 19339,
+      "handler_line": 19342,
       "response": "json",
       "ui_callers": [
         "harnessRecoveryPost"
@@ -2315,7 +2315,7 @@
       "method": "DELETE",
       "path": "/api/harness/sessions/{session_id}/feedback/{feedback_id}",
       "handler": "api_delete_scoped_feedback",
-      "handler_line": 15915,
+      "handler_line": 15918,
       "response": "json",
       "ui_callers": [
         "withdrawHarnessFeedback"
@@ -2442,7 +2442,7 @@
       "method": "POST",
       "path": "/api/harness/sessions/{session_id}/grants",
       "handler": "api_issue_harness_session_grant",
-      "handler_line": 16433,
+      "handler_line": 16436,
       "response": "json",
       "ui_callers": [
         "harnessRecoveryPost"
@@ -2524,7 +2524,7 @@
       "method": "POST",
       "path": "/api/harness/sessions/{session_id}/grants/revoke",
       "handler": "api_revoke_harness_session_grant",
-      "handler_line": 16500,
+      "handler_line": 16503,
       "response": "json",
       "ui_callers": [
         "revokeHarnessGrant"
@@ -2678,7 +2678,7 @@
       "method": "POST",
       "path": "/api/harness/sessions/{session_id}/resume",
       "handler": "api_resume_harness_session",
-      "handler_line": 20353,
+      "handler_line": 20356,
       "response": "json",
       "ui_callers": [
         "harnessRecoveryPost"
@@ -2835,7 +2835,7 @@
       "method": "POST",
       "path": "/api/harness/sessions/{session_id}/switch-model",
       "handler": "api_switch_harness_session_model",
-      "handler_line": 17595,
+      "handler_line": 17598,
       "response": "json",
       "ui_callers": [
         "harnessRecoveryPost"

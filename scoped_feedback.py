@@ -726,10 +726,10 @@ class FeedbackStore:
         return record
 
     def put(self, record: Feedback) -> Feedback:
-        """Insert or replace one record. The id is the identity; a put cannot fork history."""
+        """Insert or update a record without transferring its identity between sessions."""
         payload = json.dumps(record.to_mapping(), sort_keys=True)
         with self._connect() as connection:
-            connection.execute(
+            cursor = connection.execute(
                 """
                 INSERT INTO scoped_feedback (
                     feedback_id, session_id, artifact_id, artifact_sha256, scope_kind, verbatim, record_json
@@ -742,6 +742,7 @@ class FeedbackStore:
                     verbatim = excluded.verbatim,
                     record_json = excluded.record_json,
                     updated_at = CURRENT_TIMESTAMP
+                WHERE scoped_feedback.session_id = excluded.session_id
                 """,
                 (
                     record.feedback_id,
@@ -753,6 +754,8 @@ class FeedbackStore:
                     payload,
                 ),
             )
+            if cursor.rowcount != 1:
+                raise FeedbackConflict("feedback identity belongs to a different session")
         return record
 
     def get(self, feedback_id: str) -> Feedback | None:

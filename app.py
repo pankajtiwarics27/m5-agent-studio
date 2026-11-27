@@ -15902,7 +15902,10 @@ async def api_promote_scoped_feedback(session_id: str, feedback_id: str, request
         )
     except scoped_feedback.FeedbackError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    store.put(promoted)
+    try:
+        store.put(promoted)
+    except scoped_feedback.FeedbackConflict as exc:
+        raise HTTPException(status_code=409, detail="Feedback identity already exists; no promotion was recorded.") from exc
     _append_harness_event(
         session_id, "feedback/promoted", {"feedback_id": promoted.feedback_id, "scope_kind": promoted.scope_kind}
     )

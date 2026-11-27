@@ -354,6 +354,38 @@ def test_capture_collision_cannot_replace_a_session_record_or_its_history(tmp_pa
     assert _list(client, other).json()["items"] == []
 
 
+def test_promotion_cannot_replace_another_sessions_feedback(tmp_path, monkeypatch):
+    studio, client = _harness_client(tmp_path, monkeypatch)
+    owner, other = _session(studio), _session(studio)
+    assert _capture(client, owner, feedback_id="shared@preference", verbatim="original").status_code == 200
+    assert _capture(client, other, feedback_id="shared", verbatim="other", material=False).status_code == 200
+    original = _list(client, owner).json()["items"]
+    other_before = _list(client, other).json()["items"]
+    events_before = studio._read_harness_events(other)
+    result = client.post(
+        f"/api/harness/sessions/{other}/feedback/shared/promote",
+        json={"basis": "repeated correction", "promoted_by": "owner"},
+    )
+    assert result.status_code == 409, result.text
+    assert "no promotion was recorded" in result.json()["detail"]
+    assert _list(client, owner).json()["items"] == original
+    assert _list(client, other).json()["items"] == other_before
+    assert studio._read_harness_events(other) == events_before
+
+
+def test_repeating_promotion_in_same_session_preserves_existing_behavior(tmp_path, monkeypatch):
+    studio, client = _harness_client(tmp_path, monkeypatch)
+    session = _session(studio)
+    assert _capture(client, session, feedback_id="initial", material=False).status_code == 200
+    path = f"/api/harness/sessions/{session}/feedback/initial/promote"
+    for _ in range(2):
+        result = client.post(path, json={"basis": "same reason", "promoted_by": "owner"})
+        assert result.status_code == 200, result.text
+        assert result.json()["feedback"]["feedback_id"] == "initial@preference"
+        assert result.json()["feedback"]["scope_kind"] == "preference"
+    assert len(_list(client, session).json()["items"]) == 2
+
+
 def test_feedback_view_fences_races_and_keeps_drafts_by_version():
     root = Path(__file__).resolve().parents[1]
     result = subprocess.run(
