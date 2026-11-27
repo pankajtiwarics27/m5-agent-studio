@@ -137,6 +137,7 @@ def prepare(environment: demo_tour.DemoEnvironment):
         ("main", "AP-019 walk: scoped corrections", current_sha, current_workspace),
         ("stale", "AP-019 walk: an older version", current_sha, current_workspace),
         ("hostile", "AP-019 walk: hostile text", current_sha, current_workspace),
+        ("other", "AP-019 walk: separate checkpoint", old_sha, current_workspace),
     ):
         session = studio.create_harness_session_db(
             title=title,
@@ -423,6 +424,7 @@ def main(argv: list[str] | None = None) -> int:
         "main_session_id": ids["main"],
         "stale_session_id": ids["stale"],
         "hostile_session_id": ids["hostile"],
+        "other_session_id": ids["other"],
         "artifact_id": ARTIFACT_ID,
         "hostile_text": HOSTILE,
         "root": str(environment.root),

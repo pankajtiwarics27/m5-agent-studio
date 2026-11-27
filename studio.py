@@ -7630,10 +7630,11 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
             <div class="harness-workspace-review-body">
               <p id="harnessWorkspaceProgress" role="status">Select a session to see its recorded progress.</p>
               <p id="harnessWorkspaceContractFiles" role="status">Select a session to see its verification file requirements.</p>
+              <p id="harnessWorkspaceArtifacts" role="status" style="white-space:pre-line;">Select a session to see recorded artifact versions.</p>
               <p id="harnessWorkspaceVersions" role="status" aria-live="polite">Open this section to inspect recorded workspace snapshots.</p>
               <p id="harnessWorkspaceDiffState" role="status" aria-live="polite">Open this section to inspect workspace changes.</p>
               <pre id="harnessWorkspaceDiffPreview" aria-label="Inert text preview of workspace changes" hidden></pre>
-              <p>Preview is inert text, not an active website. Source references and artifact versions are not available here. Workspace snapshots are recovery records, not artifact versions; changes shown are current and may differ from a snapshot.</p>
+              <p>Preview is inert text, not an active website. Workspace snapshots are recovery records, not artifact versions; changes shown are current and may differ from a snapshot. Source references are not available here.</p>
               <button type="button" class="btn btn-xs" onclick="refreshHarnessWorkspaceReview()">Refresh workspace review</button>
               <button type="button" class="btn btn-xs" onclick="openHarnessEvidenceModal()">Verification &amp; artifacts</button>
             </div>
@@ -18144,6 +18145,38 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     node.textContent = `${prefix}required files: ${describe(spec.required_files)} · required modified files: ${describe(spec.required_modified_files)}. These are requirements, not proof that files exist or were modified.`;
   }
 
+  function renderHarnessWorkspaceArtifacts() {
+    const node = document.getElementById("harnessWorkspaceArtifacts");
+    if (!node) return;
+    const state = harnessSnapshot;
+    if (!activeHarnessId) { node.textContent = "Select a session to see recorded artifact versions."; return; }
+    if (!state || state.session_id !== activeHarnessId || !("checkpoint_integrity_error" in state) || !("latest_checkpoint" in state)) {
+      node.textContent = "Recorded artifact versions are unavailable; the session snapshot could not be confirmed."; return;
+    }
+    if (state.checkpoint_integrity_error) {
+      node.textContent = "Recorded artifact versions are unavailable because checkpoint integrity could not be confirmed."; return;
+    }
+    const versions = state.session_artifact_versions;
+    const validDigest = value => typeof value === "string" && /^[0-9a-f]{64}$/.test(value);
+    if (!Array.isArray(versions) || (!state.latest_checkpoint && versions.length) || versions.some(version =>
+      !version || version.session_id !== activeHarnessId || typeof version.artifact_id !== "string" || !version.artifact_id.trim()
+      || !validDigest(version.content_sha256) || !validDigest(version.identity_sha256)
+      || !["content_only", "content+provenance"].includes(version.identity_basis)
+      || !Array.isArray(version.identity_axes_absent) || version.identity_axes_absent.some(axis => typeof axis !== "string")
+      || version.contributes_a_verified_version !== true || version.rechecked_against_current_content !== false
+      || version.is_global_lineage !== false || version.is_workspace_snapshot !== false)) {
+      node.textContent = "Recorded artifact versions are unavailable because the session record is invalid."; return;
+    }
+    const stale = document.querySelector("#harnessSnapshotState .presentation");
+    const prefix = stale ? "Last known checkpoint (may be stale)" : "Latest checkpoint";
+    if (!versions.length) { node.textContent = `${prefix}: no artifact versions derivable from recorded references.`; return; }
+    const lines = versions.slice(0, 5).map(version => {
+      const missing = version.identity_axes_absent.length ? `; not recorded: ${version.identity_axes_absent.join(", ").slice(0, 180)}` : "";
+      return `${version.artifact_id.slice(0, 256)} · version ${version.identity_sha256.slice(0, 12)} · ${version.identity_basis}${missing}`;
+    });
+    node.textContent = `${prefix}: ${versions.length} recorded artifact version(s).\n${lines.join("\n")}${versions.length > 5 ? `\nShowing 5 of ${versions.length}.` : ""}\nRecorded identities have not been rechecked against current files; they are not approval.`;
+  }
+
   function resetHarnessWorkspaceReview() {
     harnessWorkspaceReviewSerial += 1;
     const status = document.getElementById("harnessWorkspaceDiffState");
@@ -18154,6 +18187,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     if (preview) { preview.textContent = ""; preview.hidden = true; }
     renderHarnessWorkspaceProgress();
     renderHarnessWorkspaceContractFiles();
+    renderHarnessWorkspaceArtifacts();
     const panel = document.getElementById("harnessWorkspaceReview");
     if (activeHarnessId && panel && panel.open) refreshHarnessWorkspaceReview();
   }
@@ -18191,6 +18225,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     const readSerial = ++harnessWorkspaceReviewSerial;
     renderHarnessWorkspaceProgress();
     renderHarnessWorkspaceContractFiles();
+    renderHarnessWorkspaceArtifacts();
     refreshHarnessWorkspaceSnapshots(sessionId, readSerial);
     preview.textContent = "";
     preview.hidden = true;
@@ -18220,6 +18255,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     if (!state) return;
     renderHarnessWorkspaceProgress();
     renderHarnessWorkspaceContractFiles();
+    renderHarnessWorkspaceArtifacts();
     const badge = document.getElementById("harnessActiveStatusBadge");
     const b = harnessStatusBadge(state);
     if (badge) setStatus(badge, b.cls, b.label);
@@ -18253,6 +18289,7 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
     if (hadFocus && panel) panel.querySelector("button")?.focus();
     renderHarnessWorkspaceProgress();
     renderHarnessWorkspaceContractFiles();
+    renderHarnessWorkspaceArtifacts();
     return panel;
   }
 

@@ -31,7 +31,7 @@ which meant a stacked dialog disappeared without returning focus to the one unde
 | `#skillsModal` | Agent Skills Manager | `, o, p, e, n, S, k, i, l, l, s, M, o, d, a, l, (, ), `,  , f, r, o, m,  , 3,  , c, a, l, l,  , s, i, t, e, (, s, ) | yes | 3262 |
 | `#sdlcModal` | Autonomous Agile SDLC Product Factory | `, o, p, e, n, S, d, l, c, M, o, d, a, l, (, ), `,  , f, r, o, m,  , 3,  , c, a, l, l,  , s, i, t, e, (, s, ) | yes | 3292 |
 | `#spawnModal` | Spawn Council Session | `, o, p, e, n, S, p, a, w, n, M, o, d, a, l, (, ), `,  , f, r, o, m,  , 6,  , c, a, l, l,  , s, i, t, e, (, s, ) | yes | 3387 |
-| `#pathPickerModal` | pathPickerTitle | `, o, p, e, n, P, a, t, h, P, i, c, k, e, r, (, ), `,  , f, r, o, m,  , 9,  , c, a, l, l,  , s, i, t, e, (, s, ) | yes | 4131 |
+| `#pathPickerModal` | pathPickerTitle | `, o, p, e, n, P, a, t, h, P, i, c, k, e, r, (, ), `,  , f, r, o, m,  , 9,  , c, a, l, l,  , s, i, t, e, (, s, ) | yes | 4132 |
 
 14 dialogs, 14 wired through the controller.
 

@@ -51,6 +51,7 @@ const DEFAULTS = {
   mainSessionId: "",
   staleSessionId: "",
   hostileSessionId: "",
+  otherSessionId: "",
   artifactId: "hero.html",
   port: 0,
 };
@@ -71,6 +72,7 @@ function parseArgs(argv) {
       case "--main-session": args.mainSessionId = next(); break;
       case "--stale-session": args.staleSessionId = next(); break;
       case "--hostile-session": args.hostileSessionId = next(); break;
+      case "--other-session": args.otherSessionId = next(); break;
       case "--artifact-id": args.artifactId = next(); break;
       case "--port": args.port = Number(next()); break;
       case "--screenshots": args.screenshots = next(); break;
@@ -87,7 +89,7 @@ function parseArgs(argv) {
 function usage() {
   return [
     "Usage: node scripts/harness_feedback_walk.mjs [--screenshots DIR] [--json]",
-    "       --base-url URL --token TOKEN --main-session ID --stale-session ID --hostile-session ID",
+    "       --base-url URL --token TOKEN --main-session ID --stale-session ID --hostile-session ID --other-session ID",
     "",
     "Without --base-url the walk starts scripts/harness_feedback_seed.py itself, so every record",
     "it reads was written by the running server's own routes. This script refuses to report a",
@@ -179,6 +181,7 @@ async function main() {
     main: args.mainSessionId,
     stale: args.staleSessionId,
     hostile: args.hostileSessionId,
+    other: args.otherSessionId,
   };
   let artifactId = args.artifactId;
   let hostileText = "";
@@ -190,10 +193,12 @@ async function main() {
       main: ids.main || seed.ready.main_session_id,
       stale: ids.stale || seed.ready.stale_session_id,
       hostile: ids.hostile || seed.ready.hostile_session_id,
+      other: ids.other || seed.ready.other_session_id,
     };
     artifactId = seed.ready.artifact_id || artifactId;
     hostileText = seed.ready.hostile_text || "";
   }
+  if (!ids.other || ids.other === ids.main) throw new Error("a distinct --other-session is required for checkpoint switching checks");
   if (!(await waitForHttp(`${baseUrl}/healthz`, args.timeoutMs))) {
     throw new Error(`the app did not become healthy at ${baseUrl}`);
   }
@@ -295,6 +300,35 @@ async function main() {
 
     // ---- 1. the pane draws what was said, at its scope, next to the version ----
     await openSession(ids.main);
+    const adjacentArtifact = await page.evaluate(async sessionId => {
+      const response = await fetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/state`);
+      const state = await response.json();
+      const node = document.getElementById('harnessWorkspaceArtifacts');
+      const version = state.session_artifact_versions && state.session_artifact_versions[0];
+      return {ok: response.ok, id: state.session_id, version, text: node ? node.textContent : '', children: node ? node.children.length : -1};
+    }, ids.main);
+    check(Boolean(adjacentArtifact.ok && adjacentArtifact.id === ids.main && adjacentArtifact.version
+      && adjacentArtifact.text.includes(adjacentArtifact.version.artifact_id)
+      && adjacentArtifact.text.includes(adjacentArtifact.version.identity_sha256.slice(0, 12))
+      && /not been rechecked against current files/.test(adjacentArtifact.text)
+      && adjacentArtifact.children === 0), 'adjacent panel reflects this session checkpoint version as inert text', JSON.stringify(adjacentArtifact));
+    const immediateSwitch = await page.evaluate(id => {
+      selectHarnessSession(id);
+      return document.getElementById('harnessWorkspaceArtifacts').textContent;
+    }, ids.other);
+    check(!immediateSwitch.includes(adjacentArtifact.version.identity_sha256.slice(0, 12)), 'switch immediately clears the previous checkpoint', immediateSwitch);
+    await sleep(args.settleMs * 14);
+    const otherArtifact = await page.evaluate(async id => {
+      const response = await fetch(`/api/harness/sessions/${encodeURIComponent(id)}/state`);
+      const state = await response.json();
+      return {ok: response.ok, id: state.session_id, version: state.session_artifact_versions?.[0], text: document.getElementById('harnessWorkspaceArtifacts').textContent};
+    }, ids.other);
+    check(Boolean(otherArtifact.ok && otherArtifact.id === ids.other && otherArtifact.version
+      && otherArtifact.version.identity_sha256 !== adjacentArtifact.version.identity_sha256
+      && otherArtifact.text.includes(otherArtifact.version.identity_sha256.slice(0, 12))
+      && !otherArtifact.text.includes(adjacentArtifact.version.identity_sha256.slice(0, 12))), 'switch shows only the other session checkpoint', JSON.stringify(otherArtifact));
+    await openSession(ids.main);
+    check((await page.$eval('#harnessWorkspaceArtifacts', node => node.textContent)).includes(adjacentArtifact.version.identity_sha256.slice(0, 12)), 'switching back restores the selected checkpoint');
     await openFeedbackPane();
     check(await paneVisible(), "1. the feedback pane is drawn in the evidence modal");
     let text = await paneText();
@@ -458,6 +492,22 @@ async function main() {
       await page.setViewport({ width, height, ...extra });
       await sleep(args.settleMs * 8);
       await openSession(ids.main);
+      const panel = await page.evaluate(() => {
+        const review = document.getElementById('harnessWorkspaceReview');
+        const node = document.getElementById('harnessWorkspaceArtifacts');
+        review.open = true;
+        node.scrollIntoView({block: 'nearest'});
+        const box = node.getBoundingClientRect();
+        const container = review.getBoundingClientRect();
+        return {text: node.textContent, width: box.width, height: box.height,
+          left: box.left, right: box.right, top: box.top, bottom: box.bottom,
+          containerTop: container.top, containerBottom: container.bottom,
+          viewportWidth: innerWidth, documentOverflow: Math.max(0, document.documentElement.scrollWidth - innerWidth)};
+      });
+      check(Boolean(panel.text.includes(adjacentArtifact.version.identity_sha256.slice(0, 12)) && panel.width > 100 && panel.height > 0
+        && panel.left >= -1 && panel.right <= panel.viewportWidth + 1 && panel.top >= panel.containerTop - 1
+        && panel.bottom <= panel.containerBottom + 1 && panel.documentOverflow === 0),
+        `adjacent checkpoint is readable without horizontal overflow at ${width} CSS pixels`, JSON.stringify(panel));
       await openFeedbackPane();
       return paneVisible();
     }
