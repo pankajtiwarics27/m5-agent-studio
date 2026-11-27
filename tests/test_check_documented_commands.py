@@ -376,7 +376,7 @@ def test_cli_names_skipped_locations(tmp_path: Path, capsys: pytest.CaptureFixtu
     )
     (tmp_path / "docs" / "README.md").write_text("python scripts/a.py\n", encoding="utf-8")
     (tmp_path / "README.md").write_text("python scripts/b.py\n", encoding="utf-8")
-    assert cdc.main([str(tmp_path)]) == 0
+    assert cdc.main([str(tmp_path)]) == 1
     err = capsys.readouterr().err
     assert "docs/page.md:1, docs/page.md:2" in err
     assert "docs/README.md:1" in err and ", README.md:1" in err
@@ -457,8 +457,8 @@ def test_indirect_node_argv_is_reported_unchecked_not_as_a_flag_problem(
     report = cdc.check_repository(tmp_path)
     assert report.unresolved == ["scripts/helper.js"]
     assert len(report.unchecked) == 1 and report.unchecked[0].interpreter == "node"
-    assert report.ok and not report.problems
-    assert cdc.main([str(tmp_path)]) == 0
+    assert not report.ok and not report.problems
+    assert cdc.main([str(tmp_path)]) == 1
     output = capsys.readouterr()
     assert "0 checked against a static parser, 1 unchecked across 1 unreadable scripts" in output.out
     assert "not checked (parser not statically readable): scripts/helper.js" in output.err
@@ -495,6 +495,37 @@ def test_a_wrong_node_flag_in_the_pilot_runbook_fails_the_gate(tmp_path: Path) -
 def test_the_committed_documentation_names_no_missing_flag() -> None:
     report = cdc.check_repository(PROJECT_ROOT)
     assert report.ok, [problem.describe() for problem in report.problems]
+
+
+@pytest.mark.parametrize("scenario", ["no_documents", "no_commands", "only_skipped", "only_unreadable"])
+def test_empty_coverage_is_never_a_pass(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], scenario: str
+) -> None:
+    if scenario != "no_documents":
+        (tmp_path / "docs").mkdir()
+        content = {
+            "no_commands": "Ordinary prose.\n",
+            "only_skipped": "python scripts/tool.py --root <root>\n",
+            "only_unreadable": "python scripts/tool.py --root value\n",
+        }[scenario]
+        (tmp_path / "docs" / "page.md").write_text(content, encoding="utf-8")
+    if scenario == "only_unreadable":
+        (tmp_path / "scripts").mkdir()
+        (tmp_path / "scripts" / "tool.py").write_text("print('unknown')\n", encoding="utf-8")
+    report = cdc.check_repository(tmp_path)
+    assert not report.problems and report.readable_count == 0
+    assert not report.ok
+    assert cdc.main([str(tmp_path)]) == 1
+    output = capsys.readouterr()
+    assert "coverage is empty" in output.err
+    assert "0 checked against a static parser" in output.out
+
+
+def test_default_repository_root_is_the_checkout_not_the_scripts_directory() -> None:
+    default_report = cdc.check_repository()
+    explicit_report = cdc.check_repository(PROJECT_ROOT)
+    assert default_report.ok and default_report.readable_count > 0
+    assert default_report == explicit_report
 
 
 def test_the_repository_check_actually_reads_commands() -> None:
@@ -573,7 +604,7 @@ def test_cli_does_not_call_every_skipped_line_a_placeholder(tmp_path: Path, caps
         'python scripts/tool.py\npython scripts/tool.py --path <path>\npython scripts/tool.py --path \\\n',
         encoding="utf-8",
     )
-    assert cdc.main([str(tmp_path)]) == 0
+    assert cdc.main([str(tmp_path)]) == 1
     output = capsys.readouterr().out
     assert "0 literal candidates, 3 skipped lines" in output
     assert "with placeholders" not in output
@@ -614,7 +645,7 @@ def test_the_cli_reports_what_it_did_not_check(tmp_path: Path, capsys: pytest.Ca
     (tmp_path / "scripts" / "plain.py").write_text("print('no parser here')\n", encoding="utf-8")
     (tmp_path / "docs").mkdir()
     (tmp_path / "docs" / "page.md").write_text("python scripts/plain.py --anything\n", encoding="utf-8")
-    assert cdc.main([str(tmp_path)]) == 0
+    assert cdc.main([str(tmp_path)]) == 1
     captured = capsys.readouterr()
     assert "not checked" in captured.err
     assert "scripts/plain.py" in captured.err
@@ -637,7 +668,8 @@ def test_a_document_quoting_a_wrong_command_can_opt_out_and_is_named(tmp_path: P
         encoding="utf-8",
     )
     report = cdc.check_repository(tmp_path)
-    assert report.ok is True, "a declared counter-example was checked as an instruction"
+    assert not report.problems, "a declared counter-example was checked as an instruction"
+    assert not report.ok, "an exemption alone cannot supply checked coverage"
     assert report.counter_examples == ["bad-example.md"]
 
 
@@ -663,7 +695,7 @@ def test_the_cli_names_every_exempted_document(tmp_path: Path, capsys: pytest.Ca
         "python scripts/tool.py package --root /tmp/x\n",
         encoding="utf-8",
     )
-    assert cdc.main([str(tmp_path)]) == 0
+    assert cdc.main([str(tmp_path)]) == 1
     err = capsys.readouterr().err
     assert "exempt as counter-examples" in err
     assert "quoted.md" in err, "the exemption was announced without naming the document"
