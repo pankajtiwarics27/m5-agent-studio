@@ -35404,22 +35404,20 @@ async def api_promote_scoped_feedback(session_id: str, feedback_id: str, request
     if not isinstance(body, dict):
         raise HTTPException(status_code=400, detail="Promotion needs a JSON body with a basis.")
     store = get_scoped_feedback_store()
-    existing = store.get(feedback_id)
-    if existing is None or existing.session_id != session_id:
-        raise HTTPException(status_code=404, detail=f"No feedback {feedback_id!r} in this session.")
     try:
-        promoted = scoped_feedback.promote(
-            existing,
+        promoted = store.promote_for_session(
+            feedback_id,
+            session_id,
             basis=str(body.get("basis") or ""),
             promoted_by=str(body.get("promoted_by") or "owner"),
             scope_kind=str(body.get("scope_kind") or "preference"),
         )
+        if promoted is None:
+            raise HTTPException(status_code=404, detail=f"No feedback {feedback_id!r} in this session.")
     except scoped_feedback.FeedbackError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    try:
-        store.put(promoted)
     except scoped_feedback.FeedbackConflict as exc:
-        raise HTTPException(status_code=409, detail="Feedback identity already exists; no promotion was recorded.") from exc
+        raise HTTPException(status_code=409, detail="Feedback identity or binding conflicted; no promotion was recorded.") from exc
     _append_harness_event(
         session_id, "feedback/promoted", {"feedback_id": promoted.feedback_id, "scope_kind": promoted.scope_kind}
     )
@@ -57943,11 +57941,10 @@ class FeedbackStore:
                 raise FeedbackConflict("feedback identity already exists; no new feedback was recorded")
         return record
 
-    def put(self, record: Feedback) -> Feedback:
-        """Insert or update a record without changing its session, artifact, version or scope."""
+    def _put_on_connection(self, connection: Any, record: Feedback) -> Feedback:
+        """Write using the caller's transaction, retaining the record's existing binding."""
         payload = json.dumps(record.to_mapping(), sort_keys=True)
-        with self._connect() as connection:
-            cursor = connection.execute(
+        cursor = connection.execute(
                 """
                 INSERT INTO scoped_feedback (
                     feedback_id, session_id, artifact_id, artifact_sha256, scope_kind, verbatim, record_json
@@ -57974,10 +57971,15 @@ class FeedbackStore:
                     record.verbatim,
                     payload,
                 ),
-            )
-            if cursor.rowcount != 1:
-                raise FeedbackConflict("feedback identity has a different recorded binding")
+        )
+        if cursor.rowcount != 1:
+            raise FeedbackConflict("feedback identity has a different recorded binding")
         return record
+
+    def put(self, record: Feedback) -> Feedback:
+        """Insert or update a record without changing its session, artifact, version or scope."""
+        with self._connect() as connection:
+            return self._put_on_connection(connection, record)
 
     def get(self, feedback_id: str) -> Feedback | None:
         identifier = _ps_text(feedback_id, "feedback_id", 120)
@@ -58015,6 +58017,19 @@ class FeedbackStore:
             ).fetchall()
         return [Feedback.from_mapping(json.loads(row["record_json"])) for row in rows]
 
+    def _read_bound(self, connection: Any, identifier: str, session_id: str | None) -> Feedback | None:
+        row = connection.execute(
+            "SELECT session_id, artifact_id, artifact_sha256, scope_kind, record_json "
+            "FROM scoped_feedback WHERE feedback_id = ?", (identifier,)
+        ).fetchone()
+        if row is None or (session_id is not None and row["session_id"] != session_id):
+            return None
+        existing = Feedback.from_mapping(json.loads(row["record_json"]))
+        binding = (existing.feedback_id, existing.session_id, existing.artifact_id, existing.artifact_sha256, existing.scope_kind)
+        if binding != (identifier, row["session_id"], row["artifact_id"], row["artifact_sha256"], row["scope_kind"]):
+            raise FeedbackConflict("feedback record does not match its stored binding")
+        return existing
+
     def _update_atomic(
         self, feedback_id: str, session_id: str | None, change: Callable[[Feedback], Feedback]
     ) -> Feedback | None:
@@ -58024,16 +58039,10 @@ class FeedbackStore:
             session_id = _ps_text(session_id, "session_id", 120)
         with self._connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
-            row = connection.execute(
-                "SELECT session_id, artifact_id, artifact_sha256, scope_kind, record_json "
-                "FROM scoped_feedback WHERE feedback_id = ?", (identifier,)
-            ).fetchone()
-            if row is None or (session_id is not None and row["session_id"] != session_id):
+            existing = self._read_bound(connection, identifier, session_id)
+            if existing is None:
                 return None
-            existing = Feedback.from_mapping(json.loads(row["record_json"]))
             binding = (existing.feedback_id, existing.session_id, existing.artifact_id, existing.artifact_sha256, existing.scope_kind)
-            if binding != (identifier, row["session_id"], row["artifact_id"], row["artifact_sha256"], row["scope_kind"]):
-                raise FeedbackConflict("feedback record does not match its stored binding")
             updated = change(existing)
             if binding != (updated.feedback_id, updated.session_id, updated.artifact_id, updated.artifact_sha256, updated.scope_kind):
                 raise FeedbackConflict("feedback update attempted to change its binding")
@@ -58045,6 +58054,20 @@ class FeedbackStore:
             if cursor.rowcount != 1:
                 raise FeedbackConflict("feedback record changed during its update")
             return updated
+
+    def promote_for_session(
+        self, feedback_id: str, session_id: str, *, basis: str, promoted_by: str, scope_kind: str
+    ) -> Feedback | None:
+        """Promote the current source and write its derived record in one transaction."""
+        identifier = _ps_text(feedback_id, "feedback_id", 120)
+        session = _ps_text(session_id, "session_id", 120)
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            existing = self._read_bound(connection, identifier, session)
+            if existing is None:
+                return None
+            promoted = promote(existing, basis=basis, promoted_by=promoted_by, scope_kind=scope_kind)
+            return self._put_on_connection(connection, promoted)
 
     def confirm_for_session(self, feedback_id: str, session_id: str, *, confirmed_by: str) -> Feedback | None:
         return self._update_atomic(feedback_id, session_id, lambda existing: confirm(existing, confirmed_by=confirmed_by))

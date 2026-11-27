@@ -15889,22 +15889,20 @@ async def api_promote_scoped_feedback(session_id: str, feedback_id: str, request
     if not isinstance(body, dict):
         raise HTTPException(status_code=400, detail="Promotion needs a JSON body with a basis.")
     store = get_scoped_feedback_store()
-    existing = store.get(feedback_id)
-    if existing is None or existing.session_id != session_id:
-        raise HTTPException(status_code=404, detail=f"No feedback {feedback_id!r} in this session.")
     try:
-        promoted = scoped_feedback.promote(
-            existing,
+        promoted = store.promote_for_session(
+            feedback_id,
+            session_id,
             basis=str(body.get("basis") or ""),
             promoted_by=str(body.get("promoted_by") or "owner"),
             scope_kind=str(body.get("scope_kind") or "preference"),
         )
+        if promoted is None:
+            raise HTTPException(status_code=404, detail=f"No feedback {feedback_id!r} in this session.")
     except scoped_feedback.FeedbackError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    try:
-        store.put(promoted)
     except scoped_feedback.FeedbackConflict as exc:
-        raise HTTPException(status_code=409, detail="Feedback identity already exists; no promotion was recorded.") from exc
+        raise HTTPException(status_code=409, detail="Feedback identity or binding conflicted; no promotion was recorded.") from exc
     _append_harness_event(
         session_id, "feedback/promoted", {"feedback_id": promoted.feedback_id, "scope_kind": promoted.scope_kind}
     )

@@ -116,11 +116,11 @@
         },
         "fast": {
           "model": "Gemma-4-21B-REAP-4bit",
-          "elapsed_ms": 341.40000000596046,
+          "elapsed_ms": 333.40000000596046,
           "renders": 19,
           "schedules": 58,
           "model_tokens": 58,
-          "sse_per_second": 169.889,
+          "sse_per_second": 173.965,
           "complete_chars": 330
         }
       },
@@ -130,8 +130,8 @@
             "Nodes": 8683,
             "Documents": 2,
             "JSEventListeners": 344,
-            "JSHeapUsedSize": 3424244,
-            "JSHeapTotalSize": 4194304,
+            "JSHeapUsedSize": 3423884,
+            "JSHeapTotalSize": 3670016,
             "LayoutCount": 1,
             "RecalcStyleCount": 3
           },
@@ -139,8 +139,8 @@
             "Nodes": 8683,
             "Documents": 2,
             "JSEventListeners": 344,
-            "JSHeapUsedSize": 3373420,
-            "JSHeapTotalSize": 4165632,
+            "JSHeapUsedSize": 3356456,
+            "JSHeapTotalSize": 3903488,
             "LayoutCount": 123,
             "RecalcStyleCount": 245
           },
@@ -148,13 +148,13 @@
             "Nodes": 8683,
             "Documents": 2,
             "JSEventListeners": 344,
-            "JSHeapUsedSize": 3368180,
-            "JSHeapTotalSize": 4165632,
+            "JSHeapUsedSize": 3376476,
+            "JSHeapTotalSize": 3903488,
             "LayoutCount": 245,
             "RecalcStyleCount": 487
           },
           "cycle_1": {
-            "elapsed_ms": 3980.300000011921,
+            "elapsed_ms": 3975.5,
             "cursor": 18000,
             "cached": 5000,
             "cards": 300,
@@ -162,7 +162,7 @@
             "last": 18000
           },
           "cycle_2": {
-            "elapsed_ms": 3986.5999999940395,
+            "elapsed_ms": 3971.4000000059605,
             "cursor": 30000,
             "cached": 5000,
             "cards": 300,
@@ -173,9 +173,9 @@
         },
         "steady": {
           "calls": 20,
-          "mean_ms": 2.2899999991059303,
-          "p95_ms": 3.5,
-          "max_ms": 3.7999999821186066,
+          "mean_ms": 2.635000002384186,
+          "p95_ms": 4.0999999940395355,
+          "max_ms": 4.200000017881393,
           "cards": 300
         }
       },
@@ -207,10 +207,10 @@
         {
           "viewport": "1440x900",
           "theme": "light",
-          "cls_total": 0.19692,
-          "cls_internal_stream": 0.19692,
+          "cls_total": 0.22974,
+          "cls_internal_stream": 0.22974,
           "cls_external_shell": 0,
-          "shifts": 6,
+          "shifts": 7,
           "overflow": 0,
           "max_geometry_delta": 0,
           "cards": 300,
@@ -231,10 +231,10 @@
         {
           "viewport": "1280x800",
           "theme": "light",
-          "cls_total": 0.18073,
-          "cls_internal_stream": 0.18073,
+          "cls_total": 0.15491,
+          "cls_internal_stream": 0.15491,
           "cls_external_shell": 0,
-          "shifts": 7,
+          "shifts": 6,
           "overflow": 0,
           "max_geometry_delta": 0,
           "cards": 300,
@@ -320,7 +320,7 @@
         "  [PASS] no new privileges — --security-opt=no-new-privileges",
         "  [PASS] no implicit image pull — --pull=never",
         "  [PASS] resource limits — --pids-limit=128 --memory=2g --cpus=2",
-        "  [PASS] single workspace bind mount — type=bind,source=/tmp/m5-isolation-smoke-iieqkmag,target=/workspace",
+        "  [PASS] single workspace bind mount — type=bind,source=/tmp/m5-isolation-smoke-n7b38wo5,target=/workspace",
         "",
         "== 3. Skill-code execution gates (app._run_skill_script) ==",
         "  [PASS] default-off skill-code denial — PermissionError",

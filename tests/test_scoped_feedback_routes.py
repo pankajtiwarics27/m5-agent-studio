@@ -433,6 +433,136 @@ def test_confirm_and_withdraw_serialize_without_losing_either_change(tmp_path, m
     assert stored.verbatim == "original"
 
 
+@pytest.mark.parametrize("first", ["promote", "withdraw"])
+def test_promotion_and_withdrawal_serialize_on_the_source(tmp_path, monkeypatch, first):
+    studio, client = _harness_client(tmp_path, monkeypatch)
+    session = _session(studio)
+    assert _capture(client, session, feedback_id="race-promote", verbatim="original", material=False).status_code == 200
+    entered, release, second_started, second_done = Event(), Event(), Event(), Event()
+    if first == "promote":
+        original = feedback_module.promote
+
+        def paused_promote(*args, **kwargs):
+            entered.set()
+            if not release.wait(5):
+                raise RuntimeError("promotion test was not released")
+            return original(*args, **kwargs)
+
+        monkeypatch.setattr(feedback_module, "promote", paused_promote)
+    else:
+        original = feedback_module.replace
+
+        def paused_replace(record, **kwargs):
+            if kwargs.get("deleted") is True:
+                entered.set()
+                if not release.wait(5):
+                    raise RuntimeError("withdrawal test was not released")
+            return original(record, **kwargs)
+
+        monkeypatch.setattr(feedback_module, "replace", paused_replace)
+
+    def request(action):
+        base = f"/api/harness/sessions/{session}/feedback/race-promote"
+        if action == "promote":
+            return client.post(f"{base}/promote", json={"basis": "reason", "promoted_by": "owner"})
+        return client.delete(base)
+
+    def second_request():
+        second_started.set()
+        try:
+            return request("withdraw" if first == "promote" else "promote")
+        finally:
+            second_done.set()
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        one = pool.submit(request, first)
+        try:
+            assert entered.wait(5), "first update did not reach its decision"
+            two = pool.submit(second_request)
+            assert second_started.wait(5), "second update did not start"
+            assert not second_done.wait(0.3), "second update escaped while the first held the record"
+        finally:
+            release.set()
+        first_response = one.result(timeout=10)
+        second_response = two.result(timeout=10)
+        assert first_response.status_code == second_response.status_code == 200
+    promotion = first_response if first == "promote" else second_response
+    assert promotion.json()["feedback"]["deleted"] is (first == "withdraw")
+    store = studio.get_scoped_feedback_store()
+    assert store.get("race-promote").deleted is True
+    assert store.get("race-promote@preference").deleted is (first == "withdraw")
+
+
+def test_promotion_waits_for_an_inflight_confirmation(tmp_path, monkeypatch):
+    studio, client = _harness_client(tmp_path, monkeypatch)
+    session = _session(studio)
+    assert _capture(client, session, feedback_id="needs-confirm").status_code == 200
+    entered, release, started, done = Event(), Event(), Event(), Event()
+    original = feedback_module.confirm
+
+    def paused_confirm(*args, **kwargs):
+        entered.set()
+        if not release.wait(5):
+            raise RuntimeError("confirmation test was not released")
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(feedback_module, "confirm", paused_confirm)
+    base = f"/api/harness/sessions/{session}/feedback/needs-confirm"
+
+    def promote_after_start():
+        started.set()
+        try:
+            return client.post(f"{base}/promote", json={"basis": "reason", "promoted_by": "owner"})
+        finally:
+            done.set()
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        confirmation = pool.submit(client.post, f"{base}/confirm", json={"confirmed_by": "owner"})
+        try:
+            assert entered.wait(5)
+            promotion = pool.submit(promote_after_start)
+            assert started.wait(5)
+            assert not done.wait(0.3), "promotion escaped before confirmation completed"
+        finally:
+            release.set()
+        assert confirmation.result(timeout=10).status_code == 200
+        result = promotion.result(timeout=10)
+    assert result.status_code == 200, result.text
+    assert result.json()["feedback"]["scope_kind"] == "preference"
+    assert studio.get_scoped_feedback_store().get("needs-confirm").confirmed is True
+
+
+def test_promotion_refuses_a_contradictory_stored_source_binding(tmp_path, monkeypatch):
+    studio, client = _harness_client(tmp_path, monkeypatch)
+    session = _session(studio)
+    assert _capture(client, session, feedback_id="bad-promote", material=False).status_code == 200
+    store = studio.get_scoped_feedback_store()
+    with store._connect() as connection:
+        connection.execute("UPDATE scoped_feedback SET artifact_id = 'other.html' WHERE feedback_id = 'bad-promote'")
+        before = tuple(connection.execute("SELECT * FROM scoped_feedback WHERE feedback_id = 'bad-promote'").fetchone())
+    events = studio._read_harness_events(session)
+    result = client.post(f"/api/harness/sessions/{session}/feedback/bad-promote/promote", json={"basis": "reason"})
+    assert result.status_code == 409
+    with store._connect() as connection:
+        assert tuple(connection.execute("SELECT * FROM scoped_feedback WHERE feedback_id = 'bad-promote'").fetchone()) == before
+    assert store.get("bad-promote@preference") is None
+    assert studio._read_harness_events(session) == events
+
+
+def test_promotion_cannot_read_another_sessions_source(tmp_path, monkeypatch):
+    studio, client = _harness_client(tmp_path, monkeypatch)
+    owner, other = _session(studio), _session(studio)
+    assert _capture(client, owner, feedback_id="foreign", material=False).status_code == 200
+    before = _list(client, owner).json()["items"]
+    events = studio._read_harness_events(other)
+    result = client.post(f"/api/harness/sessions/{other}/feedback/foreign/promote", json={"basis": "reason"})
+    assert result.status_code == 404, result.text
+    assert _list(client, owner).json()["items"] == before
+    assert _list(client, other).json()["items"] == []
+    assert studio.get_scoped_feedback_store().get("foreign@preference") is None
+    assert studio._read_harness_events(other) == events
+
+
 def test_promotion_cannot_replace_another_sessions_feedback(tmp_path, monkeypatch):
     studio, client = _harness_client(tmp_path, monkeypatch)
     owner, other = _session(studio), _session(studio)
