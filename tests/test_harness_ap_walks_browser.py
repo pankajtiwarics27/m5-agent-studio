@@ -1,7 +1,7 @@
-"""The AP harness walks, run in a real browser as part of the mandatory CI job.
+"""Harness and Compare continuity walks, run in a real browser in the mandatory CI job.
 
-These three walks each start their own isolated demo fixture, stage every record through the
-route the product uses, and then drive the shipped UI. They existed since AP-018/AP-019/AP-020
+These walks each start their own isolated demo fixture, stage records through the
+routes the product uses, and then drive the shipped UI. They existed since AP-018/AP-019/AP-020
 but nothing in CI executed them, so a change to a route contract could break a fixture and the
 only symptom was a stale document claiming "22/22 checks passed".
 
@@ -32,6 +32,7 @@ AP_WALKS = (
     ("scripts/harness_direction_walk.mjs", 22),
     ("scripts/harness_feedback_walk.mjs", 59),
     ("scripts/harness_reference_walk.mjs", 40),
+    ("scripts/compare_continuity_walk.mjs", 18),
 )
 
 

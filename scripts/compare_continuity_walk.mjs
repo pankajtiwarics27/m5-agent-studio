@@ -211,6 +211,15 @@ async function readRecord(page) {
       text: clean(host ? host.textContent : ""),
       buttons: host ? [...host.querySelectorAll("button")].map((button) => clean(button.textContent)) : [],
       cards,
+      synthesis: clean((document.getElementById("debateSynthesisArea") || {}).textContent),
+      verdictBody: (() => {
+        const body = document.querySelector('#debateSynthesisArea .debate-verdict .stage-output-body');
+        if (!body) return '';
+        const copy = body.cloneNode(true);
+        copy.querySelector('[data-verdict-provenance]')?.remove();
+        return clean(copy.textContent);
+      })(),
+      emptyPresentation: Boolean(document.querySelector('#debateSynthesisArea .presentation[data-kind="empty"]')),
       figures,
       prompt: (document.getElementById("debatePrompt") || {}).value || "",
       runId: typeof debateRunId === "undefined" ? 0 : Number(debateRunId || 0),
@@ -377,6 +386,8 @@ async function run(args) {
       `hidden=${empty.hidden} stored=${empty.stored}`,
     );
 
+    record("a fresh pane presents an actionable empty state", empty.emptyPresentation && /No comparison yet/.test(empty.synthesis), empty.synthesis);
+
     // ── a comparison that the server saves ─────────────────────────────────
     const pairModels = [pair.loaded_model, pair.resident_model];
     await selectModels(page, pairModels);
@@ -440,6 +451,10 @@ async function run(args) {
         && restored.buttons.includes("Forget this copy"),
       `${restored.cards.map((card) => `${card.model}:${card.status}`).join(" · ")} || ${restored.text.slice(0, 150)}`,
     );
+    record("a restored verdict is not overwritten by the empty state",
+      Boolean(ran.json.synthesis.model) && Boolean(ran.verdictBody) && restored.verdictBody === ran.verdictBody
+        && restored.synthesis.includes(ran.json.synthesis.model) && !restored.emptyPresentation,
+      `live=${ran.synthesis.slice(0, 100)} restored=${restored.synthesis.slice(0, 100)}`);
     record(
       "the restored comparison is byte-for-byte the one that was exported",
       restored.markdown === ran.markdown.replace(/^\* This copy.*$/gm, "").replace(/\n\n\n+/g, "\n\n").trim() || restored.markdown.includes(pairModels[0]),
@@ -527,6 +542,10 @@ async function run(args) {
         && stopped.cards[0].body.split(/\s+/).slice(0, 12).join(" ") === slowRestored.cards[0].body.split(/\s+/).slice(0, 12).join(" "),
       `${slowRestored.cards.map((card) => card.status).join(",")} || ${slowRestored.text.slice(0, 120)}`,
     );
+
+    record("a restored single stopped panel is not labelled as an empty pane",
+      slowRestored.cards.length === 1 && !slowRestored.emptyPresentation && !/No comparison yet/.test(slowRestored.synthesis),
+      slowRestored.synthesis);
 
     // ── narrow and light ───────────────────────────────────────────────────
     await page.setViewport({ width: 480, height: 900, deviceScaleFactor: 1 });

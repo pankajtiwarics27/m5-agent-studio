@@ -45,7 +45,9 @@ change the number of columns for existing results. The first slice derives that 
 from existing panels when present and uses selections only before results exist. It does
 not change dispatch, model selections, persistence, verdicts or permissions. The separate
 empty-state card in the supplied screenshot requires further reproduction; this change
-is not represented as a fix for that screenshot's full state.
+is not represented as a fix for that screenshot's full state. A later, separately verified
+[restore slice](project-workspace-compare-restore-slice.md) addresses the reproduced
+boot-time empty card over restored results.
 
 Verification for this slice: run the renderer with no results and with one/two result
 panels while changing the selection; mutation-check the previous maximum-of-both rule;

@@ -19453,7 +19453,9 @@ body[data-active-pane="harness"] .mode-tabs { height: max-content; bottom: auto;
   // Open only after the handlers above exist; an HTML open attribute can fire toggle during parsing.
   const workspaceReview = document.getElementById("harnessWorkspaceReview");
   if (workspaceReview) workspaceReview.open = true;
-  presentDebateEmpty();
+  // The Compare pane may already have restored a local run during initialization.
+  // Do not overwrite a restored verdict or label existing panels as an empty pane.
+  if (!debatePanels().length && !debateSynth.m) presentDebateEmpty();
   presentHallEmpty();
   // A checkpoint outlives the page it was written on: drawing it here is what makes a failed
   // run recoverable after a reload, rather than a thing the reader had to be watching for.

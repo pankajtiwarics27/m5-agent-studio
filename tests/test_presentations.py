@@ -157,9 +157,10 @@ def test_the_builder_validates_before_it_renders():
 
 def test_the_empty_panes_are_drawn_at_startup():
     html = FRONTEND.read_text(encoding="utf-8")
-    startup = html[
-        html.find("applyShortcutHints();") : html.find("applyShortcutHints();") + 400
-    ]
+    start = html.rfind("  applyShortcutHints();")
+    end = html.find("  renderPipelineRecovery();", start)
+    assert 0 <= start < end
+    startup = html[start:end]
     assert "presentDebateEmpty()" in startup
     assert "presentHallEmpty()" in startup
 
@@ -306,5 +307,19 @@ def test_a_raw_writer_in_a_converted_handler_is_caught(markup_copy):
 def test_an_empty_pane_missing_from_startup_is_caught(markup_copy):
     payload = markup_copy(
         lambda text: text.replace("\n  presentHallEmpty();\n", "\n", 1)
+    )
+    assert "startup-missing" in _checks(payload)
+
+
+def test_startup_check_survives_boot_text_growth(markup_copy):
+    payload = markup_copy(
+        lambda text: text.replace("  applyShortcutHints();", "  applyShortcutHints();\n" + "  // extra boot context\n" * 40, 1)
+    )
+    assert "startup-missing" not in _checks(payload)
+
+
+def test_startup_check_refuses_a_missing_end_anchor(markup_copy):
+    payload = markup_copy(
+        lambda text: text.replace("\n  renderPipelineRecovery();", "\n  missingRecoveryBoot();", 1)
     )
     assert "startup-missing" in _checks(payload)

@@ -237,9 +237,10 @@ def build_inventory() -> dict[str, object]:
             )
 
     # 6. The empty panes are drawn at startup, not only after a failed action.
-    startup = html[
-        html.find("applyShortcutHints();") : html.find("applyShortcutHints();") + 400
-    ]
+    start = html.rfind("  applyShortcutHints();")
+    end = html.find("  renderPipelineRecovery();", start) if start >= 0 else -1
+    # Missing or inverted boot anchors cannot provide evidence of a startup call.
+    startup = html[start:end] if start >= 0 and end > start else ""
     for call in ("presentDebateEmpty()", "presentHallEmpty()"):
         if call not in startup:
             fail(
